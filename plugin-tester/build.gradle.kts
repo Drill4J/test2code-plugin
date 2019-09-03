@@ -28,7 +28,7 @@ application {
 }
 
 dependencies {
-    compile(group = "com.epam.drill", name = "drill-admin", version = "0.3.1-SNAPSHOT", classifier = "all")
+    compile(group = "com.epam.drill", name = "admin", version = "0.3.1-SNAPSHOT", classifier = "all")
 }
 
 tasks {
