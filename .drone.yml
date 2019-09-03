@@ -1,0 +1,22 @@
+pipeline:
+
+  build:
+    image: gradle:5.5.1-jdk8
+    environment:
+      GRADLE_OPTS: -Dorg.gradle.daemon=false
+    commands:
+      - gradle check
+
+  publish:
+    image: gradle:5.5.1-jdk8
+    secrets: [ drill_username, drill_password ]
+    commands:
+      - gradlepublishCoverageZipPublicationToMavenRepository
+        -PbintrayUser=$${DRILL_USERNAME}
+        -PbintrayApiKey=$${DRILL_PASSWORD}
+    when:
+      branch:
+        - develop
+      event:
+        exclude:
+          - pull_request

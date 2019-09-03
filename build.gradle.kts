@@ -1,12 +1,15 @@
 import com.epam.drill.build.atomicFuVersion
 import com.epam.drill.build.jvmCoroutinesVersion
 import com.epam.drill.build.serializationRuntimeVersion
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     `kotlin-multiplatform`
     `kotlinx-serialization`
     `kotlinx-atomicfu`
     distribution
+    `maven-publish`
+    id("com.github.johnrengelman.shadow") version "5.1.0"
 }
 
 repositories {
@@ -111,39 +114,74 @@ kotlin {
     }
 }
 
-//TODO replace custom tasks with some standard gradle plugin flow
 tasks {
     val pluginConfigJson = file("plugin_config.json")
 
     fun Configuration.flattenJars() = this.map { if (it.isDirectory) it else zipTree(it) }
 
     val adminPartJar by existing(Jar::class) {
-        group = "build"
-        archiveFileName.set("admin-part.jar")
+
         from(adminJarDeps.flattenJars())
     }
     val agentPartJar by existing(Jar::class) {
-        group = "build"
-        archiveFileName.set("agent-part.jar")
+
         from(agentJarDeps.flattenJars())
     }
-
-    val distJar by registering(Jar::class) {
-        group = "build"
-        from(adminPartJar, agentPartJar)
-        from(pluginConfigJson)
+    val adminShadow by registering(ShadowJar::class) {
+        configurate()
+        archiveFileName.set("admin-part.jar")
+        from(adminPartJar)
+    }
+    val agentShadow by registering(ShadowJar::class) {
+        configurate()
+        archiveFileName.set("agent-part.jar")
+        from(agentPartJar)
     }
 
-    val buildToDistr by registering(Copy::class) {
-        group = "app"
-        from(distJar) {
-            into("adminStorage")
+    distributions {
+        main {
+            contents {
+                from(adminShadow, agentShadow, pluginConfigJson)
+                into("/")
+            }
         }
-        destinationDir = project.rootProject.file("distr")
-    }
-
-    register<Copy>("buildCoveragePluginDev") {
-        group = "app"
-        dependsOn(buildToDistr)
     }
 }
+
+fun ShadowJar.configurate() {
+    mergeServiceFiles()
+    isZip64 = true
+    relocate("io.vavr", "coverage.io.vavr")
+    relocate("org.apache.bcel", "coverage.org.apache.bcel")
+    relocate("org.objectweb.asm", "coverage.org.objectweb.asm")
+    relocate("org.jacoco.core", "coverage.org.jacoco.core")
+}
+
+publishing {
+    repositories {
+        maven {
+            url =
+                if (version.toString().endsWith("-SNAPSHOT"))
+                    uri("http://oss.jfrog.org/oss-snapshot-local")
+                else uri("http://oss.jfrog.org/oss-release-local")
+            credentials {
+                username =
+                    if (project.hasProperty("bintrayUser"))
+                        project.property("bintrayUser").toString()
+                    else System.getenv("BINTRAY_USER")
+                password =
+                    if (project.hasProperty("bintrayApiKey"))
+                        project.property("bintrayApiKey").toString()
+                    else System.getenv("BINTRAY_API_KEY")
+            }
+        }
+    }
+
+    publications {
+        create<MavenPublication>("coverageZip") {
+            artifact(tasks["distZip"])
+        }
+    }
+}
+
+tasks.build.get().dependsOn("publishCoverageZipPublicationToMavenLocal")
