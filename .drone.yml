@@ -11,7 +11,7 @@ pipeline:
     image: gradle:5.5.1-jdk8
     secrets: [ drill_username, drill_password ]
     commands:
-      - gradlepublishCoverageZipPublicationToMavenRepository
+      - gradle publishCoverageZipPublicationToMavenRepository
         -PbintrayUser=$${DRILL_USERNAME}
         -PbintrayApiKey=$${DRILL_PASSWORD}
     when:
