@@ -6,3 +6,4 @@ val jvmCoroutinesVersion = "1.3.0"
 
 val atomicFuVersion = "0.12.11"
 
+val drillCommonLibVerison = "0.1.1"
