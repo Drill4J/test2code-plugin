@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.coverage
 
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class AtomicTest {
     @Test

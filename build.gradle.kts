@@ -36,7 +36,6 @@ val adminJarDeps by configurations.creating {
 
 dependencies {
     commonJarDeps("org.jacoco:org.jacoco.core:$jacocoVersion")
-    commonJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
 }
 
@@ -74,7 +73,7 @@ kotlin {
                 extendsFrom(agentJarDeps)
             }
             dependencies {
-
+                implementation(kotlin("stdlib"))
                 implementation("com.epam.drill:drill-agent-part-jvm:$version")
             }
         }
@@ -84,7 +83,9 @@ kotlin {
                 extendsFrom(adminJarDeps)
             }
             dependencies {
+                implementation(kotlin("stdlib-jdk8"))
                 implementation("com.epam.drill:drill-admin-part-jvm:$version")
+                implementation("io.vavr:vavr-kotlin:$vavrVersion")
             }
         }
         adminPartMain.dependsOn(jvmMain)
@@ -94,7 +95,7 @@ kotlin {
             it.compilations["main"].defaultSourceSet {
                 dependencies {
                     implementation("com.epam.drill:common:$drillCommonLibVerison")
-                    implementation(kotlin("stdlib-jdk8"))
+
                     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
                     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
                 }

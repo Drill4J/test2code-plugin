@@ -54,7 +54,7 @@ class InstrumentationTest {
         addInstrumentedClass()
         val instrumentedClass = memoryClassLoader.loadClass(targetClass.name)
         TestProbeArrayProvider.start(sessionId, "MANUAL")
-        val runnable = instrumentedClass.newInstance() as Runnable
+        @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
         val runtimeData = TestProbeArrayProvider.stop(sessionId)
         val executionData = ExecutionDataStore()
@@ -73,7 +73,7 @@ class InstrumentationTest {
         addInstrumentedClass()
         val instrumentedClass = memoryClassLoader.loadClass(targetClass.name)
         TestProbeArrayProvider.start(sessionId, "MANUAL")
-        val runnable = instrumentedClass.newInstance() as Runnable
+        @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
         val runtimeData = TestProbeArrayProvider.stop(sessionId)
         runtimeData?.forEach {
