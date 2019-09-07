@@ -1,7 +1,5 @@
-import com.epam.drill.build.atomicFuVersion
-import com.epam.drill.build.jvmCoroutinesVersion
-import com.epam.drill.build.serializationRuntimeVersion
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.epam.drill.build.*
+import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
     `kotlin-multiplatform`
@@ -13,10 +11,10 @@ plugins {
 }
 
 repositories {
-    if (version.toString().endsWith("-SNAPSHOT"))
+    if (version.toString().endsWith("-SNAPSHOT")) {
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
-    else
-        maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
+    }
+    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
     mavenCentral()
     jcenter()
 }
@@ -55,7 +53,7 @@ kotlin {
     sourceSets {
         named("commonMain") {
             dependencies {
-                implementation("com.epam.drill:common-jvm:$version")
+                implementation("com.epam.drill:common-jvm:$drillCommonLibVerison")
                 implementation("org.jetbrains.kotlin:kotlin-stdlib-common")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$serializationRuntimeVersion")
             }
@@ -95,7 +93,7 @@ kotlin {
         jvms.forEach {
             it.compilations["main"].defaultSourceSet {
                 dependencies {
-                    implementation("com.epam.drill:common:$version")
+                    implementation("com.epam.drill:common:$drillCommonLibVerison")
                     implementation(kotlin("stdlib-jdk8"))
                     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
                     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
