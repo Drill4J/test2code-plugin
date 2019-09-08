@@ -37,6 +37,7 @@ val adminJarDeps by configurations.creating {
 dependencies {
     commonJarDeps("org.jacoco:org.jacoco.core:$jacocoVersion")
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
+    adminJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
 }
 
 
