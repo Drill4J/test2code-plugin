@@ -1,0 +1,26 @@
+name: Build & publish CC plugin
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build_and_publish:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build
+        run: |
+          gradle check
+        env:
+          KONAN_DATA_DIR: /home/gradle/.gradle/konan
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+      - name: Publish
+        run: |
+          gradle publishCoverageZipPublicationToMavenRepository \
+          -PbintrayUser=${BINTRAY_USER} \
+          -PbintrayApiKey=${BINTRAY_API}
+        env:
+          BINTRAY_USER: ${{ secrets.DRILL_USERNAME }}
+          BINTRAY_API: ${{ secrets.DRILL_PASSWORD }}
