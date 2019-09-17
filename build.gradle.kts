@@ -19,11 +19,6 @@ repositories {
     jcenter()
 }
 
-
-val jacocoVersion = "0.8.3"
-val vavrVersion = "0.10.0"
-val bcelVersion = "6.3.1"
-
 val commonJarDeps by configurations.creating {}
 
 val agentJarDeps by configurations.creating {
@@ -38,6 +33,7 @@ dependencies {
     commonJarDeps("org.jacoco:org.jacoco.core:$jacocoVersion")
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
     adminJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
+    adminJarDeps("org.jetbrains.xodus:dnq:$xodusDnqVersion")
 }
 
 

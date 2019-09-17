@@ -25,7 +25,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             else -> AgentState(agentInfo, state)
         }
     }!!
-    
+
     private val activeScope get() = agentState.activeScope
 
     override suspend fun doAction(action: Action): Any {
@@ -47,16 +47,19 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         }
     }
 
-    internal suspend fun renameScope(payload: RenameScopePayload) =
-        when {
-            agentState.scopeNotExisting(payload.scopeId) ->
+    internal suspend fun renameScope(payload: RenameScopePayload): StatusMessage {
+        val scopeBuildVersion = agentState.scopeBuildVersion(payload.scopeId)
+        return when {
+            scopeBuildVersion == null ->
                 StatusMessage(
                     StatusCodes.NOT_FOUND,
                     "Failed to rename scope with id ${payload.scopeId}: scope not found"
                 )
             agentState.scopeNameNotExisting(payload.scopeName) -> {
                 agentState.renameScope(payload.scopeId, payload.scopeName)
-                sendScopeMessages()
+                val summary = agentState.scopeSummary(payload.scopeId)!!
+                sendScopeSummary(summary, scopeBuildVersion)
+                sendScopeMessages(scopeBuildVersion)
                 StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
             }
             else -> StatusMessage(
@@ -64,7 +67,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
                 "Scope with such name already exists. Please choose a different name."
             )
         }
-
+    }
 
 
     override suspend fun processData(dm: DrillMessage): Any {
@@ -111,7 +114,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             }
             is SessionFinished -> {
                 val scope = agentState.activeScope
-                when(val session = scope.finishSession(coverMsg)) {
+                when (val session = scope.finishSession(coverMsg)) {
                     null -> println("No active session for sessionId ${coverMsg.sessionId}")
                     else -> {
                         if (session.any()) {
@@ -176,16 +179,16 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         )
     }
 
-    internal suspend fun sendScopeMessages() {
+    internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
         sendActiveScope()
-        sendScopes()
+        sendScopes(buildVersion)
     }
 
     internal suspend fun sendActiveSessions() {
-        val activeSessions = activeScope.activeSessions.run { 
+        val activeSessions = activeScope.activeSessions.run {
             ActiveSessions(
                 count = count(),
-                testTypes = values.groupBy { it.testType }.keys 
+                testTypes = values.groupBy { it.testType }.keys
             )
         }
         sender.send(
@@ -209,31 +212,33 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(agentInfo, "/active-scope", "")
     }
 
-    internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary) {
+    internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
+        val targetAgentInfo = agentInfo.target(buildVersion)
         sender.send(
-            agentInfo,
+            targetAgentInfo,
             "/scope/${scopeSummary.id}",
             ScopeSummary.serializer() stringify scopeSummary
         )
     }
 
-    internal suspend fun sendScopes() {
+    internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
+        val targetAgentInfo = agentInfo.target(buildVersion)
         sender.send(
-            agentInfo,
+            targetAgentInfo,
             "/scopes",
-            ScopeSummary.serializer().list stringify agentState.scopeSummaries.toList()
+            ScopeSummary.serializer().list stringify agentState.scopeSummariesByBuild(buildVersion).toList()
         )
     }
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
-        return agentState.scopes[scopeId]?.let { scope ->
-            scope.toggle()
-            sendScopes()
-            sendScopeSummary(scope.summary)
-            calculateAndSendBuildCoverage()
+        return agentState.scopeManager[scopeId]?.let {
+            val toggledScope = agentState.toggleScope(scopeId)!!
+            sendScopes(toggledScope.buildVersion)
+            sendScopeSummary(toggledScope.summary, toggledScope.buildVersion)
+            calculateAndSendBuildCoverage(toggledScope.buildVersion)
             StatusMessage(
                 StatusCodes.OK,
-                "Scope with id $scopeId toggled to 'enabled' value '${scope.enabled}'"
+                "Scope with id $scopeId was toggled to 'enabled' value '${toggledScope.enabled}'"
             )
         } ?: StatusMessage(
             StatusCodes.CONFLICT,
@@ -242,10 +247,10 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
     }
 
     internal suspend fun dropScope(scopeId: String): StatusMessage {
-        return agentState.scopes.remove(scopeId)?.let {
+        return agentState.scopeManager.remove(scopeId)?.let { scope ->
             cleanTopics(id)
-            sendScopes()
-            calculateAndSendBuildCoverage()
+            sendScopes(scope.buildVersion)
+            calculateAndSendBuildCoverage(scope.buildVersion)
             StatusMessage(
                 StatusCodes.OK,
                 "Scope with id $scopeId was removed"
@@ -261,10 +266,13 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             val prevScope = agentState.changeActiveScope(scopeChange.scopeName.trim())
             if (scopeChange.savePrevScope) {
                 if (prevScope.any()) {
-                    val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
-                    sendScopeSummary(finishedScope.summary)
+                    val finishedScope = prevScope.finish(
+                        agentInfo.buildVersion,
+                        scopeChange.prevScopeEnabled
+                    )
+                    sendScopeSummary(finishedScope.summary, finishedScope.buildVersion)
                     println("$finishedScope have been saved.")
-                    agentState.scopes[finishedScope.id] = finishedScope
+                    agentState.scopeManager.save(finishedScope)
                     if (finishedScope.enabled) {
                         calculateAndSendBuildCoverage()
                     }
@@ -283,62 +291,54 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
         )
 
-    internal suspend fun sendCalcResults(cis: CoverageInfoSet, path: String = "") {
-        sendCoverageBlock(cis.coverage, path)
+    internal suspend fun sendCalcResults(
+        cis: CoverageInfoSet,
+        path: String = "", buildVersion:
+        String = agentInfo.buildVersion
+    ) {
+        val targetAgentInfo = agentInfo.target(buildVersion)
 
         // TODO extend destination with plugin id
         if (cis.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${cis.associatedTests.count()}")
             sender.send(
-                agentInfo,
+                targetAgentInfo,
                 "$path/associated-tests",
                 AssociatedTests.serializer().list stringify cis.associatedTests
             )
         }
         sender.send(
-            agentInfo,
+            targetAgentInfo,
             "$path/methods",
             BuildMethods.serializer() stringify cis.buildMethods
         )
 
-        val packageCoverage = cis.packageCoverage
-        sendPackageCoverage(packageCoverage, path)
         sender.send(
-            agentInfo,
+            targetAgentInfo,
+            "$path/coverage",
+            Coverage.serializer() stringify cis.coverage
+        )
+
+        sender.send(
+            targetAgentInfo,
+            "$path/coverage-by-packages",
+            JavaPackageCoverage.serializer().list stringify cis.packageCoverage
+        )
+
+        sender.send(
+            targetAgentInfo,
             "$path/tests-usages",
             TestUsagesInfo.serializer().list stringify cis.testUsages
         )
     }
 
-    internal suspend fun sendPackageCoverage(
-        packageCoverage: List<JavaPackageCoverage>,
-        path: String = ""
-    ) {
-        sender.send(
-            agentInfo,
-            "$path/coverage-by-packages",
-            JavaPackageCoverage.serializer().list stringify packageCoverage
-        )
-    }
-
-    internal suspend fun sendCoverageBlock(
-        coverage: Coverage,
-        path: String = ""
-    ) {
-        sender.send(
-            agentInfo,
-            "$path/coverage",
-            Coverage.serializer() stringify coverage
-        )
-    }
-
-    internal suspend fun calculateAndSendBuildCoverage() {
-        val sessions = agentState.scopes.values
+    internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
+        val sessions = agentState.scopeManager.allScopesByBuild(buildVersion)
             .filter { it.enabled }
             .flatMap { it.probes.values.flatten().asSequence() }
         val coverageInfoSet = calculateCoverageData(sessions, true)
         agentState.classesData().lastBuildCoverage = coverageInfoSet.coverage.coverage
-        sendCalcResults(coverageInfoSet, "/build")
+        sendCalcResults(coverageInfoSet, "/build", buildVersion)
     }
 
     internal suspend fun calculateAndSendActiveScopeCoverage() {
@@ -358,7 +358,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
 
     override suspend fun dropData() {
         agentInfo.buildVersions.map { it.id }.forEach {
-            val oldAgentInfo = agentInfo.copy(buildVersion = it)
+            val oldAgentInfo = agentInfo.target(it)
             sender.send(oldAgentInfo, "/scopes", "")
             sender.send(oldAgentInfo, "/build/associated-tests", "")
             sender.send(oldAgentInfo, "/build/coverage-new", "")
@@ -376,5 +376,6 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         processData(Initialized(""))
     }
 
-
 }
+
+fun AgentInfo.target(buildVersion: String) = this.copy(buildVersion = buildVersion)

@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.coverage
 
 import com.epam.drill.common.*
+import com.epam.drill.plugins.coverage.storage.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
@@ -32,16 +33,13 @@ class AgentState(
             _backup.value = value
         }
 
-
-    val scopes = AtomicCache<String, FinishedScope>()
+    val scopeManager: ScopeManager = XodusScopeManager(agentInfo.id)
 
     private val _scopeCounter = atomic(0)
 
     private val _activeScope = atomic(ActiveScope(scopeName()))
 
     val activeScope get() = _activeScope.value
-
-    val scopeSummaries get() = scopes.values.map { it.summary }
 
     fun init(initInfo: InitInfo) {
         _data.updateAndGet { prevData ->
@@ -52,18 +50,32 @@ class AgentState(
         }
     }
 
+    fun scopeSummariesByBuild(buildVersion: String) = scopeManager.allScopesByBuild(buildVersion).summaries()
+
     fun renameScope(id: String, newName: String) {
         val trimmedNewName = newName.trim()
         if (id == activeScope.id) activeScope.rename(trimmedNewName)
-        else scopes[id]?.apply {
-            scopes[id] = this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName))
+        else scopeManager[id]?.apply {
+            scopeManager.save(this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName)))
         }
     }
 
-    fun scopeNameNotExisting(name: String) =
-        scopes.values.find { it.name == name.trim() } == null && name.trim() != activeScope.name
+    fun toggleScope(id: String): FinishedScope? =
+        scopeManager[id]?.run {
+            scopeManager.save(this.copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
+        }
 
-    fun scopeNotExisting(id: String) = scopes[id] == null && activeScope.id != id
+    fun scopeNameNotExisting(name: String, buildVersion: String = agentInfo.buildVersion) =
+        scopeManager.allScopesByBuild(buildVersion)
+            .find { it.name == name.trim() } == null && name.trim() != activeScope.name
+
+    fun scopeBuildVersion(id: String) = scopeManager[id]?.buildVersion ?: if (activeScope.id == id) {
+        agentInfo.buildVersion
+    } else null
+
+    fun scopeSummary(id: String) = scopeManager[id]?.summary ?: if (activeScope.id == id) {
+        activeScope.summary
+    } else null
 
     fun addClass(key: String, bytes: ByteArray) {
         //throw ClassCastException if the ref value is in the wrong state
@@ -125,7 +137,7 @@ class AgentState(
     fun reset() {
         data = NoData
         changeActiveScope("New Scope 1")
-        scopes.clean()
+        scopeManager.clean()
     }
 
     //throw ClassCastException if the ref value is in the wrong state

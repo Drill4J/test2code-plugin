@@ -114,7 +114,7 @@ class CoverageAdminPartTest {
         runBlocking {
             coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope2", true)))
         }
-        assertNull(agentState.scopes["testScope"])
+        assertNull(agentState.scopeManager["testScope"])
     }
 
     @Test
@@ -124,7 +124,7 @@ class CoverageAdminPartTest {
         assertEquals("testScope", agentState.activeScope.name)
         appendSessionStub(agentState, agentState.classesData())
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope2"))) }
-        assertNull(agentState.scopes["testScope"])
+        assertNull(agentState.scopeManager["testScope"])
     }
 
     @Test
@@ -136,7 +136,7 @@ class CoverageAdminPartTest {
         runBlocking {
             coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope6", true)))
         }
-        assertTrue { agentState.scopes.values.any { it.name == "testScope66" } }
+        assertTrue { agentState.scopeManager.allScopes.any { it.name == "testScope66" } }
     }
 
     @Test
@@ -147,10 +147,10 @@ class CoverageAdminPartTest {
         runBlocking {
             coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testDropScope2", true)))
         }
-        val id = agentState.scopes.values.find { it.name == "testDropScope" }?.id
+        val id = agentState.scopeManager.allScopes.find { it.name == "testDropScope" }?.id
         assertNotNull(id)
         runBlocking { coverageController.doAction(DropScope(ScopePayload(id))) }
-        val deleted = agentState.scopes.values.find { it.id == id }
+        val deleted = agentState.scopeManager.allScopes.find { it.id == id }
         assertNull(deleted)
     }
 
@@ -167,21 +167,21 @@ class CoverageAdminPartTest {
     @Test
     fun `finished scope renaming process goes correctly`() {
         prepareClasses(Dummy::class.java)
-        runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("renameFinishedScope1"))) }
+        runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("renameFinishedScope88"))) }
         appendSessionStub(agentState, agentState.classesData())
         runBlocking {
             coverageController.doAction(
                 SwitchActiveScope(
                     ActiveScopeChangePayload(
-                        "renameFinishedScope2",
+                        "renameFinishedScope99",
                         true
                     )
                 )
             )
         }
-        val finishedId = agentState.scopes.values.find { it.name == "renameFinishedScope1" }?.id!!
+        val finishedId = agentState.scopeManager.allScopes.find { it.name == "renameFinishedScope88" }?.id!!
         runBlocking { coverageController.doAction(RenameScope(RenameScopePayload(finishedId, "renamedScope1"))) }
-        val renamed = agentState.scopes[finishedId]!!
+        val renamed = agentState.scopeManager[finishedId]!!
         assertEquals(renamed.name, "renamedScope1")
     }
 
@@ -193,9 +193,9 @@ class CoverageAdminPartTest {
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName2", true))) }
         appendSessionStub(agentState, agentState.classesData())
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("freeName", true))) }
-        val finishedId = agentState.scopes.values.find { it.name == "occupiedName1" }?.id!!
+        val finishedId = agentState.scopeManager.allScopes.find { it.name == "occupiedName1" }?.id!!
         runBlocking { coverageController.doAction(RenameScope(RenameScopePayload(finishedId, "occupiedName2"))) }
-        assertEquals(agentState.scopes[finishedId]!!.name, "occupiedName1")
+        assertEquals(agentState.scopeManager[finishedId]!!.name, "occupiedName1")
         val activeId = agentState.activeScope.id
         runBlocking { coverageController.doAction(RenameScope(RenameScopePayload(activeId, "occupiedName2"))) }
         assertEquals(agentState.activeScope.summary.name, "freeName")

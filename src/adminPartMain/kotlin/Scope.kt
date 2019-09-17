@@ -13,14 +13,16 @@ class ActiveScope(
 
     val started: Long = currentTimeMillis()
 
-    private val _summary = atomic(ScopeSummary(
-        id = id,
-        name = name,
-        started = started
-    ))
-    
+    private val _summary = atomic(
+        ScopeSummary(
+            id = id,
+            name = name,
+            started = started
+        )
+    )
+
     val summary get() = _summary.value
-    
+
     val name = summary.name
 
     val activeSessions = AtomicCache<String, ActiveSession>()
@@ -37,9 +39,10 @@ class ActiveScope(
 
     fun rename(name: String): ScopeSummary = _summary.getAndUpdate { it.copy(name = name) }
 
-    fun finish(enabled: Boolean) = FinishedScope(
+    fun finish(buildVersion: String, enabled: Boolean) = FinishedScope(
         id = id,
         name = summary.name,
+        buildVersion = buildVersion,
         enabled = enabled,
         summary = summary.copy(finished = currentTimeMillis(), active = false, enabled = enabled),
         probes = _sessions.value.asIterable().groupBy { it.testType }
@@ -73,17 +76,13 @@ class ActiveScope(
 
 data class FinishedScope(
     val id: String,
+    val buildVersion: String,
     val name: String,
     val summary: ScopeSummary,
     val probes: Map<String, List<FinishedSession>>,
     var enabled: Boolean = true
-)  : Sequence<FinishedSession> {
-    
-    fun toggle() {
-        enabled = !enabled
-        summary.enabled = enabled
-    }
-    
+) : Sequence<FinishedSession> {
+
     override fun iterator() = probes.values.flatten().iterator()
 
     override fun toString() = "fin-scope($id, $name)"
