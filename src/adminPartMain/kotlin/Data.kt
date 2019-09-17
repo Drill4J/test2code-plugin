@@ -47,7 +47,11 @@ data class BuildMethods(
     val modifiedDescMethods: MethodsInfo = MethodsInfo(),
     val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
     val deletedMethods: MethodsInfo = MethodsInfo()
-)
+) {
+    val allModified = modifiedBodyMethods.methods +
+            modifiedDescMethods.methods +
+            modifiedNameMethods.methods
+}
 
 @Serializable
 data class MethodsInfo(
@@ -137,4 +141,10 @@ data class TestTypeSummary(
     val testType: String,
     val coverage: Double = 0.0,
     val testCount: Int = 0
+)
+
+@Serializable
+data class Risks(
+    val newMethods: List<JavaMethod>,
+    val modifiedMethods: List<JavaMethod>
 )
