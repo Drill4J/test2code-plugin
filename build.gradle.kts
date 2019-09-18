@@ -1,4 +1,3 @@
-import com.epam.drill.build.*
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
@@ -10,6 +9,8 @@ plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
 
+setupVersion()
+
 repositories {
     if (version.toString().endsWith("-SNAPSHOT")) {
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
@@ -18,7 +19,6 @@ repositories {
     mavenCentral()
     jcenter()
 }
-
 
 val jacocoVersion = "0.8.3"
 val vavrVersion = "0.10.0"
@@ -53,7 +53,7 @@ kotlin {
     sourceSets {
         named("commonMain") {
             dependencies {
-                implementation("com.epam.drill:common-jvm:$drillCommonLibVerison")
+                implementation("com.epam.drill:common-jvm:$drillCommonLibVersion")
                 implementation("org.jetbrains.kotlin:kotlin-stdlib-common")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$serializationRuntimeVersion")
             }
@@ -95,7 +95,7 @@ kotlin {
         jvms.forEach {
             it.compilations["main"].defaultSourceSet {
                 dependencies {
-                    implementation("com.epam.drill:common:$drillCommonLibVerison")
+                    implementation("com.epam.drill:common:$drillCommonLibVersion")
 
                     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
                     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")

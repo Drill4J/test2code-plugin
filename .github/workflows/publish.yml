@@ -1,0 +1,22 @@
+name: Build & publish coverage-plugin
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+
+jobs:
+  build_and_publish:
+    name: Publish coverage plugin as zip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Check
+        run: ./gradlew -si --no-daemon check
+      - name: Publish
+        run: |
+          ./gradlew -si --no-daemon publishCoverageZipPublicationToMavenRepository
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
