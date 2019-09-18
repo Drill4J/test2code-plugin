@@ -75,7 +75,7 @@ kotlin {
             }
             dependencies {
                 implementation(kotlin("stdlib"))
-                implementation("com.epam.drill:drill-agent-part-jvm:$version")
+                implementation("com.epam.drill:drill-agent-part-jvm:$drillPluginApiVersion")
             }
         }
         agentPartMain.dependsOn(jvmMain)
@@ -85,7 +85,7 @@ kotlin {
             }
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                implementation("com.epam.drill:drill-admin-part-jvm:$version")
+                implementation("com.epam.drill:drill-admin-part-jvm:$drillPluginApiVersion")
                 implementation("io.vavr:vavr-kotlin:$vavrVersion")
             }
         }
@@ -117,22 +117,19 @@ kotlin {
 tasks {
     val pluginConfigJson = file("plugin_config.json")
 
-    fun Configuration.flattenJars() = this.map { if (it.isDirectory) it else zipTree(it) }
-
-    val adminPartJar by existing(Jar::class) {
-
-        from(adminJarDeps.flattenJars())
-    }
-    val agentPartJar by existing(Jar::class) {
-
-        from(agentJarDeps.flattenJars())
-    }
+    val adminPartJar by existing(Jar::class)
+    
     val adminShadow by registering(ShadowJar::class) {
+        configurations = listOf(adminJarDeps)
         configurate()
         archiveFileName.set("admin-part.jar")
         from(adminPartJar)
     }
+
+    val agentPartJar by existing(Jar::class)
+
     val agentShadow by registering(ShadowJar::class) {
+        configurations = listOf(agentJarDeps)
         configurate()
         archiveFileName.set("agent-part.jar")
         from(agentPartJar)
@@ -184,4 +181,6 @@ publishing {
     }
 }
 
-tasks.build.get().dependsOn("publishCoverageZipPublicationToMavenLocal")
+tasks.build {
+    dependsOn("publishCoverageZipPublicationToMavenLocal")
+}

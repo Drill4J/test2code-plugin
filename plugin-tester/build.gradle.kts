@@ -14,10 +14,10 @@ val appJvmArgs = listOf(
 )
 
 repositories {
-    if (version.toString().endsWith("-SNAPSHOT"))
+    if (version.toString().endsWith("-SNAPSHOT")) {
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
-    else
-        maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
+    }
+    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
     mavenCentral()
     jcenter()
 }
@@ -28,16 +28,16 @@ application {
 }
 
 dependencies {
-    compile(group = "com.epam.drill", name = "admin", version = "0.3.1-SNAPSHOT", classifier = "all")
+    runtime("com.epam.drill:admin:0.3.0:all@jar")
 }
 
 tasks {
+    val prepareDist by registering(Copy::class) {
+        from(rootProject.tasks["distZip"])
+        into(file("distr").resolve("adminStorage"))
+    }
+
     named("run") {
-        doFirst {
-            copy {
-                from(rootProject.tasks["distZip"])
-                into(projectDir.resolve("distr").resolve("adminStorage"))
-            }
-        }
+        dependsOn(prepareDist)
     }
 }
