@@ -15,6 +15,7 @@ dependencies {
     implementation(kotlin("serialization", kotlinVersion))
     implementation(kotlin("reflect", kotlinVersion))
     implementation("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicFuVersion")
+    implementation("com.palantir.gradle.gitversion:gradle-git-version:0.12.2")
 }
 
 kotlinDslPluginOptions {
