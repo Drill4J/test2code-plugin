@@ -54,7 +54,7 @@ fun classCoverage(
                 val methodKey = methodCoverage.coverageKey(classCoverage)
                 JavaMethodCoverage(
                     id = methodKey.id,
-                    name = methodCoverage.name,
+                    name = MethodName.of(methodCoverage).isCalled(),
                     desc = methodCoverage.desc,
                     decl = declaration(methodCoverage.desc),
                     coverage = methodCoverage.coverage,
@@ -122,3 +122,32 @@ fun Methods.getInfo(
 )
 
 fun IMethodCoverage.sign() = "$name$desc"
+
+enum class MethodName(protected var value: String) {
+
+    OTHER("") {
+        override fun isCalled(): String = value
+    },
+    INIT("<init>") {
+        override fun isCalled(): String = "constructor"
+    },
+    CLINIT("<clinit>") {
+        override fun isCalled(): String = "staticConstructor"
+    };
+
+    companion object {
+        fun of(method: IMethodCoverage): MethodName {
+
+            return when (val name = method.name) {
+                INIT.value -> INIT
+                CLINIT.value -> CLINIT
+                else -> {
+                    OTHER.value = name
+                    OTHER
+                }
+            }
+        }
+    }
+
+    abstract fun isCalled(): String
+}
