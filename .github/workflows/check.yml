@@ -1,0 +1,14 @@
+name: Check coverage-plugin
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build_and_check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Check
+        run: ./gradlew -si --no-daemon check

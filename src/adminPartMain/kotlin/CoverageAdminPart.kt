@@ -339,6 +339,22 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         val coverageInfoSet = calculateCoverageData(sessions, true)
         agentState.classesData().lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build")
+        sendRisks(coverageInfoSet.buildMethods)
+    }
+
+    internal suspend fun sendRisks(buildMethods: BuildMethods) {
+        val risks = risks(buildMethods)
+        sender.send(
+            agentInfo,
+            "/build/risks",
+            Risks.serializer() stringify risks
+        )
+    }
+
+    internal fun risks(buildMethods: BuildMethods): Risks {
+        val newRisks = buildMethods.newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
+        val modifiedRisks = buildMethods.allModified.filter { it.coverageRate == CoverageRate.MISSED }
+        return Risks(newRisks, modifiedRisks)
     }
 
     internal suspend fun calculateAndSendActiveScopeCoverage() {
