@@ -28,7 +28,7 @@ application {
 }
 
 dependencies {
-    runtime("com.epam.drill:admin:0.3.0:all@jar")
+    runtime("com.epam.drill:admin:0.4.0-SNAPSHOT:all@jar")
 }
 
 tasks {
