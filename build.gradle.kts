@@ -9,7 +9,9 @@ plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
 
-setupVersion()
+allprojects {
+    setupVersion()
+}
 
 repositories {
     if (version.toString().endsWith("-SNAPSHOT")) {
