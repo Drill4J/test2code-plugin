@@ -110,7 +110,10 @@ data class AssociatedTests(
     val className: String?,
     val methodName: String?,
     val tests: List<String>
-)
+) {
+    override fun equals(other: Any?) = other is AssociatedTests && id == other.id
+    override fun hashCode() = id.hashCode()
+}
 
 @Serializable
 data class TestUsagesInfo(
@@ -147,4 +150,9 @@ data class TestTypeSummary(
 data class Risks(
     val newMethods: List<JavaMethod>,
     val modifiedMethods: List<JavaMethod>
+)
+
+@Serializable
+data class TestsToRun(
+    val tests: List<String>?
 )

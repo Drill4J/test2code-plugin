@@ -9,6 +9,34 @@ import kotlinx.serialization.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
+object TestsAssociatedWithBuild : TestBuild {
+    private val map: MutableMap<String, MutableSet<AssociatedTests>> = HashMap()
+
+    override fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>) {
+
+        when {
+            map[buildVersion].isNullOrEmpty() -> map[buildVersion] = associatedTestsList.toMutableSet()
+            else -> map[buildVersion]?.addAll(associatedTestsList)
+        }
+    }
+
+    override fun getTestsAssociatedWithMethods(prevBuildVersion: String, javaMethods: List<JavaMethod>) =
+        map[prevBuildVersion]?.filter { test ->
+            javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
+        }?.flatMap { it -> it.tests }
+
+
+    fun gett(prevBuildVersion: String, javaMethods: List<JavaMethod>): String {
+        val testd = TestsToRun(getTestsAssociatedWithMethods(prevBuildVersion, javaMethods))
+        return TestsToRun.serializer() stringify testd
+    }
+}
+
+interface TestBuild {
+    fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>)
+    fun getTestsAssociatedWithMethods(prevBuildVersion: String, javaMethods: List<JavaMethod>): List<String>?
+}
+
 internal val agentStates = AtomicCache<String, AgentState>()
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
@@ -166,6 +194,8 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
 
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
         val testUsages = testUsages(classesData.bundlesByTests(finishedSessions))
+
+        TestsAssociatedWithBuild.add(buildVersion, associatedTests)
 
         return CoverageInfoSet(
             associatedTests,
@@ -340,6 +370,18 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         agentState.classesData().lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build")
         sendRisks(coverageInfoSet.buildMethods)
+        sendTestsToRun(coverageInfoSet.buildMethods)
+    }
+
+    internal suspend fun sendTestsToRun(buildMethods: BuildMethods) {
+        val tests = TestsToRun(agentState.classesData().prevAgentInfo?.buildVersion?.let {
+            TestsAssociatedWithBuild.getTestsAssociatedWithMethods(it, buildMethods.allModified)
+        })
+        sender.send(
+            agentInfo,
+            "/build/test-to-run",
+            TestsToRun.serializer() stringify tests
+        )
     }
 
     internal suspend fun sendRisks(buildMethods: BuildMethods) {
