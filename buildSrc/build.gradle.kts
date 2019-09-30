@@ -3,7 +3,9 @@ plugins {
 }
 
 repositories {
+    mavenLocal()
     maven(url = "https://dl.bintray.com/kotlin/kotlinx/")
+    maven(url = "http://oss.jfrog.org/oss-release-local")
     jcenter()
 }
 
@@ -16,6 +18,7 @@ dependencies {
     implementation(kotlin("reflect", kotlinVersion))
     implementation("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicFuVersion")
     implementation("com.palantir.gradle.gitversion:gradle-git-version:0.12.2")
+    implementation("com.epam.drill:drill-gradle-plugin:0.1.0")
 }
 
 kotlinDslPluginOptions {

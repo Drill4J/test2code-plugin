@@ -15,7 +15,7 @@ class CoverageAdminPartTest {
     private val agentInfo = AgentInfo(
         id = "id",
         name = "test",
-        status = AgentStatus.READY,
+        status = AgentStatus.ONLINE,
         groupName = "test",
         description = "test",
         ipAddress = "127.0.0.1",
@@ -217,11 +217,9 @@ class CoverageAdminPartTest {
         runBlocking {
             prepareClasses(Dummy::class.java)
             commendTestSession(listOf(true, false))
-            val methods = ws.sent["/scope/${agentState.activeScope.id}/methods"]
-            @Suppress("UNCHECKED_CAST")
-            val parsed = BuildMethods.serializer() parse (methods as String)
-            assertTrue { parsed.totalMethods.methods.any { it.coverageRate == CoverageRate.FULL } }
-            assertTrue { parsed.totalMethods.methods.any { it.coverageRate == CoverageRate.MISSED } }
+            val methods = ws.sent["/scope/${agentState.activeScope.id}/methods"] as BuildMethods
+            assertTrue { methods.totalMethods.methods.any { it.coverageRate == CoverageRate.FULL } }
+            assertTrue { methods.totalMethods.methods.any { it.coverageRate == CoverageRate.MISSED } }
         }
     }
 
@@ -291,11 +289,13 @@ class SenderStub : Sender {
 
     lateinit var javaPackagesCoverage: List<JavaPackageCoverage>
 
-    override suspend fun send(agentInfo: AgentInfo, destination: String, message: String) {
-        if (!message.isEmpty()) {
+    override suspend fun send(agentInfo: AgentInfo, destination: String, message: Any) {
+        if (message.toString().isNotEmpty()) {
             sent[destination] = message
-            if (destination.endsWith("/coverage-by-packages"))
-                javaPackagesCoverage = JavaPackageCoverage.serializer().list parse message
+            if (destination.endsWith("/coverage-by-packages")) {
+                @Suppress("UNCHECKED_CAST")
+                javaPackagesCoverage = message as List<JavaPackageCoverage>
+            }
         }
     }
 }
