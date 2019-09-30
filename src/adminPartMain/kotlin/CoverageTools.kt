@@ -54,7 +54,7 @@ fun classCoverage(
                 val methodKey = methodCoverage.coverageKey(classCoverage)
                 JavaMethodCoverage(
                     id = methodKey.id,
-                    name = methodCoverage.name,
+                    name = methodCoverage.beautifyName(),
                     desc = methodCoverage.desc,
                     decl = declaration(methodCoverage.desc),
                     coverage = methodCoverage.coverage,
@@ -122,3 +122,9 @@ fun Methods.getInfo(
 )
 
 fun IMethodCoverage.sign() = "$name$desc"
+
+fun IMethodCoverage.beautifyName() = when (name) {
+    "<init>" -> "constructor"
+    "<clinit>" -> "staticConstructor"
+    else -> name
+}!!
