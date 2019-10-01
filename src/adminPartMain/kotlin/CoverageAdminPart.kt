@@ -5,7 +5,6 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
-import kotlinx.serialization.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
@@ -26,7 +25,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             else -> AgentState(agentInfo, state)
         }
     }!!
-    
+
     private val activeScope get() = agentState.activeScope
 
     override suspend fun doAction(action: Action): Any {
@@ -65,7 +64,6 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
                 "Scope with such name already exists. Please choose a different name."
             )
         }
-
 
 
     override suspend fun processData(dm: DrillMessage): Any {
@@ -112,7 +110,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             }
             is SessionFinished -> {
                 val scope = agentState.activeScope
-                when(val session = scope.finishSession(coverMsg)) {
+                when (val session = scope.finishSession(coverMsg)) {
                     null -> println("No active session for sessionId ${coverMsg.sessionId}")
                     else -> {
                         if (session.any()) {
@@ -185,16 +183,16 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
     }
 
     internal suspend fun sendActiveSessions() {
-        val activeSessions = activeScope.activeSessions.run { 
+        val activeSessions = activeScope.activeSessions.run {
             ActiveSessions(
                 count = count(),
-                testTypes = values.groupBy { it.testType }.keys 
+                testTypes = values.groupBy { it.testType }.keys
             )
         }
         sender.send(
             agentInfo,
             "/active-sessions",
-            ActiveSessions.serializer() stringify activeSessions
+            activeSessions
         )
     }
 
@@ -203,7 +201,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "/active-scope",
-            ScopeSummary.serializer() stringify activeScopeSummary
+            activeScopeSummary
         )
         sendScopeSummary(activeScopeSummary)
     }
@@ -216,7 +214,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "/scope/${scopeSummary.id}",
-            ScopeSummary.serializer() stringify scopeSummary
+            scopeSummary
         )
     }
 
@@ -224,7 +222,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "/scopes",
-            ScopeSummary.serializer().list stringify agentState.scopeSummaries.toList()
+            agentState.scopeSummaries.toList()
         )
     }
 
@@ -295,13 +293,13 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             sender.send(
                 agentInfo,
                 "$path/associated-tests",
-                AssociatedTests.serializer().list stringify cis.associatedTests
+                cis.associatedTests
             )
         }
         sender.send(
             agentInfo,
             "$path/methods",
-            BuildMethods.serializer() stringify cis.buildMethods
+            cis.buildMethods
         )
 
         val packageCoverage = cis.packageCoverage
@@ -309,7 +307,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "$path/tests-usages",
-            TestUsagesInfo.serializer().list stringify cis.testUsages
+            cis.testUsages
         )
     }
 
@@ -320,7 +318,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "$path/coverage-by-packages",
-            JavaPackageCoverage.serializer().list stringify packageCoverage
+            packageCoverage
         )
     }
 
@@ -331,7 +329,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "$path/coverage",
-            Coverage.serializer() stringify coverage
+            coverage
         )
     }
 
@@ -365,7 +363,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         sender.send(
             agentInfo,
             "/build/risks",
-            Risks.serializer() stringify risks
+            risks
         )
     }
 

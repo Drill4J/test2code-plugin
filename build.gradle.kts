@@ -7,13 +7,15 @@ plugins {
     distribution
     `maven-publish`
     id("com.github.johnrengelman.shadow") version "5.1.0"
+    id("com.epam.drill.version.plugin") apply false
 }
 
 allprojects {
-    setupVersion()
+    apply(plugin = "com.epam.drill.version.plugin")
 }
 
 repositories {
+    mavenLocal()
     if (version.toString().endsWith("-SNAPSHOT")) {
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
     }
@@ -77,7 +79,7 @@ kotlin {
             }
             dependencies {
                 implementation(kotlin("stdlib"))
-                implementation("com.epam.drill:drill-agent-part-jvm:$drillPluginApiVersion")
+                api("com.epam.drill:drill-agent-part-jvm:$drillPluginApiVersion")
             }
         }
         agentPartMain.dependsOn(jvmMain)
@@ -87,7 +89,7 @@ kotlin {
             }
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                implementation("com.epam.drill:drill-admin-part-jvm:$drillPluginApiVersion")
+                api("com.epam.drill:drill-admin-part-jvm:$drillPluginApiVersion")
                 implementation("io.vavr:vavr-kotlin:$vavrVersion")
             }
         }
@@ -97,8 +99,6 @@ kotlin {
         jvms.forEach {
             it.compilations["main"].defaultSourceSet {
                 dependencies {
-                    implementation("com.epam.drill:common:$drillCommonLibVersion")
-
                     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
                     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
                 }
@@ -108,6 +108,7 @@ kotlin {
                     implementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
                     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$jvmCoroutinesVersion")
                     implementation(kotlin("test-junit"))
+                    implementation(kotlin("reflect"))
                 }
             }
         }
