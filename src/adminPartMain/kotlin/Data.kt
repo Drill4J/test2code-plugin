@@ -154,5 +154,5 @@ data class Risks(
 
 @Serializable
 data class TestsToRun(
-    val tests: List<String>?
+    var test: List<String>
 )

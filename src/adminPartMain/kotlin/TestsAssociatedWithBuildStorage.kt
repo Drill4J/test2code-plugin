@@ -2,11 +2,14 @@ package com.epam.drill.plugins.coverage
 
 import java.util.concurrent.ConcurrentHashMap
 
-object TestsAssociatedWithBuildStorageImpl : TestsAssociatedWithBuildStorage {
+interface TestsAssociatedWithBuild {
+    fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>)
+    fun getTestsAssociatedWithMethods(agentState: AgentState, javaMethods: List<JavaMethod>): List<String>
+}
+
+class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
 
     private val map: MutableMap<String, MutableSet<AssociatedTests>> = ConcurrentHashMap()
-
-    override fun getStorage() = this
 
     override fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>) {
         when {
@@ -18,18 +21,24 @@ object TestsAssociatedWithBuildStorageImpl : TestsAssociatedWithBuildStorage {
     override fun getTestsAssociatedWithMethods(agentState: AgentState, javaMethods: List<JavaMethod>) =
         map[previousBuildVersion(agentState)]?.filter { test ->
             javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
-        }?.flatMap { it -> it.tests }
+        }?.flatMap { it -> it.tests }.orEmpty()
 
-    override fun previousBuildVersion(agentState: AgentState): String {
+    private fun previousBuildVersion(agentState: AgentState): String {
         return agentState.classesData().prevAgentInfo?.buildVersion.toString()
     }
 }
 
-interface TestsAssociatedWithBuildStorage {
-    fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>)
-    fun getTestsAssociatedWithMethods(agentState: AgentState, javaMethods: List<JavaMethod>): List<String>?
-    fun getStorage(): TestsAssociatedWithBuildStorage
-    fun previousBuildVersion(agentState: AgentState): String
-}
+object StorageManager {
+    private val storage: MutableMap<String, TestsAssociatedWithBuild> = ConcurrentHashMap()
 
-val instanceOfStorageTestsAssociatedWithBuild = TestsAssociatedWithBuildStorageImpl.getStorage()
+    fun getStorage(
+        id: String,
+        storageImplementation: TestsAssociatedWithBuild
+    ): TestsAssociatedWithBuild = storage[id] ?: addStorage(id, storageImplementation)
+
+
+    private fun addStorage(
+        id: String,
+        testsAssociatedWithBuild: TestsAssociatedWithBuild
+    ): TestsAssociatedWithBuild = testsAssociatedWithBuild.also { storage[id] = testsAssociatedWithBuild }
+}
