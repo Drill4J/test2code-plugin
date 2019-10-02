@@ -9,17 +9,7 @@ data class JavaMethod(
     val desc: String,
     val hash: String?,
     val coverageRate: CoverageRate = CoverageRate.MISSED
-) {
-
-    val sign = "$name$desc"
-
-    fun nameModified(otherMethod: JavaMethod) = hash == otherMethod.hash && desc == otherMethod.desc
-
-    fun descriptorModified(otherMethod: JavaMethod) = name == otherMethod.name && hash == otherMethod.hash
-
-    fun bodyModified(otherMethod: JavaMethod) = name == otherMethod.name && desc == otherMethod.desc
-
-}
+)
 
 enum class CoverageRate {
     MISSED,

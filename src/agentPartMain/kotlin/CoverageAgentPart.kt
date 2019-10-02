@@ -1,6 +1,6 @@
 package com.epam.drill.plugins.coverage
 
-import com.epam.drill.*
+import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.session.*
 import kotlinx.atomicfu.*
@@ -8,9 +8,11 @@ import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
 class CoverageAgentPart @JvmOverloads constructor(
-    override val id: String,
+    private val payload: PluginPayload,
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
-) : AgentPart<CoverConfig, Action>(), InstrumentationPlugin {
+) : AgentPart<CoverConfig, Action>(payload), InstrumentationPlugin {
+
+    override val id: String = payload.pluginId
 
     override val confSerializer = CoverConfig.serializer()
 
@@ -20,35 +22,24 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private val _loadedClasses = atomic(emptyMap<String, Long?>())
 
+    private var loadedClasses
+        get() = _loadedClasses.value
+        set(value) {
+            _loadedClasses.value = value
+        }
+
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
-        val scanItPlease = ClassPath().scanItPlease(ClassLoader.getSystemClassLoader())
-        val filter = scanItPlease
-            .filter { (classPath, _) ->
-                isTopLevelClass(classPath) && config.pathPrefixes.any { packageName ->
-                    isAllowedClass(classPath, packageName)
-                }
-            }
-
-        val initInfo = InitInfo(filter.count(), initializingMessage)
+        val loadedClassesMap = payload.agentData.classMap
+        val initInfo = InitInfo(loadedClassesMap.keys.count(), initializingMessage)
         sendMessage(initInfo)
-        val loadedClasses = filter.map { (resourceName, classInfo) ->
-            val className = resourceName
-                .removePrefix("BOOT-INF/classes/") //fix from Spring Boot Executable jar
-                .removeSuffix(".class")
-            val bytes = classInfo.url(resourceName).readBytes()
-            sendMessage(ClassBytes(className, bytes.encode()))
+        loadedClasses = loadedClassesMap.map { (className, bytes) ->
             val classId = CRC64.classId(bytes)
             className to classId
-
         }.toMap()
-        _loadedClasses.value = loadedClasses
-        val initializedStr = "Plugin $id initialized!"
-        sendMessage(Initialized(msg = initializedStr))
-        println(initializedStr)
-        println("Loaded ${loadedClasses.count()} classes")
+        sendMessage(Initialized(msg = "Initialized"))
+        println("Plugin $id initialized! Loaded ${loadedClassesMap.count()} classes")
         retransform()
-
     }
 
     override fun off() {
@@ -57,7 +48,7 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     override fun instrument(className: String, initialBytes: ByteArray): ByteArray? {
         if (!enabled) return null
-        return _loadedClasses.value[className]?.let { classId ->
+        return loadedClasses[className]?.let { classId ->
             instrumenter(className, classId, initialBytes)
         }
     }
@@ -67,17 +58,10 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun retransform() {
-        val filter = DrillRequest.GetAllLoadedClasses()
-            .filter { cl -> cl.`package` != null && isTopLevelClass(cl.name) } // only top level classes
-            .filter { cla ->
-                val bytecodePackageView = cla.`package`.name.replace(".", "/")
-                config.pathPrefixes.any { packageName ->
-                    isAllowedClass(bytecodePackageView, packageName)
-                }
-            }
+        val classes = payload.agentData.classMap.keys.map { it.replace("/", ".") }
+        val filter = DrillRequest.GetAllLoadedClasses().filter { it.name in classes }
         if (filter.isNotEmpty())
             DrillRequest.RetransformClasses(filter.toTypedArray())
-
         println("${filter.size} classes were re-transformed")
     }
 

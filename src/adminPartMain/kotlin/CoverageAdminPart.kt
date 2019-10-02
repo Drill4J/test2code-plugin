@@ -12,8 +12,8 @@ import org.jacoco.core.data.*
 internal val agentStates = AtomicCache<String, AgentState>()
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
-class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
-    AdminPluginPart<Action>(sender, agentInfo, id) {
+class CoverageAdminPart(adminData: AdminData, sender: Sender, agentInfo: AgentInfo, id: String) :
+    AdminPluginPart<Action>(adminData, sender, agentInfo, id) {
 
     override val serDe: SerDe<Action> = commonSerDe
 
@@ -75,18 +75,12 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
     internal suspend fun processData(coverMsg: CoverMessage): Any {
         when (coverMsg) {
             is InitInfo -> {
-                agentState.init(coverMsg)
+                agentState.init()
                 println(coverMsg.message) //log init message
                 println("${coverMsg.classesCount} classes to load")
             }
-            is ClassBytes -> {
-                val className = coverMsg.className
-                val bytes = coverMsg.bytes.decode()
-                agentState.addClass(className, bytes)
-            }
             is Initialized -> {
-                println(coverMsg.msg) //log initialized message
-                agentState.initialized()
+                agentState.initialized(adminData.buildManager[agentInfo.buildVersion])
                 val classesData = agentState.classesData()
                 if (classesData.changed) {
                     classesData.prevAgentInfo?.let { cleanActiveScope(it) }
@@ -338,7 +332,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
             .filter { it.enabled }
             .flatMap { it.probes.values.flatten().asSequence() }
         val coverageInfoSet = calculateCoverageData(sessions, true)
-        agentState.classesData().lastBuildCoverage = coverageInfoSet.coverage.coverage
+        agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build")
         sendRisks(coverageInfoSet.buildMethods)
         sendTestsToRun(coverageInfoSet.buildMethods)
@@ -402,10 +396,8 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         val classesBytes = agentState.classesData().classesBytes
         agentState.reset()
         processData(InitInfo(classesBytes.keys.count(), ""))
-        classesBytes.forEach { className, bytes ->
-            agentState.addClass(className, bytes)
-        }
-        processData(Initialized(""))
+        agentState.refreshClasses(adminData.buildManager[agentInfo.buildVersion]!!)
+        processData(Initialized())
     }
 
 

@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.drill.common.*
 import org.jacoco.core.analysis.*
 
 //TODO Rewrite all of this, remove the file
@@ -85,7 +86,7 @@ fun calculateBuildMethods(
     val methodsCoverages = bundleCoverage.toDataMap()
 
     val infos = DiffType.values().map { type ->
-        type to (methodChanges[type]?.getInfo(methodsCoverages) ?: MethodsInfo())
+        type to (methodChanges.map[type]?.getInfo(methodsCoverages) ?: MethodsInfo())
     }.toMap()
 
     val totalInfo = infos
@@ -116,8 +117,13 @@ fun Methods.getInfo(
     totalCount = this.count(),
     coveredCount = count { data[it.ownerClass to it.sign]?.instructionCounter?.coveredCount ?: 0 > 0 },
     methods = this.map { method ->
-        val rate = data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
-        method.copy(coverageRate = rate)
+        JavaMethod(
+            method.ownerClass,
+            method.name,
+            method.desc,
+            method.hash,
+            data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
+        )
     }
 )
 

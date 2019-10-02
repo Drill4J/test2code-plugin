@@ -14,29 +14,29 @@ import org.jacoco.core.data.*
 
 class AgentState(
     val agentInfo: AgentInfo,
-    prevState: AgentState?,
-    val testsAssociatedWithBuild: TestsAssociatedWithBuild = testsAssociatedWithBuildStorageManager.getStorage(
-        agentInfo.id, MutableMapTestsAssociatedWithBuild()
-    )
+    private val prevState: AgentState?
 ) {
     @Suppress("PropertyName")
-    private val _data = atomic(prevState?.data ?: NoData)
-    private val _backup = atomic<AgentData>(NoData)
+    private val _data = atomic<AgentData>(NoData)
 
-    internal var data: AgentData
+    var data: AgentData
         get() = _data.value
         private set(value) {
             _data.value = value
         }
 
-    private var backup: AgentData
-        get() = _backup.value
-        private set(value) {
-            _backup.value = value
+    private val _lastBuildCoverage = atomic(prevState?.lastBuildCoverage ?: 0.0)
+
+    internal var lastBuildCoverage: Double
+        get() = _lastBuildCoverage.value
+        set(value) {
+            _lastBuildCoverage.value = value
         }
 
-
     val scopes = AtomicCache<String, FinishedScope>()
+
+    val testsAssociatedWithBuild: TestsAssociatedWithBuild = prevState?.testsAssociatedWithBuild
+        ?: testsAssociatedWithBuildStorageManager.getStorage(agentInfo.id, MutableMapTestsAssociatedWithBuild())
 
     private val _scopeCounter = atomic(0)
 
@@ -46,13 +46,8 @@ class AgentState(
 
     val scopeSummaries get() = scopes.values.map { it.summary }
 
-    fun init(initInfo: InitInfo) {
-        _data.updateAndGet { prevData ->
-            ClassDataBuilder(
-                count = initInfo.classesCount,
-                prevData = prevData as? ClassesData
-            )
-        }
+    fun init() {
+        _data.updateAndGet { ClassDataBuilder() }
     }
 
     fun renameScope(id: String, newName: String) {
@@ -68,13 +63,18 @@ class AgentState(
 
     fun scopeNotExisting(id: String) = scopes[id] == null && activeScope.id != id
 
-    fun addClass(key: String, bytes: ByteArray) {
+    fun refreshClasses(buildInfo: BuildInfo) {
         //throw ClassCastException if the ref value is in the wrong state
         val agentData = data as ClassDataBuilder
-        agentData.addClass(key, bytes)
+        buildInfo.classesBytes.forEach { (key, bytes) ->
+            agentData.addClass(key, bytes)
+        }
     }
 
-    fun initialized() {
+    fun initialized(buildInfo: BuildInfo?) {
+        //if buildInfo is null, agent has not been initialized properly
+        refreshClasses(buildInfo!!)
+        val diff = buildInfo.methodChanges
         //throw ClassCastException if the ref value is in the wrong state
         val agentData = data as ClassDataBuilder
         val coverageBuilder = CoverageBuilder()
@@ -84,45 +84,14 @@ class AgentState(
             .onEach { analyzer.analyzeClass(it.second, it.first) }
             .toMap()
         val bundleCoverage = coverageBuilder.getBundle("")
-        val currentMethods = classBytes.mapValues { (className, bytes) ->
-            BcelClassParser(bytes, className).parseToJavaMethods()
-        }
-        val analysisResult = analyzeMethods(agentData, bundleCoverage, currentMethods)
         data = ClassesData(
-            agentInfo = agentInfo,
             classesBytes = classBytes,
             totals = bundleCoverage.plainCopy,
-            javaMethods = currentMethods,
-            prevAgentInfo = analysisResult.prevData?.agentInfo,
-            methodsChanges = analysisResult.diff,
-            prevBuildCoverage = analysisResult.prevData?.lastBuildCoverage ?: 0.0,
-            changed = analysisResult.changed
+            prevAgentInfo = prevState?.agentInfo,
+            methodsChanges = diff,
+            prevBuildCoverage = lastBuildCoverage,
+            changed = diff.notEmpty
         )
-
-        backup = analysisResult.prevData ?: NoData
-    }
-
-    private fun analyzeMethods(
-        agentData: ClassDataBuilder,
-        bundleCoverage: IBundleCoverage?,
-        currentMethods: Map<String, List<JavaMethod>>
-    ): MethodsAnalysisResult {
-        val result = calculateDiff(agentData.prevData, bundleCoverage, currentMethods)
-        return if (!result.changed) {
-            calculateDiff(backup as? ClassesData, bundleCoverage, currentMethods)
-        } else result
-    }
-
-    private fun calculateDiff(
-        prevData: ClassesData?,
-        bundleCoverage: IBundleCoverage?,
-        currentMethods: Map<String, List<JavaMethod>>
-    ): MethodsAnalysisResult {
-        val prevMethods = prevData?.javaMethods ?: mapOf()
-        val diff = MethodsComparator(bundleCoverage).compareClasses(prevMethods, currentMethods)
-        val prevAgentInfo = prevData?.agentInfo
-        val changed = prevAgentInfo != agentInfo || diff.notEmpty()
-        return MethodsAnalysisResult(diff, changed, prevData)
     }
 
     fun reset() {
@@ -141,9 +110,3 @@ class AgentState(
         else -> trimmed
     }
 }
-
-class MethodsAnalysisResult(
-    val diff: MethodChanges,
-    val changed: Boolean,
-    val prevData: ClassesData?
-)
