@@ -1,15 +1,17 @@
 package com.epam.drill.plugins.coverage
 
 import com.epam.drill.common.*
+import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.coverage.test.bar.*
 import com.epam.drill.plugins.coverage.test.foo.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.*
-import org.jacoco.core.internal.data.*
 import java.util.concurrent.*
+import kotlin.collections.set
 import kotlin.test.*
+
+const val AGENT_BUILD_VERSION = "1.0.1"
 
 class CoverageAdminPartTest {
     private val agentInfo = AgentInfo(
@@ -19,13 +21,15 @@ class CoverageAdminPartTest {
         groupName = "test",
         description = "test",
         ipAddress = "127.0.0.1",
-        buildVersion = "1.0.1",
+        buildVersion = AGENT_BUILD_VERSION,
         buildAlias = "test alias",
         buildVersions = mutableSetOf()
     )
     private val ws = SenderStub()
 
-    private val coverageController = CoverageAdminPart(ws, agentInfo, "test")
+    private val adminData = AdminDataStub()
+
+    private val coverageController = CoverageAdminPart(adminData, ws, agentInfo, "test")
 
     private val agentState = agentStates[agentInfo.id]!!
 
@@ -35,46 +39,21 @@ class CoverageAdminPartTest {
     }
 
     @Test
-    fun `should switch agent data ref to ClassDataBuilder on init`() = runBlocking {
-        val initInfo = InitInfo(1, "hello")
-
-        sendMessage(initInfo)
-
-        assertEquals(1, agentStates.count())
-        val agentData = agentStates[agentInfo.id]?.data
-        assertTrue { agentData is ClassDataBuilder }
-    }
-
-    @Test
-    fun `should add class bytes on receiving a CLASS_BYTES message`() = runBlocking {
-        val dummyClass = Dummy::class.java
-        val dummyBytes = dummyClass.readBytes()
-
-        sendInit(dummyClass)
-        sendClass(dummyClass)
-
-        agentStates[agentInfo.id]!!.run {
-            val agentData = data as ClassDataBuilder
-            val (name, bytes) = agentData.classData.first()
-            assertEquals(dummyClass.path, name)
-            assertTrue { dummyBytes contentEquals bytes }
-        }
-    }
-
-    @Test
     fun `should send messages to WebSocket on empty data`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         val sessionId = "xxx"
         sendMessage(SessionStarted(sessionId, "", currentTimeMillis()))
         val finished = SessionFinished(sessionId, currentTimeMillis())
         sendMessage(finished)
-        assertTrue { ws.sent["/build/methods"] != null }
-        assertTrue { ws.sent["/build/coverage"] != null }
-        assertTrue { ws.sent["/build/coverage-by-packages"] != null }
+        val scopeDestinationPrefix = "/scope/${agentState.activeScope.id}"
+        assertTrue { ws.sent["$scopeDestinationPrefix/methods"] != null }
+        assertTrue { ws.sent["$scopeDestinationPrefix/coverage"] != null }
+        assertTrue { ws.sent["$scopeDestinationPrefix/coverage-by-packages"] != null }
     }
 
     @Test
     fun `should preserve coverage for packages`() {
+        sendInit()
         // Count of Classes in package for test
         val countClassesInPackage = 1
         // Count of packages for test
@@ -84,7 +63,6 @@ class CoverageAdminPartTest {
         // Total count of Methods for test
         val countAllMethods = 6
 
-        prepareClasses(Dummy::class.java, BarDummy::class.java, FooDummy::class.java)
         val sessionId = "xxx"
 
         val started = SessionStarted(sessionId, "", currentTimeMillis())
@@ -108,7 +86,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `empty activeScope should not be saved during switch to new scope`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope"))) }
         assertEquals("testScope", agentState.activeScope.name)
         runBlocking {
@@ -119,7 +97,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `not empty activeScope should switch to a specified one with previous scope deletion`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope"))) }
         assertEquals("testScope", agentState.activeScope.name)
         appendSessionStub(agentState, agentState.classesData())
@@ -129,7 +107,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `not empty activeScope should switch to a specified one with saving previous scope`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.changeActiveScope(ActiveScopeChangePayload("testScope66")) }
         assertEquals("testScope66", agentState.activeScope.name)
         appendSessionStub(agentState, agentState.classesData())
@@ -141,7 +119,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `DropScope action deletes the specified scope data from storage`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testDropScope"))) }
         appendSessionStub(agentState, agentState.classesData())
         runBlocking {
@@ -156,7 +134,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `active scope renaming process goes correctly`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("renameActiveScope1"))) }
         assertEquals(agentState.activeScope.summary.name, "renameActiveScope1")
         val activeId = agentState.activeScope.id
@@ -166,7 +144,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `finished scope renaming process goes correctly`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("renameFinishedScope1"))) }
         appendSessionStub(agentState, agentState.classesData())
         runBlocking {
@@ -187,7 +165,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `neither active nor finished scope can be renamed to an existing scope name`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName1"))) }
         appendSessionStub(agentState, agentState.classesData())
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName2", true))) }
@@ -203,7 +181,7 @@ class CoverageAdminPartTest {
 
     @Test
     fun `not possible to switch scope to a new one with already existing name`() {
-        prepareClasses(Dummy::class.java)
+        sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName"))) }
         appendSessionStub(agentState, agentState.classesData())
         val activeId1 = agentState.activeScope.id
@@ -213,14 +191,12 @@ class CoverageAdminPartTest {
     }
 
     @Test
-    fun `should compute new methods coverage rates`() {
-        runBlocking {
-            prepareClasses(Dummy::class.java)
-            commendTestSession(listOf(true, false))
-            val methods = ws.sent["/scope/${agentState.activeScope.id}/methods"] as BuildMethods
-            assertTrue { methods.totalMethods.methods.any { it.coverageRate == CoverageRate.FULL } }
-            assertTrue { methods.totalMethods.methods.any { it.coverageRate == CoverageRate.MISSED } }
-        }
+    fun `should switch agent data ref to ClassDataBuilder on init`() = runBlocking {
+        val initInfo = InitInfo(3, "hello")
+        sendMessage(initInfo)
+        assertEquals(1, agentStates.count())
+        val agentData = agentStates[agentInfo.id]?.data
+        assertTrue { agentData is ClassDataBuilder }
     }
 
     private fun appendSessionStub(agentState: AgentState, classesData: ClassesData) {
@@ -234,25 +210,10 @@ class CoverageAdminPartTest {
         )
     }
 
-    private fun prepareClasses(vararg classes: Class<*>) {
-        runBlocking {
-            sendInit(*classes)
-            for (clazz in classes) {
-                sendClass(clazz)
-            }
-            sendMessage(Initialized("Initialized!"))
-        }
-    }
-
-    private fun sendClass(clazz: Class<*>) {
-        val bytes = clazz.readBytes()
-        val classBytes = ClassBytes(clazz.path, bytes.encode())
-        sendMessage(classBytes)
-    }
-
-    private fun sendInit(vararg classes: Class<*>) {
-        val initInfo = InitInfo(classes.count(), "Start initialization")
+    private fun sendInit() {
+        val initInfo = InitInfo(3, "Start initialization")
         sendMessage(initInfo)
+        sendMessage(Initialized())
     }
 
     private fun sendMessage(message: CoverMessage) {
@@ -262,25 +223,6 @@ class CoverageAdminPartTest {
         }
     }
 
-    private fun commendTestSession(probes: List<Boolean>) {
-        val sessionId = "test"
-        val className = "com/epam/drill/plugins/coverage/Dummy"
-        sendMessage(SessionStarted(sessionId, "MANUAL", currentTimeMillis()))
-        sendMessage(
-            CoverDataPart(
-                sessionId,
-                listOf(
-                    ExecClassData(
-                        id = CRC64.classId(agentState.classesData().classesBytes[className]),
-                        className = className,
-                        probes = probes,
-                        testName = "someTestName"
-                    )
-                )
-            )
-        )
-        sendMessage(SessionFinished(sessionId, currentTimeMillis()))
-    }
 }
 
 class SenderStub : Sender {
@@ -298,4 +240,30 @@ class SenderStub : Sender {
             }
         }
     }
+}
+
+class AdminDataStub : AdminData {
+    private val manager: BuildManagerStub = BuildManagerStub()
+    override val buildManager = manager
+}
+
+class BuildManagerStub : BuildManager {
+    override val buildInfos: Map<String, BuildInfo> =
+        mapOf(
+            AGENT_BUILD_VERSION to BuildInfo(
+                buildVersion = AGENT_BUILD_VERSION,
+                classesBytes = mapOf(
+                    parseClass(Dummy::class.java),
+                    parseClass(BarDummy::class.java),
+                    parseClass(FooDummy::class.java)
+                )
+            )
+        )
+
+    private fun parseClass(clazz: Class<*>) = clazz.path to clazz.readBytes()
+
+    override val summaries: List<BuildSummary> = buildInfos.values.map { it.buildSummary }
+
+    override operator fun get(buildVersion: String): BuildInfo? = buildInfos[buildVersion]
+
 }

@@ -18,7 +18,6 @@ private val serialModule = SerializersModule {
     }
     polymorphic<CoverMessage> {
         addSubclass(InitInfo.serializer())
-        addSubclass(ClassBytes.serializer())
         addSubclass(Initialized.serializer())
 
         addSubclass(SessionStarted.serializer())

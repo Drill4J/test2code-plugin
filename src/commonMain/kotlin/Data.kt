@@ -21,16 +21,9 @@ data class InitInfo(
 
 typealias EncodedString = String
 
-@SerialName("CLASS_BYTES")
-@Serializable
-data class ClassBytes(
-        val className: String,
-        val bytes: EncodedString
-) : CoverMessage()
-
 @SerialName("INITIALIZED")
 @Serializable
-data class Initialized(val msg: String) : CoverMessage()
+data class Initialized(val msg: String = "") : CoverMessage()
 
 @SerialName("SESSION_STARTED")
 @Serializable
