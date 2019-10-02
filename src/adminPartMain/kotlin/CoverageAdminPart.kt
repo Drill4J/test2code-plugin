@@ -26,8 +26,6 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         }
     }!!
 
-    private val testsAssociatedWithBuild = StorageManager.getStorage(agentInfo.id, MutableMapTestsAssociatedWithBuild())
-
     private val activeScope get() = agentState.activeScope
 
     override suspend fun doAction(action: Action): Any {
@@ -168,7 +166,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
         val testUsages = testUsages(classesData.bundlesByTests(finishedSessions))
 
-        testsAssociatedWithBuild.add(buildVersion, associatedTests)
+        agentState.testsAssociatedWithBuild.add(buildVersion, associatedTests)
 
         return CoverageInfoSet(
             associatedTests,
@@ -348,7 +346,7 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
 
     internal suspend fun sendTestsToRun(buildMethods: BuildMethods) {
         val tests = TestsToRun(
-            testsAssociatedWithBuild.getTestsAssociatedWithMethods(
+            agentState.testsAssociatedWithBuild.getTestsAssociatedWithMethods(
                 agentState,
                 buildMethods.allModified
             )

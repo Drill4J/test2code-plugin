@@ -7,6 +7,10 @@ interface TestsAssociatedWithBuild {
     fun getTestsAssociatedWithMethods(agentState: AgentState, javaMethods: List<JavaMethod>): List<String>
 }
 
+interface TestsAssociatedWithBuildStorageManager {
+    fun getStorage(id: String, storageImplementation: TestsAssociatedWithBuild): TestsAssociatedWithBuild
+}
+
 class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
 
     private val map: MutableMap<String, MutableSet<AssociatedTests>> = ConcurrentHashMap()
@@ -28,10 +32,10 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
     }
 }
 
-object StorageManager {
+object MutableMapStorageManager : TestsAssociatedWithBuildStorageManager {
     private val storage: MutableMap<String, TestsAssociatedWithBuild> = ConcurrentHashMap()
 
-    fun getStorage(
+    override fun getStorage(
         id: String,
         storageImplementation: TestsAssociatedWithBuild
     ): TestsAssociatedWithBuild = storage[id] ?: addStorage(id, storageImplementation)
@@ -40,5 +44,7 @@ object StorageManager {
     private fun addStorage(
         id: String,
         testsAssociatedWithBuild: TestsAssociatedWithBuild
-    ): TestsAssociatedWithBuild = testsAssociatedWithBuild.also { storage[id] = testsAssociatedWithBuild }
+    ): TestsAssociatedWithBuild = testsAssociatedWithBuild.apply { storage[id] = testsAssociatedWithBuild }
 }
+
+val testsAssociatedWithBuildStorageManager: TestsAssociatedWithBuildStorageManager = MutableMapStorageManager
