@@ -14,7 +14,10 @@ import org.jacoco.core.data.*
 
 class AgentState(
     val agentInfo: AgentInfo,
-    prevState: AgentState?
+    prevState: AgentState?,
+    val testsAssociatedWithBuild: TestsAssociatedWithBuild = testsAssociatedWithBuildStorageManager.getStorage(
+        agentInfo.id, MutableMapTestsAssociatedWithBuild()
+    )
 ) {
     @Suppress("PropertyName")
     private val _data = atomic(prevState?.data ?: NoData)

@@ -8,6 +8,7 @@ import com.epam.drill.plugin.api.message.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
+
 internal val agentStates = AtomicCache<String, AgentState>()
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
@@ -164,6 +165,8 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
 
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
         val testUsages = testUsages(classesData.bundlesByTests(finishedSessions))
+
+        agentState.testsAssociatedWithBuild.add(buildVersion, associatedTests)
 
         return CoverageInfoSet(
             associatedTests,
@@ -338,6 +341,21 @@ class CoverageAdminPart(sender: Sender, agentInfo: AgentInfo, id: String) :
         agentState.classesData().lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build")
         sendRisks(coverageInfoSet.buildMethods)
+        sendTestsToRun(coverageInfoSet.buildMethods)
+    }
+
+    internal suspend fun sendTestsToRun(buildMethods: BuildMethods) {
+        val tests = TestsToRun(
+            agentState.testsAssociatedWithBuild.getTestsAssociatedWithMethods(
+                agentState,
+                buildMethods.allModified
+            )
+        )
+        sender.send(
+            agentInfo,
+            "/build/tests-to-run",
+            tests
+        )
     }
 
     internal suspend fun sendRisks(buildMethods: BuildMethods) {
