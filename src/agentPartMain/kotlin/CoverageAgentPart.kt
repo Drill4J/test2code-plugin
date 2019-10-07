@@ -20,16 +20,6 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private val _loadedClasses = atomic(emptyMap<String, Long?>())
 
-    private val allSuitableClasses: List<Class<*>>
-        get() = DrillRequest.GetAllLoadedClasses()
-            .filter { cl -> cl.`package` != null && isTopLevelClass(cl.name) } // only top level classes
-            .filter { cla ->
-                val bytecodePackageView = cla.`package`.name.replace(".", "/")
-                config.pathPrefixes.any { packageName ->
-                    isAllowedClass(bytecodePackageView, packageName)
-                }
-            }
-
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
         val scanItPlease = ClassPath().scanItPlease(ClassLoader.getSystemClassLoader())
@@ -38,10 +28,7 @@ class CoverageAgentPart @JvmOverloads constructor(
                 isTopLevelClass(classPath) && config.pathPrefixes.any { packageName ->
                     isAllowedClass(classPath, packageName)
                 }
-            }.toMutableMap()
-        filter.putAll(allSuitableClasses
-            .associate { it.canonicalName.replace(".", "/") + ".class" to it.classLoader }
-        )
+            }
 
         val initInfo = InitInfo(filter.count(), initializingMessage)
         sendMessage(initInfo)
@@ -80,7 +67,14 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun retransform() {
-        val filter = allSuitableClasses
+        val filter = DrillRequest.GetAllLoadedClasses()
+            .filter { cl -> cl.`package` != null && isTopLevelClass(cl.name) } // only top level classes
+            .filter { cla ->
+                val bytecodePackageView = cla.`package`.name.replace(".", "/")
+                config.pathPrefixes.any { packageName ->
+                    isAllowedClass(bytecodePackageView, packageName)
+                }
+            }
         if (filter.isNotEmpty())
             DrillRequest.RetransformClasses(filter.toTypedArray())
 
