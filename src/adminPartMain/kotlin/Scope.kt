@@ -1,36 +1,44 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.kodux.*
 import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
+import kotlinx.serialization.*
 
-class ActiveScope(
-    name: String
-) : Sequence<FinishedSession> {
+interface Scope {
+    val id: String
+    val buildVersion: String
+    val summary: ScopeSummary
+}
 
-    val id = genUuid()
+class ActiveScope(name: String, override val buildVersion: String) : Scope, Sequence<FinishedSession> {
+
+    override val id = genUuid()
 
     private val _sessions = atomic(list<FinishedSession>())
 
-    val started: Long = currentTimeMillis()
+    private val started: Long = currentTimeMillis()
 
-    private val _summary = atomic(ScopeSummary(
-        id = id,
-        name = name,
-        started = started
-    ))
-    
-    val summary get() = _summary.value
-    
+    private val _summary = atomic(
+        ScopeSummary(
+            id = id,
+            name = name,
+            started = started
+        )
+    )
+
+    override val summary get() = _summary.value
+
     val name = summary.name
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
-    fun update(session: FinishedSession, classesData: ClassesData): ScopeSummary {
+    fun update(session: FinishedSession, classesBytes: ClassesBytes?, totalInstructions: Int): ScopeSummary {
         _sessions.update { it.append(session) }
         return _summary.updateAndGet { summary ->
             summary.copy(
-                coverage = classesData.coverage(this),
-                coveragesByType = classesData.coveragesByTestType(this)
+                coverage = classesBytes?.coverage(this, totalInstructions) ?: 0.0,
+                coveragesByType = classesBytes?.coveragesByTestType(this, totalInstructions) ?: emptyMap()
             )
         }
     }
@@ -39,6 +47,7 @@ class ActiveScope(
 
     fun finish(enabled: Boolean) = FinishedScope(
         id = id,
+        buildVersion = buildVersion,
         name = summary.name,
         enabled = enabled,
         summary = summary.copy(finished = currentTimeMillis(), active = false, enabled = enabled),
@@ -71,19 +80,17 @@ class ActiveScope(
     override fun toString() = "act-scope($id, $name)"
 }
 
+@Serializable
 data class FinishedScope(
-    val id: String,
+    @Id
+    override val id: String,
+    override val buildVersion: String,
     val name: String,
-    val summary: ScopeSummary,
+    override val summary: ScopeSummary,
     val probes: Map<String, List<FinishedSession>>,
     var enabled: Boolean = true
-)  : Sequence<FinishedSession> {
-    
-    fun toggle() {
-        enabled = !enabled
-        summary.enabled = enabled
-    }
-    
+) : Scope, Sequence<FinishedSession> {
+
     override fun iterator() = probes.values.flatten().iterator()
 
     override fun toString() = "fin-scope($id, $name)"

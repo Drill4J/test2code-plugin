@@ -118,14 +118,15 @@ data class TestUsagesInfo(
 @Serializable
 data class ActiveSessions(
     val count: Int,
-    val testTypes: Set<String>)
+    val testTypes: Set<String>
+)
 
 @Serializable
 data class ScopeSummary(
     val name: String,
     val id: String,
     val started: Long,
-    val finished: Long? = null,
+    val finished: Long = 0L,
     val coverage: Double = 0.0,
     var enabled: Boolean = true,
     val active: Boolean = true,

@@ -1,6 +1,8 @@
 package com.epam.drill.plugins.coverage
 
 import com.epam.drill.common.*
+import com.epam.drill.plugins.coverage.storage.*
+import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
@@ -13,6 +15,7 @@ import org.jacoco.core.data.*
  */
 
 class AgentState(
+    storeClient: StoreClient,
     val agentInfo: AgentInfo,
     private val prevState: AgentState?
 ) {
@@ -33,77 +36,74 @@ class AgentState(
             _lastBuildCoverage.value = value
         }
 
-    val scopes = AtomicCache<String, FinishedScope>()
+    val scopeManager = ScopeManager(storeClient)
 
     val testsAssociatedWithBuild: TestsAssociatedWithBuild = prevState?.testsAssociatedWithBuild
         ?: testsAssociatedWithBuildStorageManager.getStorage(agentInfo.id, MutableMapTestsAssociatedWithBuild())
 
     private val _scopeCounter = atomic(0)
 
-    private val _activeScope = atomic(ActiveScope(scopeName()))
+    private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
 
     val activeScope get() = _activeScope.value
 
-    val scopeSummaries get() = scopes.values.map { it.summary }
-
     fun init() {
-        _data.updateAndGet { ClassDataBuilder() }
+        _data.updateAndGet { ClassDataBuilder }
     }
 
-    fun renameScope(id: String, newName: String) {
+    suspend fun renameScope(id: String, newName: String) {
         val trimmedNewName = newName.trim()
         if (id == activeScope.id) activeScope.rename(trimmedNewName)
-        else scopes[id]?.apply {
-            scopes[id] = this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName))
+        else scopeManager[id]?.apply {
+            scopeManager.saveScope(this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName)))
         }
     }
 
-    fun scopeNameNotExisting(name: String) =
-        scopes.values.find { it.name == name.trim() } == null && name.trim() != activeScope.name
-
-    fun scopeNotExisting(id: String) = scopes[id] == null && activeScope.id != id
-
-    fun refreshClasses(buildInfo: BuildInfo) {
-        //throw ClassCastException if the ref value is in the wrong state
-        val agentData = data as ClassDataBuilder
-        buildInfo.classesBytes.forEach { (key, bytes) ->
-            agentData.addClass(key, bytes)
+    suspend fun toggleScope(id: String) {
+        scopeManager[id]?.apply {
+            scopeManager.saveScope(this.copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
         }
     }
 
-    fun initialized(buildInfo: BuildInfo?) {
-        //if buildInfo is null, agent has not been initialized properly
-        refreshClasses(buildInfo!!)
-        val diff = buildInfo.methodChanges
-        //throw ClassCastException if the ref value is in the wrong state
-        val agentData = data as ClassDataBuilder
+    suspend fun scopeSummariesByBuild(buildVersion: String) = scopeManager.summariesByBuildVersion(buildVersion)
+
+    suspend fun scopeNameNotExisting(name: String, buildVersion: String) =
+        scopeManager.scopesByBuildVersion(buildVersion)
+            .find { it.name == name.trim() } == null && (name.trim() != activeScope.name || agentInfo.buildVersion != buildVersion)
+
+    fun scopeNotExisting(id: String) = scopeManager[id] == null && activeScope.id != id
+
+
+    suspend fun initialized(buildInfo: BuildInfo?) {
+        val classesBytes = buildInfo?.classesBytes ?: emptyMap()
         val coverageBuilder = CoverageBuilder()
         val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
-        agentData.classData.toMap()
-        val classBytes = agentData.classData.asSequence()
-            .onEach { analyzer.analyzeClass(it.second, it.first) }
-            .toMap()
+        classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
         val bundleCoverage = coverageBuilder.getBundle("")
-        data = ClassesData(
-            classesBytes = classBytes,
-            totals = bundleCoverage.plainCopy,
-            prevAgentInfo = prevState?.agentInfo,
-            methodsChanges = diff,
-            prevBuildCoverage = lastBuildCoverage,
-            changed = diff.notEmpty
+        val classesData = ClassesData(
+            buildVersion = agentInfo.buildVersion,
+            totalInstructions = bundleCoverage.instructionCounter.totalCount,
+            prevAgentInfo = prevState?.agentInfo ?: agentInfo.copy(buildVersion = "", buildAlias = ""),
+            prevBuildCoverage = lastBuildCoverage
         )
+        data = classesData
+        scopeManager.saveClassesData(classesData)
     }
 
-    fun reset() {
+    suspend fun reset() {
         data = NoData
         changeActiveScope("New Scope 1")
-        scopes.clean()
+        scopeManager.clean()
     }
 
     //throw ClassCastException if the ref value is in the wrong state
-    fun classesData(): ClassesData = data as ClassesData
+    fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData =
+        if (buildVersion == agentInfo.buildVersion) {
+            data as ClassesData
+        } else scopeManager.classesData(buildVersion) ?: NoData
 
-    fun changeActiveScope(name: String) = _activeScope.getAndUpdate { ActiveScope(scopeName(name)) }
+    fun changeActiveScope(name: String) =
+        _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
 
     private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
         "" -> "New Scope ${_scopeCounter.incrementAndGet()}"

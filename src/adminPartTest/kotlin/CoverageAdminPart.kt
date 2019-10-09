@@ -6,7 +6,9 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.coverage.test.bar.*
 import com.epam.drill.plugins.coverage.test.foo.*
+import com.epam.kodux.*
 import kotlinx.coroutines.*
+import java.io.*
 import java.util.concurrent.*
 import kotlin.collections.set
 import kotlin.test.*
@@ -29,9 +31,29 @@ class CoverageAdminPartTest {
 
     private val adminData = AdminDataStub()
 
-    private val coverageController = CoverageAdminPart(adminData, ws, agentInfo, "test")
+    private var store: StoreClient = StoreManger(File("test-storage")).agentStore("test")
 
-    private val agentState = agentStates[agentInfo.id]!!
+    private var coverageController = CoverageAdminPart(adminData, ws, store, agentInfo, "test")
+
+    lateinit var agentState: AgentState
+
+    @BeforeTest
+    fun init() {
+        if (!store.environment.isOpen) {
+            store = StoreManger(File("test-storage")).agentStore("test")
+            coverageController = CoverageAdminPart(adminData, ws, store, agentInfo, "test")
+        }
+        agentState = coverageController.agentState
+        store.clear()
+    }
+
+    @AfterTest
+    fun finalize() {
+        agentStates.remove("id")
+        if (store.environment.isOpen) {
+            store.close()
+        }
+    }
 
     @Test
     fun `should have some state before init`() {
@@ -92,7 +114,7 @@ class CoverageAdminPartTest {
         runBlocking {
             coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope2", true)))
         }
-        assertNull(agentState.scopes["testScope"])
+        assertNull(agentState.scopeManager["testScope"])
     }
 
     @Test
@@ -100,9 +122,9 @@ class CoverageAdminPartTest {
         sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope"))) }
         assertEquals("testScope", agentState.activeScope.name)
-        appendSessionStub(agentState, agentState.classesData())
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope2"))) }
-        assertNull(agentState.scopes["testScope"])
+        assertNull(agentState.scopeManager["testScope"])
     }
 
     @Test
@@ -110,25 +132,30 @@ class CoverageAdminPartTest {
         sendInit()
         runBlocking { coverageController.changeActiveScope(ActiveScopeChangePayload("testScope66")) }
         assertEquals("testScope66", agentState.activeScope.name)
-        appendSessionStub(agentState, agentState.classesData())
-        runBlocking {
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
+        val allScopes = runBlocking {
             coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testScope6", true)))
+            agentState.scopeManager.allScopes()
         }
-        assertTrue { agentState.scopes.values.any { it.name == "testScope66" } }
+        assertTrue { allScopes.any { it.name == "testScope66" } }
     }
 
     @Test
     fun `DropScope action deletes the specified scope data from storage`() {
         sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testDropScope"))) }
-        appendSessionStub(agentState, agentState.classesData())
-        runBlocking {
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
+        val allScopesBeforeSwitch = runBlocking {
             coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("testDropScope2", true)))
+            agentState.scopeManager.allScopes()
         }
-        val id = agentState.scopes.values.find { it.name == "testDropScope" }?.id
+        val id = allScopesBeforeSwitch.find { it.name == "testDropScope" }?.id
         assertNotNull(id)
-        runBlocking { coverageController.doAction(DropScope(ScopePayload(id))) }
-        val deleted = agentState.scopes.values.find { it.id == id }
+        val allScopesAfterSwitch = runBlocking {
+            coverageController.doAction(DropScope(ScopePayload(id)))
+            agentState.scopeManager.allScopes()
+        }
+        val deleted = allScopesAfterSwitch.find { it.id == id }
         assertNull(deleted)
     }
 
@@ -146,8 +173,8 @@ class CoverageAdminPartTest {
     fun `finished scope renaming process goes correctly`() {
         sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("renameFinishedScope1"))) }
-        appendSessionStub(agentState, agentState.classesData())
-        runBlocking {
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
+        val allScopes = runBlocking {
             coverageController.doAction(
                 SwitchActiveScope(
                     ActiveScopeChangePayload(
@@ -156,10 +183,11 @@ class CoverageAdminPartTest {
                     )
                 )
             )
+            agentState.scopeManager.allScopes()
         }
-        val finishedId = agentState.scopes.values.find { it.name == "renameFinishedScope1" }?.id!!
+        val finishedId = allScopes.find { it.name == "renameFinishedScope1" }?.id!!
         runBlocking { coverageController.doAction(RenameScope(RenameScopePayload(finishedId, "renamedScope1"))) }
-        val renamed = agentState.scopes[finishedId]!!
+        val renamed = agentState.scopeManager[finishedId]!!
         assertEquals(renamed.name, "renamedScope1")
     }
 
@@ -167,13 +195,16 @@ class CoverageAdminPartTest {
     fun `neither active nor finished scope can be renamed to an existing scope name`() {
         sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName1"))) }
-        appendSessionStub(agentState, agentState.classesData())
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName2", true))) }
-        appendSessionStub(agentState, agentState.classesData())
-        runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("freeName", true))) }
-        val finishedId = agentState.scopes.values.find { it.name == "occupiedName1" }?.id!!
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
+        val allScopes = runBlocking {
+            coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("freeName", true)))
+            agentState.scopeManager.allScopes()
+        }
+        val finishedId = allScopes.find { it.name == "occupiedName1" }?.id!!
         runBlocking { coverageController.doAction(RenameScope(RenameScopePayload(finishedId, "occupiedName2"))) }
-        assertEquals(agentState.scopes[finishedId]!!.name, "occupiedName1")
+        assertEquals(agentState.scopeManager[finishedId]!!.name, "occupiedName1")
         val activeId = agentState.activeScope.id
         runBlocking { coverageController.doAction(RenameScope(RenameScopePayload(activeId, "occupiedName2"))) }
         assertEquals(agentState.activeScope.summary.name, "freeName")
@@ -183,7 +214,7 @@ class CoverageAdminPartTest {
     fun `not possible to switch scope to a new one with already existing name`() {
         sendInit()
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName"))) }
-        appendSessionStub(agentState, agentState.classesData())
+        appendSessionStub(agentState, classesBytes(), (agentState.classesData() as ClassesData).totalInstructions)
         val activeId1 = agentState.activeScope.id
         runBlocking { coverageController.doAction(SwitchActiveScope(ActiveScopeChangePayload("occupiedName", true))) }
         val activeId2 = agentState.activeScope.id
@@ -199,14 +230,15 @@ class CoverageAdminPartTest {
         assertTrue { agentData is ClassDataBuilder }
     }
 
-    private fun appendSessionStub(agentState: AgentState, classesData: ClassesData) {
+    private fun appendSessionStub(agentState: AgentState, classesBytes: ClassesBytes, totalInstructions: Int) {
         agentState.activeScope.update(
             FinishedSession(
                 "testSession",
                 "MANUAL",
                 mapOf()
             ),
-            classesData
+            classesBytes,
+            totalInstructions
         )
     }
 
@@ -223,6 +255,8 @@ class CoverageAdminPartTest {
         }
     }
 
+    private fun classesBytes() = adminData.buildManager[agentInfo.buildVersion]?.classesBytes ?: emptyMap()
+
 }
 
 class SenderStub : Sender {
@@ -231,7 +265,7 @@ class SenderStub : Sender {
 
     lateinit var javaPackagesCoverage: List<JavaPackageCoverage>
 
-    override suspend fun send(agentInfo: AgentInfo, destination: String, message: Any) {
+    override suspend fun send(agentId: String, buildVersion: String, destination: String, message: Any) {
         if (message.toString().isNotEmpty()) {
             sent[destination] = message
             if (destination.endsWith("/coverage-by-packages")) {
