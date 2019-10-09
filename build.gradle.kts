@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
+import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     `kotlin-multiplatform`
@@ -88,7 +89,11 @@ kotlin {
                 extendsFrom(adminJarDeps)
             }
             dependencies {
-                implementation(kotlin("stdlib-jdk8"))
+                implementation("com.epam.drill:kodux-jvm:0.1.1"){
+                    isChanging = true
+                }
+                api("org.jetbrains.xodus:xodus-entity-store:1.3.91")
+                api(kotlin("stdlib-jdk8"))
                 api("com.epam.drill:drill-admin-part-jvm:$drillPluginApiVersion")
                 implementation("io.vavr:vavr-kotlin:$vavrVersion")
             }
@@ -145,6 +150,10 @@ tasks {
                 into("/")
             }
         }
+    }
+
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
     }
 }
 

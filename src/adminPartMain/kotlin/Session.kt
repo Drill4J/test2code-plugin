@@ -2,7 +2,9 @@ package com.epam.drill.plugins.coverage
 
 import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
+import kotlinx.serialization.Serializable
 
+@Serializable
 sealed class Session(
         val id: String,
         val testType: String
@@ -20,17 +22,18 @@ class ActiveSession(
     }
 
     fun finish() = FinishedSession(
-            id = id,
-            testType = testType,
-            probes = _probes.value.asSequence().groupBy { TypedTest(it.testName, testType) }
+        sessionId = id,
+        testTypeName = testType,
+        probes = _probes.value.asSequence().groupBy { TypedTest(it.testName, testType) }
     )
 }
 
+@Serializable
 class FinishedSession(
-        id: String,
-        testType: String,
-        val probes: Map<TypedTest, List<ExecClassData>>
-) : Session(id, testType), Sequence<ExecClassData> {
+    val sessionId: String,
+    val testTypeName: String,
+    val probes: Map<TypedTest, List<ExecClassData>>
+) : Session(sessionId, testTypeName), Sequence<ExecClassData> {
 
     val testNames = probes.keys
 
@@ -39,6 +42,7 @@ class FinishedSession(
         .iterator()
 }
 
+@Serializable
 data class TypedTest(val name: String, val type: String) {
     override fun toString() = "$type::$name"
 }
