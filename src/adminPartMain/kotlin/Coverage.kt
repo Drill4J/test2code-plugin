@@ -18,7 +18,6 @@ fun ClassesData.coverage(data: Sequence<FinishedSession>) =
     coverageBundle(data.flatten()).coverage(totals.instructionCounter.totalCount)
 
 fun ClassesData.coveragesByTestType(data: Sequence<FinishedSession>): Map<String, TestTypeSummary> {
-
     return data.groupBy { it.testType }.mapValues { (testType, finishedSessions) ->
         TestTypeSummary(
             testType = testType,
