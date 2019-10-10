@@ -150,10 +150,8 @@ class CoverageAdminPart(adminData: AdminData, sender: Sender, agentInfo: AgentIn
         val coverageBlock = Coverage(
             coverage = totalCoveragePercent,
             diff = totalCoveragePercent - agentState.classesData().prevBuildCoverage,
-            previousBuildInfo = Pair(
-                agentState.classesData().prevAgentInfo?.buildVersion?:"",
-                agentState.classesData().prevAgentInfo?.buildAlias?:""
-            ),
+            previousBuildInfo = agentState.classesData().prevAgentInfo?.buildVersion.orEmpty()
+                    to agentState.classesData().prevAgentInfo?.buildAlias.orEmpty(),
             coverageByType = coverageByType,
             arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
         )
