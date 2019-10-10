@@ -158,7 +158,7 @@ class CoverageAdminPart(adminData: AdminData, sender: Sender, agentInfo: AgentIn
         val buildMethods = calculateBuildMethods(methodsChanges, bundleCoverage)
 
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
-        val testUsages = testUsages(classesData.bundlesByTests(finishedSessions))
+        val testUsages = testUsages(classesData.bundlesByTests(finishedSessions), classesData.totals.instructionCounter.totalCount)
 
         agentState.testsAssociatedWithBuild.add(buildVersion, associatedTests)
 

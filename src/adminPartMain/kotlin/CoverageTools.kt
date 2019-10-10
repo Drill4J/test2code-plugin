@@ -13,9 +13,9 @@ data class CoverageInfoSet(
     val testUsages: List<TestUsagesInfo>
 )
 
-fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>): List<TestUsagesInfo> =
+fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>, totalCoverageCount: Int): List<TestUsagesInfo> =
     bundleMap.map { (test, bundle) ->
-        TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type)
+        TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type, bundle.coverage(totalCoverageCount))
     }
 
 fun packageCoverage(

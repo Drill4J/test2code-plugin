@@ -109,7 +109,8 @@ data class AssociatedTests(
 data class TestUsagesInfo(
     val testName: String,
     val methodCalls: Int,
-    val testType: String
+    val testType: String,
+    val coverage: Double
 )
 
 @Serializable
@@ -133,7 +134,8 @@ data class ScopeSummary(
 data class TestTypeSummary(
     val testType: String,
     val coverage: Double = 0.0,
-    val testCount: Int = 0
+    val testCount: Int = 0,
+    val coveredMethodsCount: Int
 )
 
 @Serializable

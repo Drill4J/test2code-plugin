@@ -18,11 +18,13 @@ fun ClassesData.coverage(data: Sequence<FinishedSession>) =
     coverageBundle(data.flatten()).coverage(totals.instructionCounter.totalCount)
 
 fun ClassesData.coveragesByTestType(data: Sequence<FinishedSession>): Map<String, TestTypeSummary> {
+
     return data.groupBy { it.testType }.mapValues { (testType, finishedSessions) ->
         TestTypeSummary(
             testType = testType,
             coverage = coverage(finishedSessions.asSequence()),
-            testCount = finishedSessions.flatMap { it.testNames }.distinct().count()
+            testCount = finishedSessions.flatMap { it.testNames }.distinct().count(),
+            coveredMethodsCount = coveredMethodsByTestTypeCount(data, testType) ?: 0
         )
     }
 }
@@ -35,6 +37,11 @@ fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
         else -> ArrowType.DECREASE
     }
 }
+
+fun ClassesData.coveredMethodsByTestTypeCount(data: Sequence<FinishedSession>, testType: String) = bundlesByTests(data)
+    .flatMap { (test, bundle) -> bundle.collectAssocTestPairs(test) }
+    .filter { !it.first.methodName.isNullOrEmpty() && it.second.type == testType }
+    .groupBy { it.second.type }[testType]?.count()
 
 fun ClassesData.associatedTests(data: Sequence<FinishedSession>) = bundlesByTests(data)
     .flatMap { (test, bundle) ->
