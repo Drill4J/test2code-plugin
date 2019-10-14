@@ -162,11 +162,10 @@ class CoverageAdminPart(
         val coverageBlock = Coverage(
             coverage = totalCoveragePercent,
             diff = totalCoveragePercent - classesData.prevBuildCoverage,
-            previousBuildInfo = classesData.prevAgentInfo.buildVersion
-                to classesData.prevAgentInfo.buildAlias,
-            diff = totalCoveragePercent - agentState.classesData().prevBuildCoverage,
-            previousBuildInfo = agentState.classesData().prevAgentInfo?.buildVersion.orEmpty()
-                    to agentState.classesData().prevAgentInfo?.buildAlias.orEmpty(),
+            previousBuildInfo = PairOfIdAndAlias(
+                classesData.prevAgentInfo.buildVersion,
+                classesData.prevAgentInfo.buildAlias
+            ),
             coverageByType = coverageByType,
             arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
         )

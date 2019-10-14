@@ -21,9 +21,15 @@ enum class CoverageRate {
 data class Coverage(
     val coverage: Double,
     val diff: Double,
-    val previousBuildInfo: Pair<String, String>,
+    val previousBuildInfo: PairOfIdAndAlias,
     val coverageByType: Map<String, TestTypeSummary>,
     val arrow: ArrowType? = null
+)
+
+@Serializable
+data class PairOfIdAndAlias(
+    val id: String,
+    val alias: String
 )
 
 enum class ArrowType {
