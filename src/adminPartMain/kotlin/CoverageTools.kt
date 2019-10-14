@@ -13,9 +13,9 @@ data class CoverageInfoSet(
     val testUsages: List<TestUsagesInfo>
 )
 
-fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>): List<TestUsagesInfo> =
+fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>, totalCoverageCount: Int): List<TestUsagesInfo> =
     bundleMap.map { (test, bundle) ->
-        TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type)
+        TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type, bundle.coverage(totalCoverageCount))
     }
 
 fun packageCoverage(
@@ -55,7 +55,7 @@ fun classCoverage(
                 val methodKey = methodCoverage.coverageKey(classCoverage)
                 JavaMethodCoverage(
                     id = methodKey.id,
-                    name = methodCoverage.beautifyName(),
+                    name = beautifyMethodName(methodCoverage.name),
                     desc = methodCoverage.desc,
                     decl = declaration(methodCoverage.desc),
                     coverage = methodCoverage.coverage,
@@ -119,7 +119,7 @@ fun Methods.getInfo(
     methods = this.map { method ->
         JavaMethod(
             method.ownerClass,
-            method.name,
+            beautifyMethodName(method.name),
             method.desc,
             method.hash,
             data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
@@ -129,8 +129,8 @@ fun Methods.getInfo(
 
 fun IMethodCoverage.sign() = "$name$desc"
 
-fun IMethodCoverage.beautifyName() = when (name) {
+fun beautifyMethodName(name: String) = when (name) {
     "<init>" -> "constructor"
     "<clinit>" -> "staticConstructor"
     else -> name
-}!!
+}

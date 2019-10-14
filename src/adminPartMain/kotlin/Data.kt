@@ -111,20 +111,22 @@ data class AssociatedTests(
 data class TestUsagesInfo(
     val testName: String,
     val methodCalls: Int,
-    val testType: String
+    val testType: String,
+    val coverage: Double
 )
 
 @Serializable
 data class ActiveSessions(
     val count: Int,
-    val testTypes: Set<String>)
+    val testTypes: Set<String>
+)
 
 @Serializable
 data class ScopeSummary(
     val name: String,
     val id: String,
     val started: Long,
-    val finished: Long? = null,
+    val finished: Long = 0L,
     val coverage: Double = 0.0,
     var enabled: Boolean = true,
     val active: Boolean = true,
@@ -135,7 +137,8 @@ data class ScopeSummary(
 data class TestTypeSummary(
     val testType: String,
     val coverage: Double = 0.0,
-    val testCount: Int = 0
+    val testCount: Int = 0,
+    val coveredMethodsCount: Int
 )
 
 @Serializable

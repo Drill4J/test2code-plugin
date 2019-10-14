@@ -1,4 +1,4 @@
-val serializationRuntimeVersion = "0.12.0"
+val serializationRuntimeVersion = "0.13.0"
 
 val jvmCoroutinesVersion = "1.3.0"
 

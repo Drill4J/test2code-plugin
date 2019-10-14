@@ -1,10 +1,14 @@
 package com.epam.drill.plugins.coverage
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.*
 
 interface TestsAssociatedWithBuild {
     fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>)
-    fun getTestsAssociatedWithMethods(agentState: AgentState, javaMethods: List<JavaMethod>): List<String>
+    suspend fun getTestsAssociatedWithMethods(
+        buildVersion: String,
+        agentState: AgentState,
+        javaMethods: List<JavaMethod>
+    ): List<String>
 }
 
 interface TestsAssociatedWithBuildStorageManager {
@@ -22,13 +26,16 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         }
     }
 
-    override fun getTestsAssociatedWithMethods(agentState: AgentState, javaMethods: List<JavaMethod>) =
-        map[previousBuildVersion(agentState)]?.filter { test ->
-            javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
-        }?.flatMap { it -> it.tests }.orEmpty()
+    override suspend fun getTestsAssociatedWithMethods(
+        buildVersion: String,
+        agentState: AgentState,
+        javaMethods: List<JavaMethod>
+    ) = map[previousBuildVersion(buildVersion, agentState)]?.filter { test ->
+        javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
+    }?.flatMap { it -> it.tests }.orEmpty()
 
-    private fun previousBuildVersion(agentState: AgentState): String {
-        return agentState.classesData().prevAgentInfo?.buildVersion.toString()
+    private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String {
+        return (agentState.classesData(buildVersion) as ClassesData).prevAgentInfo.buildVersion
     }
 }
 
