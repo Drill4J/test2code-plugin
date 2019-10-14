@@ -80,11 +80,12 @@ class AgentState(
         val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
         classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
         val bundleCoverage = coverageBuilder.getBundle("")
+        val lastCoverage = scopeManager.getLastCoverage(buildInfo?.buildVersion ?: "")
         val classesData = ClassesData(
             buildVersion = agentInfo.buildVersion,
             totalInstructions = bundleCoverage.instructionCounter.totalCount,
             prevAgentInfo = prevState?.agentInfo ?: agentInfo.copy(buildVersion = "", buildAlias = ""),
-            prevBuildCoverage = lastBuildCoverage
+            prevBuildCoverage = lastCoverage ?: lastBuildCoverage
         )
         data = classesData
         scopeManager.saveClassesData(classesData)

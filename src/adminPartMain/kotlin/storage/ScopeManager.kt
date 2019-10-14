@@ -30,6 +30,9 @@ class ScopeManager(private val storage: StoreClient) {
 
     suspend fun getScope(scopeId: String): FinishedScope? = storage.findById(scopeId)
 
+    suspend fun getLastCoverage(buildVersion: String): Double? =
+        storage.findById<ClassesData>(buildVersion)?.prevBuildCoverage
+
     suspend fun classesData(buildVersion: String): ClassesData? =
         storage.findBy<ClassesData> { ClassesData::buildVersion eq buildVersion }.firstOrNull()
 
