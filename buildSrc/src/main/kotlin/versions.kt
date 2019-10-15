@@ -6,4 +6,4 @@ val atomicFuVersion = "0.12.11"
 
 val drillCommonLibVersion = "0.1.3"
 
-val drillPluginApiVersion = "0.4.0-SNAPSHOT"
+val drillPluginApiVersion = "0.1.3"
