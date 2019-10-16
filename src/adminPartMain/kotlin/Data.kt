@@ -149,5 +149,5 @@ data class Risks(
 
 @Serializable
 data class TestsToRun(
-    var test: List<String>
+    var test: Set<String>
 )
