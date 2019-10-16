@@ -16,7 +16,7 @@ data class CoverageInfoSet(
 fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>, totalCoverageCount: Int): List<TestUsagesInfo> =
     bundleMap.map { (test, bundle) ->
         TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type, bundle.coverage(totalCoverageCount))
-    }
+    }.sortedBy { it.testName }
 
 fun packageCoverage(
     bundleCoverage: IBundleCoverage,
@@ -73,7 +73,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
         methodName = key.methodName,
         tests = tests.map { it.toString() }
     )
-}
+}.sortedBy { it.methodName }.map { assocTests -> assocTests.copy(tests = assocTests.tests.sortedBy { it }) }
 
 fun IBundleCoverage.toDataMap() = packages
     .flatMap { it.classes }
@@ -124,7 +124,7 @@ fun Methods.getInfo(
             method.hash,
             data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
         )
-    }
+    }.sortedBy { it.name }
 )
 
 fun IMethodCoverage.sign() = "$name$desc"
