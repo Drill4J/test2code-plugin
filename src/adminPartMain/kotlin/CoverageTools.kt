@@ -71,9 +71,9 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
         packageName = key.packageName,
         className = key.className,
         methodName = key.methodName,
-        tests = tests.map { it.toString() }
+        tests = tests
     )
-}.sortedBy { it.methodName }.map { assocTests -> assocTests.copy(tests = assocTests.tests.sortedBy { it }) }
+}.sortedBy { it.methodName }.map { assocTests -> assocTests.copy(tests = assocTests.tests.sortedBy { it.name }) }
 
 fun IBundleCoverage.toDataMap() = packages
     .flatMap { it.classes }

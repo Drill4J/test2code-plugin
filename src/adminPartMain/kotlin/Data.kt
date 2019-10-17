@@ -101,7 +101,7 @@ data class AssociatedTests(
     val packageName: String?,
     val className: String?,
     val methodName: String?,
-    val tests: List<String>
+    val tests: List<TypedTest>
 ) {
     override fun equals(other: Any?) = other is AssociatedTests && id == other.id
     override fun hashCode() = id.hashCode()
@@ -149,5 +149,6 @@ data class Risks(
 
 @Serializable
 data class TestsToRun(
-    var test: List<String>
+    @SerialName("tests-to-run")
+    var tests: Map<String, List<String>>
 )
