@@ -45,7 +45,7 @@ fun classCoverage(
         val classKey = classCoverage.coverageKey()
         JavaClassCoverage(
             id = classKey.id,
-            name = classCoverage.name.substringAfterLast('/'),
+            name = classNameFromPath(classCoverage.name),
             path = classCoverage.name,
             coverage = classCoverage.coverage,
             totalMethodsCount = classCoverage.methodCounter.totalCount,
@@ -55,7 +55,7 @@ fun classCoverage(
                 val methodKey = methodCoverage.coverageKey(classCoverage)
                 JavaMethodCoverage(
                     id = methodKey.id,
-                    name = beautifyMethodName(methodCoverage.name),
+                    name = beautifyMethodName(methodCoverage.name, classNameFromPath(classCoverage.name)),
                     desc = methodCoverage.desc,
                     decl = declaration(methodCoverage.desc),
                     coverage = methodCoverage.coverage,
@@ -119,7 +119,7 @@ fun Methods.getInfo(
     methods = this.map { method ->
         JavaMethod(
             method.ownerClass,
-            beautifyMethodName(method.name),
+            beautifyMethodName(method.name, classNameFromPath(method.ownerClass)),
             method.desc,
             method.hash,
             data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
@@ -127,10 +127,12 @@ fun Methods.getInfo(
     }
 )
 
+private fun classNameFromPath(path: String) = path.substringAfterLast('/')
+
 fun IMethodCoverage.sign() = "$name$desc"
 
-fun beautifyMethodName(name: String) = when (name) {
-    "<init>" -> "constructor"
-    "<clinit>" -> "staticConstructor"
+fun beautifyMethodName(name: String, owner: String) = when (name) {
+    "<init>" -> "$owner()"
+    "<clinit>" -> "static $owner()"
     else -> name
 }
