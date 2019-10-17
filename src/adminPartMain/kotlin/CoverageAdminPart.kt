@@ -6,6 +6,7 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
 import com.epam.kodux.*
+import kotlinx.atomicfu.atomic
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
@@ -22,6 +23,14 @@ class CoverageAdminPart(
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
 
     override val serDe: SerDe<Action> = commonSerDe
+
+    private val _lastTestsToRun = atomic(TestsToRun(emptyMap()))
+
+    internal var lastTestsToRun: TestsToRun
+        get() = _lastTestsToRun.value
+        set(value) {
+            _lastTestsToRun.value = value
+        }
 
     private val agentId = agentInfo.id
 
@@ -80,6 +89,13 @@ class CoverageAdminPart(
         val content = dm.content
         val message = CoverMessage.serializer() parse content!!
         return processData(message)
+    }
+
+    override fun getPluginData(params: Map<String, String>): String {
+        return when (params["type"]) {
+            "tests-to-run" -> TestsToRun.serializer() stringify lastTestsToRun
+            else -> ""
+        }
     }
 
     internal suspend fun processData(coverMsg: CoverMessage): Any {
@@ -303,18 +319,30 @@ class CoverageAdminPart(
         agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build", buildVersion)
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
-        sendTestsToRun(buildVersion, coverageInfoSet.buildMethods)
+        lastTestsToRun = testsToRun(buildVersion, coverageInfoSet.buildMethods)
+        sendTestsToRun(lastTestsToRun)
     }
 
-    internal suspend fun sendTestsToRun(buildVersion: String, buildMethods: BuildMethods) {
-        val tests = TestsToRun(
+    internal suspend fun sendTestsToRun(testsToRun: TestsToRun) {
+        sender.send(
+            agentId,
+            buildVersion,
+            "/build/tests-to-run",
+            testsToRun
+        )
+    }
+
+    private suspend fun testsToRun(
+        buildVersion: String,
+        buildMethods: BuildMethods
+    ): TestsToRun {
+        return TestsToRun(
             agentState.testsAssociatedWithBuild.getTestsAssociatedWithMethods(
                 buildVersion,
                 agentState,
                 buildMethods.allModified
             )
         )
-        sender.send(agentId, buildVersion, "/build/tests-to-run", tests)
     }
 
     internal suspend fun sendRisks(buildVersion: String, buildMethods: BuildMethods) {

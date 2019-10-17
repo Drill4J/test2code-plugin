@@ -43,6 +43,7 @@ class FinishedSession(
 }
 
 @Serializable
-data class TypedTest(val name: String, val type: String) {
-    override fun toString() = "$type::$name"
-}
+data class TypedTest(
+    val name: String,
+    val type: String
+)
