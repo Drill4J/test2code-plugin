@@ -120,7 +120,7 @@ fun Methods.getInfo(
         JavaMethod(
             method.ownerClass,
             beautifyMethodName(method.name, classNameFromPath(method.ownerClass)),
-            method.desc,
+            declaration(method.desc),
             method.hash,
             data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
         )
@@ -132,7 +132,7 @@ private fun classNameFromPath(path: String) = path.substringAfterLast('/')
 fun IMethodCoverage.sign() = "$name$desc"
 
 fun beautifyMethodName(name: String, owner: String) = when (name) {
-    "<init>" -> "$owner()"
-    "<clinit>" -> "static $owner()"
+    "<init>" -> owner
+    "<clinit>" -> "static $owner"
     else -> name
 }
