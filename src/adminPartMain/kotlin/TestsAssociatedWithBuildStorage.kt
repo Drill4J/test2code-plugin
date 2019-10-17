@@ -8,7 +8,7 @@ interface TestsAssociatedWithBuild {
         buildVersion: String,
         agentState: AgentState,
         javaMethods: List<JavaMethod>
-    ): List<String>
+    ): Map<String, List<String>>
 }
 
 interface TestsAssociatedWithBuildStorageManager {
@@ -30,9 +30,12 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         buildVersion: String,
         agentState: AgentState,
         javaMethods: List<JavaMethod>
-    ) = map[previousBuildVersion(buildVersion, agentState)]?.filter { test ->
-        javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
-    }?.flatMap { it -> it.tests }.orEmpty()
+    ) = map[previousBuildVersion(buildVersion, agentState)]
+        ?.filter { test ->
+            javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
+        }
+        ?.flatMap { it -> it.tests }.orEmpty().toSet()
+        .groupBy({ it.type }, { it.name })
 
     private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String {
         return (agentState.classesData(buildVersion) as ClassesData).prevAgentInfo.buildVersion
