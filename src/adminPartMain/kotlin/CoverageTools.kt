@@ -69,7 +69,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
     AssociatedTests(
         id = key.id,
         packageName = key.packageName,
-        className = key.className?.replace(key.packageName ?: "", ""),
+        className = key.className,
         methodName = key.methodName,
         tests = tests
     )

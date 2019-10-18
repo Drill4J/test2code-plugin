@@ -301,7 +301,10 @@ class CoverageAdminPart(
         // TODO extend destination with plugin id
         if (cis.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${cis.associatedTests.count()}")
-            sender.send(agentId, buildVersion, "$path/associated-tests", cis.associatedTests)
+            val beautifiedAssociatedTests = cis.associatedTests.map { batch ->
+                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
+            }
+            sender.send(agentId, buildVersion, "$path/associated-tests", beautifiedAssociatedTests)
         }
         sender.send(agentId, buildVersion, "$path/coverage", cis.coverage)
         sender.send(agentId, buildVersion, "$path/coverage-by-packages", cis.packageCoverage)
