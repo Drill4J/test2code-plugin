@@ -26,6 +26,10 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         }
     }
 
+    private fun testsAssociatedWithBuild(buildVersion: String): List<TypedTest> {
+        return map[buildVersion]?.flatMap { it -> it.tests }.orEmpty()
+    }
+
     override suspend fun getTestsAssociatedWithMethods(
         buildVersion: String,
         agentState: AgentState,
@@ -34,7 +38,9 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         ?.filter { test ->
             javaMethods.any { it.ownerClass == test.className && it.name == test.methodName }
         }
-        ?.flatMap { it -> it.tests }.orEmpty().toSet()
+        ?.flatMap { it -> it.tests }.orEmpty()
+        .filter { !testsAssociatedWithBuild(buildVersion).contains(it) }
+        .toSet()
         .groupBy({ it.type }, { it.name })
 
     private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String {
