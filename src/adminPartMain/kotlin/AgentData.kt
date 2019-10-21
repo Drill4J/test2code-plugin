@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.coverage
 
-import com.epam.drill.common.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 
@@ -15,6 +14,7 @@ class ClassesData(
     @Id
     val buildVersion: String,
     val totalInstructions: Int,
-    val prevAgentInfo: AgentInfo,
+    val prevBuildVersion: String,
+    val prevBuildAlias: String,
     val prevBuildCoverage: Double
 ) : AgentData()

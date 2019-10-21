@@ -43,9 +43,8 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         .toSet()
         .groupBy({ it.type }, { it.name })
 
-    private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String {
-        return (agentState.classesData(buildVersion) as ClassesData).prevAgentInfo.buildVersion
-    }
+    private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String =
+        (agentState.classesData(buildVersion) as ClassesData).prevBuildVersion
 }
 
 object MutableMapStorageManager : TestsAssociatedWithBuildStorageManager {
