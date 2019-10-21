@@ -6,7 +6,7 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
 import com.epam.kodux.*
-import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
@@ -108,7 +108,7 @@ class CoverageAdminPart(
             is Initialized -> {
                 agentState.initialized(adminData.buildManager[buildVersion])
                 val classesData = agentState.classesData(buildVersion) as ClassesData
-                cleanActiveScope(classesData.prevAgentInfo)
+                cleanActiveScope(classesData.prevBuildVersion)
                 calculateAndSendActiveScopeCoverage()
                 calculateAndSendBuildCoverage()
                 sendScopeMessages()
@@ -178,8 +178,8 @@ class CoverageAdminPart(
         val coverageBlock = Coverage(
             coverage = totalCoveragePercent,
             diff = totalCoveragePercent - classesData.prevBuildCoverage,
-            previousBuildInfo = classesData.prevAgentInfo.buildVersion
-                to classesData.prevAgentInfo.buildAlias,
+            previousBuildInfo = classesData.prevBuildVersion
+                to classesData.prevBuildAlias,
             coverageByType = coverageByType,
             arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
         )
@@ -223,8 +223,8 @@ class CoverageAdminPart(
         sendScopeSummary(activeScopeSummary)
     }
 
-    internal suspend fun cleanActiveScope(agentInfo: AgentInfo) {
-        sender.send(agentId, agentInfo.buildVersion, "/active-scope", "")
+    internal suspend fun cleanActiveScope(buildVersion: String) {
+        sender.send(agentId, buildVersion, "/active-scope", "")
     }
 
     internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {

@@ -84,7 +84,8 @@ class AgentState(
         val classesData = ClassesData(
             buildVersion = agentInfo.buildVersion,
             totalInstructions = bundleCoverage.instructionCounter.totalCount,
-            prevAgentInfo = prevState?.agentInfo ?: agentInfo.copy(buildVersion = "", buildAlias = ""),
+            prevBuildVersion = prevState?.agentInfo?.buildVersion ?: "",
+            prevBuildAlias = prevState?.agentInfo?.buildAlias ?: "",
             prevBuildCoverage = lastCoverage ?: lastBuildCoverage
         )
         data = classesData
