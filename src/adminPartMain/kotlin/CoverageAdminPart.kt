@@ -191,8 +191,6 @@ class CoverageAdminPart(
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
         val testUsages = testUsages(classesBytes.bundlesByTests(finishedSessions), classesData.totalInstructions)
 
-        agentState.testsAssociatedWithBuild.add(buildVersion, associatedTests)
-
         return CoverageInfoSet(
             associatedTests,
             coverageBlock,
@@ -322,6 +320,7 @@ class CoverageAdminPart(
         agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build", buildVersion)
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
+        agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
         lastTestsToRun = testsToRun(buildVersion, coverageInfoSet.buildMethods)
         sendTestsToRun(lastTestsToRun)
     }
