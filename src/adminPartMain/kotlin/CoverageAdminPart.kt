@@ -230,7 +230,7 @@ class CoverageAdminPart(
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        sender.send(agentId, buildVersion, "/scopes", agentState.scopeSummariesByBuild(buildVersion))
+        sender.send(agentId, buildVersion, "/scopes", agentState.scopeManager.summariesByBuildVersion(buildVersion))
     }
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
@@ -312,10 +312,7 @@ class CoverageAdminPart(
 
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
-        val sessions = agentState.scopeManager.scopesByBuildVersion(buildVersion)
-            .filter { it.enabled }
-            .flatMap { it.probes.values.flatten() }
-            .asSequence()
+        val sessions = agentState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
         agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
         sendCalcResults(coverageInfoSet, "/build", buildVersion)
