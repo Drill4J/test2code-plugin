@@ -65,8 +65,6 @@ class AgentState(
         }
     }
 
-    suspend fun scopeSummariesByBuild(buildVersion: String) = scopeManager.summariesByBuildVersion(buildVersion)
-
     suspend fun scopeNameNotExisting(name: String, buildVersion: String) =
         scopeManager.scopesByBuildVersion(buildVersion)
             .find { it.name == name.trim() } == null && (name.trim() != activeScope.name || agentInfo.buildVersion != buildVersion)

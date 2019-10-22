@@ -26,44 +26,29 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         }
     }
 
-    private suspend fun enabledFinishedScopes(
-        agentState: AgentState
-    ): Collection<FinishedScope> {
-        return agentState.scopeManager.allScopes().filter { it.enabled }
-    }
-
-    private fun typedTestsFromScopes(scopes: Collection<FinishedScope>): Set<TypedTest> {
-        return scopes.flatMap {
-            it.probes.values.flatMap { value ->
-                value.flatMap { finishedSession -> finishedSession.testNames }
-            }
-        }.toSet()
-    }
-
-    private fun typedTestsFromScopesAssociatedWithCurrentBuildVersion(
-        scopes: Collection<FinishedScope>,
-        buildVersion: String
-    ): Set<TypedTest> {
-        return typedTestsFromScopes(scopes.filter { it.buildVersion == buildVersion })
-    }
+    private fun Collection<FinishedScope>.typedTests() = flatMap {
+        it.probes.values.flatMap { value ->
+            value.flatMap { finishedSession -> finishedSession.testNames }
+        }
+    }.toSet()
 
     override suspend fun getTestsAssociatedWithMethods(
         buildVersion: String,
         agentState: AgentState,
         javaMethods: List<JavaMethod>
     ): Map<String, List<String>> {
-        val scopes = enabledFinishedScopes(agentState)
+        val scopes = agentState.scopeManager.enabledScopes()
+        val scopesInBuild = scopes.filter { it.buildVersion == buildVersion }
 
-        return map[previousBuildVersion(buildVersion, agentState)].orEmpty()
-            .filter { test ->
+        return map[previousBuildVersion(buildVersion, agentState)]
+            ?.filter { test ->
                 javaMethods.any { method -> method.ownerClass == test.className && method.name == test.methodName }
             }
-            .flatMap { it.tests }
-            .filter {
-                typedTestsFromScopes(scopes).contains(it)
-                        && !typedTestsFromScopesAssociatedWithCurrentBuildVersion(scopes, buildVersion).contains(it)
-            }.toSet()
-            .groupBy({ it.type }, { it.name })
+            ?.flatMap { it.tests }
+            ?.filter { scopes.typedTests().contains(it) && !(scopesInBuild.typedTests().contains(it)) }
+            ?.toSet()
+            ?.groupBy({ it.type }, { it.name })
+            .orEmpty()
     }
 
     private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String =

@@ -11,6 +11,13 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun scopesByBuildVersion(buildVersion: String): List<FinishedScope> =
         allScopes().filter { it.buildVersion == buildVersion }
 
+    suspend fun enabledScopes() = allScopes().filter { it.enabled }
+
+    suspend fun enabledScopesSessionsByBuildVersion(buildVersion: String): Sequence<FinishedSession> =
+        scopesByBuildVersion(buildVersion).filter { it.enabled }
+            .flatMap { it.probes.values.flatten() }
+            .asSequence()
+
     suspend fun clean() {
         allScopes().forEach { delete(it.id) }
     }
