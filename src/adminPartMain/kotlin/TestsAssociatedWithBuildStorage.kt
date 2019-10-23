@@ -52,7 +52,7 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
     ): Int {
         return testsAssociatedWithMethods(
             deletedMethods,
-            agentState.prevBuildVersion()
+            agentState.prevBuildVersion
         )
             ?.toSet()
             ?.count() ?: 0
@@ -65,7 +65,7 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         val scopes = agentState.scopeManager.enabledScopes()
         val scopesInBuild = scopes.filter { it.buildVersion == agentState.agentInfo.buildVersion }
 
-        return testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion())
+        return testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion)
             ?.flatMap { it.tests }
             ?.filter { scopes.typedTests().contains(it) && !(scopesInBuild.typedTests().contains(it)) }
             ?.toSet()
