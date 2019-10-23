@@ -36,7 +36,7 @@ class AgentState(
             _lastBuildCoverage.value = value
         }
 
-    fun prevBuildVersion() = prevState?.agentInfo?.buildVersion ?: ""
+    suspend fun prevBuildVersion() = (classesData(agentInfo.buildVersion) as ClassesData).prevBuildVersion
 
     val scopeManager = ScopeManager(storeClient)
 
