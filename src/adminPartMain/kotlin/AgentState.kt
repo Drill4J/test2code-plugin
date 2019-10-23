@@ -36,6 +36,8 @@ class AgentState(
             _lastBuildCoverage.value = value
         }
 
+    fun prevBuildVersion() = prevState?.agentInfo?.buildVersion ?: ""
+
     val scopeManager = ScopeManager(storeClient)
 
     val testsAssociatedWithBuild: TestsAssociatedWithBuild = prevState?.testsAssociatedWithBuild

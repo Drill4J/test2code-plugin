@@ -179,15 +179,18 @@ class CoverageAdminPart(
             coverage = totalCoveragePercent,
             diff = totalCoveragePercent - classesData.prevBuildCoverage,
             previousBuildInfo = classesData.prevBuildVersion
-                to classesData.prevBuildAlias,
+                    to classesData.prevBuildAlias,
             coverageByType = coverageByType,
             arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
         )
         println(coverageBlock)
 
         val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
-        val buildMethods = calculateBuildMethods(methodsChanges, bundleCoverage)
 
+        val buildMethods = calculateBuildMethods(
+            methodsChanges,
+            bundleCoverage
+        ).enrichmentDeletedCoveredMethodsCount(agentState)
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
         val testUsages = testUsages(classesBytes.bundlesByTests(finishedSessions), classesData.totalInstructions)
 
@@ -318,7 +321,7 @@ class CoverageAdminPart(
         sendCalcResults(coverageInfoSet, "/build", buildVersion)
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
         agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
-        lastTestsToRun = testsToRun(buildVersion, coverageInfoSet.buildMethods)
+        lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
         sendTestsToRun(lastTestsToRun)
     }
 
@@ -332,12 +335,10 @@ class CoverageAdminPart(
     }
 
     private suspend fun testsToRun(
-        buildVersion: String,
         buildMethods: BuildMethods
     ): TestsToRun {
         return TestsToRun(
-            agentState.testsAssociatedWithBuild.getTestsAssociatedWithMethods(
-                buildVersion,
+            agentState.testsAssociatedWithBuild.getTestsToRun(
                 agentState,
                 buildMethods.allModified
             )

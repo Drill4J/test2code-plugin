@@ -1,14 +1,20 @@
 package com.epam.drill.plugins.coverage
 
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
 
 interface TestsAssociatedWithBuild {
     fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>)
-    suspend fun getTestsAssociatedWithMethods(
-        buildVersion: String,
+
+    suspend fun getTestsToRun(
         agentState: AgentState,
         javaMethods: List<JavaMethod>
     ): Map<String, List<String>>
+
+    suspend fun deletedCoveredMethodsCount(
+        buildVersion: String,
+        agentState: AgentState,
+        deletedMethods: List<JavaMethod>
+    ): Int
 }
 
 interface TestsAssociatedWithBuildStorageManager {
@@ -17,11 +23,18 @@ interface TestsAssociatedWithBuildStorageManager {
 
 class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
 
-    private val map: MutableMap<String, MutableSet<AssociatedTests>> = ConcurrentHashMap()
+    private val map: MutableMap<String, MutableList<AssociatedTests>> = ConcurrentHashMap()
+
+    private fun testsAssociatedWithMethods(
+        methods: List<JavaMethod>,
+        buildVersion: String
+    ) = map[buildVersion]?.filter { test ->
+        methods.any { method -> method.ownerClass == test.className && method.name == test.methodName }
+    }
 
     override fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>) {
         when {
-            map[buildVersion].isNullOrEmpty() -> map[buildVersion] = associatedTestsList.toMutableSet()
+            map[buildVersion].isNullOrEmpty() -> map[buildVersion] = associatedTestsList.toMutableList()
             else -> map[buildVersion]?.addAll(associatedTestsList)
         }
     }
@@ -32,27 +45,33 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         }
     }.toSet()
 
-    override suspend fun getTestsAssociatedWithMethods(
+    override suspend fun deletedCoveredMethodsCount(
         buildVersion: String,
+        agentState: AgentState,
+        deletedMethods: List<JavaMethod>
+    ): Int {
+        return testsAssociatedWithMethods(
+            deletedMethods,
+            agentState.prevBuildVersion()
+        )
+            ?.toSet()
+            ?.count() ?: 0
+    }
+
+    override suspend fun getTestsToRun(
         agentState: AgentState,
         javaMethods: List<JavaMethod>
     ): Map<String, List<String>> {
         val scopes = agentState.scopeManager.enabledScopes()
-        val scopesInBuild = scopes.filter { it.buildVersion == buildVersion }
+        val scopesInBuild = scopes.filter { it.buildVersion == agentState.agentInfo.buildVersion }
 
-        return map[previousBuildVersion(buildVersion, agentState)]
-            ?.filter { test ->
-                javaMethods.any { method -> method.ownerClass == test.className && method.name == test.methodName }
-            }
+        return testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion())
             ?.flatMap { it.tests }
             ?.filter { scopes.typedTests().contains(it) && !(scopesInBuild.typedTests().contains(it)) }
             ?.toSet()
             ?.groupBy({ it.type }, { it.name })
             .orEmpty()
     }
-
-    private suspend fun previousBuildVersion(buildVersion: String, agentState: AgentState): String =
-        (agentState.classesData(buildVersion) as ClassesData).prevBuildVersion
 }
 
 object MutableMapStorageManager : TestsAssociatedWithBuildStorageManager {

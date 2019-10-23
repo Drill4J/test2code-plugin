@@ -38,11 +38,21 @@ data class BuildMethods(
     val modifiedNameMethods: MethodsInfo = MethodsInfo(),
     val modifiedDescMethods: MethodsInfo = MethodsInfo(),
     val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
-    val deletedMethods: MethodsInfo = MethodsInfo()
+    val deletedMethods: MethodsInfo = MethodsInfo(),
+    var deletedCoveredMethodsCount: Int = 0
 ) {
     val allModified = modifiedBodyMethods.methods +
             modifiedDescMethods.methods +
             modifiedNameMethods.methods
+
+    suspend fun enrichmentDeletedCoveredMethodsCount(agentState: AgentState): BuildMethods {
+        deletedCoveredMethodsCount = agentState.testsAssociatedWithBuild.deletedCoveredMethodsCount(
+            agentState.agentInfo.buildVersion,
+            agentState,
+            deletedMethods.methods
+        )
+        return this
+    }
 }
 
 @Serializable
