@@ -30,10 +30,18 @@ class AgentState(
 
     private val _lastBuildCoverage = atomic(prevState?.lastBuildCoverage ?: 0.0)
 
-    internal var lastBuildCoverage: Double
+    var lastBuildCoverage: Double
         get() = _lastBuildCoverage.value
         set(value) {
             _lastBuildCoverage.value = value
+        }
+
+    private val _prevBuildVersion = atomic("")
+
+    var prevBuildVersion: String
+        get() = _prevBuildVersion.value
+        private set(value) {
+            _prevBuildVersion.value = value
         }
 
     val scopeManager = ScopeManager(storeClient)
@@ -79,13 +87,16 @@ class AgentState(
         classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
         val bundleCoverage = coverageBuilder.getBundle("")
         val lastCoverage = scopeManager.getLastCoverage(buildInfo?.buildVersion ?: "")
+        prevBuildVersion = buildInfo?.prevBuild ?: ""
+
         val classesData = ClassesData(
             buildVersion = agentInfo.buildVersion,
             totalInstructions = bundleCoverage.instructionCounter.totalCount,
-            prevBuildVersion = prevState?.agentInfo?.buildVersion ?: "",
+            prevBuildVersion = prevBuildVersion,
             prevBuildAlias = prevState?.agentInfo?.buildAlias ?: "",
             prevBuildCoverage = lastCoverage ?: lastBuildCoverage
         )
+
         data = classesData
         scopeManager.saveClassesData(classesData)
     }
