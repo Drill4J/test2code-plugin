@@ -193,14 +193,26 @@ class CoverageAdminPart(
             bundleCoverage
         ).enrichmentDeletedCoveredMethodsCount(agentState)
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
-        val testUsages = testUsages(classesBytes.bundlesByTests(finishedSessions), classesData.totalInstructions)
+
+        val testsUsagesInfoByType = coverageByType.map {
+            TestsUsagesInfoByType(
+                it.value.testType,
+                it.value.coverage,
+                it.value.coveredMethodsCount,
+                testUsages(
+                    classesBytes.bundlesByTests(finishedSessions),
+                    classesData.totalInstructions,
+                    it.value.testType
+                )
+            )
+        }.sortedBy { it.testType }
 
         return CoverageInfoSet(
             associatedTests,
             coverageBlock,
             buildMethods,
             packageCoverage,
-            testUsages
+            testsUsagesInfoByType
         )
     }
 
@@ -310,9 +322,7 @@ class CoverageAdminPart(
         sender.send(agentId, buildVersion, Routes.Build.Coverage, coverageInfoSet.coverage)
         sender.send(agentId, buildVersion, Routes.Build.CoverageByPackages, coverageInfoSet.packageCoverage)
         sender.send(agentId, buildVersion, Routes.Build.Methods, coverageInfoSet.buildMethods)
-        sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testUsages)
-
-
+        sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testsUsagesInfoByType)
 
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
         agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
@@ -371,9 +381,12 @@ class CoverageAdminPart(
             coverageInfoSet.packageCoverage
         )
         sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
-        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(activeScope.id), coverageInfoSet.testUsages)
-
-
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Scope.TestsUsages(activeScope.id),
+            coverageInfoSet.testsUsagesInfoByType
+        )
     }
 
     internal suspend fun cleanTopics(id: String) {
