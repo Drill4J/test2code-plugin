@@ -181,15 +181,20 @@ class CoverageAdminPart(
         } else activeScope.summary.coveragesByType
         println(coverageByType)
 
-        val prevBuildVersion = classesData.prevBuildVersion
-        val prevBuildAlias = agentInfo.buildVersions.find { it.id == prevBuildVersion }?.name ?: ""
-
-        val coverageBlock = Coverage(
-            coverage = totalCoveragePercent,
-            diff = totalCoveragePercent - classesData.prevBuildCoverage,
-            previousBuildInfo = prevBuildVersion to prevBuildAlias,
-            coverageByType = coverageByType,
-            arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
+        val coverageBlock: Coverage = if (isBuildCvg) {
+            val prevBuildVersion = classesData.prevBuildVersion
+            val prevBuildAlias = agentInfo.buildVersions.find { it.id == prevBuildVersion }?.name ?: ""
+            BuildCoverage(
+                coverage = totalCoveragePercent,
+                diff = totalCoveragePercent - classesData.prevBuildCoverage,
+                previousBuildInfo = prevBuildVersion to prevBuildAlias,
+                coverageByType = coverageByType,
+                arrow = classesData.arrowType(totalCoveragePercent),
+                scopesCount = agentState.scopeManager.scopeCountByBuildVersion(buildVersion)
+            )
+        } else ScopeCoverage(
+            totalCoveragePercent,
+            coverageByType
         )
         println(coverageBlock)
 
@@ -388,12 +393,9 @@ class CoverageAdminPart(
             coverageInfoSet.packageCoverage
         )
         sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
-        sender.send(
-            agentId,
-            buildVersion,
-            Routes.Scope.TestsUsages(activeScope.id),
-            coverageInfoSet.testsUsagesInfoByType
-        )
+        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(activeScope.id), coverageInfoSet.testsUsagesInfoByType)
+
+
     }
 
     internal suspend fun cleanTopics(id: String) {

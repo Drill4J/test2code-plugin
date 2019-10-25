@@ -17,14 +17,27 @@ enum class CoverageRate {
     FULL
 }
 
+interface Coverage {
+    val coverage: Double
+    val coverageByType: Map<String, TestTypeSummary>
+}
+
 @Serializable
-data class Coverage(
-    val coverage: Double,
+data class ScopeCoverage(
+    override val coverage: Double,
+    override val coverageByType: Map<String, TestTypeSummary>
+) : Coverage
+
+
+@Serializable
+data class BuildCoverage(
+    override val coverage: Double,
     val diff: Double,
     val previousBuildInfo: Pair<String, String>,
-    val coverageByType: Map<String, TestTypeSummary>,
-    val arrow: ArrowType? = null
-)
+    override val coverageByType: Map<String, TestTypeSummary>,
+    val arrow: ArrowType?,
+    val scopesCount: Int
+) : Coverage
 
 enum class ArrowType {
     INCREASE,
