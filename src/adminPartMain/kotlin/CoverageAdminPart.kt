@@ -46,6 +46,11 @@ class CoverageAdminPart(
 
     private val activeScope get() = agentState.activeScope
 
+    override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
+        val next = agentState.nextVersion(buildVersion)
+        calculateAndSendBuildCoverage(next)
+    }
+
     override suspend fun doAction(action: Action): Any {
         return when (action) {
             is SwitchActiveScope -> changeActiveScope(action.payload)
@@ -176,11 +181,13 @@ class CoverageAdminPart(
         } else activeScope.summary.coveragesByType
         println(coverageByType)
 
+        val prevBuildVersion = classesData.prevBuildVersion
+        val prevBuildAlias = agentInfo.buildVersions.find { it.id == prevBuildVersion }?.name ?: ""
+
         val coverageBlock = Coverage(
             coverage = totalCoveragePercent,
             diff = totalCoveragePercent - classesData.prevBuildCoverage,
-            previousBuildInfo = classesData.prevBuildVersion
-                    to classesData.prevBuildAlias,
+            previousBuildInfo = prevBuildVersion to prevBuildAlias,
             coverageByType = coverageByType,
             arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
         )
