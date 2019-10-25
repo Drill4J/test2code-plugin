@@ -28,7 +28,7 @@ fun ClassesBytes.coveragesByTestType(
             testType = testType,
             coverage = coverage(finishedSessions.asSequence(), totalInstructions),
             testCount = finishedSessions.flatMap { it.testNames }.distinct().count(),
-            coveredMethodsCount = coveredMethodsByTestTypeCount(data, testType) ?: 0
+            coveredMethodsCount = coveredMethodsByTestTypeCount(data, testType)
         )
     }
 }
@@ -45,7 +45,7 @@ fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
 fun ClassesBytes.coveredMethodsByTestTypeCount(data: Sequence<FinishedSession>, testType: String) = bundlesByTests(data)
     .flatMap { (test, bundle) -> bundle.collectAssocTestPairs(test) }
     .filter { !it.first.methodName.isNullOrEmpty() && it.second.type == testType }
-    .groupBy { it.second.type }[testType]?.count()
+    .groupBy { it.first.id }.count()
 
 fun ClassesBytes.associatedTests(data: Sequence<FinishedSession>) = bundlesByTests(data)
     .flatMap { (test, bundle) ->
