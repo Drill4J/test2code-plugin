@@ -28,7 +28,7 @@ class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     println(testsUsages())
 
 
-                    val startSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                    val startSession = StartNewSession(StartPayload("MANUAL", "test")).stringify()
 
                     val stopSession = StopSession(payload = SessionPayload("xxx")).stringify()
 

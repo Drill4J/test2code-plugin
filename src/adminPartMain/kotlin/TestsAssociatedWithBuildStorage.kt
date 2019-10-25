@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.drill.plugins.coverage.data.*
 import java.util.concurrent.ConcurrentHashMap
 
 interface TestsAssociatedWithBuild {
@@ -8,7 +9,7 @@ interface TestsAssociatedWithBuild {
     suspend fun getTestsToRun(
         agentState: AgentState,
         javaMethods: List<JavaMethod>
-    ): Map<String, List<String>>
+    ): TestsToRun
 
     suspend fun deletedCoveredMethodsCount(
         buildVersion: String,
@@ -61,16 +62,17 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
     override suspend fun getTestsToRun(
         agentState: AgentState,
         javaMethods: List<JavaMethod>
-    ): Map<String, List<String>> {
+    ): TestsToRun {
         val scopes = agentState.scopeManager.enabledScopes()
         val scopesInBuild = scopes.filter { it.buildVersion == agentState.agentInfo.buildVersion }
 
-        return testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion)
+        return TestsToRun(testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion)
             ?.flatMap { it.tests }
             ?.filter { scopes.typedTests().contains(it) && !(scopesInBuild.typedTests().contains(it)) }
             ?.toSet()
             ?.groupBy({ it.type }, { it.name })
             .orEmpty()
+        )
     }
 }
 

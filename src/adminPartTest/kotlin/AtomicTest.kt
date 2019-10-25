@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.drill.plugins.coverage.storage.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

@@ -1,8 +1,9 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.coverage.data
 
+import com.epam.drill.plugins.coverage.*
 import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
 sealed class Session(
@@ -17,6 +18,9 @@ class ActiveSession(
 
     private val _probes = atomic(list<ExecClassData>())
 
+    val probes: List<ExecClassData>
+        get() = _probes.value.toJavaList()
+
     fun append(probe: ExecClassData) {
         _probes.update { it.append(probe) }
     }
@@ -24,7 +28,12 @@ class ActiveSession(
     fun finish() = FinishedSession(
         sessionId = id,
         testTypeName = testType,
-        probes = _probes.value.asSequence().groupBy { TypedTest(it.testName, testType) }
+        probes = _probes.value.asSequence().groupBy {
+            TypedTest(
+                it.testName,
+                testType
+            )
+        }
     )
 }
 

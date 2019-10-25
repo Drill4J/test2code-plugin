@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.drill.plugins.coverage.data.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import kotlin.math.*

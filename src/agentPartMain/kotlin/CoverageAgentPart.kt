@@ -6,6 +6,8 @@ import com.epam.drill.session.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
 
+const val DEFAULT_SESSION = "DEFAULT_SESSION"
+
 @Suppress("unused")
 class CoverageAgentPart @JvmOverloads constructor(
     private val payload: PluginPayload,
@@ -76,39 +78,48 @@ class CoverageAgentPart @JvmOverloads constructor(
             is StartSession -> {
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType
+                val testName = action.payload.startPayload.testName
+                val godMode = action.payload.startPayload.godMode
                 println("Start recording for session $sessionId")
-                instrContext.start(sessionId, testType)
+                instrContext.start(sessionId, testType, testName)
+                if (godMode) instrContext.start(DEFAULT_SESSION, testType, testName)
                 sendMessage(SessionStarted(sessionId, testType, currentTimeMillis()))
             }
             is StopSession -> {
                 val sessionId = action.payload.sessionId
-                println("End of recording for session $sessionId")
-                val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
-                if (runtimeData.any()) {
-                    runtimeData.map { datum ->
-                        ExecClassData(
-                            id = datum.id,
-                            className = datum.name,
-                            probes = datum.probes.toList(),
-                            testName = datum.testName
-                        )
-                    }.chunked(10)
-                        .forEach { dataChunk ->
-                            //send data in chunks of 10
-                            sendMessage(CoverDataPart(sessionId, dataChunk))
-                        }
-                } else println("No data for session $sessionId")
+                stopSession(sessionId)
+                stopSession(DEFAULT_SESSION)
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
             is CancelSession -> {
                 val sessionId = action.payload.sessionId
                 println("Cancellation of recording for session $sessionId")
                 instrContext.cancel(sessionId)
+                instrContext.cancel(DEFAULT_SESSION)
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
             else -> Unit
         }
 
+    }
+
+    private fun stopSession(sessionId: String) {
+        println("End of recording for session $sessionId")
+        val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
+        if (runtimeData.any()) {
+            runtimeData.map { datum ->
+                ExecClassData(
+                    id = datum.id,
+                    className = datum.name,
+                    probes = datum.probes.toList(),
+                    testName = datum.testName
+                )
+            }.chunked(10)
+                .forEach { dataChunk ->
+                    //send data in chunks of 10
+                    sendMessage(CoverDataPart(sessionId, dataChunk))
+                }
+        } else println("No data for session $sessionId")
     }
 
     private fun sendMessage(message: CoverMessage) {

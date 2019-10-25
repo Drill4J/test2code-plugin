@@ -34,12 +34,16 @@ data class RenameScope(val payload: RenameScopePayload) : Action()
 @Serializable
 data class ToggleScope(val payload: ScopePayload) : Action()
 
+@SerialName("GOD_MODE")
+@Serializable
+data class SetGodMode(val payload: GodModePayload) : Action()
+
 @SerialName("DROP_SCOPE")
 @Serializable
 data class DropScope(val payload: ScopePayload) : Action()
 
 @Serializable
-data class StartPayload(val testType: String)
+data class StartPayload(val testType: String, val testName: String, val godMode: Boolean = false)
 
 @Serializable
 data class StartSessionPayload(val sessionId: String, val startPayload: StartPayload)
@@ -62,3 +66,6 @@ data class RenameScopePayload(
 
 @Serializable
 data class ScopePayload(val scopeId: String = "")
+
+@Serializable
+data class GodModePayload(val enabled: Boolean)

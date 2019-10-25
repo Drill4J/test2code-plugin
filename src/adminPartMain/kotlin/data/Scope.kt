@@ -1,9 +1,13 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.coverage.data
 
+import com.epam.drill.plugins.coverage.*
+import com.epam.drill.plugins.coverage.storage.*
 import com.epam.kodux.*
 import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.*
+
+const val DEFAULT_SESSION = "DEFAULT_SESSION"
 
 interface Scope {
     val id: String
@@ -50,18 +54,33 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope, Sequ
         buildVersion = buildVersion,
         name = summary.name,
         enabled = enabled,
-        summary = summary.copy(finished = currentTimeMillis(), active = false, enabled = enabled),
+        summary = summary.copy(
+            finished = currentTimeMillis(),
+            active = false,
+            enabled = enabled
+        ),
         probes = _sessions.value.asIterable().groupBy { it.testType }
     )
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
-    fun startSession(msg: SessionStarted) {
-        activeSessions(msg.sessionId) { ActiveSession(msg.sessionId, msg.testType) }
+    fun startSession(msg: SessionStarted, godMode: Boolean) {
+        activeSessions(msg.sessionId) {
+            ActiveSession(
+                msg.sessionId,
+                msg.testType
+            )
+        }
+        if (godMode) activeSessions(DEFAULT_SESSION) {
+            ActiveSession(
+                DEFAULT_SESSION,
+                msg.testType
+            )
+        }
     }
 
     fun addProbes(msg: CoverDataPart) {
-        activeSessions[msg.sessionId]?.let { activeSession ->
+        (activeSessions[msg.sessionId] ?: activeSessions[DEFAULT_SESSION])?.let { activeSession ->
             for (probe in msg.data) {
                 activeSession.append(probe)
             }
@@ -69,11 +88,16 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope, Sequ
     }
 
     fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)
+        .apply { activeSessions.remove(DEFAULT_SESSION) }
 
     fun finishSession(msg: SessionFinished): FinishedSession? {
         return when (val activeSession = activeSessions.remove(msg.sessionId)) {
             null -> null
-            else -> activeSession.finish()
+            else -> {
+                val defaultSession = activeSessions.remove(DEFAULT_SESSION)
+                defaultSession?.probes?.forEach { activeSession.append(it) }
+                activeSession.finish()
+            }
         }
     }
 

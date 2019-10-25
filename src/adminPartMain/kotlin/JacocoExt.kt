@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.drill.plugins.coverage.data.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
@@ -82,12 +83,13 @@ fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when
     else -> CoverageKey(this.name.crc64)
 }
 
-fun IMethodCoverage.simpleMethodCoverage(ownerClass: String) = SimpleJavaMethodCoverage(
-    name = name,
-    desc = declaration(desc),
-    coverage = coverage,
-    ownerClass = ownerClass
-)
+fun IMethodCoverage.simpleMethodCoverage(ownerClass: String) =
+    SimpleJavaMethodCoverage(
+        name = name,
+        desc = declaration(desc),
+        coverage = coverage,
+        ownerClass = ownerClass
+    )
 
 /**
  * Converts ASM method description to declaration in java style with kotlin style of return type.

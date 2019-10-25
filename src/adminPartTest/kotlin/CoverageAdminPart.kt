@@ -4,6 +4,8 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugins.coverage.data.*
+import com.epam.drill.plugins.coverage.storage.*
 import com.epam.drill.plugins.coverage.test.bar.*
 import com.epam.drill.plugins.coverage.test.foo.*
 import com.epam.kodux.*

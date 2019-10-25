@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.coverage.storage
 
 import io.vavr.collection.*
 import io.vavr.kotlin.*

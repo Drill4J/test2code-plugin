@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.coverage.storage
 
 import com.epam.drill.plugins.coverage.*
+import com.epam.drill.plugins.coverage.data.*
 import com.epam.kodux.*
 import kotlin.reflect.*
 

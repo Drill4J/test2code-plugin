@@ -1,6 +1,7 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.coverage.data
 
 import com.epam.drill.common.*
+import com.epam.drill.plugins.coverage.*
 import com.epam.drill.plugins.coverage.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
@@ -47,11 +48,18 @@ class AgentState(
     val scopeManager = ScopeManager(storeClient)
 
     val testsAssociatedWithBuild: TestsAssociatedWithBuild = prevState?.testsAssociatedWithBuild
-        ?: testsAssociatedWithBuildStorageManager.getStorage(agentInfo.id, MutableMapTestsAssociatedWithBuild())
+        ?: testsAssociatedWithBuildStorageManager.getStorage(agentInfo.id,
+            MutableMapTestsAssociatedWithBuild()
+        )
 
     private val _scopeCounter = atomic(0)
 
-    private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
+    private val _activeScope = atomic(
+        ActiveScope(
+            scopeName(),
+            agentInfo.buildVersion
+        )
+    )
 
     val activeScope get() = _activeScope.value
 
@@ -114,7 +122,12 @@ class AgentState(
         } else scopeManager.classesData(buildVersion) ?: NoData
 
     fun changeActiveScope(name: String) =
-        _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
+        _activeScope.getAndUpdate {
+            ActiveScope(
+                scopeName(name),
+                agentInfo.buildVersion
+            )
+        }
 
     private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
         "" -> "New Scope ${_scopeCounter.incrementAndGet()}"

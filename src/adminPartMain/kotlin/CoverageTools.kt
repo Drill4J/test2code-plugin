@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.coverage
 
 import com.epam.drill.common.*
+import com.epam.drill.plugins.coverage.data.*
 import org.jacoco.core.analysis.*
 
 //TODO Rewrite all of this, remove the file
@@ -15,7 +16,12 @@ data class CoverageInfoSet(
 
 fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>, totalCoverageCount: Int): List<TestUsagesInfo> =
     bundleMap.map { (test, bundle) ->
-        TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type, bundle.coverage(totalCoverageCount))
+        TestUsagesInfo(
+            test.name,
+            bundle.methodCounter.coveredCount,
+            test.type,
+            bundle.coverage(totalCoverageCount)
+        )
     }.sortedBy { it.testName }
 
 fun packageCoverage(
@@ -122,7 +128,8 @@ fun Methods.getInfo(
             beautifyMethodName(method.name, classNameFromPath(method.ownerClass)),
             declaration(method.desc),
             method.hash,
-            data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
+            data[method.ownerClass to method.sign]?.coverageRate()
+                ?: CoverageRate.MISSED
         )
     }.sortedBy { it.name }
 )

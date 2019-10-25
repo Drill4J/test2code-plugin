@@ -10,6 +10,9 @@ class Routes {
     @Location("/active-sessions")
     object ActiveSessions
 
+    @Location("/god-mode")
+    object GodMode
+
     @Location("/scopes")
     object Scopes
 

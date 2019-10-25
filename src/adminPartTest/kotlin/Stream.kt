@@ -5,6 +5,7 @@ import com.epam.drill.e2e.*
 import com.epam.drill.endpoints.*
 import com.epam.drill.endpoints.plugin.*
 import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugins.coverage.data.*
 import com.epam.drill.plugins.coverage.routes.*
 import io.ktor.application.*
 import io.ktor.http.*

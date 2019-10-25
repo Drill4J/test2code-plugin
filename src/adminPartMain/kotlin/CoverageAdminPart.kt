@@ -5,7 +5,9 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugins.coverage.data.*
 import com.epam.drill.plugins.coverage.routes.*
+import com.epam.drill.plugins.coverage.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*
@@ -25,6 +27,18 @@ class CoverageAdminPart(
 
     override val serDe: SerDe<Action> = commonSerDe
 
+    private val agentId = agentInfo.id
+
+    private val buildVersion = agentInfo.buildVersion
+
+    private val _godMode = atomic(false)
+
+    internal var godMode: Boolean
+        get() = _godMode.value
+        set(value) {
+            _godMode.value = value
+        }
+
     private val _lastTestsToRun = atomic(TestsToRun(emptyMap()))
 
     internal var lastTestsToRun: TestsToRun
@@ -32,10 +46,6 @@ class CoverageAdminPart(
         set(value) {
             _lastTestsToRun.value = value
         }
-
-    private val agentId = agentInfo.id
-
-    private val buildVersion = agentInfo.buildVersion
 
     internal val agentState: AgentState = agentStates(agentId) { state ->
         when (state?.agentInfo) {
@@ -51,12 +61,13 @@ class CoverageAdminPart(
             is SwitchActiveScope -> changeActiveScope(action.payload)
             is RenameScope -> renameScope(action.payload)
             is ToggleScope -> toggleScope(action.payload.scopeId)
+            is SetGodMode -> setGodMode(action.payload.enabled)
             is DropScope -> dropScope(action.payload.scopeId)
             is StartNewSession -> {
                 val startAgentSession = StartSession(
                     payload = StartSessionPayload(
                         sessionId = genUuid(),
-                        startPayload = action.payload
+                        startPayload = action.payload.copy(godMode = godMode)
                     )
                 )
                 serDe.actionSerializer stringify startAgentSession
@@ -64,27 +75,6 @@ class CoverageAdminPart(
             else -> Unit
         }
     }
-
-    internal suspend fun renameScope(payload: RenameScopePayload) =
-        when {
-            agentState.scopeNotExisting(payload.scopeId) ->
-                StatusMessage(
-                    StatusCodes.NOT_FOUND,
-                    "Failed to rename scope with id ${payload.scopeId}: scope not found"
-                )
-            agentState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
-                agentState.renameScope(payload.scopeId, payload.scopeName)
-                val scope: Scope = agentState.scopeManager.getScope(payload.scopeId) ?: activeScope
-                sendScopeMessages(scope.buildVersion)
-                sendScopeSummary(scope.summary, scope.buildVersion)
-                StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
-            }
-            else -> StatusMessage(
-                StatusCodes.CONFLICT,
-                "Scope with such name already exists. Please choose a different name."
-            )
-        }
-
 
     override suspend fun processData(dm: DrillMessage): Any {
         val content = dm.content
@@ -113,9 +103,10 @@ class CoverageAdminPart(
                 calculateAndSendActiveScopeCoverage()
                 calculateAndSendBuildCoverage()
                 sendScopeMessages()
+                sendGodMode()
             }
             is SessionStarted -> {
-                activeScope.startSession(coverMsg)
+                activeScope.startSession(coverMsg, godMode)
                 println("Session ${coverMsg.sessionId} started.")
                 sendActiveSessions()
             }
@@ -180,7 +171,7 @@ class CoverageAdminPart(
             coverage = totalCoveragePercent,
             diff = totalCoveragePercent - classesData.prevBuildCoverage,
             previousBuildInfo = classesData.prevBuildVersion
-                    to classesData.prevBuildAlias,
+                to classesData.prevBuildAlias,
             coverageByType = coverageByType,
             arrow = if (isBuildCvg) classesData.arrowType(totalCoveragePercent) else null
         )
@@ -204,37 +195,29 @@ class CoverageAdminPart(
         )
     }
 
-    internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
-        sendActiveScope()
-        sendScopes(buildVersion)
-    }
-
-    internal suspend fun sendActiveSessions() {
-        val activeSessions = activeScope.activeSessions.run {
-            ActiveSessions(
-                count = count(),
-                testTypes = values.groupBy { it.testType }.keys
+    internal suspend fun renameScope(payload: RenameScopePayload) =
+        when {
+            agentState.scopeNotExisting(payload.scopeId) ->
+                StatusMessage(
+                    StatusCodes.NOT_FOUND,
+                    "Failed to rename scope with id ${payload.scopeId}: scope not found"
+                )
+            agentState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
+                agentState.renameScope(payload.scopeId, payload.scopeName)
+                val scope: Scope = agentState.scopeManager.getScope(payload.scopeId) ?: activeScope
+                sendScopeMessages(scope.buildVersion)
+                sendScopeSummary(scope.summary, scope.buildVersion)
+                StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
+            }
+            else -> StatusMessage(
+                StatusCodes.CONFLICT,
+                "Scope with such name already exists. Please choose a different name."
             )
         }
-        sender.send(agentId, buildVersion, Routes.ActiveSessions, activeSessions)
-    }
 
-    internal suspend fun sendActiveScope() {
-        val activeScopeSummary = agentState.activeScope.summary
-        sender.send(agentId, buildVersion, Routes.ActiveScope, activeScopeSummary)
-        sendScopeSummary(activeScopeSummary)
-    }
-
-    internal suspend fun cleanActiveScope(buildVersion: String) {
-        sender.send(agentId, buildVersion, Routes.ActiveScope, "")
-    }
-
-    internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
-        sender.send(agentId, buildVersion, Routes.Scope.Scope(scopeSummary.id), scopeSummary)
-    }
-
-    internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        sender.send(agentId, buildVersion, Routes.Scopes, agentState.scopeManager.summariesByBuildVersion(buildVersion))
+    internal suspend fun setGodMode(enabled: Boolean) {
+        godMode = enabled
+        sendGodMode()
     }
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
@@ -296,28 +279,78 @@ class CoverageAdminPart(
             "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
         )
 
+    internal suspend fun calculateAndSendActiveScopeCoverage() {
+        val activeScope = agentState.activeScope
+        val coverageInfoSet = calculateCoverageData(activeScope)
+        sendActiveSessions()
+        sendCalcResults(coverageInfoSet, "/scope/${activeScope.id}")
+    }
+
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = agentState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
         agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
+        sendCalcResults(coverageInfoSet, "/build", buildVersion)
+        sendRisks(buildVersion, coverageInfoSet.buildMethods)
+        agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
+        lastTestsToRun =
+            agentState.testsAssociatedWithBuild.getTestsToRun(agentState, coverageInfoSet.buildMethods.allModified)
+        sendTestsToRun(lastTestsToRun)
+    }
+
+    internal suspend fun sendCalcResults(
+        coverageInfoSet: CoverageInfoSet, path: String = "",
+        buildVersion: String = this.buildVersion
+    ) {
+        // TODO extend destination with plugin id
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
                 batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
             }
-            sender.send(agentId, buildVersion, Routes.Build.AssociatedTests, beautifiedAssociatedTests)
+            sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(activeScope.id), beautifiedAssociatedTests)
         }
-        sender.send(agentId, buildVersion, Routes.Build.Coverage, coverageInfoSet.coverage)
-        sender.send(agentId, buildVersion, Routes.Build.CoverageByPackages, coverageInfoSet.packageCoverage)
-        sender.send(agentId, buildVersion, Routes.Build.Methods, coverageInfoSet.buildMethods)
-        sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testUsages)
+        sender.send(agentId, buildVersion, Routes.Scope.Coverage(activeScope.id), coverageInfoSet.coverage)
+        sender.send(agentId, buildVersion, Routes.Scope.CoverageByPackages(activeScope.id), coverageInfoSet.packageCoverage)
+        sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
+        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(activeScope.id), coverageInfoSet.testUsages)
+    }
 
+    internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
+        sendActiveScope()
+        sendScopes(buildVersion)
+    }
 
+    internal suspend fun sendActiveSessions() {
+        val activeSessions = activeScope.activeSessions.run {
+            ActiveSessions(
+                count = count(),
+                testTypes = values.groupBy { it.testType }.keys
+            )
+        }
+        sender.send(agentId, buildVersion, Routes.ActiveSessions, activeSessions)
+    }
 
-        sendRisks(buildVersion, coverageInfoSet.buildMethods)
-        agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
-        lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
-        sendTestsToRun(lastTestsToRun)
+    internal suspend fun sendActiveScope() {
+        val activeScopeSummary = agentState.activeScope.summary
+        sender.send(agentId, buildVersion, Routes.ActiveScope, activeScopeSummary)
+        sendScopeSummary(activeScopeSummary)
+    }
+
+    internal suspend fun cleanActiveScope(buildVersion: String) {
+        sender.send(agentId, buildVersion, Routes.ActiveScope, "")
+    }
+
+    internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
+        sender.send(agentId, buildVersion, Routes.Scope.Scope(scopeSummary.id), scopeSummary)
+    }
+
+    internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
+        sender.send(agentId, buildVersion, Routes.Scopes, agentState.scopeManager.summariesByBuildVersion(buildVersion))
+    }
+
+    internal suspend fun sendGodMode() {
+        sender.send(agentId, buildVersion, Routes.GodMode, godMode)
     }
 
     internal suspend fun sendTestsToRun(testsToRun: TestsToRun) {
@@ -329,55 +362,12 @@ class CoverageAdminPart(
         )
     }
 
-    private suspend fun testsToRun(
-        buildMethods: BuildMethods
-    ): TestsToRun {
-        return TestsToRun(
-            agentState.testsAssociatedWithBuild.getTestsToRun(
-                agentState,
-                buildMethods.allModified
-            )
-        )
-    }
-
     internal suspend fun sendRisks(buildVersion: String, buildMethods: BuildMethods) {
         val risks = risks(buildMethods)
         sender.send(agentId, buildVersion, Routes.Build.Risks, risks)
     }
 
-    internal fun risks(buildMethods: BuildMethods): Risks {
-        val newRisks = buildMethods.newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
-        val modifiedRisks = buildMethods.allModified.filter { it.coverageRate == CoverageRate.MISSED }
-        return Risks(newRisks, modifiedRisks)
-    }
-
-    internal suspend fun calculateAndSendActiveScopeCoverage() {
-        val activeScope = agentState.activeScope
-        val coverageInfoSet = calculateCoverageData(activeScope)
-        sendActiveSessions()
-
-        if (coverageInfoSet.associatedTests.isNotEmpty()) {
-            println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
-            val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
-                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
-            }
-            sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(activeScope.id), beautifiedAssociatedTests)
-        }
-        sender.send(agentId, buildVersion, Routes.Scope.Coverage(activeScope.id), coverageInfoSet.coverage)
-        sender.send(
-            agentId,
-            buildVersion,
-            Routes.Scope.CoverageByPackages(activeScope.id),
-            coverageInfoSet.packageCoverage
-        )
-        sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
-        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(activeScope.id), coverageInfoSet.testUsages)
-
-
-    }
-
     internal suspend fun cleanTopics(id: String) {
-
         sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(id), "")
         sender.send(agentId, buildVersion, Routes.Scope.Methods(id), "")
         sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(id), "")
@@ -403,5 +393,10 @@ class CoverageAdminPart(
         processData(Initialized())
     }
 
+    private fun risks(buildMethods: BuildMethods): Risks {
+        val newRisks = buildMethods.newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
+        val modifiedRisks = buildMethods.allModified.filter { it.coverageRate == CoverageRate.MISSED }
+        return Risks(newRisks, modifiedRisks)
+    }
 
 }
