@@ -5,6 +5,7 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugins.coverage.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*
@@ -215,25 +216,25 @@ class CoverageAdminPart(
                 testTypes = values.groupBy { it.testType }.keys
             )
         }
-        sender.send(agentId, buildVersion, "/active-sessions", activeSessions)
+        sender.send(agentId, buildVersion, Routes.ActiveSessions, activeSessions)
     }
 
     internal suspend fun sendActiveScope() {
         val activeScopeSummary = agentState.activeScope.summary
-        sender.send(agentId, buildVersion, "/active-scope", activeScopeSummary)
+        sender.send(agentId, buildVersion, Routes.ActiveScope, activeScopeSummary)
         sendScopeSummary(activeScopeSummary)
     }
 
     internal suspend fun cleanActiveScope(buildVersion: String) {
-        sender.send(agentId, buildVersion, "/active-scope", "")
+        sender.send(agentId, buildVersion, Routes.ActiveScope, "")
     }
 
     internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
-        sender.send(agentId, buildVersion, "/scope/${scopeSummary.id}", scopeSummary)
+        sender.send(agentId, buildVersion, Routes.Scope.Scope(scopeSummary.id), scopeSummary)
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        sender.send(agentId, buildVersion, "/scopes", agentState.scopeManager.summariesByBuildVersion(buildVersion))
+        sender.send(agentId, buildVersion, Routes.Scopes, agentState.scopeManager.summariesByBuildVersion(buildVersion))
     }
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
@@ -295,30 +296,24 @@ class CoverageAdminPart(
             "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
         )
 
-    internal suspend fun sendCalcResults(
-        cis: CoverageInfoSet, path: String = "",
-        buildVersion: String = this.buildVersion
-    ) {
-        // TODO extend destination with plugin id
-        if (cis.associatedTests.isNotEmpty()) {
-            println("Assoc tests - ids count: ${cis.associatedTests.count()}")
-            val beautifiedAssociatedTests = cis.associatedTests.map { batch ->
-                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
-            }
-            sender.send(agentId, buildVersion, "$path/associated-tests", beautifiedAssociatedTests)
-        }
-        sender.send(agentId, buildVersion, "$path/coverage", cis.coverage)
-        sender.send(agentId, buildVersion, "$path/coverage-by-packages", cis.packageCoverage)
-        sender.send(agentId, buildVersion, "$path/methods", cis.buildMethods)
-        sender.send(agentId, buildVersion, "$path/tests-usages", cis.testUsages)
-    }
-
-
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = agentState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
         agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
-        sendCalcResults(coverageInfoSet, "/build", buildVersion)
+        if (coverageInfoSet.associatedTests.isNotEmpty()) {
+            println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
+            val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
+                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
+            }
+            sender.send(agentId, buildVersion, Routes.Build.AssociatedTests, beautifiedAssociatedTests)
+        }
+        sender.send(agentId, buildVersion, Routes.Build.Coverage, coverageInfoSet.coverage)
+        sender.send(agentId, buildVersion, Routes.Build.CoverageByPackages, coverageInfoSet.packageCoverage)
+        sender.send(agentId, buildVersion, Routes.Build.Methods, coverageInfoSet.buildMethods)
+        sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testUsages)
+
+
+
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
         agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
         lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
@@ -329,7 +324,7 @@ class CoverageAdminPart(
         sender.send(
             agentId,
             buildVersion,
-            "/build/tests-to-run",
+            Routes.Build.TestsToRun,
             testsToRun
         )
     }
@@ -347,7 +342,7 @@ class CoverageAdminPart(
 
     internal suspend fun sendRisks(buildVersion: String, buildMethods: BuildMethods) {
         val risks = risks(buildMethods)
-        sender.send(agentId, buildVersion, "/build/risks", risks)
+        sender.send(agentId, buildVersion, Routes.Build.Risks, risks)
     }
 
     internal fun risks(buildMethods: BuildMethods): Risks {
@@ -360,27 +355,46 @@ class CoverageAdminPart(
         val activeScope = agentState.activeScope
         val coverageInfoSet = calculateCoverageData(activeScope)
         sendActiveSessions()
-        sendCalcResults(coverageInfoSet, "/scope/${activeScope.id}")
+
+        if (coverageInfoSet.associatedTests.isNotEmpty()) {
+            println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
+            val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
+                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
+            }
+            sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(activeScope.id), beautifiedAssociatedTests)
+        }
+        sender.send(agentId, buildVersion, Routes.Scope.Coverage(activeScope.id), coverageInfoSet.coverage)
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Scope.CoverageByPackages(activeScope.id),
+            coverageInfoSet.packageCoverage
+        )
+        sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
+        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(activeScope.id), coverageInfoSet.testUsages)
+
+
     }
 
     internal suspend fun cleanTopics(id: String) {
-        sender.send(agentId, buildVersion, "/scope/$id/associated-tests", "")
-        sender.send(agentId, buildVersion, "/scope/$id/methods", "")
-        sender.send(agentId, buildVersion, "/scope/$id/tests-usages", "")
-        sender.send(agentId, buildVersion, "/scope/$id/coverage-by-packages", "")
-        sender.send(agentId, buildVersion, "/scope/$id/coverage", "")
+
+        sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(id), "")
+        sender.send(agentId, buildVersion, Routes.Scope.Methods(id), "")
+        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(id), "")
+        sender.send(agentId, buildVersion, Routes.Scope.CoverageByPackages(id), "")
+        sender.send(agentId, buildVersion, Routes.Scope.Coverage(id), "")
     }
 
     override suspend fun dropData() {
         val buildInfo = adminData.buildManager[buildVersion]!!
         agentInfo.buildVersions.map { it.id }.forEach {
-            sender.send(agentId, it, "/scopes", "")
-            sender.send(agentId, it, "/build/associated-tests", "")
-            sender.send(agentId, it, "/build/coverage-new", "")
-            sender.send(agentId, it, "/build/methods", "")
-            sender.send(agentId, it, "/build/tests-usages", "")
-            sender.send(agentId, it, "/build/coverage-by-packages", "")
-            sender.send(agentId, it, "/build/coverage", "")
+            sender.send(agentId, it, Routes.Scopes, "")
+            sender.send(agentId, it, Routes.Build.AssociatedTests, "")
+            sender.send(agentId, it, Routes.Build.CoverageNew, "")
+            sender.send(agentId, it, Routes.Build.Methods, "")
+            sender.send(agentId, it, Routes.Build.TestsUsages, "")
+            sender.send(agentId, it, Routes.Build.CoverageByPackages, "")
+            sender.send(agentId, it, Routes.Build.Coverage, "")
         }
         val classesBytes = buildInfo.classesBytes
         agentState.reset()

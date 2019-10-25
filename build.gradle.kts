@@ -1,7 +1,11 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
+import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
+
+    id("com.gradle.build-scan") version "3.0"
+
     `kotlin-multiplatform`
     `kotlinx-serialization`
     `kotlinx-atomicfu`
@@ -11,6 +15,10 @@ plugins {
     id("com.epam.drill.version.plugin") apply false
 }
 
+buildScan {
+    termsOfServiceUrl = "https://gradle.com/terms-of-service"
+    termsOfServiceAgree = "yes"
+}
 allprojects {
     apply(plugin = "com.epam.drill.version.plugin")
 }
@@ -28,6 +36,7 @@ repositories {
 val jacocoVersion = "0.8.3"
 val vavrVersion = "0.10.0"
 val bcelVersion = "6.3.1"
+val ktorVersion = "1.2.5"
 
 val commonJarDeps by configurations.creating {}
 
@@ -89,17 +98,33 @@ kotlin {
                 extendsFrom(adminJarDeps)
             }
             dependencies {
-                implementation("com.epam.drill:kodux-jvm:0.1.1"){
+                implementation("com.epam.drill:kodux-jvm:0.1.1") {
                     isChanging = true
                 }
                 api("org.jetbrains.xodus:xodus-entity-store:1.3.91")
                 api(kotlin("stdlib-jdk8"))
                 api("com.epam.drill:drill-admin-part-jvm:$drillPluginApiVersion")
                 implementation("io.vavr:vavr-kotlin:$vavrVersion")
+                implementation(ktor("locations"))
             }
         }
         adminPartMain.dependsOn(jvmMain)
 
+        val adminPartTest by getting {
+            dependencies {
+                implementation("com.epam.drill:test-framework:0.4.0-SNAPSHOT")
+                implementation("com.epam.drill:admin:0.4.0-20191025.113304-47")
+                implementation(ktor("server-test-host"))
+                implementation(ktor("auth"))
+                implementation(ktor("auth-jwt"))
+                implementation(ktor("server-netty"))
+                implementation(ktor("locations"))
+                implementation(ktor("server-core"))
+                implementation(ktor("websockets"))
+                implementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
+                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
+            }
+        }
         //common jvm deps
         jvms.forEach {
             it.compilations["main"].defaultSourceSet {
@@ -126,10 +151,10 @@ tasks {
     val pluginConfigJson = file("plugin_config.json")
 
     val adminPartJar by existing(Jar::class)
-    
+
     val adminShadow by registering(ShadowJar::class) {
         configurations = listOf(adminJarDeps)
-        configurate()
+//        configurate()
         archiveFileName.set("admin-part.jar")
         from(adminPartJar)
     }
@@ -138,7 +163,7 @@ tasks {
 
     val agentShadow by registering(ShadowJar::class) {
         configurations = listOf(agentJarDeps)
-        configurate()
+//        configurate()
         archiveFileName.set("agent-part.jar")
         from(agentPartJar)
     }
@@ -155,6 +180,16 @@ tasks {
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
     }
+
+    val prepareDist by registering(Copy::class) {
+        from(rootProject.tasks["distZip"])
+        into(file("distr").resolve("adminStorage"))
+    }
+
+    named("adminPartTest") {
+        dependsOn(prepareDist)
+    }
+
 }
 
 fun ShadowJar.configurate() {
@@ -196,3 +231,7 @@ publishing {
 tasks.build {
     dependsOn("publishCoverageZipPublicationToMavenLocal")
 }
+
+@Suppress("unused")
+fun KotlinDependencyHandler.ktor(module: String, version: String? = ktorVersion): Any =
+    "io.ktor:ktor-$module${version?.let { ":$version" } ?: ""}"
