@@ -121,8 +121,15 @@ data class AssociatedTests(
 data class TestUsagesInfo(
     val testName: String,
     val methodCalls: Int,
-    val testType: String,
     val coverage: Double
+)
+
+@Serializable
+data class TestsUsagesInfoByType(
+    val testType: String,
+    val coverage: Double,
+    val methodsCount: Int,
+    val tests: List<TestUsagesInfo>
 )
 
 @Serializable

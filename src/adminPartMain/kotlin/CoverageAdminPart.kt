@@ -192,14 +192,26 @@ class CoverageAdminPart(
             bundleCoverage
         ).enrichmentDeletedCoveredMethodsCount(agentState)
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
-        val testUsages = testUsages(classesBytes.bundlesByTests(finishedSessions), classesData.totalInstructions)
+
+        val testsUsagesInfoByType = coverageByType.map {
+            TestsUsagesInfoByType(
+                it.value.testType,
+                it.value.coverage,
+                it.value.coveredMethodsCount,
+                testUsages(
+                    classesBytes.bundlesByTests(finishedSessions),
+                    classesData.totalInstructions,
+                    it.value.testType
+                )
+            )
+        }.sortedBy { it.testType }
 
         return CoverageInfoSet(
             associatedTests,
             coverageBlock,
             buildMethods,
             packageCoverage,
-            testUsages
+            testsUsagesInfoByType
         )
     }
 
@@ -310,7 +322,7 @@ class CoverageAdminPart(
         sender.send(agentId, buildVersion, "$path/coverage", cis.coverage)
         sender.send(agentId, buildVersion, "$path/coverage-by-packages", cis.packageCoverage)
         sender.send(agentId, buildVersion, "$path/methods", cis.buildMethods)
-        sender.send(agentId, buildVersion, "$path/tests-usages", cis.testUsages)
+        sender.send(agentId, buildVersion, "$path/tests-usages", cis.testsUsagesInfoByType)
     }
 
 
