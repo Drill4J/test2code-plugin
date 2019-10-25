@@ -10,13 +10,18 @@ data class CoverageInfoSet(
     val coverage: Coverage,
     val buildMethods: BuildMethods,
     val packageCoverage: List<JavaPackageCoverage>,
-    val testUsages: List<TestUsagesInfo>
+    val testsUsagesInfoByType: List<TestsUsagesInfoByType>
 )
 
-fun testUsages(bundleMap: Map<TypedTest, IBundleCoverage>, totalCoverageCount: Int): List<TestUsagesInfo> =
-    bundleMap.map { (test, bundle) ->
-        TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, test.type, bundle.coverage(totalCoverageCount))
-    }.sortedBy { it.testName }
+fun testUsages(
+    bundleMap: Map<TypedTest, IBundleCoverage>,
+    totalCoverageCount: Int,
+    testType: String
+): List<TestUsagesInfo> =
+    bundleMap.filter { it.key.type == testType }
+        .map { (test, bundle) ->
+            TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
+        }.sortedBy { it.testName }
 
 fun packageCoverage(
     bundleCoverage: IBundleCoverage,
