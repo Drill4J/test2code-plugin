@@ -59,6 +59,11 @@ class AgentState(
         _data.updateAndGet { ClassDataBuilder }
     }
 
+    suspend fun nextVersion(buildVersion: String): String{
+        val versionMap = scopeManager.getVersionMap()
+        return versionMap[buildVersion] ?: ""
+    }
+
     suspend fun renameScope(id: String, newName: String) {
         val trimmedNewName = newName.trim()
         if (id == activeScope.id) activeScope.rename(trimmedNewName)

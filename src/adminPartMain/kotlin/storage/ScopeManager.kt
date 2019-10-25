@@ -30,6 +30,15 @@ class ScopeManager(private val storage: StoreClient) {
         storage.store(classesData)
     }
 
+    suspend fun getVersionMap(): Map<String, String> {
+        val classesDatas = storage.getAll<ClassesData>()
+        return classesDatas.mapNotNull { classesData ->
+            if (!(classesData.prevBuildVersion.isBlank())) {
+                classesData.prevBuildVersion to classesData.buildVersion
+            } else null
+        }.toMap()
+    }
+
     suspend fun delete(scopeId: String): FinishedScope? =
         getScope(scopeId)?.apply {
             storage.deleteById<FinishedScope>(scopeId)
