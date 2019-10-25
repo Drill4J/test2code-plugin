@@ -199,7 +199,7 @@ class CoverageSocketStreams() : PluginStreams() {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 coverage.send(null)
                                             } else
-                                                coverage.send(Coverage.serializer() parse content)
+                                                coverage.send(ScopeCoverage.serializer() parse content)
                                         }
 
 
@@ -244,14 +244,14 @@ class CoverageSocketStreams() : PluginStreams() {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 coverage.send(null)
                                             } else
-                                                coverage.send(Coverage.serializer() parse content)
+                                                coverage.send(BuildCoverage.serializer() parse content)
                                         }
 
                                         is Routes.Build.CoverageNew -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 coverageNew.send(null)
                                             } else
-                                                coverageNew.send(Coverage.serializer() parse content)
+                                                coverageNew.send(BuildCoverage.serializer() parse content)
                                         }
 
                                         is Routes.Build.TestsToRun -> {
