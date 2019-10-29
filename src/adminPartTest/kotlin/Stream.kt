@@ -313,7 +313,7 @@ class CoverageSocketStreams() : PluginStreams() {
     suspend fun subscribeOnScope(
         scopeId: String,
         agentId: String = info.agentId,
-        buildVersio: String = info.buildVersionHash,
+        buildVersion: String = info.buildVersionHash,
         block: suspend ScopeContext.() -> Unit
     ) {
         arrayOf(
@@ -330,7 +330,7 @@ class CoverageSocketStreams() : PluginStreams() {
                     app.toLocation(it),
                     SubscribeInfo.serializer() stringify SubscribeInfo(
                         agentId,
-                        buildVersio
+                        buildVersion
                     )
                 )
             )
