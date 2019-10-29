@@ -51,7 +51,7 @@ class CoverageAdminPartTest {
 
     @AfterTest
     fun finalize() {
-        agentStates.remove("id")
+        agentStates.map.keySet().forEach { agentStates.remove(it) }
         if (store.environment.isOpen) {
             store.close()
         }
