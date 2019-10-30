@@ -20,7 +20,7 @@ class CoverageTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                 plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
                 agent.sendEvent(InitInfo(classesCount, "asdad"))
                 agent.sendEvent(Initialized())
-                plugUi.coverage()?.apply {
+                plugUi.buildCoverage()?.apply {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
                     previousBuildInfo.first shouldBe ""
@@ -34,7 +34,7 @@ class CoverageTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
 
                 agent.sendEvent(InitInfo(classesCount, "asdad"))
                 agent.sendEvent(Initialized())
-                plugUi.coverage()?.apply {
+                plugUi.buildCoverage()?.apply {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
                     previousBuildInfo.first shouldBe "38187"
