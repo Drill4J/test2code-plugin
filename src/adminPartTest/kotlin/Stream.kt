@@ -36,7 +36,7 @@ class CoverageSocketStreams() : PluginStreams() {
         activeScope()
         activeSessions()
         associatedTests()
-        coverage()
+        buildCoverage()
         coverageByPackages()
         coverageNew()
         methods()
@@ -59,8 +59,8 @@ class CoverageSocketStreams() : PluginStreams() {
     suspend fun methods() = methods.receive()
 
 
-    private val coverage = Channel<Coverage?>()
-    suspend fun coverage() = coverage.receive()
+    private val buildCoverage = Channel<BuildCoverage?>()
+    suspend fun buildCoverage() = buildCoverage.receive()
 
 
     private val coverageByPackages = Channel<List<JavaPackageCoverage>?>()
@@ -242,9 +242,9 @@ class CoverageSocketStreams() : PluginStreams() {
 
                                         is Routes.Build.Coverage -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coverage.send(null)
+                                                buildCoverage.send(null)
                                             } else
-                                                coverage.send(BuildCoverage.serializer() parse content)
+                                                buildCoverage.send(BuildCoverage.serializer() parse content)
                                         }
 
                                         is Routes.Build.CoverageNew -> {
@@ -313,7 +313,7 @@ class CoverageSocketStreams() : PluginStreams() {
     suspend fun subscribeOnScope(
         scopeId: String,
         agentId: String = info.agentId,
-        buildVersio: String = info.buildVersionHash,
+        buildVersion: String = info.buildVersionHash,
         block: suspend ScopeContext.() -> Unit
     ) {
         arrayOf(
@@ -330,7 +330,7 @@ class CoverageSocketStreams() : PluginStreams() {
                     app.toLocation(it),
                     SubscribeInfo.serializer() stringify SubscribeInfo(
                         agentId,
-                        buildVersio
+                        buildVersion
                     )
                 )
             )
