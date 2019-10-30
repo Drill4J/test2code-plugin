@@ -163,7 +163,7 @@ tasks {
 
     val agentShadow by registering(ShadowJar::class) {
         configurations = listOf(agentJarDeps)
-//        configurate()
+        configurate()
         archiveFileName.set("agent-part.jar")
         from(agentPartJar)
     }
@@ -196,6 +196,7 @@ fun ShadowJar.configurate() {
     mergeServiceFiles()
     isZip64 = true
     relocate("io.vavr", "coverage.io.vavr")
+    relocate("kotlin", "kruntime")
     relocate("org.apache.bcel", "coverage.org.apache.bcel")
     relocate("org.objectweb.asm", "coverage.org.objectweb.asm")
     relocate("org.jacoco.core", "coverage.org.jacoco.core")

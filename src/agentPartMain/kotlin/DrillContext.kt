@@ -3,8 +3,8 @@ package com.epam.drill.plugins.coverage
 import com.epam.drill.session.*
 
 private val instrContext = object : InstrContext {
-    override fun invoke(): String? = DrillRequest.currentSession()
-    override fun get(key: String): String? = DrillRequest[key.toLowerCase()]
+    override fun invoke(): String? = DrillRequest.threadStorage.get()?.drillSessionId
+    override fun get(key: String): String? = DrillRequest.threadStorage.get()?.get(key.toLowerCase())
 }
 
 /**
