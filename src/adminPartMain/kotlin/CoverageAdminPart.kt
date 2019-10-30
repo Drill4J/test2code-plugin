@@ -48,7 +48,8 @@ class CoverageAdminPart(
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
         val next = agentState.nextVersion(buildVersion)
-        calculateAndSendBuildCoverage(next)
+        if (!next.isBlank())
+            calculateAndSendBuildCoverage(next)
     }
 
     override suspend fun doAction(action: Action): Any {
