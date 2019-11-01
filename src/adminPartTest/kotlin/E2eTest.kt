@@ -8,7 +8,7 @@ import org.junit.*
 
 class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
 
-    @Test
+    @Test(timeout = 10000)
     fun sad() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
 

@@ -113,7 +113,7 @@ kotlin {
         val adminPartTest by getting {
             dependencies {
                 implementation("com.epam.drill:test-framework:0.4.0-SNAPSHOT")
-                implementation("com.epam.drill:admin:0.4.0-20191025.113304-47")
+                implementation("com.epam.drill:admin:0.4.0-SNAPSHOT")
                 implementation(ktor("server-test-host"))
                 implementation(ktor("auth"))
                 implementation(ktor("auth-jwt"))
