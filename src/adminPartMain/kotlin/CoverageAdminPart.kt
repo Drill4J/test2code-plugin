@@ -61,7 +61,7 @@ class CoverageAdminPart(
             is StartNewSession -> {
                 val startAgentSession = StartSession(
                     payload = StartSessionPayload(
-                        sessionId = genUuid(),
+                        sessionId = if (action.payload.sessionId.isEmpty()) genUuid() else action.payload.sessionId,
                         startPayload = action.payload
                     )
                 )
@@ -394,7 +394,12 @@ class CoverageAdminPart(
             coverageInfoSet.packageCoverage
         )
         sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
-        sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(activeScope.id), coverageInfoSet.testsUsagesInfoByType)
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Scope.TestsUsages(activeScope.id),
+            coverageInfoSet.testsUsagesInfoByType
+        )
 
 
     }

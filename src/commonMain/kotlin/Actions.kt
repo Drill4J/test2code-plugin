@@ -39,7 +39,7 @@ data class ToggleScope(val payload: ScopePayload) : Action()
 data class DropScope(val payload: ScopePayload) : Action()
 
 @Serializable
-data class StartPayload(val testType: String)
+data class StartPayload(val testType: String = "MANUAL", val sessionId: String = "")
 
 @Serializable
 data class StartSessionPayload(val sessionId: String, val startPayload: StartPayload)

@@ -68,7 +68,7 @@ open class SimpleSessionProbeArrayProvider(private val instrContext: InstrContex
         return when(val sessionRuntime = if (sessionId != null) sessionRuntimes[sessionId] else null) {
             null -> BooleanArray(probeCount)
             else -> {
-                val testName = instrContext[DRIlL_TEST_NAME] ?: ""
+                val testName = instrContext[DRIlL_TEST_NAME] ?: "default"
                 sessionRuntime(id, name, probeCount, testName)
             }
         }
