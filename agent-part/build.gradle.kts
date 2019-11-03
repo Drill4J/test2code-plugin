@@ -12,9 +12,6 @@ val bcelVersion = "6.3.1"
 
 repositories {
     mavenLocal()
-    if (version.toString().endsWith("-SNAPSHOT")) {
-        maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
-    }
     maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
     mavenCentral()
     jcenter()
@@ -36,8 +33,8 @@ dependencies {
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
     implementation(project(":common-part"))
-    implementation("com.epam.drill:drill-agent-part-jvm:$version")
-    implementation("com.epam.drill:common-jvm:$version")
+    implementation("com.epam.drill:drill-agent-part-jvm:+")
+    implementation("com.epam.drill:common-jvm:+")
     testImplementation(kotlin("test-junit"))
 }
 

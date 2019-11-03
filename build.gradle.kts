@@ -30,10 +30,7 @@ tasks {
 publishing {
     repositories {
         maven {
-            url =
-                if (version.toString().endsWith("-SNAPSHOT"))
-                    uri("http://oss.jfrog.org/oss-snapshot-local")
-                else uri("http://oss.jfrog.org/oss-release-local")
+            url = uri("http://oss.jfrog.org/oss-release-local")
             credentials {
                 username =
                     if (project.hasProperty("bintrayUser"))

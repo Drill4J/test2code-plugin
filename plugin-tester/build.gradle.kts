@@ -15,9 +15,6 @@ val appJvmArgs = listOf(
 
 repositories {
     mavenLocal()
-    if (version.toString().endsWith("-SNAPSHOT")) {
-        maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
-    }
     maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
     mavenCentral()
     jcenter()
@@ -29,7 +26,7 @@ application {
 }
 
 dependencies {
-    runtime("com.epam.drill:admin-core:$version:all@jar")
+    runtime("com.epam.drill:admin-core:+:all@jar")
 }
 
 tasks {

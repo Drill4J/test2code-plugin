@@ -15,9 +15,6 @@ val bcelVersion = "6.3.1"
 
 repositories {
     mavenLocal()
-    if (version.toString().endsWith("-SNAPSHOT")) {
-        maven(url = "https://oss.jfrog.org/artifactory/list/oss-snapshot-local")
-    }
     maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
     mavenCentral()
     jcenter()
@@ -43,17 +40,17 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
     api("org.jetbrains.xodus:xodus-entity-store:1.3.91")
     api(kotlin("stdlib-jdk8"))
-    api("com.epam.drill:drill-admin-part-jvm:$version")
+    api("com.epam.drill:drill-admin-part-jvm:+")
     implementation(ktor("locations"))
     implementation(project(":common-part"))
-    implementation("com.epam.drill:common-jvm:$version")
+    implementation("com.epam.drill:common-jvm:+")
 
     implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
 
     testImplementation(kotlin("test-junit"))
-    testCompile("com.epam.drill:test-framework:$version")
-    testImplementation("com.epam.drill:admin-core:$version")
+    testCompile("com.epam.drill:test-framework:+")
+    testImplementation("com.epam.drill:admin-core:+")
     testImplementation(ktor("server-test-host"))
     testImplementation(ktor("auth"))
     testImplementation(ktor("auth-jwt"))
@@ -87,4 +84,4 @@ tasks {
 
 @Suppress("unused")
 fun DependencyHandler.ktor(module: String, version: String? = ktorVersion): Any =
-    "io.ktor:ktor-$module${version?.let { ":$version" } ?: ""}"
+    "io.ktor:ktor-$module${version?.let { ":+" } ?: ""}"
