@@ -4,7 +4,7 @@ on:
     branches:
       - develop
     tags:
-      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - 'v[0-9]*.[0-9]*.0'
 
 jobs:
   build_and_publish:
@@ -15,10 +15,16 @@ jobs:
       - name: env
         run: env
       - name: Check
-        run: ./gradlew -si --no-daemon check
+        run: gradle -si --no-daemon check
       - name: Publish
         run: |
-          ./gradlew -si --no-daemon publishCoverageZipPublicationToMavenRepository
+          gradle -si --no-daemon publishCoverageZipPublicationToMavenRepository
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+      - name: Increment
+        run: |
+          gradle incrementVersion -PgithubUserName=${githubUserName} -PgithubUserPassword={githubUserPassword}
+        env:
+          githubUserName: ${{ secrets.githubUserName }}
+          githubUserPassword: ${{ secrets.githubUserPassword }}

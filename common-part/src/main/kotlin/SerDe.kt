@@ -2,7 +2,7 @@ package com.epam.drill.plugins.coverage
 
 import com.epam.drill.plugin.api.*
 import kotlinx.serialization.modules.*
-import kotlin.native.concurrent.SharedImmutable
+//import kotlin.native.concurrent.SharedImmutable
 
 private val serialModule = SerializersModule {
     polymorphic<Action> {
@@ -27,7 +27,7 @@ private val serialModule = SerializersModule {
     }
 }
 
-@SharedImmutable
+//@SharedImmutable
 val commonSerDe = SerDe(
         actionSerializer = Action.serializer(),
         ctx = serialModule

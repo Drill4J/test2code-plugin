@@ -29,7 +29,7 @@ application {
 }
 
 dependencies {
-    runtime("com.epam.drill:admin:0.4.0-SNAPSHOT:all@jar")
+    runtime("com.epam.drill:admin-core:$version:all@jar")
 }
 
 tasks {

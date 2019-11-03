@@ -11,4 +11,4 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Check
-        run: ./gradlew -si --no-daemon check
+        run: gradle -si --no-daemon check
