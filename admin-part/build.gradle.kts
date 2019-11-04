@@ -1,10 +1,12 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
+import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     kotlin("jvm")
     `kotlinx-serialization`
     `kotlinx-atomicfu`
+    idea
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
 val jacocoVersion = "0.8.3"
@@ -24,6 +26,13 @@ val commonJarDeps by configurations.creating {}
 val adminJarDeps by configurations.creating {
     extendsFrom(commonJarDeps)
 }
+val integrationTestImplementation by configurations.creating {
+    extendsFrom(configurations["testCompile"])
+}
+val integrationTestRuntime by configurations.creating {
+    extendsFrom(configurations["testRuntime"])
+}
+
 dependencies {
     commonJarDeps("org.jacoco:org.jacoco.core:$jacocoVersion")
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
@@ -49,28 +58,61 @@ dependencies {
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
 
     testImplementation(kotlin("test-junit"))
-    testCompile("com.epam.drill:test-framework:+")
-    testImplementation("com.epam.drill:admin-core:+")
-    testImplementation(ktor("server-test-host"))
-    testImplementation(ktor("auth"))
-    testImplementation(ktor("auth-jwt"))
-    testImplementation(ktor("server-netty"))
-    testImplementation(ktor("locations"))
-    testImplementation(ktor("server-core"))
-    testImplementation(ktor("websockets"))
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
-    testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
+    integrationTestImplementation(kotlin("test-junit"))
+    integrationTestImplementation("com.epam.drill:test-framework:+")
+    integrationTestImplementation("com.epam.drill:admin-core:+")
+    integrationTestImplementation(ktor("server-test-host"))
+    integrationTestImplementation(ktor("auth"))
+    integrationTestImplementation(ktor("auth-jwt"))
+    integrationTestImplementation(ktor("server-netty"))
+    integrationTestImplementation(ktor("locations"))
+    integrationTestImplementation(ktor("server-core"))
+    integrationTestImplementation(ktor("websockets"))
+
+    integrationTestImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
 
 
+}
+
+val testIngerationModuleName = "test-integration"
+
+sourceSets {
+    create(testIngerationModuleName) {
+        withConvention(KotlinSourceSet::class) {
+            kotlin.srcDir("src/$testIngerationModuleName/kotlin")
+            resources.srcDir("src/$testIngerationModuleName/resources")
+            compileClasspath += sourceSets["main"].output + integrationTestImplementation + configurations["testRuntimeClasspath"]
+            runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath + integrationTestRuntime
+        }
+    }
+}
+idea {
+    module {
+        testSourceDirs =
+            (sourceSets[testIngerationModuleName].withConvention(KotlinSourceSet::class) { kotlin.srcDirs })
+        testResourceDirs = (sourceSets[testIngerationModuleName].resources.srcDirs)
+        scopes["TEST"]?.get("plus")?.add(integrationTestImplementation)
+    }
+}
+
+task<Test>("integrationTest") {
+    systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
+    description = "Runs the integration tests"
+    group = "verification"
+    testClassesDirs = sourceSets[testIngerationModuleName].output.classesDirs
+    classpath = sourceSets[testIngerationModuleName].runtimeClasspath
+    mustRunAfter(tasks["test"])
+}
+
+tasks.named("check") {
+    dependsOn("integrationTest")
 }
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
 
 tasks {
-    test {
-        systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
-    }
     val jar by existing(Jar::class)
 
     val adminShadow by registering(ShadowJar::class) {
@@ -85,3 +127,6 @@ tasks {
 @Suppress("unused")
 fun DependencyHandler.ktor(module: String, version: String? = ktorVersion): Any =
     "io.ktor:ktor-$module${version?.let { ":+" } ?: ""}"
+
+fun DependencyHandler.integrationTestImplementation(dependencyNotation: Any): Dependency? =
+    add("integrationTestImplementation", dependencyNotation)

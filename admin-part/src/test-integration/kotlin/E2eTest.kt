@@ -1,8 +1,6 @@
-package com.epam.drill.plugins.coverage
-
-
 import com.epam.drill.e2e.*
 import com.epam.drill.endpoints.plugin.*
+import com.epam.drill.plugins.coverage.*
 import org.junit.*
 
 
@@ -28,9 +26,17 @@ class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     println(testsUsages())
 
 
-                    val startSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                    val startSession = StartNewSession(
+                        StartPayload(
+                            "MANUAL"
+                        )
+                    ).stringify()
 
-                    val stopSession = StopSession(payload = SessionPayload("xxx")).stringify()
+                    val stopSession = StopSession(
+                        payload = SessionPayload(
+                            "xxx"
+                        )
+                    ).stringify()
 
 
                     pluginAction(startSession)
