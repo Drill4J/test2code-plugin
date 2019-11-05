@@ -29,7 +29,7 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope, Sequ
 
     override val summary get() = _summary.value
 
-    val name = summary.name
+    val name get() = summary.name
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 

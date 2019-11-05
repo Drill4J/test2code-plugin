@@ -5,6 +5,7 @@ import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
+import io.ktor.http.*
 
 
 class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
@@ -40,17 +41,15 @@ class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
                 pluginAction(renameScope)
                 plugUi.activeScope()?.name shouldBe "integration"
 
-                val toggleScope = ToggleScope(ScopePayload(activeScope.id)).stringify()
-                println(toggleScope)
-                //TODO(Is it toggle scope worked? We have got status 400.)
-/*                val (status, content) = pluginAction(toggleScope)
-                status shouldBe HttpStatusCode.OK
-                println(content)
-                plugUi.activeScope()?.enabled shouldBe false
-                pluginAction(toggleScope)
-                plugUi.activeScope()?.enabled shouldBe true*/
-            }
+                val switchActiveScopeWrong = SwitchActiveScope(ActiveScopeChangePayload("integration")).stringify()
+                val (status1, _) = pluginAction(switchActiveScopeWrong)
+                status1 shouldBe HttpStatusCode.BadRequest
 
+                val switchActiveScope = SwitchActiveScope(ActiveScopeChangePayload("scope integration")).stringify()
+                val (status2, _) = pluginAction(switchActiveScope)
+                status2 shouldBe HttpStatusCode.OK
+                plugUi.activeScope()?.name shouldBe "scope integration"
+            }
 
         }
     }
