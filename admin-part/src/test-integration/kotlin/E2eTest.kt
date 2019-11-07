@@ -1,22 +1,14 @@
+import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
-import com.epam.drill.endpoints.plugin.*
 import com.epam.drill.plugins.coverage.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 
 class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
-
-    @Test(timeout = 10000)
+    @Test
     fun sad() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
-
-            connectAgent(setOf("DrillExtension1.class")) { plugUi, agent ->
-                plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
-
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
-
-
+            connectAgent<Build1> { plugUi, agent ->
                 val activeScope = plugUi.activeScope()
                 plugUi.subscribeOnScope(activeScope!!.id) {
                     println(methods())
@@ -24,33 +16,8 @@ class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     println(coverage())
                     println(coverageByPackages())
                     println(testsUsages())
-
-
-                    val startSession = StartNewSession(
-                        StartPayload(
-                            "MANUAL"
-                        )
-                    ).stringify()
-
-                    val stopSession = StopSession(
-                        payload = SessionPayload(
-                            "xxx"
-                        )
-                    ).stringify()
-
-
-                    pluginAction(startSession)
-
-                    pluginAction(stopSession)
-
                 }
-            }.newConnect(setOf("DrillExtension2.class")) { plug, agent ->
-
-                plug.subscribe(SubscribeInfo(agentId, buildVersionHash))
-
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
-
+            }.reconnect<Build2> { plug, agent ->
                 plug.subscribeOnScope(plug.activeScope()!!.id) {
                     println(methods())
                     println(associatedTests())
@@ -58,13 +25,7 @@ class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     println(coverageByPackages())
                     println(testsUsages())
                 }
-
             }
-
-
         }
-
     }
-
-
 }

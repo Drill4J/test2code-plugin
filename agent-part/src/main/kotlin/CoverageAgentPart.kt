@@ -113,6 +113,6 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private fun sendMessage(message: CoverMessage) {
         val messageStr = CoverMessage.serializer() stringify message
-        Sender.sendMessage(id, messageStr)
+        send(messageStr)
     }
 }

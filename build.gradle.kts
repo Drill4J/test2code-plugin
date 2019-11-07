@@ -24,7 +24,7 @@ tasks {
         into(file("distr").resolve("adminStorage"))
     }
 
-    getByPath(":admin-part:test").dependsOn(prepareDist)
+    getByPath(":admin-part:testIntegrationClasses").dependsOn(prepareDist)
 
 }
 publishing {
