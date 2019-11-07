@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.coverage.e2e
 
 
+import com.epam.drill.builds.*
 import com.epam.drill.e2e.AbstarctE2EPluginTest
 import com.epam.drill.endpoints.plugin.SubscribeInfo
 import com.epam.drill.plugins.coverage.CoverageSocketStreams
@@ -13,26 +14,22 @@ import org.junit.Test
 
 class RisksTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
 
-    @Test(timeout = 10000)
+    @org.junit.jupiter.api.Test
     fun `E2E risks test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent(setOf("DrillExtension1.class")) { plugUi, agent ->
-                plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
+            connectAgent<Build1> { plugUi, agent ->
+
                 plugUi.risks()?.apply {
-                    newMethods.first().name shouldBe "DrillExtension"
+                    newMethods.first().name shouldBe "Test"
                     newMethods.first().desc shouldBe "(): void"
                     modifiedMethods shouldBe emptyList()
                 }
-            }.newConnect(setOf("DrillExtension2.class")) { plugUi, agent ->
-                plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
+            }.reconnect<Build2> { plugUi, agent ->
+
                 plugUi.risks()?.apply {
-                    newMethods.first().name shouldBe "DrillExtension"
-                    newMethods.first().desc shouldBe "(String): void"
-                    modifiedMethods shouldBe emptyList()
+                    newMethods.first().name shouldBe "firstMethod"
+                    newMethods.first().desc shouldBe "(): void"
+//                    modifiedMethods shouldBe emptyList()
                 }
             }
         }

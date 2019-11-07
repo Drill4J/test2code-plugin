@@ -1,8 +1,10 @@
 package com.epam.drill.plugins.coverage.e2e
 
 
+import com.epam.drill.builds.*
 import com.epam.drill.e2e.AbstarctE2EPluginTest
 import com.epam.drill.endpoints.plugin.SubscribeInfo
+import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
@@ -14,13 +16,12 @@ import org.junit.Test
 class ScopeTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
 
 
-    @Test(timeout = 10000)
+    @org.junit.jupiter.api.Test
     fun `E2E scope test`() {
+        val drillContext = DrillContext
         createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent(setOf("DrillExtension1.class")) { plugUi, agent ->
-                plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
+            connectAgent<Build1> { plugUi, agent ->
+
                 val activeScope = plugUi.activeScope()
                 activeScope?.apply {
                     name shouldBe "New Scope 1"
@@ -30,10 +31,8 @@ class ScopeTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     enabled shouldBe true
                     active shouldBe true
                 }
-            }.newConnect(setOf("DrillExtension2.class")) { plugUi, agent ->
-                plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
+            }.reconnect<Build2> { plugUi, agent ->
+
                 val activeScope = plugUi.activeScope()
                 activeScope?.apply {
                     name shouldBe "New Scope 1"

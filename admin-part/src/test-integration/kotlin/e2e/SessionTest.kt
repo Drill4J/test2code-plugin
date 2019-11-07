@@ -1,36 +1,54 @@
 package com.epam.drill.plugins.coverage.e2e
 
 
-import com.epam.drill.e2e.AbstarctE2EPluginTest
-import com.epam.drill.endpoints.plugin.SubscribeInfo
+import com.epam.drill.builds.*
+import com.epam.drill.e2e.*
 import com.epam.drill.plugins.coverage.*
-import io.kotlintest.shouldBe
-import io.ktor.http.HttpStatusCode
-import org.junit.Test
-
+import io.kotlintest.*
+import io.ktor.http.*
+import org.junit.jupiter.api.*
 
 class SessionTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
 
-    @Test(timeout = 10000)
+
+    @RepeatedTest(2)
     fun `E2E test session test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent(setOf("DrillExtension1.class")) { plugUi, agent ->
-                plugUi.subscribe(SubscribeInfo(agentId, buildVersionHash))
-                agent.sendEvent(InitInfo(classesCount, "asdad"))
-                agent.sendEvent(Initialized())
-                plugUi.activeSessions()?.apply {
+            connectAgent<Build1> { plugUi, build ->
+                plugUi.activeSessions()?.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
                 }
-              val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+
+                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 val (status, content) = pluginAction(startNewSession)
+
                 status shouldBe HttpStatusCode.OK
-                println(content)
-                /*//TODO("We have got status 200 but on the next step test has been failed with timeout")
-                plugUi.activeSessions()?.apply {
+
+                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+
+                plugUi.activeSessions()?.run {
                     count shouldBe 1
-                    testTypes shouldBe "MANUAL"
-                }*/
+                    testTypes.first() shouldBe "MANUAL"
+                }
+
+                runWithSession(startSession.payload.sessionId) {
+                    val gt = build.entryPoint()
+
+                    gt.test1()
+                    gt.test2()
+                    gt.test3()
+                }
+
+                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                plugUi.activeSessions()?.count shouldBe 0
+
+            }.reconnect<Build2> { plugUi, build ->
+                plugUi.activeSessions()?.run {
+                    count shouldBe 0
+                    testTypes shouldBe emptySet()
+                }
+
             }
         }
     }

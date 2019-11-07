@@ -28,7 +28,7 @@ class CoverageSocketStreams() : PluginStreams() {
 
     lateinit var iut: SendChannel<Frame>
 
-    suspend fun subscribe(sinf: SubscribeInfo) {
+    override suspend fun subscribe(sinf: SubscribeInfo) {
         pathToCallBackMapping.filterKeys { !it.contains("{") }.forEach {
             iut.send(UiMessage(WsMessageType.SUBSCRIBE, it.key, SubscribeInfo.serializer() stringify sinf))
         }

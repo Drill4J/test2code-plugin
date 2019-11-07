@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.drill.plugin.api.processing.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -12,10 +13,6 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
     fun start(sessionId: String, testType: String)
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun cancel(sessionId: String)
-}
-
-interface InstrContext : () -> String? {
-    operator fun get(key: String): String?
 }
 
 const val DRIlL_TEST_NAME = "drill-test-name"
@@ -60,7 +57,7 @@ class ExecRuntime : (Long, String, Int, String) -> BooleanArray {
  * This class is intended to be an ancestor for a concrete probe array provider object.
  * The provider must be a Kotlin singleton object, otherwise the instrumented probe calls will fail.
  */
-open class SimpleSessionProbeArrayProvider(private val instrContext: InstrContext) : SessionProbeArrayProvider {
+open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillContex = DrillContext) : SessionProbeArrayProvider {
     private val sessionRuntimes = ConcurrentHashMap<String, ExecRuntime>()
 
     override fun invoke(id: Long, name: String, probeCount: Int): BooleanArray {

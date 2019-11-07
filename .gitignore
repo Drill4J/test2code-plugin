@@ -1,8 +1,7 @@
-/.gradle/
-/*/.gradle/
-/.idea/
-/build/
-/*/build/
-/distr/
-/test-storage/
-/admin-part/test-storage/
+.gradle/
+.idea/
+build/
+distr/
+test-storage/
+work/
+.kotlintest/

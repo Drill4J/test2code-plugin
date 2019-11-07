@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
+    java
     kotlin("jvm")
     `kotlinx-serialization`
     `kotlinx-atomicfu`
@@ -29,6 +30,8 @@ val adminJarDeps by configurations.creating {
 val integrationTestImplementation by configurations.creating {
     extendsFrom(configurations["testCompile"])
 }
+
+val testData by configurations.creating {}
 val integrationTestRuntime by configurations.creating {
     extendsFrom(configurations["testRuntime"])
 }
@@ -38,6 +41,7 @@ dependencies {
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
     commonJarDeps(project(":common-part"))
     adminJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
+    add("testData", "com.epam.drill:test-data:$drillVersion")
 }
 
 
@@ -49,10 +53,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
     api("org.jetbrains.xodus:xodus-entity-store:1.3.91")
     api(kotlin("stdlib-jdk8"))
-    api("com.epam.drill:drill-admin-part-jvm:+")
+    api("com.epam.drill:drill-admin-part-jvm:$drillVersion")
+    implementation("com.epam.drill:drill-agent-part-jvm:$drillVersion")
     implementation(ktor("locations"))
     implementation(project(":common-part"))
-    implementation("com.epam.drill:common-jvm:+")
+    implementation("com.epam.drill:common-jvm:$drillVersion")
 
     implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
@@ -60,8 +65,8 @@ dependencies {
     testImplementation(kotlin("test-junit"))
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
     integrationTestImplementation(kotlin("test-junit"))
-    integrationTestImplementation("com.epam.drill:test-framework:+")
-    integrationTestImplementation("com.epam.drill:admin-core:+")
+    integrationTestImplementation("com.epam.drill:test-framework:$drillVersion")
+    integrationTestImplementation("com.epam.drill:admin-core:$drillVersion")
     integrationTestImplementation(ktor("server-test-host"))
     integrationTestImplementation(ktor("auth"))
     integrationTestImplementation(ktor("auth-jwt"))
@@ -69,8 +74,11 @@ dependencies {
     integrationTestImplementation(ktor("locations"))
     integrationTestImplementation(ktor("server-core"))
     integrationTestImplementation(ktor("websockets"))
-
+    integrationTestImplementation(project(":agent-part"))
+    integrationTestImplementation("io.mockk:mockk:1.9.3")
     integrationTestImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
+    integrationTestImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
+    integrationTestImplementation("org.apache.bcel:bcel:$bcelVersion")
 
 
 }
@@ -86,7 +94,21 @@ sourceSets {
             runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath + integrationTestRuntime
         }
     }
+
+    (1..2).forEach {
+        create("build$it") {
+            java.srcDir("src/test-data/build$it/java")
+            dependencies {
+                implementation("com.epam.drill:test-data:$drillVersion")
+            }
+            compileClasspath += testData
+            runtimeClasspath += output + compileClasspath
+        }
+        tasks["testIntegrationClasses"].dependsOn("build${it}Classes")
+    }
 }
+
+
 idea {
     module {
         testSourceDirs =
@@ -97,6 +119,7 @@ idea {
 }
 
 task<Test>("integrationTest") {
+    useJUnitPlatform()
     systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
     description = "Runs the integration tests"
     group = "verification"
@@ -110,8 +133,8 @@ tasks.named("check") {
 }
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=io.ktor.locations.KtorExperimentalLocationsAPI"
 }
-
 tasks {
     val jar by existing(Jar::class)
 

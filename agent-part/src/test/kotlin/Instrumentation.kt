@@ -15,15 +15,16 @@ class InstrumentationTest {
     companion object {
         const val sessionId = "xxx"
 
-        val instrContextStub: InstrContext = object : InstrContext {
-            override fun get(key: String): String? = when (key) {
-                DRIlL_TEST_NAME -> "test"
-                else -> null
+        val instrContextStub: com.epam.drill.plugin.api.processing.IDrillContex =
+            object : com.epam.drill.plugin.api.processing.IDrillContex {
+                override fun get(key: String): String? = when (key) {
+                    DRIlL_TEST_NAME -> "test"
+                    else -> null
+                }
+
+                override fun invoke(): String? = sessionId
+
             }
-
-            override fun invoke(): String? = sessionId
-
-        }
     }
 
 
