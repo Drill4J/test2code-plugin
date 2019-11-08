@@ -9,7 +9,7 @@ import io.kotlintest.*
 import org.junit.jupiter.api.*
 
 
-class CoverageByPackagesTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
+class CoverageByPackagesTest : E2EPluginTest<CoverageSocketStreams>() {
 
     @Test
     fun `E2E coverage by packages test`() {

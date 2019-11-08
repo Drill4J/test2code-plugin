@@ -2,7 +2,7 @@ package com.epam.drill.plugins.coverage.e2e
 
 
 import com.epam.drill.builds.*
-import com.epam.drill.e2e.AbstarctE2EPluginTest
+import com.epam.drill.e2e.E2EPluginTest
 import com.epam.drill.endpoints.plugin.SubscribeInfo
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.coverage.*
@@ -13,7 +13,7 @@ import org.junit.Ignore
 import org.junit.Test
 
 
-class ScopeTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
+class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
 
 
     @org.junit.jupiter.api.Test

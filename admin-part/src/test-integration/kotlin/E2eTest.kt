@@ -4,7 +4,7 @@ import com.epam.drill.plugins.coverage.*
 import org.junit.jupiter.api.*
 
 
-class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
+class E2eTest : E2EPluginTest<CoverageSocketStreams>() {
     @Test
     fun sad() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {

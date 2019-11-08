@@ -2,7 +2,7 @@ package com.epam.drill.plugins.coverage.e2e
 
 
 import com.epam.drill.builds.*
-import com.epam.drill.e2e.AbstarctE2EPluginTest
+import com.epam.drill.e2e.E2EPluginTest
 import com.epam.drill.endpoints.plugin.SubscribeInfo
 import com.epam.drill.plugins.coverage.CoverageSocketStreams
 import com.epam.drill.plugins.coverage.InitInfo
@@ -12,7 +12,7 @@ import io.kotlintest.shouldBe
 import org.junit.Test
 
 
-class RisksTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
+class RisksTest : E2EPluginTest<CoverageSocketStreams>() {
 
     @org.junit.jupiter.api.Test
     fun `E2E risks test`() {
