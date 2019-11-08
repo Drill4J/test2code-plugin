@@ -43,7 +43,7 @@ class SessionTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
                 plugUi.activeSessions()?.count shouldBe 0
 
-            }.reconnect<Build2> { plugUi, build ->
+            }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()?.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()

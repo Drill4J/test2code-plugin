@@ -17,7 +17,7 @@ class CoverageTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
     @org.junit.jupiter.api.Test
     fun `E2E coverage test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent<Build1> { plugUi, agent ->
+            connectAgent<Build1> { plugUi, _ ->
 
                 plugUi.buildCoverage()?.apply {
                     coverage shouldBe 0.0
@@ -27,7 +27,7 @@ class CoverageTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     coverageByType shouldBe emptyMap()
                     arrow shouldBe null
                 }
-            }.reconnect<Build2> { plugUi, agent ->
+            }.reconnect<Build2> { plugUi, _ ->
 
 
 

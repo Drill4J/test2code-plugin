@@ -14,7 +14,7 @@ class CoverageByPackagesTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
     @Test
     fun `E2E coverage by packages test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent<Build1> { plugUi, agent ->
+            connectAgent<Build1> { plugUi, _ ->
 
                 plugUi.coverageByPackages()?.first()?.apply {
                     id shouldBe "vsu9sbxes5bl"

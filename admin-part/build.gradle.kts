@@ -74,6 +74,7 @@ dependencies {
     integrationTestImplementation(ktor("locations"))
     integrationTestImplementation(ktor("server-core"))
     integrationTestImplementation(ktor("websockets"))
+    integrationTestImplementation(ktor("client-cio"))
     integrationTestImplementation(project(":agent-part"))
     integrationTestImplementation("io.mockk:mockk:1.9.3")
     integrationTestImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
@@ -149,7 +150,7 @@ tasks {
 
 @Suppress("unused")
 fun DependencyHandler.ktor(module: String, version: String? = ktorVersion): Any =
-    "io.ktor:ktor-$module${version?.let { ":+" } ?: ""}"
+    "io.ktor:ktor-$module:${version ?: "+"}"
 
 fun DependencyHandler.integrationTestImplementation(dependencyNotation: Any): Dependency? =
     add("integrationTestImplementation", dependencyNotation)

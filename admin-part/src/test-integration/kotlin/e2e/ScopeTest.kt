@@ -18,9 +18,8 @@ class ScopeTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
 
     @org.junit.jupiter.api.Test
     fun `E2E scope test`() {
-        val drillContext = DrillContext
         createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent<Build1> { plugUi, agent ->
+            connectAgent<Build1> { plugUi, _ ->
 
                 val activeScope = plugUi.activeScope()
                 activeScope?.apply {
@@ -31,7 +30,7 @@ class ScopeTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     enabled shouldBe true
                     active shouldBe true
                 }
-            }.reconnect<Build2> { plugUi, agent ->
+            }.reconnect<Build2> { plugUi, _ ->
 
                 val activeScope = plugUi.activeScope()
                 activeScope?.apply {

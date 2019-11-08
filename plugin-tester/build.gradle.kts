@@ -28,14 +28,3 @@ application {
 dependencies {
     runtime("com.epam.drill:admin-core:$drillVersion:all@jar")
 }
-
-tasks {
-    val prepareDist by registering(Copy::class) {
-        from(rootProject.tasks["distZip"])
-        into(file("distr").resolve("adminStorage"))
-    }
-
-    named("run") {
-        dependsOn(prepareDist)
-    }
-}

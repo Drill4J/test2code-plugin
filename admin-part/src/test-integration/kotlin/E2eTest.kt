@@ -8,7 +8,7 @@ class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
     @Test
     fun sad() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
-            connectAgent<Build1> { plugUi, agent ->
+            connectAgent<Build1> { plugUi, _ ->
                 val activeScope = plugUi.activeScope()
                 plugUi.subscribeOnScope(activeScope!!.id) {
                     println(methods())
@@ -17,7 +17,7 @@ class E2eTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
                     println(coverageByPackages())
                     println(testsUsages())
                 }
-            }.reconnect<Build2> { plug, agent ->
+            }.reconnect<Build2> { plug, _ ->
                 plug.subscribeOnScope(plug.activeScope()!!.id) {
                     println(methods())
                     println(associatedTests())
