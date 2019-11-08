@@ -4,6 +4,7 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.session.*
 import kotlinx.atomicfu.*
+import mu.KotlinLogging
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
@@ -12,6 +13,7 @@ class CoverageAgentPart @JvmOverloads constructor(
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
 ) : AgentPart<CoverConfig, Action>(payload), InstrumentationPlugin {
 
+    private val logger = KotlinLogging.logger { }
     override val id: String = payload.pluginId
 
     override val confSerializer = CoverConfig.serializer()
@@ -38,7 +40,7 @@ class CoverageAgentPart @JvmOverloads constructor(
             className to classId
         }.toMap()
         sendMessage(Initialized(msg = "Initialized"))
-        println("Plugin $id initialized! Loaded ${loadedClassesMap.count()} classes")
+        logger.debug { "Plugin $id initialized! Loaded ${loadedClassesMap.count()} classes" }
         retransform()
     }
 
@@ -62,27 +64,29 @@ class CoverageAgentPart @JvmOverloads constructor(
         val filter = DrillRequest.GetAllLoadedClasses().filter { it.name in classes }
         if (filter.isNotEmpty())
             DrillRequest.RetransformClasses(filter.toTypedArray())
-        println("${filter.size} classes were re-transformed")
+        logger.info { "${filter.size} classes were re-transformed" }
     }
 
     override fun initPlugin() {
-        println("Plugin $id initialized")
-
+        logger.info { "Plugin $id initialized" }
     }
 
 
     override suspend fun doAction(action: Action) {
+
         when (action) {
+
             is StartSession -> {
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType
-                println("Start recording for session $sessionId")
+                logger.debug { "Start recording for session $sessionId" }
                 instrContext.start(sessionId, testType)
                 sendMessage(SessionStarted(sessionId, testType, currentTimeMillis()))
             }
+
             is StopSession -> {
                 val sessionId = action.payload.sessionId
-                println("End of recording for session $sessionId")
+                logger.debug { "End of recording for session $sessionId" }
                 val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
                 if (runtimeData.any()) {
                     runtimeData.map { datum ->
@@ -97,16 +101,19 @@ class CoverageAgentPart @JvmOverloads constructor(
                             //send data in chunks of 10
                             sendMessage(CoverDataPart(sessionId, dataChunk))
                         }
-                } else println("No data for session $sessionId")
+                } else logger.warn { "No data for session $sessionId" }
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
+
             is CancelSession -> {
                 val sessionId = action.payload.sessionId
-                println("Cancellation of recording for session $sessionId")
+                logger.debug { "Cancellation of recording for session $sessionId" }
                 instrContext.cancel(sessionId)
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
-            else -> Unit
+            else -> {
+                logger.warn { "Action $action not supported yen" }
+            }
         }
 
     }

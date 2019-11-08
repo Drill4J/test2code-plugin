@@ -81,6 +81,7 @@ dependencies {
     integrationTestImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     integrationTestImplementation("org.apache.bcel:bcel:$bcelVersion")
 
+    implementation("io.github.microutils:kotlin-logging:1.6.24")
 
 }
 

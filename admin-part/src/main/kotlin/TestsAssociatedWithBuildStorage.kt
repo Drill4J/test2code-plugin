@@ -1,6 +1,9 @@
 package com.epam.drill.plugins.coverage
 
+import mu.KotlinLogging
 import java.util.concurrent.ConcurrentHashMap
+
+private val logger = KotlinLogging.logger { }
 
 interface TestsAssociatedWithBuild {
     fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>)
@@ -33,9 +36,19 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
     }
 
     override fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>) {
+        logger.debug { "Adding associated tests to storage associates witt build version $buildVersion" }
         when {
-            map[buildVersion].isNullOrEmpty() -> map[buildVersion] = associatedTestsList.toMutableList()
-            else -> map[buildVersion]?.addAll(associatedTestsList)
+            map[buildVersion].isNullOrEmpty() -> {
+                map[buildVersion] = associatedTestsList.toMutableList()
+                logger.debug {
+                    "Add new list of tests associates with build version $buildVersion. " +
+                            "Added ${associatedTestsList.count()} tests"
+                }
+            }
+            else -> {
+                map[buildVersion]?.addAll(associatedTestsList)
+                logger.debug { "Added ${associatedTestsList.count()} tests" }
+            }
         }
     }
 
@@ -62,15 +75,20 @@ class MutableMapTestsAssociatedWithBuild : TestsAssociatedWithBuild {
         agentState: AgentState,
         javaMethods: List<JavaMethod>
     ): Map<String, List<String>> {
+
+        logger.debug { "Getting tests to run" }
         val scopes = agentState.scopeManager.enabledScopes()
         val scopesInBuild = scopes.filter { it.buildVersion == agentState.agentInfo.buildVersion }
 
-        return testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion)
+        val result = testsAssociatedWithMethods(javaMethods, agentState.prevBuildVersion)
             ?.flatMap { it.tests }
             ?.filter { scopes.typedTests().contains(it) && !(scopesInBuild.typedTests().contains(it)) }
             ?.toSet()
             ?.groupBy({ it.type }, { it.name })
             .orEmpty()
+
+        logger.debug { "Tests to run count ${result.count()}" }
+        return result
     }
 }
 

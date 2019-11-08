@@ -8,11 +8,13 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.coverage.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
+import mu.KotlinLogging
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
 
 internal val agentStates = AtomicCache<String, AgentState>()
+private val logger = KotlinLogging.logger { }
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class CoverageAdminPart(
@@ -53,6 +55,8 @@ class CoverageAdminPart(
     }
 
     override suspend fun doAction(action: Action): Any {
+        logger.debug { "doAction $action" }
+
         return when (action) {
             is SwitchActiveScope -> changeActiveScope(action.payload)
             is RenameScope -> renameScope(action.payload)
@@ -67,30 +71,39 @@ class CoverageAdminPart(
                 )
                 serDe.actionSerializer stringify startAgentSession
             }
-            else -> Unit
+            else -> {
+                logger.warn { "Action $action not supported yet" }
+            }
         }
     }
 
-    internal suspend fun renameScope(payload: RenameScopePayload) =
-        when {
+    internal suspend fun renameScope(payload: RenameScopePayload): StatusMessage {
+        logger.debug { "Rename scope ${payload.scopeId}. New name is ${payload.scopeName} " }
+
+        val result = when {
             agentState.scopeNotExisting(payload.scopeId) ->
                 StatusMessage(
                     StatusCodes.NOT_FOUND,
                     "Failed to rename scope with id ${payload.scopeId}: scope not found"
                 )
+
             agentState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
+                logger.debug { "Scope name ${payload.scopeName} not existing in build version $buildVersion" }
                 agentState.renameScope(payload.scopeId, payload.scopeName)
                 val scope: Scope = agentState.scopeManager.getScope(payload.scopeId) ?: activeScope
                 sendScopeMessages(scope.buildVersion)
                 sendScopeSummary(scope.summary, scope.buildVersion)
                 StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
             }
+
             else -> StatusMessage(
                 StatusCodes.CONFLICT,
                 "Scope with such name already exists. Please choose a different name."
             )
         }
-
+        logger.debug { "Scope renaming finished with status ${result.code} and message ${result.message}" }
+        return result
+    }
 
     override suspend fun processData(dm: DrillMessage): Any {
         val content = dm.content
@@ -106,46 +119,61 @@ class CoverageAdminPart(
     }
 
     internal suspend fun processData(coverMsg: CoverMessage): Any {
+        logger.debug { "Processing data $coverMsg" }
+
         when (coverMsg) {
             is InitInfo -> {
+                logger.debug {
+                    "AgentState initialization with data ${coverMsg.message}" +
+                            " and loading ${coverMsg.classesCount} classes"
+                }
                 agentState.init()
-                println(coverMsg.message) //log init message
-                println("${coverMsg.classesCount} classes to load")
             }
+
             is Initialized -> {
+                logger.debug { "AgentState initialized" }
                 agentState.initialized(adminData.buildManager[buildVersion])
                 val classesData = agentState.classesData(buildVersion) as ClassesData
                 cleanActiveScope(classesData.prevBuildVersion)
                 calculateAndSendActiveScopeCoverage()
                 calculateAndSendBuildCoverage()
                 sendScopeMessages()
+                logger.debug { "AgentState initialized for classes data $classesData" }
             }
+
             is SessionStarted -> {
+                logger.debug { "Starting session  with id ${coverMsg.sessionId}" }
                 activeScope.startSession(coverMsg)
-                println("Session ${coverMsg.sessionId} started.")
                 sendActiveSessions()
             }
+
             is SessionCancelled -> {
+                logger.debug { "Session ${coverMsg.sessionId} cancelled." }
                 activeScope.cancelSession(coverMsg)
-                println("Session ${coverMsg.sessionId} cancelled.")
                 sendActiveSessions()
             }
+
             is CoverDataPart -> {
+                logger.debug { "Adding probes to active scope" }
                 activeScope.addProbes(coverMsg)
             }
+
             is SessionFinished -> {
                 val scope = agentState.activeScope
                 when (val session = scope.finishSession(coverMsg)) {
-                    null -> println("No active session for sessionId ${coverMsg.sessionId}")
+                    null -> logger.warn { "No active session for sessionId ${coverMsg.sessionId}" }
                     else -> {
                         if (session.any()) {
                             val totalInstructions = (agentState.classesData() as ClassesData).totalInstructions
                             val classesBytes = adminData.buildManager[buildVersion]?.classesBytes
                             scope.update(session, classesBytes, totalInstructions)
                             sendScopeMessages()
-                        } else println("Session ${session.id} is empty, it won't be added to the active scope")
+                            logger.debug { "Session ${session.id} added to the active scope" }
+                        } else {
+                            logger.warn { "Session ${session.id} is empty, it won't be added to the active scope" }
+                        }
                         calculateAndSendActiveScopeCoverage()
-                        println("Session ${session.id} finished.")
+                        logger.debug { "Session ${session.id} finished." }
                     }
                 }
             }
@@ -158,6 +186,7 @@ class CoverageAdminPart(
         buildVersion: String = this.buildVersion,
         isBuildCvg: Boolean = false
     ): CoverageInfoSet {
+        logger.debug { "Calculating coverage data" }
         val buildInfo = adminData.buildManager[buildVersion]
         val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
         val probes = finishedSessions.flatten()
@@ -180,9 +209,10 @@ class CoverageAdminPart(
         val coverageByType = if (isBuildCvg) {
             classesBytes.coveragesByTestType(finishedSessions, classesData.totalInstructions)
         } else activeScope.summary.coveragesByType
-        println(coverageByType)
+        logger.debug { "Calculated coverage by type $coverageByType" }
 
         val coverageBlock: Coverage = if (isBuildCvg) {
+            logger.debug { "Calculating build coverage" }
             val prevBuildVersion = classesData.prevBuildVersion
             val prevBuildAlias = agentInfo.buildVersions.find { it.id == prevBuildVersion }?.name ?: ""
             BuildCoverage(
@@ -193,11 +223,14 @@ class CoverageAdminPart(
                 arrow = classesData.arrowType(totalCoveragePercent),
                 scopesCount = agentState.scopeManager.scopeCountByBuildVersion(buildVersion)
             )
-        } else ScopeCoverage(
-            totalCoveragePercent,
-            coverageByType
-        )
-        println(coverageBlock)
+        } else {
+            logger.debug { "Calculating scope coverage" }
+            ScopeCoverage(
+                totalCoveragePercent,
+                coverageByType
+            )
+        }
+        logger.debug { "Calculated coverage: $coverageBlock" }
 
         val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
 
@@ -220,13 +253,16 @@ class CoverageAdminPart(
             )
         }.sortedBy { it.testType }
 
-        return CoverageInfoSet(
+        val result = CoverageInfoSet(
             associatedTests,
             coverageBlock,
             buildMethods,
             packageCoverage,
             testsUsagesInfoByType
         )
+
+        logger.debug { "Calculating coverage result $result" }
+        return result
     }
 
     internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
@@ -263,8 +299,9 @@ class CoverageAdminPart(
     }
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
+        logger.debug { "Toggle scope with id $scopeId" }
         agentState.toggleScope(scopeId)
-        return agentState.scopeManager.getScope(scopeId)?.let { scope ->
+        val result = agentState.scopeManager.getScope(scopeId)?.let { scope ->
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
             calculateAndSendBuildCoverage(scope.buildVersion)
@@ -276,10 +313,13 @@ class CoverageAdminPart(
             StatusCodes.CONFLICT,
             "Failed to toggle scope with id $scopeId: scope not found"
         )
+        logger.debug { "Scope toggling finished with status ${result.code} and message ${result.message}" }
+        return result
     }
 
     internal suspend fun dropScope(scopeId: String): StatusMessage {
-        return agentState.scopeManager.delete(scopeId)?.let { scope ->
+        logger.debug { "Drop scope with id $scopeId" }
+        val result = agentState.scopeManager.delete(scopeId)?.let { scope ->
             cleanTopics(scope.id)
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
@@ -292,27 +332,35 @@ class CoverageAdminPart(
             StatusCodes.CONFLICT,
             "Failed to drop scope with id $scopeId: scope not found"
         )
+        logger.debug { "Scope dropping finished with status ${result.code} and message ${result.message}" }
+        return result
     }
 
-    internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload) =
-        if (agentState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
+    internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload): StatusMessage {
+        logger.debug { "Change active scope" }
+
+        val result = if (agentState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
             val prevScope = agentState.changeActiveScope(scopeChange.scopeName.trim())
+            val activeScope = agentState.activeScope
+
             if (scopeChange.savePrevScope) {
+
                 if (prevScope.any()) {
                     val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
                     sendScopeSummary(finishedScope.summary)
-                    println("$finishedScope have been saved.")
                     agentState.scopeManager.saveScope(finishedScope)
+                    logger.info { "$finishedScope have been saved." }
+
                     if (finishedScope.enabled) {
                         calculateAndSendBuildCoverage()
                     }
                 } else {
-                    println("$prevScope is empty, it won't be added to the build.")
+                    logger.warn { "$prevScope is empty, it won't be added to the build." }
                     cleanTopics(prevScope.id)
                 }
             }
-            val activeScope = agentState.activeScope
-            println("Current active scope $activeScope")
+
+            logger.info { "Current active scope $activeScope" }
             calculateAndSendActiveScopeCoverage()
             sendScopeMessages()
             StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
@@ -320,13 +368,19 @@ class CoverageAdminPart(
             StatusCodes.CONFLICT,
             "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
         )
+        logger.debug { "Changing active scope finished with result: ${result.message}" }
+        return result
+    }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
+        logger.debug { "Calculate and send build coverage" }
         val sessions = agentState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
         agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
+
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
-            println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
+            logger.info { "Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}" }
+
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
                 batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
             }
@@ -375,12 +429,13 @@ class CoverageAdminPart(
     }
 
     internal suspend fun calculateAndSendActiveScopeCoverage() {
+        logger.debug { "Calculate and send coverage of active scope" }
         val activeScope = agentState.activeScope
         val coverageInfoSet = calculateCoverageData(activeScope)
         sendActiveSessions()
 
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
-            println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
+            logger.info { "Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}" }
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
                 batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
             }

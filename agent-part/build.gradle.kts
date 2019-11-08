@@ -36,6 +36,7 @@ dependencies {
     implementation("com.epam.drill:drill-agent-part-jvm:$drillVersion")
     implementation("com.epam.drill:common-jvm:$drillVersion")
     testImplementation(kotlin("test-junit"))
+    implementation("io.github.microutils:kotlin-logging:1.6.24")
 }
 
 tasks {
