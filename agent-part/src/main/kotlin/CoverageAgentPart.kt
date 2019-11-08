@@ -112,7 +112,7 @@ class CoverageAgentPart @JvmOverloads constructor(
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
             else -> {
-                logger.warn { "Action $action not supported yen" }
+                logger.warn { "Action $action not supported yet" }
             }
         }
 
