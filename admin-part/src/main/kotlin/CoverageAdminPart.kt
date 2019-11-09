@@ -184,7 +184,7 @@ class CoverageAdminPart(
 
         val coverageBlock: Coverage = if (isBuildCvg) {
             val prevBuildVersion = classesData.prevBuildVersion
-            val prevBuildAlias = agentInfo.buildVersions.find { it.id == prevBuildVersion }?.name ?: ""
+            val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias  ?: ""
             BuildCoverage(
                 coverage = totalCoveragePercent,
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
@@ -415,7 +415,7 @@ class CoverageAdminPart(
 
     override suspend fun dropData() {
         val buildInfo = adminData.buildManager[buildVersion]!!
-        agentInfo.buildVersions.map { it.id }.forEach {
+        adminData.buildManager.buildInfos.keys.forEach {
             sender.send(agentId, it, Routes.Scopes, "")
             sender.send(agentId, it, Routes.Build.AssociatedTests, "")
             sender.send(agentId, it, Routes.Build.CoverageNew, "")
