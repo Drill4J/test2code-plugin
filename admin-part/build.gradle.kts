@@ -47,7 +47,7 @@ dependencies {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.epam.drill:kodux-jvm:0.1.1") {
+    implementation("com.epam.drill:kodux-jvm:0.1.3") {
         isChanging = true
     }
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")

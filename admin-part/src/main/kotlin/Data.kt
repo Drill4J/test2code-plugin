@@ -179,6 +179,5 @@ data class Risks(
 
 @Serializable
 data class TestsToRun(
-    @SerialName("tests-to-run")
-    var tests: Map<String, List<String>>
+    var testsToRun: Map<String, List<String>>
 )
