@@ -2,14 +2,9 @@ package com.epam.drill.plugins.coverage.e2e
 
 
 import com.epam.drill.builds.*
-import com.epam.drill.e2e.E2EPluginTest
-import com.epam.drill.endpoints.plugin.SubscribeInfo
-import com.epam.drill.plugins.coverage.CoverageSocketStreams
-import com.epam.drill.plugins.coverage.InitInfo
-import com.epam.drill.plugins.coverage.Initialized
-import com.epam.drill.plugins.coverage.sendEvent
-import io.kotlintest.shouldBe
-import org.junit.Test
+import com.epam.drill.e2e.*
+import com.epam.drill.plugins.coverage.*
+import io.kotlintest.*
 
 
 class RisksTest : E2EPluginTest<CoverageSocketStreams>() {

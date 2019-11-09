@@ -7,7 +7,7 @@ import org.junit.jupiter.api.*
 class E2eTest : E2EPluginTest<CoverageSocketStreams>() {
     @Test
     fun sad() {
-        createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
                 val activeScope = plugUi.activeScope()
                 plugUi.subscribeOnScope(activeScope!!.id) {

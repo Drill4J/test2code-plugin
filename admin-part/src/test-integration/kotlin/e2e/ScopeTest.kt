@@ -2,15 +2,9 @@ package com.epam.drill.plugins.coverage.e2e
 
 
 import com.epam.drill.builds.*
-import com.epam.drill.e2e.E2EPluginTest
-import com.epam.drill.endpoints.plugin.SubscribeInfo
-import com.epam.drill.plugin.api.processing.*
+import com.epam.drill.e2e.*
 import com.epam.drill.plugins.coverage.*
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.ktor.http.HttpStatusCode
-import org.junit.Ignore
-import org.junit.Test
+import io.kotlintest.*
 
 
 class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {

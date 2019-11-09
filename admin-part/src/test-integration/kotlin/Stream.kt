@@ -87,14 +87,14 @@ class CoverageSocketStreams() : PluginStreams() {
     suspend fun scopes() = scopes.receive()
 
 
-    override fun queued(incoming: ReceiveChannel<Frame>, out: SendChannel<Frame>) {
+    override fun queued(incoming: ReceiveChannel<Frame>, out: SendChannel<Frame>, isDebugStream: Boolean) {
         iut = out
         app.launch {
             incoming.consumeEach {
                 when (it) {
                     is Frame.Text -> {
                         val parseJson = json.parseJson(it.readText()) as JsonObject
-                        if (true)
+                        if (isDebugStream)
                             println("PLUGIN: $parseJson")
                         val messageType = WsMessageType.valueOf(parseJson[WsReceiveMessage::type.name]!!.content)
                         val url = parseJson[WsReceiveMessage::destination.name]!!.content
@@ -102,7 +102,7 @@ class CoverageSocketStreams() : PluginStreams() {
 
                         when (messageType) {
                             WsMessageType.MESSAGE ->
-                               app.launch {
+                                app.launch {
                                     val resolve = app.resolve(url)
                                     when (resolve) {
 
@@ -403,5 +403,5 @@ suspend fun Agent.sendEvent(cov: CoverMessage) {
     )
 }
 
-fun Action.stringify()= commonSerDe.stringify(commonSerDe.actionSerializer, this)
+fun Action.stringify() = commonSerDe.stringify(commonSerDe.actionSerializer, this)
 

@@ -3,7 +3,6 @@ package com.epam.drill.plugins.coverage.e2e
 
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
-import com.epam.drill.endpoints.plugin.*
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import org.junit.jupiter.api.*
