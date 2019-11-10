@@ -8,7 +8,7 @@ import io.kotlintest.*
 import io.ktor.http.*
 import org.junit.jupiter.api.*
 
-class SessionTest : AbstarctE2EPluginTest<CoverageSocketStreams>() {
+class SessionTest : E2EPluginTest<CoverageSocketStreams>() {
 
 
     @RepeatedTest(2)
