@@ -14,10 +14,12 @@ import org.jacoco.core.data.*
  * In case of inconsistencies of the data a ClassCastException is thrown.
  */
 
-class AgentState(
-    storeClient: StoreClient,
+class PluginInstanceState(
+    lastBuildCoverage: Double,
+    val storeClient: StoreClient,
+    val prevBuildVersion: String,
     val agentInfo: AgentInfo,
-    private val prevState: AgentState?
+    val testsAssociatedWithBuild: TestsAssociatedWithBuild
 ) {
     @Suppress("PropertyName")
     private val _data = atomic<AgentData>(NoData)
@@ -28,26 +30,21 @@ class AgentState(
             _data.value = value
         }
 
-    private val _lastBuildCoverage = atomic(prevState?.lastBuildCoverage ?: 0.0)
+    private val _lastBuildCoverage = atomic(lastBuildCoverage)
 
-    var lastBuildCoverage: Double
+    val lastBuildCoverage: Double
         get() = _lastBuildCoverage.value
-        set(value) {
-            _lastBuildCoverage.value = value
-        }
 
-    private val _prevBuildVersion = atomic("")
-
-    var prevBuildVersion: String
-        get() = _prevBuildVersion.value
-        private set(value) {
-            _prevBuildVersion.value = value
-        }
+    suspend fun setLastBuildCoverage(value: Double) {
+        storeClient.store(
+            LastBuildCoverage(
+                id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
+                coverage = value
+            )
+        )
+    }
 
     val scopeManager = ScopeManager(storeClient)
-
-    val testsAssociatedWithBuild: TestsAssociatedWithBuild = prevState?.testsAssociatedWithBuild
-        ?: testsAssociatedWithBuildStorageManager.getStorage(agentInfo.id, MutableMapTestsAssociatedWithBuild())
 
     private val _scopeCounter = atomic(0)
 
@@ -59,7 +56,7 @@ class AgentState(
         _data.updateAndGet { ClassDataBuilder }
     }
 
-    suspend fun nextVersion(buildVersion: String): String{
+    suspend fun nextVersion(buildVersion: String): String {
         val versionMap = scopeManager.getVersionMap()
         return versionMap[buildVersion] ?: ""
     }
@@ -85,20 +82,20 @@ class AgentState(
     suspend fun scopeNotExisting(id: String) = scopeManager.getScope(id) == null && activeScope.id != id
 
 
-    suspend fun initialized(buildInfo: BuildInfo?) {
+    suspend fun initialized(buildInfos: Map<String, BuildInfo>) {
+        val buildInfo = buildInfos[agentInfo.buildVersion]
         val classesBytes = buildInfo?.classesBytes ?: emptyMap()
         val coverageBuilder = CoverageBuilder()
         val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
         classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
         val bundleCoverage = coverageBuilder.getBundle("")
         val lastCoverage = scopeManager.getLastCoverage(buildInfo?.buildVersion ?: "")
-        prevBuildVersion = buildInfo?.prevBuild ?: ""
 
         val classesData = ClassesData(
             buildVersion = agentInfo.buildVersion,
             totalInstructions = bundleCoverage.instructionCounter.totalCount,
             prevBuildVersion = prevBuildVersion,
-            prevBuildAlias = prevState?.agentInfo?.buildAlias ?: "",
+            prevBuildAlias = buildInfos[prevBuildVersion]?.buildAlias ?: "",
             prevBuildCoverage = lastCoverage ?: lastBuildCoverage
         )
 

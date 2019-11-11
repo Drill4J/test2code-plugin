@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.coverage
 
+import com.epam.kodux.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -55,13 +56,13 @@ data class BuildMethods(
     var deletedCoveredMethodsCount: Int = 0
 ) {
     val allModified = modifiedBodyMethods.methods +
-            modifiedDescMethods.methods +
-            modifiedNameMethods.methods
+        modifiedDescMethods.methods +
+        modifiedNameMethods.methods
 
-    suspend fun enrichmentDeletedCoveredMethodsCount(agentState: AgentState): BuildMethods {
-        deletedCoveredMethodsCount = agentState.testsAssociatedWithBuild.deletedCoveredMethodsCount(
-            agentState.agentInfo.buildVersion,
-            agentState,
+    suspend fun deletedCoveredMethodsCountEnrichment(pluginInstanceState: PluginInstanceState): BuildMethods {
+        deletedCoveredMethodsCount = pluginInstanceState.testsAssociatedWithBuild.deletedCoveredMethodsCount(
+            pluginInstanceState.agentInfo.buildVersion,
+            pluginInstanceState,
             deletedMethods.methods
         )
         return this
@@ -181,3 +182,12 @@ data class Risks(
 data class TestsToRun(
     var testsToRun: Map<String, List<String>>
 )
+
+@Serializable
+data class LastBuildCoverage(
+    @Id
+    val id: String,
+    val coverage: Double
+)
+
+fun lastCoverageId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"

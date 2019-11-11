@@ -19,12 +19,13 @@ class RisksTest : E2EPluginTest<CoverageSocketStreams>() {
                     newMethods.first().desc shouldBe "(): void"
                     modifiedMethods shouldBe emptyList()
                 }
+
             }.reconnect<Build2> { plugUi, _ ->
 
                 plugUi.risks()?.apply {
                     newMethods.first().name shouldBe "firstMethod"
                     newMethods.first().desc shouldBe "(): void"
-//                    modifiedMethods shouldBe emptyList()
+                    modifiedMethods.count() shouldBe 3
                 }
             }
         }

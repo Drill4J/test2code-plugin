@@ -49,7 +49,7 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation("com.epam.drill:kodux-jvm:$koduxVersion") { isChanging = true }
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
-    api("org.jetbrains.xodus:xodus-entity-store:1.3.91")
+    api("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
     api(kotlin("stdlib-jdk8"))
     api("com.epam.drill:drill-admin-part-jvm:$drillVersion")
     implementation("com.epam.drill:drill-agent-part-jvm:$drillVersion")
