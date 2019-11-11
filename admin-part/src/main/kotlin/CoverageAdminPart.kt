@@ -11,14 +11,11 @@ import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
-
-internal val agentStates = AtomicCache<String, AgentState>()
-
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class CoverageAdminPart(
     adminData: AdminData,
     sender: Sender,
-    storeClient: StoreClient,
+    val storeClient: StoreClient,
     agentInfo: AgentInfo,
     id: String
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
@@ -37,17 +34,16 @@ class CoverageAdminPart(
 
     private val buildVersion = agentInfo.buildVersion
 
-    internal val agentState: AgentState = agentStates(agentId) { state ->
-        when (state?.agentInfo) {
-            agentInfo -> state
-            else -> AgentState(storeClient, agentInfo, state)
-        }
-    }!!
+    lateinit var pluginInstanceState: PluginInstanceState
 
-    private val activeScope get() = agentState.activeScope
+    override suspend fun initialize() {
+        pluginInstanceState = pluginInstanceState()
+    }
+
+    private val activeScope get() = pluginInstanceState.activeScope
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
-        val next = agentState.nextVersion(buildVersion)
+        val next = pluginInstanceState.nextVersion(buildVersion)
         if (!next.isBlank())
             calculateAndSendBuildCoverage(next)
     }
@@ -73,14 +69,14 @@ class CoverageAdminPart(
 
     internal suspend fun renameScope(payload: RenameScopePayload) =
         when {
-            agentState.scopeNotExisting(payload.scopeId) ->
+            pluginInstanceState.scopeNotExisting(payload.scopeId) ->
                 StatusMessage(
                     StatusCodes.NOT_FOUND,
                     "Failed to rename scope with id ${payload.scopeId}: scope not found"
                 )
-            agentState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
-                agentState.renameScope(payload.scopeId, payload.scopeName)
-                val scope: Scope = agentState.scopeManager.getScope(payload.scopeId) ?: activeScope
+            pluginInstanceState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
+                pluginInstanceState.renameScope(payload.scopeId, payload.scopeName)
+                val scope: Scope = pluginInstanceState.scopeManager.getScope(payload.scopeId) ?: activeScope
                 sendScopeMessages(scope.buildVersion)
                 sendScopeSummary(scope.summary, scope.buildVersion)
                 StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
@@ -108,13 +104,13 @@ class CoverageAdminPart(
     internal suspend fun processData(coverMsg: CoverMessage): Any {
         when (coverMsg) {
             is InitInfo -> {
-                agentState.init()
+                pluginInstanceState.init()
                 println(coverMsg.message) //log init message
                 println("${coverMsg.classesCount} classes to load")
             }
             is Initialized -> {
-                agentState.initialized(adminData.buildManager[buildVersion])
-                val classesData = agentState.classesData(buildVersion) as ClassesData
+                pluginInstanceState.initialized(adminData.buildManager.buildInfos)
+                val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
                 cleanActiveScope(classesData.prevBuildVersion)
                 calculateAndSendActiveScopeCoverage()
                 calculateAndSendBuildCoverage()
@@ -134,12 +130,12 @@ class CoverageAdminPart(
                 activeScope.addProbes(coverMsg)
             }
             is SessionFinished -> {
-                val scope = agentState.activeScope
+                val scope = pluginInstanceState.activeScope
                 when (val session = scope.finishSession(coverMsg)) {
                     null -> println("No active session for sessionId ${coverMsg.sessionId}")
                     else -> {
                         if (session.any()) {
-                            val totalInstructions = (agentState.classesData() as ClassesData).totalInstructions
+                            val totalInstructions = (pluginInstanceState.classesData() as ClassesData).totalInstructions
                             val classesBytes = adminData.buildManager[buildVersion]?.classesBytes
                             scope.update(session, classesBytes, totalInstructions)
                             sendScopeMessages()
@@ -161,7 +157,7 @@ class CoverageAdminPart(
         val buildInfo = adminData.buildManager[buildVersion]
         val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
         val probes = finishedSessions.flatten()
-        val classesData = agentState.classesData(buildVersion) as ClassesData
+        val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
         // Analyze all existing classes
         val coverageBuilder = CoverageBuilder()
         val dataStore = ExecutionDataStore().with(probes)
@@ -184,14 +180,14 @@ class CoverageAdminPart(
 
         val coverageBlock: Coverage = if (isBuildCvg) {
             val prevBuildVersion = classesData.prevBuildVersion
-            val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias  ?: ""
+            val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias ?: ""
             BuildCoverage(
                 coverage = totalCoveragePercent,
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
                 previousBuildInfo = prevBuildVersion to prevBuildAlias,
                 coverageByType = coverageByType,
                 arrow = classesData.arrowType(totalCoveragePercent),
-                scopesCount = agentState.scopeManager.scopeCountByBuildVersion(buildVersion)
+                scopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(buildVersion)
             )
         } else ScopeCoverage(
             totalCoveragePercent,
@@ -204,7 +200,7 @@ class CoverageAdminPart(
         val buildMethods = calculateBuildMethods(
             methodsChanges,
             bundleCoverage
-        ).enrichmentDeletedCoveredMethodsCount(agentState)
+        ).deletedCoveredMethodsCountEnrichment(pluginInstanceState)
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
 
         val testsUsagesInfoByType = coverageByType.map {
@@ -245,7 +241,7 @@ class CoverageAdminPart(
     }
 
     internal suspend fun sendActiveScope() {
-        val activeScopeSummary = agentState.activeScope.summary
+        val activeScopeSummary = pluginInstanceState.activeScope.summary
         sender.send(agentId, buildVersion, Routes.ActiveScope, activeScopeSummary)
         sendScopeSummary(activeScopeSummary)
     }
@@ -259,12 +255,17 @@ class CoverageAdminPart(
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        sender.send(agentId, buildVersion, Routes.Scopes, agentState.scopeManager.summariesByBuildVersion(buildVersion))
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Scopes,
+            pluginInstanceState.scopeManager.summariesByBuildVersion(buildVersion)
+        )
     }
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
-        agentState.toggleScope(scopeId)
-        return agentState.scopeManager.getScope(scopeId)?.let { scope ->
+        pluginInstanceState.toggleScope(scopeId)
+        return pluginInstanceState.scopeManager.getScope(scopeId)?.let { scope ->
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
             calculateAndSendBuildCoverage(scope.buildVersion)
@@ -279,7 +280,7 @@ class CoverageAdminPart(
     }
 
     internal suspend fun dropScope(scopeId: String): StatusMessage {
-        return agentState.scopeManager.delete(scopeId)?.let { scope ->
+        return pluginInstanceState.scopeManager.delete(scopeId)?.let { scope ->
             cleanTopics(scope.id)
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
@@ -295,14 +296,14 @@ class CoverageAdminPart(
     }
 
     internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload) =
-        if (agentState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
-            val prevScope = agentState.changeActiveScope(scopeChange.scopeName.trim())
+        if (pluginInstanceState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
+            val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
             if (scopeChange.savePrevScope) {
                 if (prevScope.any()) {
                     val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
                     sendScopeSummary(finishedScope.summary)
                     println("$finishedScope have been saved.")
-                    agentState.scopeManager.saveScope(finishedScope)
+                    pluginInstanceState.scopeManager.saveScope(finishedScope)
                     if (finishedScope.enabled) {
                         calculateAndSendBuildCoverage()
                     }
@@ -311,7 +312,7 @@ class CoverageAdminPart(
                     cleanTopics(prevScope.id)
                 }
             }
-            val activeScope = agentState.activeScope
+            val activeScope = pluginInstanceState.activeScope
             println("Current active scope $activeScope")
             calculateAndSendActiveScopeCoverage()
             sendScopeMessages()
@@ -322,9 +323,9 @@ class CoverageAdminPart(
         )
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
-        val sessions = agentState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
+        val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
-        agentState.lastBuildCoverage = coverageInfoSet.coverage.coverage
+        pluginInstanceState.setLastBuildCoverage(coverageInfoSet.coverage.coverage)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
@@ -338,7 +339,7 @@ class CoverageAdminPart(
         sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testsUsagesInfoByType)
 
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
-        agentState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
+        pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
         lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
         sendTestsToRun(lastTestsToRun)
     }
@@ -356,8 +357,8 @@ class CoverageAdminPart(
         buildMethods: BuildMethods
     ): TestsToRun {
         return TestsToRun(
-            agentState.testsAssociatedWithBuild.getTestsToRun(
-                agentState,
+            pluginInstanceState.testsAssociatedWithBuild.getTestsToRun(
+                pluginInstanceState,
                 buildMethods.allModified
             )
         )
@@ -375,7 +376,7 @@ class CoverageAdminPart(
     }
 
     internal suspend fun calculateAndSendActiveScopeCoverage() {
-        val activeScope = agentState.activeScope
+        val activeScope = pluginInstanceState.activeScope
         val coverageInfoSet = calculateCoverageData(activeScope)
         sendActiveSessions()
 
@@ -414,7 +415,6 @@ class CoverageAdminPart(
     }
 
     override suspend fun dropData() {
-        val buildInfo = adminData.buildManager[buildVersion]!!
         adminData.buildManager.buildInfos.keys.forEach {
             sender.send(agentId, it, Routes.Scopes, "")
             sender.send(agentId, it, Routes.Build.AssociatedTests, "")
@@ -424,12 +424,29 @@ class CoverageAdminPart(
             sender.send(agentId, it, Routes.Build.CoverageByPackages, "")
             sender.send(agentId, it, Routes.Build.Coverage, "")
         }
-        val classesBytes = buildInfo.classesBytes
-        agentState.reset()
+        val classesBytes = adminData.buildManager[buildVersion]!!.classesBytes
+        pluginInstanceState.reset()
         processData(InitInfo(classesBytes.keys.count(), ""))
-        agentState.initialized(buildInfo)
+        pluginInstanceState.initialized(adminData.buildManager.buildInfos)
         processData(Initialized())
     }
 
+    private suspend fun pluginInstanceState(): PluginInstanceState {
+        val lastBuildCoverage = storeClient
+            .findById<LastBuildCoverage>(lastCoverageId(agentId, buildVersion))
+            ?.coverage ?: 0.0
+        val prevBuildVersion = adminData.buildManager[buildVersion]?.prevBuild ?: ""
+        val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
+            agentInfo.id,
+            KoduxTestsAssociatedWithBuild(agentInfo.id, storeClient)
+        )
+        return PluginInstanceState(
+            agentInfo = agentInfo,
+            lastBuildCoverage = lastBuildCoverage,
+            prevBuildVersion = prevBuildVersion,
+            storeClient = storeClient,
+            testsAssociatedWithBuild = testsAssociatedWithBuild
+        )
+    }
 
 }

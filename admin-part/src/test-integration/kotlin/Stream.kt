@@ -19,7 +19,7 @@ import kotlin.reflect.*
 import kotlin.reflect.full.*
 
 
-class CoverageSocketStreams() : PluginStreams() {
+class CoverageSocketStreams : PluginStreams() {
 
     init {
         fillMapping(Routes::class)
@@ -90,6 +90,7 @@ class CoverageSocketStreams() : PluginStreams() {
     override fun queued(incoming: ReceiveChannel<Frame>, out: SendChannel<Frame>, isDebugStream: Boolean) {
         iut = out
         app.launch {
+
             incoming.consumeEach {
                 when (it) {
                     is Frame.Text -> {
@@ -174,7 +175,7 @@ class CoverageSocketStreams() : PluginStreams() {
                                                 testsUsages.send(null)
                                             } else {
                                                 testsUsages.send(
-                                                    TestUsagesInfo.serializer().list parse content
+                                                    TestsUsagesInfoByType.serializer().list parse content
                                                 )
                                             }
                                         }
@@ -302,7 +303,7 @@ class CoverageSocketStreams() : PluginStreams() {
         suspend fun coverageByPackages() = coverageByPackages.receive()
 
 
-        internal val testsUsages = Channel<List<TestUsagesInfo>?>()
+        internal val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
         suspend fun testsUsages() = testsUsages.receive()
 
     }
@@ -367,8 +368,7 @@ fun Application.resolve(destination: String): Any {
     val filter = pathToCallBackMapping.filter { it.key.count { c -> c == '/' } + 1 == urlTokens.size }.filter {
         var matche = true
         it.key.split("/").forEachIndexed { x, y ->
-            if (y == urlTokens[x] || y.startsWith("{")) {
-            } else {
+            if (!(y == urlTokens[x] || y.startsWith("{"))) {
                 matche = false
             }
         }
@@ -379,8 +379,7 @@ fun Application.resolve(destination: String): Any {
     val parameters = suitableRout.run {
         val mutableMapOf = mutableMapOf<String, String>()
         key.split("/").forEachIndexed { x, y ->
-            if (y == urlTokens[x]) {
-            } else if (p.matches(y)) {
+            if (y != urlTokens[x] && (p.matches(y))) {
                 mutableMapOf[p.find(y)!!.groupValues[1]] = urlTokens[x]
             }
         }
