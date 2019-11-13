@@ -311,6 +311,7 @@ class CoverageAdminPart(
                     cleanTopics(prevScope.id)
                 }
             }
+            println()
             val activeScope = agentState.activeScope
             println("Current active scope $activeScope")
             calculateAndSendActiveScopeCoverage()
