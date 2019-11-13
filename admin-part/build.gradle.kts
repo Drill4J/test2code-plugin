@@ -143,6 +143,12 @@ tasks {
         archiveFileName.set("admin-part.jar")
         from(jar)
     }
+    val prepareDist by registering(Copy::class) {
+        from(rootProject.tasks["distZip"])
+        into(file("distr").resolve("adminStorage"))
+    }
+
+    getByPath("testIntegrationClasses").dependsOn(prepareDist)
 }
 
 

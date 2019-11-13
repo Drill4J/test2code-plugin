@@ -19,13 +19,6 @@ tasks {
         }
     }
 
-    val prepareDist by registering(Copy::class) {
-        from(rootProject.tasks["distZip"])
-        into(file("distr").resolve("adminStorage"))
-    }
-
-    getByPath(":admin-part:testIntegrationClasses").dependsOn(prepareDist)
-
 }
 publishing {
     repositories {
