@@ -6,6 +6,7 @@ import com.epam.drill.e2e.*
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
+import org.junit.jupiter.api.*
 
 
 class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
@@ -53,4 +54,94 @@ class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
 
         }
     }
+
+    @Test
+    fun `Finish active scope and drop it after that`() {
+        lateinit var droppedScopeId: String
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
+            connectAgent<Build1> { plugUi, build ->
+                plugUi.buildCoverage()?.coverage shouldBe 0.0
+                plugUi.activeSessions()?.run {
+                    count shouldBe 0
+                    testTypes shouldBe emptySet()
+                }
+                plugUi.activeScope()?.apply {
+                    coverage shouldBe 0.0
+                    droppedScopeId = id
+                }
+                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val (status, content) = pluginAction(startNewSession)
+                status shouldBe HttpStatusCode.OK
+                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                plugUi.activeSessions()?.run { count shouldBe 1 }
+                runWithSession(startSession.payload.sessionId) {
+                    val gt = build.entryPoint()
+                    gt.test1()
+                    gt.test2()
+                    gt.test3()
+                }
+                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                plugUi.activeSessions()?.count shouldBe 0
+                plugUi.activeScope()?.coverage shouldBe 80.0
+                val switchScope = SwitchActiveScope(
+                    ActiveScopeChangePayload(
+                        scopeName = "new2",
+                        savePrevScope = true,
+                        prevScopeEnabled = true
+                    )
+                ).stringify()
+                pluginAction(switchScope)
+                plugUi.buildCoverage()?.coverage shouldBe 80.0
+                pluginAction(DropScope(ScopePayload(droppedScopeId)).stringify())
+                plugUi.buildCoverage()?.coverage shouldBe 0.0
+                plugUi.scopes()?.apply {
+                    size shouldBe 1
+                    first().id shouldNotBe droppedScopeId
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `Finish active scope with ignoring and reignore after that`() {
+        lateinit var ignoredScopeId: String
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
+            connectAgent<Build1> { plugUi, build ->
+                plugUi.activeSessions()?.run {
+                    count shouldBe 0
+                    testTypes shouldBe emptySet()
+                }
+                plugUi.activeScope()?.apply {
+                    coverage shouldBe 0.0
+                    ignoredScopeId = id
+                }
+                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val (status, content) = pluginAction(startNewSession)
+                status shouldBe HttpStatusCode.OK
+                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                plugUi.activeSessions()?.run { count shouldBe 1 }
+                runWithSession(startSession.payload.sessionId) {
+                    val gt = build.entryPoint()
+                    gt.test1()
+                    gt.test2()
+                    gt.test3()
+                }
+                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                plugUi.activeSessions()?.count shouldBe 0
+                plugUi.activeScope()?.coverage shouldBe 80.0
+                val switchScope = SwitchActiveScope(
+                    ActiveScopeChangePayload(
+                        scopeName = "new2",
+                        savePrevScope = true,
+                        prevScopeEnabled = true
+                    )
+                ).stringify()
+                pluginAction(switchScope)
+                plugUi.buildCoverage()?.coverage shouldBe 0.0
+                pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify())
+                plugUi.buildCoverage()?.coverage shouldBe 80.0
+            }
+        }
+    }
 }
+

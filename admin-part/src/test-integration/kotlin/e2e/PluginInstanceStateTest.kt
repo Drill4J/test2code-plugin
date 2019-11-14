@@ -13,7 +13,7 @@ class PluginInstanceStateTest : E2EPluginTest<CoverageSocketStreams>() {
 
     @Test
     fun `Deploy build2 with finishing active scope and session on previous build`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.coverageByPackages()
                 plugUi.activeSessions()?.run {
@@ -69,7 +69,7 @@ class PluginInstanceStateTest : E2EPluginTest<CoverageSocketStreams>() {
     @Test
     fun `Deploy build2 without finishing active scope and session on previous build`() {
         lateinit var activeScopeIdFirstBuild: String
-        createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.coverageByPackages()
                 plugUi.activeSessions()?.run {
@@ -137,7 +137,7 @@ class PluginInstanceStateTest : E2EPluginTest<CoverageSocketStreams>() {
 
     @Test
     fun `Redeploy build1 after finishing active scope and session on this build`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.coverageByPackages()
                 plugUi.activeSessions()?.run {
