@@ -40,6 +40,10 @@ class CoverageAdminPart(
         pluginInstanceState = pluginInstanceState()
     }
 
+    override suspend fun applyPackagesChanges() {
+        wipeStoredData()
+    }
+
     private val activeScope get() = pluginInstanceState.activeScope
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
@@ -428,7 +432,7 @@ class CoverageAdminPart(
             sender.send(agentId, it, Routes.Build.Coverage, "")
         }
         val classesBytes = adminData.buildManager[buildVersion]!!.classesBytes
-        pluginInstanceState.reset()
+        pluginInstanceState = pluginInstanceState()
         processData(InitInfo(classesBytes.keys.count(), ""))
         pluginInstanceState.initialized(adminData.buildManager.buildInfos)
         processData(Initialized())
@@ -450,6 +454,14 @@ class CoverageAdminPart(
             storeClient = storeClient,
             testsAssociatedWithBuild = testsAssociatedWithBuild
         )
+    }
+
+    private suspend fun wipeStoredData() {
+        storeClient.deleteAll<FinishedScope>()
+        storeClient.deleteAll<KoduxTestsAssociatedWithBuild>()
+        storeClient.deleteAll<LastBuildCoverage>()
+        storeClient.deleteAll<ClassesData>()
+        dropData()
     }
 
 }
