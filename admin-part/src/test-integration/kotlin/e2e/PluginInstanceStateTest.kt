@@ -7,9 +7,12 @@ import io.kotlintest.*
 import io.kotlintest.matchers.boolean.*
 import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
+import kotlinx.coroutines.delay
+import org.junit.jupiter.api.Test
 
 class PluginInstanceStateTest : E2EPluginTest<CoverageSocketStreams>() {
 
+    @Test
     fun `E2E test session test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
             connectAgent<Build1> { plugUi, build ->

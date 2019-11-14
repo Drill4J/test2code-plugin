@@ -67,7 +67,7 @@ class CoverageSocketStreams : PluginStreams() {
     suspend fun coverageByPackages() = coverageByPackages.receive()
 
 
-    private val testsUsages = Channel<List<TestUsagesInfo>?>()
+    private val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
     suspend fun testsUsages() = testsUsages.receive()
 
 
@@ -226,7 +226,7 @@ class CoverageSocketStreams : PluginStreams() {
                                                 testsUsages.send(null)
                                             } else {
                                                 testsUsages.send(
-                                                    TestUsagesInfo.serializer().list parse content
+                                                    TestsUsagesInfoByType.serializer().list parse content
                                                 )
                                             }
                                         }
