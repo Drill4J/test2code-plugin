@@ -103,12 +103,6 @@ class PluginInstanceState(
         scopeManager.saveClassesData(classesData)
     }
 
-    suspend fun reset() {
-        data = NoData
-        changeActiveScope("New Scope 1")
-        scopeManager.clean()
-    }
-
     //throw ClassCastException if the ref value is in the wrong state
     suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData =
         if (buildVersion == agentInfo.buildVersion) {
