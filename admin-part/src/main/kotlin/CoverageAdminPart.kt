@@ -187,7 +187,10 @@ class CoverageAdminPart(
                 previousBuildInfo = prevBuildVersion to prevBuildAlias,
                 coverageByType = coverageByType,
                 arrow = classesData.arrowType(totalCoveragePercent),
-                scopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(buildVersion)
+                scopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(
+                    buildVersion,
+                    buildVersion == this.buildVersion
+                )
             )
         } else ScopeCoverage(
             totalCoveragePercent,
@@ -432,17 +435,17 @@ class CoverageAdminPart(
     }
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
-        val lastBuildCoverage = storeClient
-            .findById<LastBuildCoverage>(lastCoverageId(agentId, buildVersion))
-            ?.coverage ?: 0.0
         val prevBuildVersion = adminData.buildManager[buildVersion]?.prevBuild ?: ""
+        val lastPrevBuildCoverage = storeClient
+            .findById<LastBuildCoverage>(lastCoverageId(agentId, prevBuildVersion))
+            ?.coverage ?: 0.0
         val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
             agentInfo.id,
             KoduxTestsAssociatedWithBuild(agentInfo.id, storeClient)
         )
         return PluginInstanceState(
             agentInfo = agentInfo,
-            lastBuildCoverage = lastBuildCoverage,
+            lastPrevBuildCoverage = lastPrevBuildCoverage,
             prevBuildVersion = prevBuildVersion,
             storeClient = storeClient,
             testsAssociatedWithBuild = testsAssociatedWithBuild

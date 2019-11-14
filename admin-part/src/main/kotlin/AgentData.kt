@@ -15,6 +15,5 @@ class ClassesData(
     val buildVersion: String,
     val totalInstructions: Int,
     val prevBuildVersion: String,
-    val prevBuildAlias: String,
     val prevBuildCoverage: Double
 ) : AgentData()
