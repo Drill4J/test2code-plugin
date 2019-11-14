@@ -15,9 +15,9 @@ import org.jacoco.core.data.*
  */
 
 class PluginInstanceState(
-    lastBuildCoverage: Double,
     val storeClient: StoreClient,
     val prevBuildVersion: String,
+    val lastPrevBuildCoverage: Double,
     val agentInfo: AgentInfo,
     val testsAssociatedWithBuild: TestsAssociatedWithBuild
 ) {
@@ -29,11 +29,6 @@ class PluginInstanceState(
         private set(value) {
             _data.value = value
         }
-
-    private val _lastBuildCoverage = atomic(lastBuildCoverage)
-
-    val lastBuildCoverage: Double
-        get() = _lastBuildCoverage.value
 
     suspend fun setLastBuildCoverage(value: Double) {
         storeClient.store(
@@ -89,14 +84,12 @@ class PluginInstanceState(
         val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
         classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
         val bundleCoverage = coverageBuilder.getBundle("")
-        val lastCoverage = scopeManager.getLastCoverage(buildInfo?.buildVersion ?: "")
 
         val classesData = ClassesData(
             buildVersion = agentInfo.buildVersion,
             totalInstructions = bundleCoverage.instructionCounter.totalCount,
             prevBuildVersion = prevBuildVersion,
-            prevBuildAlias = buildInfos[prevBuildVersion]?.buildAlias ?: "",
-            prevBuildCoverage = lastCoverage ?: lastBuildCoverage
+            prevBuildCoverage = lastPrevBuildCoverage
         )
 
         data = classesData

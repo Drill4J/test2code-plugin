@@ -11,8 +11,10 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun scopesByBuildVersion(buildVersion: String): List<FinishedScope> =
         allScopes().filter { it.buildVersion == buildVersion }
 
-    suspend fun scopeCountByBuildVersion(buildVersion: String): Int =
-        scopesByBuildVersion(buildVersion).count()
+    suspend fun scopeCountByBuildVersion(buildVersion: String, buildIsActive: Boolean): Int {
+        val storedScopesCount = scopesByBuildVersion(buildVersion).count()
+        return if (buildIsActive) storedScopesCount + 1 else storedScopesCount
+    }
 
     suspend fun enabledScopes() = allScopes().filter { it.enabled }
 
