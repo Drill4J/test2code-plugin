@@ -2,6 +2,7 @@ package com.epam.drill.plugins.coverage.e2e
 
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
+import com.epam.drill.e2e.plugin.runWithSession
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.kotlintest.matchers.boolean.*
@@ -9,7 +10,7 @@ import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
 import org.junit.jupiter.api.*
 
-class PluginInstanceStateTest : E2EPluginTest<CoverageSocketStreams>() {
+class PluginInstanceStateTest : E2EPluginTest() {
 
     @Test
     fun `Deploy build2 with finishing active scope and session on previous build`() {

@@ -3,17 +3,19 @@ package com.epam.drill.plugins.coverage.e2e
 
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
+import com.epam.drill.e2e.plugin.runWithSession
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
+import kotlinx.coroutines.delay
 import org.junit.jupiter.api.*
 
 
-class RisksTest : E2EPluginTest<CoverageSocketStreams>() {
+class RisksTest : E2EPluginTest() {
 
     @Test
     fun `Cover all risks during 2 builds`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams> {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(true, true) {
             connectAgent<Build1> { plugUi, build ->
 
                 plugUi.activeScope()?.coverage shouldBe 0.0
@@ -75,7 +77,9 @@ class RisksTest : E2EPluginTest<CoverageSocketStreams>() {
                     gt.test2()
                     gt.test3()
                 }
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+
+                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).first shouldBe HttpStatusCode.OK
+                delay(300)//todo move it to core library
                 plugUi.activeSessions()?.count shouldBe 0
 
                 val switchScope = SwitchActiveScope(

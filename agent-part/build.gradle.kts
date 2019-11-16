@@ -6,7 +6,6 @@ plugins {
     `kotlinx-atomicfu`
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
-val jacocoVersion = "0.8.3"
 val vavrVersion = "0.10.0"
 val bcelVersion = "6.3.1"
 
@@ -26,6 +25,13 @@ dependencies {
     commonJarDeps("org.jacoco:org.jacoco.core:$jacocoVersion")
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
 }
+
+val commonJarDepsTest by configurations.creating {}
+dependencies {
+    commonJarDepsTest("org.jacoco:org.jacoco.core:$jacocoVersion")
+    commonJarDepsTest("org.apache.bcel:bcel:$bcelVersion")
+}
+
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
@@ -42,18 +48,31 @@ tasks {
     val jar by existing(Jar::class)
     val agentShadow by registering(ShadowJar::class) {
         configurations = listOf(agent)
-        configurate()
+        configureProd()
+        archiveFileName.set("agent-part.jar")
+        from(jar)
+    }
+    val agentShadowTest by registering(ShadowJar::class) {
+        configurations = listOf(commonJarDepsTest)
+        configureTest()
         archiveFileName.set("agent-part.jar")
         from(jar)
     }
 }
 
-fun ShadowJar.configurate() {
+fun ShadowJar.configureProd() {
     mergeServiceFiles()
     isZip64 = true
     relocate("io.vavr", "coverage.io.vavr")
     relocate("kotlin", "kruntime")
     relocate("org.apache.bcel", "coverage.org.apache.bcel")
+    relocate("org.objectweb.asm", "coverage.org.objectweb.asm")
+    relocate("org.jacoco.core", "coverage.org.jacoco.core")
+}
+
+fun ShadowJar.configureTest() {
+    mergeServiceFiles()
+    isZip64 = true
     relocate("org.objectweb.asm", "coverage.org.objectweb.asm")
     relocate("org.jacoco.core", "coverage.org.jacoco.core")
 }

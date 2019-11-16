@@ -7,7 +7,7 @@ import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 
 
-class CoverageTest : E2EPluginTest<CoverageSocketStreams>() {
+class CoverageTest : E2EPluginTest() {
 
     @org.junit.jupiter.api.Test
     fun `E2E coverage test`() {

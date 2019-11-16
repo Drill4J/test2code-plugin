@@ -10,7 +10,6 @@ plugins {
     idea
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
-val jacocoVersion = "0.8.3"
 val vavrVersion = "0.10.0"
 val ktorVersion = "1.2.5"
 val bcelVersion = "6.3.1"
@@ -139,16 +138,19 @@ tasks {
 
     val adminShadow by registering(ShadowJar::class) {
         configurations = listOf(adminJarDeps)
-//        configurate()
         archiveFileName.set("admin-part.jar")
         from(jar)
     }
     val prepareDist by registering(Copy::class) {
-        from(rootProject.tasks["distZip"])
+        from(rootProject.tasks["testDistZip"])
         into(file("distr").resolve("adminStorage"))
     }
 
     getByPath("testIntegrationClasses").dependsOn(prepareDist)
+
+    named("clean") {
+        delete("distr", "work")
+    }
 }
 
 
