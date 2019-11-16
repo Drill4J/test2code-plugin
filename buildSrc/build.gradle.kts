@@ -17,7 +17,7 @@ dependencies {
     implementation(kotlin("serialization", kotlinVersion))
     implementation(kotlin("reflect", kotlinVersion))
     implementation("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicFuVersion")
-    implementation("com.epam.drill:drill-gradle-plugin:0.2.0") { isChanging = true }
+    implementation("com.epam.drill:drill-gradle-plugin:0.4.0") { isChanging = true }
 }
 
 kotlinDslPluginOptions {

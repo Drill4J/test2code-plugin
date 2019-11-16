@@ -3,12 +3,13 @@ package com.epam.drill.plugins.coverage.e2e
 
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
+import com.epam.drill.e2e.plugin.runWithSession
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
 import org.junit.jupiter.api.*
 
-class SessionTest : E2EPluginTest<CoverageSocketStreams>() {
+class SessionTest : E2EPluginTest() {
 
 
     @RepeatedTest(2)

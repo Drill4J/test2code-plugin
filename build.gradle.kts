@@ -17,6 +17,12 @@ tasks {
                 into("/")
             }
         }
+        create("test") {
+            contents {
+                from(getByPath(":admin-part:adminShadow"), getByPath(":agent-part:agentShadowTest"), pluginConfigJson)
+                into("/")
+            }
+        }
     }
 
 }

@@ -3,13 +3,14 @@ package com.epam.drill.plugins.coverage.e2e
 
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
+import com.epam.drill.e2e.plugin.runWithSession
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
 import org.junit.jupiter.api.*
 
 
-class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
+class ScopeTest : E2EPluginTest() {
 
 
     @org.junit.jupiter.api.Test
@@ -58,7 +59,7 @@ class ScopeTest : E2EPluginTest<CoverageSocketStreams>() {
     @Test
     fun `Finish active scope and drop it after that`() {
         lateinit var droppedScopeId: String
-        createSimpleAppWithPlugin<CoverageSocketStreams> {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(true,true) {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.buildCoverage()?.coverage shouldBe 0.0
                 plugUi.activeSessions()?.run {
