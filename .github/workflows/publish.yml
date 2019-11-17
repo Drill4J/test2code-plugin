@@ -1,10 +1,8 @@
 name: Build & publish coverage-plugin
 on:
   push:
-    branches:
-      - develop
     tags:
-      - 'v[0-9]*.[0-9]*.0'
+      - '*'
 
 jobs:
   build_and_publish:
@@ -15,10 +13,10 @@ jobs:
       - name: env
         run: env
       - name: Check
-        run: gradle -si --no-daemon check
+        run: gradle --no-daemon check
       - name: Publish
         run: |
-          gradle -si --no-daemon publishCoverageZipPublicationToMavenRepository
+          gradle --no-daemon publishCoverageZipPublicationToMavenRepository
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
