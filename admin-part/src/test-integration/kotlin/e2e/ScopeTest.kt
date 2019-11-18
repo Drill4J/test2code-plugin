@@ -3,7 +3,7 @@ package com.epam.drill.plugins.coverage.e2e
 
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
-import com.epam.drill.e2e.plugin.runWithSession
+import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
@@ -13,13 +13,13 @@ import org.junit.jupiter.api.*
 class ScopeTest : E2EPluginTest() {
 
 
-    @org.junit.jupiter.api.Test
+    @Test
     fun `E2E scope test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
 
                 val activeScope = plugUi.activeScope()
-                activeScope?.apply {
+                activeScope!!.apply {
                     name shouldBe "New Scope 1"
                     started shouldNotBe 0L
                     finished shouldBe 0L
@@ -30,7 +30,7 @@ class ScopeTest : E2EPluginTest() {
             }.reconnect<Build2> { plugUi, _ ->
 
                 val activeScope = plugUi.activeScope()
-                activeScope?.apply {
+                activeScope!!.apply {
                     name shouldBe "New Scope 1"
                     started shouldNotBe 0L
                     finished shouldBe 0L
@@ -39,9 +39,9 @@ class ScopeTest : E2EPluginTest() {
                     active shouldBe true
                 }
                 val renameScope =
-                    RenameScope(RenameScopePayload(activeScope!!.id, "integration")).stringify()
+                    RenameScope(RenameScopePayload(activeScope.id, "integration")).stringify()
                 pluginAction(renameScope)
-                plugUi.activeScope()?.name shouldBe "integration"
+                plugUi.activeScope()!!.name shouldBe "integration"
 
                 val switchActiveScopeWrong = SwitchActiveScope(ActiveScopeChangePayload("integration")).stringify()
                 val (status1, _) = pluginAction(switchActiveScopeWrong)
@@ -50,7 +50,7 @@ class ScopeTest : E2EPluginTest() {
                 val switchActiveScope = SwitchActiveScope(ActiveScopeChangePayload("scope integration")).stringify()
                 val (status2, _) = pluginAction(switchActiveScope)
                 status2 shouldBe HttpStatusCode.OK
-                plugUi.activeScope()?.name shouldBe "scope integration"
+                plugUi.activeScope()!!.name shouldBe "scope integration"
             }
 
         }
@@ -59,14 +59,14 @@ class ScopeTest : E2EPluginTest() {
     @Test
     fun `Finish active scope and drop it after that`() {
         lateinit var droppedScopeId: String
-        createSimpleAppWithPlugin<CoverageSocketStreams>(true,true) {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                plugUi.buildCoverage()?.coverage shouldBe 0.0
-                plugUi.activeSessions()?.run {
+                plugUi.buildCoverage()!!.coverage shouldBe 0.0
+                plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
                 }
-                plugUi.activeScope()?.apply {
+                plugUi.activeScope()!!.apply {
                     coverage shouldBe 0.0
                     droppedScopeId = id
                 }
@@ -74,7 +74,7 @@ class ScopeTest : E2EPluginTest() {
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
-                plugUi.activeSessions()?.run { count shouldBe 1 }
+                plugUi.activeSessions()!!.run { count shouldBe 1 }
                 runWithSession(startSession.payload.sessionId) {
                     val gt = build.entryPoint()
                     gt.test1()
@@ -82,8 +82,8 @@ class ScopeTest : E2EPluginTest() {
                     gt.test3()
                 }
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
-                plugUi.activeSessions()?.count shouldBe 0
-                plugUi.activeScope()?.coverage shouldBe 80.0
+                plugUi.activeSessions()!!.count shouldBe 0
+                plugUi.activeScope()!!.coverage shouldBe 80.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -92,13 +92,11 @@ class ScopeTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope)
-                plugUi.buildCoverage()?.coverage shouldBe 80.0
+                plugUi.buildCoverage()!!.coverage shouldBe 80.0
                 pluginAction(DropScope(ScopePayload(droppedScopeId)).stringify())
-                plugUi.buildCoverage()?.coverage shouldBe 0.0
-                plugUi.scopes()?.apply {
-                    size shouldBe 1
-                    first().id shouldNotBe droppedScopeId
-                }
+                plugUi.buildCoverage()!!.coverage shouldBe 0.0
+                plugUi.activeScope()!!.id shouldNotBe droppedScopeId
+                plugUi.scopes() shouldBe null
             }
         }
     }
@@ -108,11 +106,11 @@ class ScopeTest : E2EPluginTest() {
         lateinit var ignoredScopeId: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                plugUi.activeSessions()?.run {
+                plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
                 }
-                plugUi.activeScope()?.apply {
+                plugUi.activeScope()!!.apply {
                     coverage shouldBe 0.0
                     ignoredScopeId = id
                 }
@@ -120,7 +118,7 @@ class ScopeTest : E2EPluginTest() {
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
-                plugUi.activeSessions()?.run { count shouldBe 1 }
+                plugUi.activeSessions()!!.run { count shouldBe 1 }
                 runWithSession(startSession.payload.sessionId) {
                     val gt = build.entryPoint()
                     gt.test1()
@@ -128,8 +126,8 @@ class ScopeTest : E2EPluginTest() {
                     gt.test3()
                 }
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
-                plugUi.activeSessions()?.count shouldBe 0
-                plugUi.activeScope()?.coverage shouldBe 80.0
+                plugUi.activeSessions()!!.count shouldBe 0
+                plugUi.activeScope()!!.coverage shouldBe 80.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -138,9 +136,9 @@ class ScopeTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope)
-                plugUi.buildCoverage()?.coverage shouldBe 0.0
+                plugUi.buildCoverage()!!.coverage shouldBe 0.0
                 pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify())
-                plugUi.buildCoverage()?.coverage shouldBe 80.0
+                plugUi.buildCoverage()!!.coverage shouldBe 80.0
             }
         }
     }
