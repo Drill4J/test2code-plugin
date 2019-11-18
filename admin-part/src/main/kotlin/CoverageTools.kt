@@ -111,6 +111,7 @@ fun calculateBuildMethods(
         modifiedNameMethods = infos[DiffType.MODIFIED_NAME]!!,
         modifiedDescMethods = infos[DiffType.MODIFIED_DESC]!!,
         modifiedBodyMethods = infos[DiffType.MODIFIED_BODY]!!,
+        unaffectedMethods = infos[DiffType.UNAFFECTED]!!,
         deletedMethods = infos[DiffType.DELETED]!!
     )
 }

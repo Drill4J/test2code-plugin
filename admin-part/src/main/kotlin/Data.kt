@@ -52,6 +52,7 @@ data class BuildMethods(
     val modifiedNameMethods: MethodsInfo = MethodsInfo(),
     val modifiedDescMethods: MethodsInfo = MethodsInfo(),
     val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
+    val unaffectedMethods: MethodsInfo = MethodsInfo(),
     val deletedMethods: MethodsInfo = MethodsInfo(),
     var deletedCoveredMethodsCount: Int = 0
 ) {
