@@ -5,15 +5,16 @@ import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
+import org.junit.jupiter.api.*
 
 
 class CoverageTest : E2EPluginTest() {
 
-    @org.junit.jupiter.api.Test
+    @Test
     fun `E2E coverage test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
-                plugUi.buildCoverage()?.apply {
+                plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
                     previousBuildInfo.first shouldBe ""
@@ -22,7 +23,7 @@ class CoverageTest : E2EPluginTest() {
                     arrow shouldBe null
                 }
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.buildCoverage()?.apply {
+                plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
                     previousBuildInfo.first shouldBe "30507"
