@@ -461,7 +461,6 @@ class CoverageAdminPart(
         storeClient.deleteAll<KoduxTestsAssociatedWithBuild>()
         storeClient.deleteAll<LastBuildCoverage>()
         storeClient.deleteAll<ClassesData>()
-        dropData()
     }
 
 }
