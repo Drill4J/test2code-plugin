@@ -20,7 +20,7 @@ class BuildMethodsTests : E2EPluginTest() {
                     modifiedBodyMethods.totalCount shouldBe 0
                     deletedMethods.totalCount shouldBe 0
                     deletedCoveredMethodsCount shouldBe 0
-                    allModified.size shouldBe 0
+                    allModifiedMethods.methods.size shouldBe 0
                 }
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.methods()!!.apply {
@@ -31,7 +31,7 @@ class BuildMethodsTests : E2EPluginTest() {
                     modifiedBodyMethods.totalCount shouldBe 3
                     deletedMethods.totalCount shouldBe 0
                     deletedCoveredMethodsCount shouldBe 0
-                    allModified.size shouldBe 3
+                    allModifiedMethods.methods.size shouldBe 3
                 }
             }
         }

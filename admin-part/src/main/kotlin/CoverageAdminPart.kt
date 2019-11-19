@@ -366,7 +366,7 @@ class CoverageAdminPart(
         return TestsToRun(
             pluginInstanceState.testsAssociatedWithBuild.getTestsToRun(
                 pluginInstanceState,
-                buildMethods.allModified
+                buildMethods.allModifiedMethods.methods
             )
         )
     }
@@ -378,7 +378,7 @@ class CoverageAdminPart(
 
     internal fun risks(buildMethods: BuildMethods): Risks {
         val newRisks = buildMethods.newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
-        val modifiedRisks = buildMethods.allModified.filter { it.coverageRate == CoverageRate.MISSED }
+        val modifiedRisks = buildMethods.allModifiedMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
         return Risks(newRisks, modifiedRisks)
     }
 
