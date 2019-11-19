@@ -56,9 +56,12 @@ data class BuildMethods(
     val deletedMethods: MethodsInfo = MethodsInfo(),
     var deletedCoveredMethodsCount: Int = 0
 ) {
-    val allModified = modifiedBodyMethods.methods +
+
+    val allModifiedMethods: MethodsInfo = (modifiedBodyMethods.methods +
         modifiedDescMethods.methods +
-        modifiedNameMethods.methods
+        modifiedNameMethods.methods).run {
+        MethodsInfo(count(), count { it.coverageRate != CoverageRate.MISSED }, this)
+    }
 
     suspend fun deletedCoveredMethodsCountEnrichment(pluginInstanceState: PluginInstanceState): BuildMethods {
         deletedCoveredMethodsCount = pluginInstanceState.testsAssociatedWithBuild.deletedCoveredMethodsCount(
@@ -69,6 +72,7 @@ data class BuildMethods(
         return this
     }
 }
+
 
 @Serializable
 data class MethodsInfo(
