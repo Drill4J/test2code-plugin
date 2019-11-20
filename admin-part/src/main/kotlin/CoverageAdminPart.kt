@@ -8,6 +8,8 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.coverage.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
+import kotlinx.serialization.list
+import kotlinx.serialization.serializer
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
@@ -101,8 +103,26 @@ class CoverageAdminPart(
     override fun getPluginData(params: Map<String, String>): String {
         return when (params["type"]) {
             "tests-to-run" -> TestsToRun.serializer() stringify lastTestsToRun
+            "recommendations" -> newBuildActionsList()
             else -> ""
         }
+    }
+
+    private fun newBuildActionsList(): String {
+        val list = mutableListOf<String>()
+
+        if (lastTestsToRun.testsToRun.isNotEmpty()) {
+            list.add("Run recommended tests to cover modified methods")
+        }
+
+        if (newMethodsCount() > 0) {
+            list.add("Update your tests to cover new methods")
+        }
+        return String.serializer().list stringify list
+    }
+
+    private fun newMethodsCount(): Int {
+        return adminData.buildManager[buildVersion]?.buildSummary?.newMethods ?: 0
     }
 
     internal suspend fun processData(coverMsg: CoverMessage): Any {
