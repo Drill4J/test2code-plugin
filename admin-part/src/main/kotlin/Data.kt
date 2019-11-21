@@ -37,7 +37,7 @@ data class BuildCoverage(
     val previousBuildInfo: Pair<String, String>,
     override val coverageByType: Map<String, TestTypeSummary>,
     val arrow: ArrowType?,
-    val scopesCount: Int
+    val finishedScopesCount: Int
 ) : Coverage
 
 enum class ArrowType {
