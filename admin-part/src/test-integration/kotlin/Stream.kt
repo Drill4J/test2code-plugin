@@ -38,7 +38,6 @@ class CoverageSocketStreams : PluginStreams() {
         associatedTests()
         buildCoverage()
         coverageByPackages()
-        coverageNew()
         methods()
         risks()
         testsToRun()
@@ -69,10 +68,6 @@ class CoverageSocketStreams : PluginStreams() {
 
     private val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
     suspend fun testsUsages() = testsUsages.receive()
-
-
-    private val coverageNew: Channel<Coverage?> = Channel()
-    suspend fun coverageNew() = coverageNew.receive()
 
 
     private val risks: Channel<Risks?> = Channel()
@@ -246,13 +241,6 @@ class CoverageSocketStreams : PluginStreams() {
                                                 buildCoverage.send(null)
                                             } else
                                                 buildCoverage.send(BuildCoverage.serializer() parse content)
-                                        }
-
-                                        is Routes.Build.CoverageNew -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coverageNew.send(null)
-                                            } else
-                                                coverageNew.send(BuildCoverage.serializer() parse content)
                                         }
 
                                         is Routes.Build.TestsToRun -> {
