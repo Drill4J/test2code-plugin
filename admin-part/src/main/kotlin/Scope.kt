@@ -38,7 +38,11 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope, Sequ
         return _summary.updateAndGet { summary ->
             summary.copy(
                 coverage = classesBytes?.coverage(this, totalInstructions) ?: 0.0,
-                coveragesByType = classesBytes?.coveragesByTestType(this, totalInstructions) ?: emptyMap()
+                coveragesByType = classesBytes?.coveragesByTestType(
+                    classesBytes.bundlesByTests(this),
+                    this,
+                    totalInstructions
+                ) ?: emptyMap()
             )
         }
     }

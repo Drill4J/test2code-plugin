@@ -34,6 +34,12 @@ class Routes {
 
         @Location("/{scopeId}/coverage")
         class Coverage(val scopeId: String)
+
+        @Location("/{scopeId}/tests/covered-methods")
+        class MethodsCoveredByTest(val scopeId: String)
+
+        @Location("/{scopeId}/test-types/covered-methods")
+        class MethodsCoveredByTestType(val scopeId: String)
     }
 
     @Location("/build")
@@ -59,5 +65,10 @@ class Routes {
         @Location("/tests-to-run")
         object TestsToRun
 
+        @Location("/tests/covered-methods")
+        object MethodsCoveredByTest
+
+        @Location("/test-types/covered-methods")
+        object MethodsCoveredByTestType
     }
 }

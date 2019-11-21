@@ -39,6 +39,9 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).first shouldBe HttpStatusCode.OK
                 delay(300)//todo move it to core library
 
+                plugUi.methodsCoveredByTest()
+                plugUi.methodsCoveredByTestType()
+
                 plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
                     coverageByPackages()!!.first().apply {
                         id shouldBe "vsu9sbxes5bl"
@@ -49,7 +52,20 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         classes.size shouldNotBe 0
                         assocTestsCount shouldBe 1
                     }
+                    methodsCoveredByTest()!!.first().apply {
+                        testName shouldBe "xxxx"
+                        newMethods.size shouldBe 1
+                        modifiedMethods.size shouldBe 0
+                        unaffectedMethods.size shouldBe 0
+                    }
+                    methodsCoveredByTestType()!!.first().apply {
+                        testType shouldBe "MANUAL"
+                        newMethods.size shouldBe 1
+                        modifiedMethods.size shouldBe 0
+                        unaffectedMethods.size shouldBe 0
+                    }
                 }
+
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -67,6 +83,24 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     classes.size shouldNotBe 0
                     assocTestsCount shouldBe 1
                 }
+
+                val methodsCoveredByTest = plugUi.methodsCoveredByTest()!!
+                val methodsCoveredByTestType = plugUi.methodsCoveredByTestType()!!
+                methodsCoveredByTest.size shouldBe 1
+                methodsCoveredByTestType.size shouldBe 1
+                methodsCoveredByTest.first().apply {
+                    testName shouldBe "xxxx"
+                    newMethods.size shouldBe 1
+                    modifiedMethods.size shouldBe 0
+                    unaffectedMethods.size shouldBe 0
+                }
+                methodsCoveredByTestType.first().apply {
+                    testType shouldBe "MANUAL"
+                    newMethods.size shouldBe 1
+                    modifiedMethods.size shouldBe 0
+                    unaffectedMethods.size shouldBe 0
+                }
+
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
                 val (status2, content2) = pluginAction(startNewSession2)
                 status2 shouldBe HttpStatusCode.OK
