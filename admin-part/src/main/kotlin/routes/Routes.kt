@@ -59,7 +59,5 @@ class Routes {
         @Location("/tests-to-run")
         object TestsToRun
 
-        @Location("/coverage-new")
-        object CoverageNew
     }
 }

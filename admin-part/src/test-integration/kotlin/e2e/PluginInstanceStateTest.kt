@@ -9,8 +9,7 @@ import io.kotlintest.*
 import io.kotlintest.matchers.boolean.*
 import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
-import org.junit.*
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 
 class PluginInstanceStateTest : E2EPluginTest() {
 
@@ -183,7 +182,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
                 plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 80.0
-                    arrow shouldBe ArrowType.INCREASE
+                    arrow shouldBe null
                     diff shouldNotBe 0.0
                     previousBuildInfo.apply {
                         first shouldBe ""
@@ -195,9 +194,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
         }
     }
 
-    //TODO: enable the test after admin is fixed
     @Test
-    @Ignore
     fun `Deploy build2 and check state of build1`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
@@ -245,8 +242,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.subscribe(SubscribeInfo(agentId, "30507"))
                 plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 80.0
-                    //TODO arrow must be null for first build in system. To edit it after fix issue.
-                    arrow shouldBe ArrowType.INCREASE
+                    arrow shouldBe null
                     diff shouldBe 80.0
                 }
 

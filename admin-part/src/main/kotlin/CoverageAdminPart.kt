@@ -8,8 +8,7 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.coverage.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
-import kotlinx.serialization.list
-import kotlinx.serialization.serializer
+import kotlinx.serialization.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
@@ -210,7 +209,7 @@ class CoverageAdminPart(
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
                 previousBuildInfo = prevBuildVersion to prevBuildAlias,
                 coverageByType = coverageByType,
-                arrow = classesData.arrowType(totalCoveragePercent),
+                arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
                 scopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(
                     buildVersion,
                     buildVersion == this.buildVersion
@@ -445,7 +444,6 @@ class CoverageAdminPart(
         adminData.buildManager.buildInfos.keys.forEach {
             sender.send(agentId, it, Routes.Scopes, "")
             sender.send(agentId, it, Routes.Build.AssociatedTests, "")
-            sender.send(agentId, it, Routes.Build.CoverageNew, "")
             sender.send(agentId, it, Routes.Build.Methods, "")
             sender.send(agentId, it, Routes.Build.TestsUsages, "")
             sender.send(agentId, it, Routes.Build.CoverageByPackages, "")
