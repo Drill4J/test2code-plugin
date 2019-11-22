@@ -13,7 +13,7 @@ jobs:
       - name: env
         run: env
       - name: Check
-        run: gradle --no-daemon check
+        run: gradle check
       - name: Publish
         run: |
           gradle --no-daemon publishCoverageZipPublicationToMavenRepository
