@@ -137,7 +137,27 @@ data class AssociatedTests(
 }
 
 @Serializable
+data class MethodsCoveredByTest(
+    val id: String,
+    val testName: String,
+    val testType: String,
+    val newMethods: List<JavaMethod>,
+    val modifiedMethods: List<JavaMethod>,
+    val unaffectedMethods: List<JavaMethod>
+)
+
+@Serializable
+data class MethodsCoveredByTestType(
+    val testType: String,
+    val testsCount: Int,
+    val newMethods: List<JavaMethod>,
+    val modifiedMethods: List<JavaMethod>,
+    val unaffectedMethods: List<JavaMethod>
+)
+
+@Serializable
 data class TestUsagesInfo(
+    val id: String,
     val testName: String,
     val methodCalls: Int,
     val coverage: Double

@@ -10,7 +10,9 @@ data class CoverageInfoSet(
     val coverage: Coverage,
     val buildMethods: BuildMethods,
     val packageCoverage: List<JavaPackageCoverage>,
-    val testsUsagesInfoByType: List<TestsUsagesInfoByType>
+    val testsUsagesInfoByType: List<TestsUsagesInfoByType>,
+    val methodsCoveredByTest: List<MethodsCoveredByTest>,
+    val methodsCoveredByTestType: List<MethodsCoveredByTestType>
 )
 
 fun testUsages(
@@ -20,7 +22,7 @@ fun testUsages(
 ): List<TestUsagesInfo> =
     bundleMap.filter { it.key.type == testType }
         .map { (test, bundle) ->
-            TestUsagesInfo(test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
+            TestUsagesInfo(test.id, test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
         }.sortedBy { it.testName }
 
 fun packageCoverage(
@@ -84,14 +86,15 @@ fun IBundleCoverage.toDataMap() = packages
     .flatMap { it.classes }
     .flatMap { c -> c.methods.map { (c.name to it.sign()) to it } }.toMap()
 
-fun calculateBuildMethods(
+fun calculateBundleMethods(
     methodChanges: MethodChanges,
-    bundleCoverage: IBundleCoverage
+    bundleCoverage: IBundleCoverage,
+    excludeMissed: Boolean = false
 ): BuildMethods {
     val methodsCoverages = bundleCoverage.toDataMap()
 
     val infos = DiffType.values().map { type ->
-        type to (methodChanges.map[type]?.getInfo(methodsCoverages) ?: MethodsInfo())
+        type to (methodChanges.map[type]?.getInfo(methodsCoverages, excludeMissed) ?: MethodsInfo())
     }.toMap()
 
     val totalInfo = infos
@@ -118,20 +121,53 @@ fun calculateBuildMethods(
 
 
 fun Methods.getInfo(
-    data: Map<Pair<String, String>, IMethodCoverage>
+    data: Map<Pair<String, String>, IMethodCoverage>,
+    excludeMissed: Boolean
 ) = MethodsInfo(
     totalCount = this.count(),
     coveredCount = count { data[it.ownerClass to it.sign]?.instructionCounter?.coveredCount ?: 0 > 0 },
-    methods = this.map { method ->
-        JavaMethod(
-            method.ownerClass,
-            beautifyMethodName(method.name, classNameFromPath(method.ownerClass)),
-            declaration(method.desc),
-            method.hash,
-            data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
-        )
+    methods = this.mapNotNull { method ->
+        val coverageRate = data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
+        if (!(excludeMissed && coverageRate == CoverageRate.MISSED)) {
+            JavaMethod(
+                method.ownerClass,
+                beautifyMethodName(method.name, classNameFromPath(method.ownerClass)),
+                declaration(method.desc),
+                method.hash,
+                coverageRate
+            )
+        } else null
     }.sortedBy { it.name }
 )
+
+fun Map<TypedTest, IBundleCoverage>.coveredMethods(
+    methodChanges: MethodChanges,
+    bundlesByType: Map<String, IBundleCoverage>
+): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {
+    val coveredByTest = map { (typedTest, bundle) ->
+        val changes = calculateBundleMethods(methodChanges, bundle, true)
+        MethodsCoveredByTest(
+            id = typedTest.id,
+            testName = typedTest.name,
+            testType = typedTest.type,
+            newMethods = changes.newMethods.methods,
+            modifiedMethods = changes.allModifiedMethods.methods,
+            unaffectedMethods = changes.unaffectedMethods.methods
+        )
+    }
+    val typesCounts = keys.groupBy { it.type }.mapValues { it.value.count() }
+    val coveredByType = bundlesByType.map { (type, bundle) ->
+        val changes = calculateBundleMethods(methodChanges, bundle, true)
+        MethodsCoveredByTestType(
+            testType = type,
+            testsCount = typesCounts[type] ?: 0,
+            newMethods = changes.newMethods.methods,
+            modifiedMethods = changes.allModifiedMethods.methods,
+            unaffectedMethods = changes.unaffectedMethods.methods
+        )
+    }
+    return coveredByTest to coveredByType
+}
 
 private fun classNameFromPath(path: String) = path.substringAfterLast('/')
 

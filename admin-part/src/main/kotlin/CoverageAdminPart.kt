@@ -187,7 +187,8 @@ class CoverageAdminPart(
         val initialClassBytes = buildInfo?.classesBytes ?: emptyMap()
         val analyzer = Analyzer(dataStore, coverageBuilder)
 
-        val assocTestsMap = classesBytes.associatedTests(finishedSessions)
+        val bundleMap = classesBytes.bundlesByTests(finishedSessions)
+        val assocTestsMap = associatedTests(bundleMap)
         val associatedTests = assocTestsMap.getAssociatedTests()
 
         initialClassBytes.forEach { (name, bytes) ->
@@ -197,7 +198,7 @@ class CoverageAdminPart(
         val totalCoveragePercent = bundleCoverage.coverage(classesData.totalInstructions)
 
         val coverageByType = if (isBuildCvg) {
-            classesBytes.coveragesByTestType(finishedSessions, classesData.totalInstructions)
+            classesBytes.coveragesByTestType(bundleMap, finishedSessions, classesData.totalInstructions)
         } else activeScope.summary.coveragesByType
         println(coverageByType)
 
@@ -220,11 +221,16 @@ class CoverageAdminPart(
 
         val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
 
-        val buildMethods = calculateBuildMethods(
+        val buildMethods = calculateBundleMethods(
             methodsChanges,
             bundleCoverage
         ).deletedCoveredMethodsCountEnrichment(pluginInstanceState)
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
+
+        val (coveredByTest, coveredByTestType) = bundleMap.coveredMethods(
+            methodsChanges,
+            classesBytes.bundlesByTestsType(finishedSessions)
+        )
 
         val testsUsagesInfoByType = coverageByType.map {
             TestsUsagesInfoByType(
@@ -244,7 +250,9 @@ class CoverageAdminPart(
             coverageBlock,
             buildMethods,
             packageCoverage,
-            testsUsagesInfoByType
+            testsUsagesInfoByType,
+            coveredByTest,
+            coveredByTestType
         )
     }
 
@@ -360,6 +368,13 @@ class CoverageAdminPart(
         sender.send(agentId, buildVersion, Routes.Build.CoverageByPackages, coverageInfoSet.packageCoverage)
         sender.send(agentId, buildVersion, Routes.Build.Methods, coverageInfoSet.buildMethods)
         sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testsUsagesInfoByType)
+        sender.send(agentId, buildVersion, Routes.Build.MethodsCoveredByTest, coverageInfoSet.methodsCoveredByTest)
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Build.MethodsCoveredByTestType,
+            coverageInfoSet.methodsCoveredByTestType
+        )
 
         sendRisks(buildVersion, coverageInfoSet.buildMethods)
         pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
@@ -424,8 +439,18 @@ class CoverageAdminPart(
             Routes.Scope.TestsUsages(activeScope.id),
             coverageInfoSet.testsUsagesInfoByType
         )
-
-
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Scope.MethodsCoveredByTest(activeScope.id),
+            coverageInfoSet.methodsCoveredByTest
+        )
+        sender.send(
+            agentId,
+            buildVersion,
+            Routes.Scope.MethodsCoveredByTestType(activeScope.id),
+            coverageInfoSet.methodsCoveredByTestType
+        )
     }
 
     internal suspend fun cleanTopics(id: String) {

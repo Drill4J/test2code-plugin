@@ -2,17 +2,17 @@ package com.epam.drill.plugins.coverage
 
 import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
 sealed class Session(
-        val id: String,
-        val testType: String
+    val id: String,
+    val testType: String
 )
 
 class ActiveSession(
-        id: String,
-        testType: String
+    id: String,
+    testType: String
 ) : Session(id, testType) {
 
     private val _probes = atomic(list<ExecClassData>())
@@ -46,4 +46,6 @@ class FinishedSession(
 data class TypedTest(
     val name: String,
     val type: String
-)
+) {
+    val id get() = "$name:$type"
+}
