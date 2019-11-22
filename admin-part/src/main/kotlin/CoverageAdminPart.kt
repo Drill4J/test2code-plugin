@@ -210,10 +210,7 @@ class CoverageAdminPart(
                 previousBuildInfo = prevBuildVersion to prevBuildAlias,
                 coverageByType = coverageByType,
                 arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
-                scopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(
-                    buildVersion,
-                    buildVersion == this.buildVersion
-                )
+                finishedScopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(buildVersion)
             )
         } else ScopeCoverage(
             totalCoveragePercent,

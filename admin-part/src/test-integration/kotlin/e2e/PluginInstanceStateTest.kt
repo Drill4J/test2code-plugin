@@ -98,12 +98,12 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.apply {
                     activeScopeIdFirstBuild = id
-                    coverage shouldBe 80.0
+                    coverage shouldBe 100.0
                     coveragesByType.getValue("MANUAL").apply {
                         testType shouldBe "MANUAL"
-                        coverage shouldBe 80.0
+                        coverage shouldBe 100.0
                         testCount shouldBe 1
-                        coveredMethodsCount shouldBe 3
+                        coveredMethodsCount shouldBe 4
                     }
                 }
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
@@ -181,7 +181,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     testsToRun.isEmpty() shouldBe true
                 }
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 80.0
+                    coverage shouldBe 100.0
                     arrow shouldBe null
                     diff shouldNotBe 0.0
                     previousBuildInfo.apply {
@@ -234,20 +234,20 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 pluginAction(switchScope)
 
                 plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 1
+                    newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
                 }
 
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.subscribe(SubscribeInfo(agentId, "30507"))
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 80.0
+                    coverage shouldBe 100.0
                     arrow shouldBe null
-                    diff shouldBe 80.0
+                    diff shouldBe 100.0
                 }
 
                 plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 1
+                    newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
                 }
 

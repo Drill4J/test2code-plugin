@@ -52,8 +52,7 @@ class RisksTest : E2EPluginTest() {
                 pluginAction(switchScope)
 
                 plugUi.risks()!!.apply {
-                    newMethods.size shouldBe 1
-                    newMethods.first().name shouldBe "Test"
+                    newMethods.size shouldBe 0
                     modifiedMethods shouldBe emptyList()
                 }
             }.reconnect<Build2> { plugUi, build ->
