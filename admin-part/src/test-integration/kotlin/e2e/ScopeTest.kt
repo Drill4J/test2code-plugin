@@ -83,7 +83,7 @@ class ScopeTest : E2EPluginTest() {
                 }
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 80.0
+                plugUi.activeScope()!!.coverage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -92,7 +92,7 @@ class ScopeTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope)
-                plugUi.buildCoverage()!!.coverage shouldBe 80.0
+                plugUi.buildCoverage()!!.coverage shouldBe 100.0
                 pluginAction(DropScope(ScopePayload(droppedScopeId)).stringify())
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
                 plugUi.activeScope()!!.id shouldNotBe droppedScopeId
@@ -127,7 +127,7 @@ class ScopeTest : E2EPluginTest() {
                 }
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 80.0
+                plugUi.activeScope()!!.coverage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -138,7 +138,7 @@ class ScopeTest : E2EPluginTest() {
                 pluginAction(switchScope)
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
                 pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify())
-                plugUi.buildCoverage()!!.coverage shouldBe 80.0
+                plugUi.buildCoverage()!!.coverage shouldBe 100.0
             }
         }
     }
