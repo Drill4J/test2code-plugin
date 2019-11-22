@@ -16,7 +16,7 @@ jobs:
         run: gradle check
       - name: Publish
         run: |
-          gradle --no-daemon publishCoverageZipPublicationToMavenRepository
+          gradle --no-daemon -i publishCoverageZipPublicationToMavenRepository
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
