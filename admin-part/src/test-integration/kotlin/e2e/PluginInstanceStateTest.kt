@@ -98,12 +98,12 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.apply {
                     activeScopeIdFirstBuild = id
-                    coverage shouldBe 80.0
+                    coverage shouldBe 100.0
                     coveragesByType.getValue("MANUAL").apply {
                         testType shouldBe "MANUAL"
-                        coverage shouldBe 80.0
+                        coverage shouldBe 100.0
                         testCount shouldBe 1
-                        coveredMethodsCount shouldBe 3
+                        coveredMethodsCount shouldBe 4
                     }
                 }
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
@@ -181,12 +181,12 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     testsToRun.isEmpty() shouldBe true
                 }
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 80.0
+                    coverage shouldBe 100.0
                     arrow shouldBe null
-                    diff shouldNotBe 0.0
+                    diff shouldBe 0.0
                     previousBuildInfo.apply {
-                        first shouldBe ""
-                        second shouldBe ""
+                        first shouldBe "30507"
+                        second shouldBe "sad"
                     }
                 }
                 plugUi.activeScope()!!.name shouldBe "New Scope 1"
@@ -219,7 +219,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     val gt = build.entryPoint()
                     gt.test1()
                     gt.test2()
-                    gt.test3()
                 }
 
                 pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
@@ -241,9 +240,9 @@ class PluginInstanceStateTest : E2EPluginTest() {
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.subscribe(SubscribeInfo(agentId, "30507"))
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 80.0
+                    coverage shouldBe 73.33333333333333
                     arrow shouldBe null
-                    diff shouldBe 80.0
+                    diff shouldBe 73.33333333333333
                 }
 
                 plugUi.risks()!!.apply {

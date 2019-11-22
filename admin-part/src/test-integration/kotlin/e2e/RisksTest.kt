@@ -5,6 +5,7 @@ import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.coverage.*
+import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
@@ -26,7 +27,9 @@ class RisksTest : E2EPluginTest() {
                     newMethods.first().desc shouldBe "(): void"
                     modifiedMethods shouldBe emptyList()
                 }
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(
+                    StartPayload("MANUAL")
+                ).stringify()
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
@@ -35,9 +38,13 @@ class RisksTest : E2EPluginTest() {
                     val gt = build.entryPoint()
                     gt.test1()
                     gt.test2()
-                    gt.test3()
                 }
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession.payload.sessionId
+                        )
+                    ).stringify())
 
                 plugUi.activeScope()!!.coverage shouldNotBe 0.0
 
@@ -53,7 +60,7 @@ class RisksTest : E2EPluginTest() {
 
                 plugUi.risks()!!.apply {
                     newMethods.size shouldBe 1
-                    newMethods.first().name shouldBe "Test"
+                    newMethods.first().name shouldBe "test3"
                     modifiedMethods shouldBe emptyList()
                 }
             }.reconnect<Build2> { plugUi, build ->
@@ -66,7 +73,9 @@ class RisksTest : E2EPluginTest() {
                     modifiedMethods.first().desc shouldBe "(): void"
                 }
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(
+                    StartPayload("MANUAL")
+                ).stringify()
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
@@ -78,7 +87,12 @@ class RisksTest : E2EPluginTest() {
                     gt.test3()
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).first shouldBe HttpStatusCode.OK
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession.payload.sessionId
+                        )
+                    ).stringify()).first shouldBe HttpStatusCode.OK
                 delay(300)//todo move it to core library
                 plugUi.activeSessions()!!.count shouldBe 0
 

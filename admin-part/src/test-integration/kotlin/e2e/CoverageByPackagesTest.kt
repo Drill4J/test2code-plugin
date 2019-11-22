@@ -44,7 +44,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
                         name shouldBe "com/epam/test"
-                        coverage shouldBe 26.666666666666668
+                        coverage shouldBe 46.666666666666664
                         totalClassesCount shouldBe 1
                         classes.size shouldNotBe 0
                         assocTestsCount shouldBe 1
@@ -62,12 +62,14 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
                     name shouldBe "com/epam/test"
-                    coverage shouldBe 26.666666666666668
+                    coverage shouldBe 46.666666666666664
                     totalClassesCount shouldBe 1
                     classes.size shouldNotBe 0
                     assocTestsCount shouldBe 1
                 }
-                val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession2 = StartNewSession(
+                    StartPayload("MANUAL")
+                ).stringify()
                 val (status2, content2) = pluginAction(startNewSession2)
                 status2 shouldBe HttpStatusCode.OK
                 val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
@@ -76,7 +78,12 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     gt.test1()
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify()).first shouldBe HttpStatusCode.OK
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession2.payload.sessionId
+                        )
+                    ).stringify()).first shouldBe HttpStatusCode.OK
                 delay(300)//todo move it to core library
 
                 plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
@@ -84,7 +91,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
                         name shouldBe "com/epam/test"
-                        coverage shouldBe 26.666666666666668
+                        coverage shouldBe 46.666666666666664
                         totalClassesCount shouldBe 1
                         classes.size shouldNotBe 0
                         assocTestsCount shouldBe 1
@@ -102,7 +109,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
                     name shouldBe "com/epam/test"
-                    coverage shouldBe 26.666666666666668
+                    coverage shouldBe 46.666666666666664
                     totalClassesCount shouldBe 1
                     classes.size shouldNotBe 0
                     assocTestsCount shouldBe 1

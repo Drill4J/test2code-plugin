@@ -199,7 +199,6 @@ class CoverageAdminPart(
         val coverageByType = if (isBuildCvg) {
             classesBytes.coveragesByTestType(finishedSessions, classesData.totalInstructions)
         } else activeScope.summary.coveragesByType
-        println(coverageByType)
 
         val coverageBlock: Coverage = if (isBuildCvg) {
             val prevBuildVersion = classesData.prevBuildVersion
@@ -216,8 +215,6 @@ class CoverageAdminPart(
             totalCoveragePercent,
             coverageByType
         )
-        println(coverageBlock)
-
         val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
 
         val buildMethods = calculateBuildMethods(

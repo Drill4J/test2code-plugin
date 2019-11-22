@@ -5,6 +5,7 @@ import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.coverage.*
+import com.epam.drill.plugins.coverage.*
 import io.kotlintest.*
 import io.ktor.http.*
 import org.junit.jupiter.api.*
@@ -22,7 +23,9 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(
+                    StartPayload("MANUAL")
+                ).stringify()
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
@@ -36,7 +39,12 @@ class SessionTest : E2EPluginTest() {
                     gt.test3()
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession.payload.sessionId
+                        )
+                    ).stringify())
                 plugUi.activeSessions()?.count shouldBe 0
 
             }.reconnect<Build2> { plugUi, _ ->
@@ -62,7 +70,9 @@ class SessionTest : E2EPluginTest() {
                 plugUi.activeScope()!!.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(
+                    StartPayload("MANUAL")
+                ).stringify()
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
@@ -75,11 +85,18 @@ class SessionTest : E2EPluginTest() {
                     gt.test2()
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession.payload.sessionId
+                        )
+                    ).stringify())
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 53.333333333333336
+                plugUi.activeScope()!!.coverage shouldBe 73.33333333333333
 
-                val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
+                val startNewSession2 = StartNewSession(
+                    StartPayload("AUTO")
+                ).stringify()
                 val (status2, content2) = pluginAction(startNewSession2)
                 status2 shouldBe HttpStatusCode.OK
                 val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
@@ -101,7 +118,7 @@ class SessionTest : E2EPluginTest() {
                 pluginAction(switchScope)
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage shouldBe 0.0
-                plugUi.buildCoverage()!!.coverage shouldBe 53.333333333333336
+                plugUi.buildCoverage()!!.coverage shouldBe 73.33333333333333
             }
         }
     }
@@ -117,7 +134,9 @@ class SessionTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(
+                    StartPayload("MANUAL")
+                ).stringify()
                 val (status, content) = pluginAction(startNewSession)
                 status shouldBe HttpStatusCode.OK
                 val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
@@ -128,7 +147,9 @@ class SessionTest : E2EPluginTest() {
                     gt.test2()
                 }
 
-                val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
+                val startNewSession2 = StartNewSession(
+                    StartPayload("AUTO")
+                ).stringify()
                 val (status2, content2) = pluginAction(startNewSession2)
                 status2 shouldBe HttpStatusCode.OK
 
@@ -139,13 +160,23 @@ class SessionTest : E2EPluginTest() {
                     gt.test3()
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession.payload.sessionId
+                        )
+                    ).stringify())
                 plugUi.activeSessions()!!.apply {
                     count shouldBe 1
                     testTypes shouldBe setOf("AUTO")
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify())
+                pluginAction(
+                    StopSession(
+                        SessionPayload(
+                            startSession2.payload.sessionId
+                        )
+                    ).stringify())
                 plugUi.activeSessions()!!.count shouldBe 0
             }
         }
