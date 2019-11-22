@@ -20,6 +20,7 @@ fun ClassesBytes.coverage(data: Sequence<FinishedSession>, totalInstructions: In
     coverageBundle(data.flatten()).coverage(totalInstructions)
 
 fun ClassesBytes.coveragesByTestType(
+    bundleMap: Map<TypedTest, IBundleCoverage>,
     data: Sequence<FinishedSession>,
     totalInstructions: Int
 ): Map<String, TestTypeSummary> {
@@ -28,7 +29,7 @@ fun ClassesBytes.coveragesByTestType(
             testType = testType,
             coverage = coverage(finishedSessions.asSequence(), totalInstructions),
             testCount = finishedSessions.flatMap { it.testNames }.distinct().count(),
-            coveredMethodsCount = coveredMethodsByTestTypeCount(data, testType)
+            coveredMethodsCount = coveredMethodsByTestTypeCount(bundleMap, testType)
         )
     }
 }
@@ -42,12 +43,12 @@ fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
     }
 }
 
-fun ClassesBytes.coveredMethodsByTestTypeCount(data: Sequence<FinishedSession>, testType: String) = bundlesByTests(data)
+fun ClassesBytes.coveredMethodsByTestTypeCount(bundleMap: Map<TypedTest, IBundleCoverage>, testType: String) = bundleMap
     .flatMap { (test, bundle) -> bundle.collectAssocTestPairs(test) }
     .filter { !it.first.methodName.isNullOrEmpty() && it.second.type == testType }
     .groupBy { it.first.id }.count()
 
-fun ClassesBytes.associatedTests(data: Sequence<FinishedSession>) = bundlesByTests(data)
+fun associatedTests(bundleMap: Map<TypedTest, IBundleCoverage>) = bundleMap
     .flatMap { (test, bundle) ->
         bundle.collectAssocTestPairs(test)
     }.groupBy({ it.first }) { it.second } //group by test names
@@ -56,6 +57,13 @@ fun ClassesBytes.associatedTests(data: Sequence<FinishedSession>) = bundlesByTes
 fun ClassesBytes.bundlesByTests(data: Sequence<FinishedSession>): Map<TypedTest, IBundleCoverage> {
     return data.flatMap { it.probes.asSequence() }
         .groupBy({ it.key }) { it.value }
+        .mapValues { it.value.asSequence().flatten() }
+        .mapValues { coverageBundle(it.value) }
+}
+
+fun ClassesBytes.bundlesByTestsType(data: Sequence<FinishedSession>): Map<String, IBundleCoverage> {
+    return data.flatMap { it.probes.asSequence() }
+        .groupBy({ it.key.type }) { it.value }
         .mapValues { it.value.asSequence().flatten() }
         .mapValues { coverageBundle(it.value) }
 }

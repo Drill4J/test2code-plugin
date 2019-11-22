@@ -43,6 +43,8 @@ class CoverageSocketStreams : PluginStreams() {
         testsToRun()
         testsUsages()
         scopes()
+        methodsCoveredByTest()
+        methodsCoveredByTestType()
     }
 
     private val activeScope: Channel<ScopeSummary?> = Channel()
@@ -77,6 +79,11 @@ class CoverageSocketStreams : PluginStreams() {
     private val testsToRun: Channel<TestsToRun?> = Channel()
     suspend fun testsToRun() = testsToRun.receive()
 
+    private val methodsCoveredByTest: Channel<List<MethodsCoveredByTest>?> = Channel()
+    suspend fun methodsCoveredByTest() = methodsCoveredByTest.receive()
+
+    private val methodsCoveredByTestType: Channel<List<MethodsCoveredByTestType>?> = Channel()
+    suspend fun methodsCoveredByTestType() = methodsCoveredByTestType.receive()
 
     private val scopes: Channel<List<ScopeSummary>?> = Channel()
     suspend fun scopes() = scopes.receive()
@@ -189,6 +196,27 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
+                                        is Routes.Scope.MethodsCoveredByTest -> {
+                                            delay(100)
+                                            val methodsCoveredByTest =
+                                                scopeSubscriptions.getValue(resolve.scopeId).first.methodsCoveredByTest
+                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                                methodsCoveredByTest.send(null)
+                                            } else
+                                                methodsCoveredByTest.send(MethodsCoveredByTest.serializer().list parse content)
+                                        }
+
+                                        is Routes.Scope.MethodsCoveredByTestType -> {
+                                            delay(100)
+                                            val methodsCoveredByTestType =
+                                                scopeSubscriptions.getValue(resolve.scopeId)
+                                                    .first.methodsCoveredByTestType
+                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                                methodsCoveredByTestType.send(null)
+                                            } else
+                                                methodsCoveredByTestType.send(MethodsCoveredByTestType.serializer().list parse content)
+                                        }
+
                                         is Routes.Scope.Coverage -> {
                                             delay(100)
                                             val coverage = scopeSubscriptions.getValue(resolve.scopeId).first.coverage
@@ -234,6 +262,21 @@ class CoverageSocketStreams : PluginStreams() {
                                                     JavaPackageCoverage.serializer().list parse content
                                                 )
                                             }
+                                        }
+
+                                        is Routes.Build.MethodsCoveredByTest -> {
+                                            delay(100)
+                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                                methodsCoveredByTest.send(null)
+                                            } else
+                                                methodsCoveredByTest.send(MethodsCoveredByTest.serializer().list parse content)
+                                        }
+
+                                        is Routes.Build.MethodsCoveredByTestType -> {
+                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                                methodsCoveredByTestType.send(null)
+                                            } else
+                                                methodsCoveredByTestType.send(MethodsCoveredByTestType.serializer().list parse content)
                                         }
 
                                         is Routes.Build.Coverage -> {
@@ -294,6 +337,12 @@ class CoverageSocketStreams : PluginStreams() {
         internal val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
         suspend fun testsUsages() = testsUsages.receive()
 
+        internal val methodsCoveredByTest = Channel<List<MethodsCoveredByTest>?>()
+        suspend fun methodsCoveredByTest() = methodsCoveredByTest.receive()
+
+        internal val methodsCoveredByTestType = Channel<List<MethodsCoveredByTestType>?>()
+        suspend fun methodsCoveredByTestType() = methodsCoveredByTestType.receive()
+
     }
 
 
@@ -311,7 +360,10 @@ class CoverageSocketStreams : PluginStreams() {
             Routes.Scope.Coverage(scopeId),
             Routes.Scope.CoverageByPackages(scopeId),
             Routes.Scope.TestsUsages(scopeId),
-            Routes.Scope.AssociatedTests(scopeId)
+            Routes.Scope.AssociatedTests(scopeId),
+            Routes.Scope.AssociatedTests(scopeId),
+            Routes.Scope.MethodsCoveredByTest(scopeId),
+            Routes.Scope.MethodsCoveredByTestType(scopeId)
         ).forEach {
             iut.send(
                 UiMessage(
