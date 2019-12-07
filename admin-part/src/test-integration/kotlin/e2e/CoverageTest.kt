@@ -27,7 +27,7 @@ class CoverageTest : E2EPluginTest() {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
                     previousBuildInfo.first shouldBe "30507"
-                    previousBuildInfo.second shouldBe "sad"
+                    previousBuildInfo.second shouldBe ""
                     coverageByType shouldBe emptyMap()
                     arrow shouldBe null
                 }

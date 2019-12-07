@@ -61,7 +61,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     diff shouldNotBe 0.0
                     previousBuildInfo.apply {
                         first shouldBe "30507"
-                        second shouldBe "sad"
+                        second shouldBe ""
                     }
                 }
             }
