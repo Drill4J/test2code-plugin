@@ -1,7 +1,7 @@
 {
   "id": "test-to-code-mapping",
   "name": "Test-to-code mapping",
-  "description": "This is the test-to-code mapping plugin. Upd description",
+  "description": "The plugin allows you to see project Risks (new and modified uncovered methods), “Tests to run” for a new build, mapping of tests to a method and vice versa. Also, it allows you to see code coverage of packages, classes, methods for builds and sessions, the number of new methods after commit and how many of them are covered by the current tests.",
   "type": "Custom",
   "family": "INSTRUMENTATION",
   "enabled": true,
