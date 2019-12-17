@@ -41,6 +41,7 @@ class CoverageAdminPart(
 
     override suspend fun initialize() {
         pluginInstanceState = pluginInstanceState()
+        calculateCurrentBuildTestsToRun()
     }
 
     override suspend fun applyPackagesChanges() {
@@ -270,6 +271,21 @@ class CoverageAdminPart(
             coveredByTest,
             coveredByTestType
         )
+    }
+
+    internal suspend fun calculateCurrentBuildTestsToRun() {
+        val buildInfo = adminData.buildManager[buildVersion]
+        val coverageBuilder = CoverageBuilder()
+        val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
+        buildInfo?.classesBytes?.forEach { (name, bytes) ->
+            analyzer.analyzeClass(bytes, name)
+        }
+        val bundleCoverage = coverageBuilder.getBundle("")
+        val methods = calculateBundleMethods(
+            buildInfo?.methodChanges ?: MethodChanges(),
+            bundleCoverage
+        ).deletedCoveredMethodsCountEnrichment(pluginInstanceState)
+        lastTestsToRun = testsToRun(methods)
     }
 
     internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
