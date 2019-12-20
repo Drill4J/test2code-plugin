@@ -72,6 +72,8 @@ dependencies {
     integrationTestImplementation(ktor("server-core"))
     integrationTestImplementation(ktor("websockets"))
     integrationTestImplementation(ktor("client-cio"))
+    integrationTestImplementation(ktor("serialization"))
+    integrationTestImplementation("com.epam.drill:ktor-swagger:$swaggerVersion")
     integrationTestImplementation(project(":agent-part"))
     integrationTestImplementation("io.mockk:mockk:1.9.3")
     integrationTestImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")

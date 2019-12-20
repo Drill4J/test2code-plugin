@@ -2,7 +2,7 @@ val serializationRuntimeVersion = "0.14.0"
 
 val atomicFuVersion = "0.14.1"
 
-val drillVersion = "0.4.27"
+val drillVersion = "0.4.52"
 
 val jacocoVersion = "0.8.3"
 
@@ -15,3 +15,5 @@ val ktorVersion = "1.2.6"
 val koduxVersion = "0.1.5"
 
 val xodusVersion = "1.3.91"
+
+val swaggerVersion = "0.6.3"

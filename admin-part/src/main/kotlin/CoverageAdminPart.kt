@@ -7,10 +7,12 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.coverage.routes.*
 import com.epam.kodux.*
+import io.ktor.util.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
+import java.io.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class CoverageAdminPart(
@@ -99,10 +101,24 @@ class CoverageAdminPart(
         return processData(message)
     }
 
-    override fun getPluginData(params: Map<String, String>): String {
+    @InternalAPI
+    override suspend fun getPluginData(params: Map<String, String>): String {
         return when (params["type"]) {
             "tests-to-run" -> TestsToRun.serializer() stringify lastTestsToRun
             "recommendations" -> newBuildActionsList()
+            "coverage-data" -> {
+                val byteArrayOutputStream = ByteArrayOutputStream()
+                val buildProbes = pluginInstanceState.scopeManager.scopesByBuildVersion(buildVersion)
+                    .map {
+                        it.probes.map { it.value.map { it.probes.map { it.value }.flatten() }.flatten() }.flatten()
+                    }.flatten()
+                val dataStore = ExecutionDataStore().with(buildProbes.asSequence())
+                val writer = ExecutionDataWriter(byteArrayOutputStream)
+                val info = SessionInfo(buildVersion, System.currentTimeMillis() - 1000, System.currentTimeMillis())
+                writer.visitSessionInfo(info)
+                dataStore.accept(writer)
+                byteArrayOutputStream.toByteArray().encodeBase64()
+            }
             else -> ""
         }
     }
