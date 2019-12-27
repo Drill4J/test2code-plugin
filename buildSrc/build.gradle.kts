@@ -11,13 +11,14 @@ repositories {
 
 val kotlinVersion = "1.3.60"
 val atomicFuVersion = "0.14.1"
+val drillPluginVersion = "0.8.0"
 dependencies {
     implementation(kotlin("gradle-plugin", kotlinVersion))
     implementation(kotlin("stdlib-jdk8", kotlinVersion))
     implementation(kotlin("serialization", kotlinVersion))
     implementation(kotlin("reflect", kotlinVersion))
     implementation("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicFuVersion")
-    implementation("com.epam.drill:drill-gradle-plugin:0.4.0") { isChanging = true }
+    implementation("com.epam.drill:gradle-plugin:$drillPluginVersion")
 }
 
 kotlinDslPluginOptions {

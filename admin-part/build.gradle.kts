@@ -10,9 +10,6 @@ plugins {
     idea
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
-val vavrVersion = "0.10.0"
-val bcelVersion = "6.3.1"
-
 
 repositories {
     mavenLocal()

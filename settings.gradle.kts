@@ -1,4 +1,4 @@
-rootProject.name = "coverage-plugin"
+rootProject.name = "test2code-plugin"
 include(":admin-part")
 include(":agent-part")
 include(":common-part")

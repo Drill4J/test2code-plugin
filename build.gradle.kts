@@ -44,12 +44,12 @@ publishing {
     }
 
     publications {
-        create<MavenPublication>("coverageZip") {
+        create<MavenPublication>("test2codeZip") {
             artifact(tasks["distZip"])
         }
     }
 }
 
 tasks.build {
-    dependsOn("publishCoverageZipPublicationToMavenLocal")
+    dependsOn("publishTest2codeZipPublicationToMavenLocal")
 }

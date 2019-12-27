@@ -1,12 +1,12 @@
-name: Build & publish coverage-plugin
+name: Tag develop
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - develop
 
 jobs:
-  build_and_publish:
-    name: Publish coverage plugin as zip
+  tag:
+    name: Tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -26,13 +26,12 @@ jobs:
           key: ${{ runner.os }}-build-${{ hashFiles('**/*.gradle.kts') }}
           restore-keys: |
             ${{ runner.os }}-build-
-      - name: env
-        run: env
-      - name: Check
-        run: gradle check
-      - name: Publish
+      - name: Set tag vesion
+        id: set_ver
         run: |
-          gradle -i publishTest2codeZipPublicationToMavenRepository
-        env:
-          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
-          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+          echo "::set-output name=tag_ver::$(gradle -q :printVersion)"
+      - name: Tag commit
+        uses: tvdias/github-tagger@v0.0.1
+        with:
+          repo-token: ${{ secrets.githubUserPassword }}
+          tag: v${{ steps.set_ver.outputs.tag_ver }}

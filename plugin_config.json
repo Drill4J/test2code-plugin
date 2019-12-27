@@ -1,7 +1,7 @@
 {
-  "id": "test-to-code-mapping",
-  "name": "Test-to-code mapping",
-  "description": "This is the test-to-code mapping plugin. Upd description",
+  "id": "test2code",
+  "name": "test2code",
+  "description": "This is the Test2Code mapping plugin. Update description",
   "type": "Custom",
   "family": "INSTRUMENTATION",
   "enabled": true,
