@@ -23,20 +23,21 @@ class SessionTest : E2EPluginTest() {
                 }
 
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status, content) = pluginAction(startNewSession)
-                status shouldBe HttpStatusCode.OK
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
 
-                plugUi.activeSessions()?.run { count shouldBe 1 }
+                    plugUi.activeSessions()?.run { count shouldBe 1 }
 
-                runWithSession(startSession.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test1()
-                    gt.test2()
-                    gt.test3()
-                }
+                    runWithSession(startSession.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                        gt.test2()
+                        gt.test3()
+                    }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                }.join()
                 plugUi.activeSessions()?.count shouldBe 0
 
             }.reconnect<Build2> { plugUi, _ ->
@@ -63,42 +64,44 @@ class SessionTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
 
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status, content) = pluginAction(startNewSession)
-                status shouldBe HttpStatusCode.OK
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
 
-                plugUi.activeSessions()!!.run { count shouldBe 1 }
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
 
-                runWithSession(startSession.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test1()
-                    gt.test2()
-                }
+                    runWithSession(startSession.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                        gt.test2()
+                    }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage shouldBe 73.33333333333333
 
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
-                val (status2, content2) = pluginAction(startNewSession2)
-                status2 shouldBe HttpStatusCode.OK
-                val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
+                pluginAction(startNewSession2) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
 
-                plugUi.activeSessions()!!.run { count shouldBe 1 }
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
 
-                runWithSession(startSession2.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test3()
-                }
+                    runWithSession(startSession2.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test3()
+                    }
 
-                val switchScope = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new scope 2",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope)
+                    val switchScope = SwitchActiveScope(
+                        ActiveScopeChangePayload(
+                            scopeName = "new scope 2",
+                            savePrevScope = true,
+                            prevScopeEnabled = true
+                        )
+                    ).stringify()
+                    pluginAction(switchScope).join()
+                }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 73.33333333333333
@@ -118,34 +121,38 @@ class SessionTest : E2EPluginTest() {
                 plugUi.activeScope()!!.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status, content) = pluginAction(startNewSession)
-                status shouldBe HttpStatusCode.OK
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
-                plugUi.activeSessions()!!.run { count shouldBe 1 }
-                runWithSession(startSession.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test1()
-                    gt.test2()
-                }
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
+                    runWithSession(startSession.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                        gt.test2()
+                    }
 
-                val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
-                val (status2, content2) = pluginAction(startNewSession2)
-                status2 shouldBe HttpStatusCode.OK
+                    val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
 
-                val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
-                plugUi.activeSessions()!!.run { count shouldBe 2 }
-                runWithSession(startSession2.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test3()
-                }
+                    pluginAction(startNewSession2) { status, content ->
+                        status shouldBe HttpStatusCode.OK
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
-                plugUi.activeSessions()!!.apply {
-                    count shouldBe 1
-                    testTypes shouldBe setOf("AUTO")
-                }
+                        val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                        plugUi.activeSessions()!!.run { count shouldBe 2 }
+                        runWithSession(startSession2.payload.sessionId) {
+                            val gt = build.entryPoint()
+                            gt.test3()
+                        }
 
-                pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify())
+                        pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+
+                        plugUi.activeSessions()!!.apply {
+                            count shouldBe 1
+                            testTypes shouldBe setOf("AUTO")
+                        }
+
+                        pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify())
+                    }.join()
+                }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
             }
         }
