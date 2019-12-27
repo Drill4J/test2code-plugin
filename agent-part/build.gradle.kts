@@ -39,8 +39,8 @@ dependencies {
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
     implementation(project(":common-part"))
-    implementation("com.epam.drill:drill-agent-part-jvm:$drillVersion")
-    implementation("com.epam.drill:common-jvm:$drillVersion")
+    implementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
+    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
     testImplementation(kotlin("test-junit"))
 }
 

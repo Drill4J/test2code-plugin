@@ -28,15 +28,22 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     assocTestsCount shouldBe null
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status, content) = pluginAction(startNewSession)
-                status shouldBe HttpStatusCode.OK
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                lateinit var cont: String
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    cont = content!!
+                }.join()
+
+                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, cont) as StartSession
                 runWithSession(startSession.payload.sessionId) {
                     val gt = build.entryPoint()
                     gt.test1()
                 }
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).first shouldBe HttpStatusCode.OK
+
+                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                }.join()
                 delay(300)//todo move it to core library
 
                 plugUi.methodsCoveredByTest()
@@ -101,15 +108,18 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 }
 
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status2, content2) = pluginAction(startNewSession2)
-                status2 shouldBe HttpStatusCode.OK
-                val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
-                runWithSession(startSession2.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test1()
-                }
+                pluginAction(startNewSession2) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    runWithSession(startSession2.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                    }
 
-                pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify()).first shouldBe HttpStatusCode.OK
+                    pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify()) { st, _ ->
+                        st shouldBe HttpStatusCode.OK
+                    }
+                }.join()
                 delay(300)//todo move it to core library
 
                 plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {

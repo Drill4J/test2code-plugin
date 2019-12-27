@@ -26,5 +26,5 @@ application {
 }
 
 dependencies {
-    runtime("com.epam.drill:admin-core:$drillVersion:all@jar")
+    runtime("com.epam.drill:admin-core:$drillCoreVersion:all@jar")
 }

@@ -11,7 +11,6 @@ plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0"
 }
 val vavrVersion = "0.10.0"
-val ktorVersion = "1.2.5"
 val bcelVersion = "6.3.1"
 
 
@@ -40,7 +39,7 @@ dependencies {
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
     commonJarDeps(project(":common-part"))
     adminJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
-    add("testData", "com.epam.drill:test-data:$drillVersion")
+    add("testData", "com.epam.drill:test-data:$drillCoreVersion")
 }
 
 
@@ -50,20 +49,20 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
     api("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
     api(kotlin("stdlib-jdk8"))
-    api("com.epam.drill:drill-admin-part-jvm:$drillVersion")
-    implementation("com.epam.drill:drill-agent-part-jvm:$drillVersion")
+    api("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
+    implementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
     implementation(ktor("locations"))
     implementation(project(":common-part"))
-    implementation("com.epam.drill:common-jvm:$drillVersion")
+    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
 
     implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
-
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3")
     testImplementation(kotlin("test-junit"))
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
     integrationTestImplementation(kotlin("test-junit"))
-    integrationTestImplementation("com.epam.drill:test-framework:$drillVersion")
-    integrationTestImplementation("com.epam.drill:admin-core:$drillVersion")
+    integrationTestImplementation("com.epam.drill:test-framework:$drillCoreVersion")
+    integrationTestImplementation("com.epam.drill:admin-core:$drillCoreVersion")
     integrationTestImplementation(ktor("server-test-host"))
     integrationTestImplementation(ktor("auth"))
     integrationTestImplementation(ktor("auth-jwt"))
@@ -99,7 +98,7 @@ sourceSets {
         create("build$it") {
             java.srcDir("src/test-data/build$it/java")
             dependencies {
-                implementation("com.epam.drill:test-data:$drillVersion")
+                implementation("com.epam.drill:test-data:$drillCoreVersion")
             }
             compileClasspath += testData
             runtimeClasspath += output + compileClasspath
