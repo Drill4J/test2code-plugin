@@ -40,16 +40,17 @@ class ScopeTest : E2EPluginTest() {
                 }
                 val renameScope =
                     RenameScope(RenameScopePayload(activeScope.id, "integration")).stringify()
-                pluginAction(renameScope)
+                pluginAction(renameScope).join()
                 plugUi.activeScope()!!.name shouldBe "integration"
 
                 val switchActiveScopeWrong = SwitchActiveScope(ActiveScopeChangePayload("integration")).stringify()
-                val (status1, _) = pluginAction(switchActiveScopeWrong)
-                status1 shouldBe HttpStatusCode.BadRequest
-
+                pluginAction(switchActiveScopeWrong) { status, _ ->
+                    status shouldBe HttpStatusCode.BadRequest
+                }.join()
                 val switchActiveScope = SwitchActiveScope(ActiveScopeChangePayload("scope integration")).stringify()
-                val (status2, _) = pluginAction(switchActiveScope)
-                status2 shouldBe HttpStatusCode.OK
+                pluginAction(switchActiveScope) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                }.join()
                 plugUi.activeScope()!!.name shouldBe "scope integration"
             }
 
@@ -71,17 +72,18 @@ class ScopeTest : E2EPluginTest() {
                     droppedScopeId = id
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status, content) = pluginAction(startNewSession)
-                status shouldBe HttpStatusCode.OK
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
-                plugUi.activeSessions()!!.run { count shouldBe 1 }
-                runWithSession(startSession.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test1()
-                    gt.test2()
-                    gt.test3()
-                }
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
+                    runWithSession(startSession.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                        gt.test2()
+                        gt.test3()
+                    }
+                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
@@ -91,9 +93,9 @@ class ScopeTest : E2EPluginTest() {
                         prevScopeEnabled = true
                     )
                 ).stringify()
-                pluginAction(switchScope)
+                pluginAction(switchScope).join()
                 plugUi.buildCoverage()!!.coverage shouldBe 100.0
-                pluginAction(DropScope(ScopePayload(droppedScopeId)).stringify())
+                pluginAction(DropScope(ScopePayload(droppedScopeId)).stringify()).join()
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
                 plugUi.activeScope()!!.id shouldNotBe droppedScopeId
                 plugUi.scopes() shouldBe null
@@ -115,17 +117,18 @@ class ScopeTest : E2EPluginTest() {
                     ignoredScopeId = id
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                val (status, content) = pluginAction(startNewSession)
-                status shouldBe HttpStatusCode.OK
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
-                plugUi.activeSessions()!!.run { count shouldBe 1 }
-                runWithSession(startSession.payload.sessionId) {
-                    val gt = build.entryPoint()
-                    gt.test1()
-                    gt.test2()
-                    gt.test3()
-                }
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
+                    runWithSession(startSession.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                        gt.test2()
+                        gt.test3()
+                    }
+                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
@@ -135,9 +138,9 @@ class ScopeTest : E2EPluginTest() {
                         prevScopeEnabled = true
                     )
                 ).stringify()
-                pluginAction(switchScope)
+                pluginAction(switchScope).join()
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
-                pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify())
+                pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify()).join()
                 plugUi.buildCoverage()!!.coverage shouldBe 100.0
             }
         }

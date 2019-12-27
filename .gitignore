@@ -5,3 +5,4 @@ distr/
 test-storage/
 work/
 .kotlintest/
+/build-cache/

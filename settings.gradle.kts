@@ -3,4 +3,10 @@ include(":admin-part")
 include(":agent-part")
 include(":common-part")
 include(":plugin-tester")
-enableFeaturePreview("GRADLE_METADATA")
+
+buildCache {
+    local {
+        directory = rootDir.resolve("build-cache")
+        removeUnusedEntriesAfterDays = 30
+    }
+}
