@@ -101,8 +101,7 @@ class CoverageAdminPart(
         return processData(message)
     }
 
-    @InternalAPI
-    override suspend fun getPluginData(params: Map<String, String>): String {
+    override suspend fun getPluginData(params: Map<String, String>): Any {
         return when (params["type"]) {
             "tests-to-run" -> TestsToRun.serializer() stringify lastTestsToRun
             "recommendations" -> newBuildActionsList()
@@ -117,7 +116,7 @@ class CoverageAdminPart(
                 val info = SessionInfo(buildVersion, System.currentTimeMillis() - 1000, System.currentTimeMillis())
                 writer.visitSessionInfo(info)
                 dataStore.accept(writer)
-                byteArrayOutputStream.toByteArray().encodeBase64()
+                byteArrayOutputStream.toByteArray()
             }
             else -> ""
         }

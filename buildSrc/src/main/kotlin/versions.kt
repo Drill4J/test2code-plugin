@@ -2,9 +2,9 @@ val serializationRuntimeVersion = "0.14.0"
 
 val atomicFuVersion = "0.14.1"
 
-val drillCoreVersion = "0.5.0-10"
+val drillCoreVersion = "0.5.0-13"
 
-val drillCommonVersion = "0.4.59"
+val drillCommonVersion = "0.4.60"
 
 val jacocoVersion = "0.8.3"
 
