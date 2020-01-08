@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.processing.*
 import java.util.concurrent.ConcurrentHashMap

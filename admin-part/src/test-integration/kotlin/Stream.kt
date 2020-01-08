@@ -1,11 +1,11 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.e2e.*
 import com.epam.drill.endpoints.*
 import com.epam.drill.endpoints.plugin.*
 import com.epam.drill.plugin.api.message.*
-import com.epam.drill.plugins.coverage.routes.*
+import com.epam.drill.plugins.test2code.routes.*
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*

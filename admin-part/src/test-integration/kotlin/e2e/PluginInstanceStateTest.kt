@@ -1,11 +1,11 @@
-package com.epam.drill.plugins.coverage.e2e
+package com.epam.drill.plugins.test2code.e2e
 
 import com.epam.drill.builds.Build1
 import com.epam.drill.builds.Build2
 import com.epam.drill.e2e.E2EPluginTest
 import com.epam.drill.e2e.plugin.runWithSession
 import com.epam.drill.endpoints.plugin.SubscribeInfo
-import com.epam.drill.plugins.coverage.*
+import com.epam.drill.plugins.test2code.*
 import io.kotlintest.matchers.boolean.shouldBeTrue
 import io.kotlintest.matchers.doubles.shouldBeGreaterThan
 import io.kotlintest.shouldBe

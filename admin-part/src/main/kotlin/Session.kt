@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 import io.vavr.kotlin.*
 import kotlinx.atomicfu.*

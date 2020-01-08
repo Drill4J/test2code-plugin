@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage.test.foo
+package com.epam.drill.plugins.test2code.test.foo
 
 class FooDummy {
     fun dummyMethod() {

@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage.routes
+package com.epam.drill.plugins.test2code.routes
 
 import io.ktor.locations.*
 

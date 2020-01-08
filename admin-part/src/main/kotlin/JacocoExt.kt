@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*

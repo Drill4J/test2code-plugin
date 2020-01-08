@@ -1,13 +1,12 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
-import com.epam.drill.plugins.coverage.routes.*
+import com.epam.drill.plugins.test2code.routes.*
 import com.epam.kodux.*
-import io.ktor.util.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.*
 import org.jacoco.core.analysis.*

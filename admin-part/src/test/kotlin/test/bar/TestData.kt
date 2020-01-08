@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage.test.bar
+package com.epam.drill.plugins.test2code.test.bar
 
 class BarDummy {
     fun dummyMethod() {

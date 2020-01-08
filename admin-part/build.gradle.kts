@@ -36,7 +36,7 @@ dependencies {
     commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
     commonJarDeps(project(":common-part"))
     adminJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
-    add("testData", "com.epam.drill:test-data:$drillCoreVersion")
+    add("testData", "com.epam.drill:test-data:$drillAdminVersion")
 }
 
 
@@ -58,8 +58,8 @@ dependencies {
     testImplementation(kotlin("test-junit"))
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
     integrationTestImplementation(kotlin("test-junit"))
-    integrationTestImplementation("com.epam.drill:test-framework:$drillCoreVersion")
-    integrationTestImplementation("com.epam.drill:admin-core:$drillCoreVersion")
+    integrationTestImplementation("com.epam.drill:test-framework:$drillAdminVersion")
+    integrationTestImplementation("com.epam.drill:admin-core:$drillAdminVersion")
     integrationTestImplementation(ktor("server-test-host"))
     integrationTestImplementation(ktor("auth"))
     integrationTestImplementation(ktor("auth-jwt"))
@@ -95,7 +95,7 @@ sourceSets {
         create("build$it") {
             java.srcDir("src/test-data/build$it/java")
             dependencies {
-                implementation("com.epam.drill:test-data:$drillCoreVersion")
+                implementation("com.epam.drill:test-data:$drillAdminVersion")
             }
             compileClasspath += testData
             runtimeClasspath += output + compileClasspath

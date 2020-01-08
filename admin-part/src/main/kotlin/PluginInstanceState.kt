@@ -1,7 +1,7 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
-import com.epam.drill.plugins.coverage.storage.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.analysis.*

@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.coverage
+package com.epam.drill.plugins.test2code
 
 fun isTopLevelClass(classPath: String) = !classPath.contains("$")
 
