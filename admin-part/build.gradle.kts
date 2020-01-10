@@ -1,14 +1,12 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
 import org.jetbrains.kotlin.gradle.plugin.*
-import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     java
-    kotlin("jvm")
+    `kotlin-platform-jvm`
     `kotlinx-serialization`
     `kotlinx-atomicfu`
-    idea
-    id("com.github.johnrengelman.shadow") version "5.1.0"
+    id("com.github.johnrengelman.shadow")
 }
 
 repositories {
@@ -18,48 +16,39 @@ repositories {
     jcenter()
 }
 
-val commonJarDeps by configurations.creating {}
-val adminJarDeps by configurations.creating {
-    extendsFrom(commonJarDeps)
-}
 val integrationTestImplementation by configurations.creating {
-    extendsFrom(configurations["testCompile"])
+    extendsFrom(configurations.compileClasspath.get())
+    extendsFrom(configurations.testCompileClasspath.get())
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class, Usage.JAVA_RUNTIME))
+    }
 }
 
 val testData by configurations.creating {}
-val integrationTestRuntime by configurations.creating {
-    extendsFrom(configurations["testRuntime"])
-}
 
 dependencies {
-    commonJarDeps("org.jacoco:org.jacoco.core:$jacocoVersion")
-    commonJarDeps("org.apache.bcel:bcel:$bcelVersion")
-    commonJarDeps(project(":common-part"))
-    adminJarDeps("io.vavr:vavr-kotlin:$vavrVersion")
-    add("testData", "com.epam.drill:test-data:$drillAdminVersion")
-}
+    implementation(kotlin("stdlib-jdk8"))
 
-
-dependencies {
-    implementation(kotlin("stdlib"))
-    implementation("com.epam.drill:kodux-jvm:$koduxVersion") { isChanging = true }
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
-    api("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
-    api(kotlin("stdlib-jdk8"))
-    api("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
-    implementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
-    implementation(ktor("locations"))
     implementation(project(":common-part"))
-    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
+    compileOnly("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
+    compileOnly("com.epam.drill:common-jvm:$drillCommonVersion")
+
+    compileOnly("com.epam.drill:kodux-jvm:$koduxVersion")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
+    compileOnly("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
+    compileOnly(ktor("locations"))
 
     implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
     implementation("io.vavr:vavr-kotlin:$vavrVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3")
+
     testImplementation(kotlin("test-junit"))
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
+    testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
     integrationTestImplementation(kotlin("test-junit"))
     integrationTestImplementation("com.epam.drill:test-framework:$drillAdminVersion")
     integrationTestImplementation("com.epam.drill:admin-core:$drillAdminVersion")
+    integrationTestImplementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
     integrationTestImplementation(ktor("server-test-host"))
     integrationTestImplementation(ktor("auth"))
     integrationTestImplementation(ktor("auth-jwt"))
@@ -75,19 +64,18 @@ dependencies {
     integrationTestImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     integrationTestImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     integrationTestImplementation("org.apache.bcel:bcel:$bcelVersion")
-
-
+    testData("com.epam.drill:test-data:$drillAdminVersion")
 }
 
-val testIngerationModuleName = "test-integration"
+val testIntegrationModuleName = "test-integration"
 
 sourceSets {
-    create(testIngerationModuleName) {
+    create(testIntegrationModuleName) {
         withConvention(KotlinSourceSet::class) {
-            kotlin.srcDir("src/$testIngerationModuleName/kotlin")
-            resources.srcDir("src/$testIngerationModuleName/resources")
-            compileClasspath += sourceSets["main"].output + integrationTestImplementation + configurations["testRuntimeClasspath"]
-            runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath + integrationTestRuntime
+            kotlin.srcDir("src/$testIntegrationModuleName/kotlin")
+            resources.srcDir("src/$testIntegrationModuleName/resources")
+            compileClasspath += sourceSets.main.get().output + integrationTestImplementation
+            runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath.get()
         }
     }
 
@@ -105,52 +93,66 @@ sourceSets {
 }
 
 
-idea {
-    module {
-        testSourceDirs =
-            (sourceSets[testIngerationModuleName].withConvention(KotlinSourceSet::class) { kotlin.srcDirs })
-        testResourceDirs = (sourceSets[testIngerationModuleName].resources.srcDirs)
-        scopes["TEST"]?.get("plus")?.add(integrationTestImplementation)
-    }
-}
-
-task<Test>("integrationTest") {
-    useJUnitPlatform()
-    systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
-    description = "Runs the integration tests"
-    group = "verification"
-    testClassesDirs = sourceSets[testIngerationModuleName].output.classesDirs
-    classpath = sourceSets[testIngerationModuleName].runtimeClasspath
-    mustRunAfter(tasks["test"])
-}
-
-tasks.named("check") {
-    dependsOn("integrationTest")
-}
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=io.ktor.locations.KtorExperimentalLocationsAPI"
-}
 tasks {
-    val jar by existing(Jar::class)
-
-    val adminShadow by registering(ShadowJar::class) {
-        configurations = listOf(adminJarDeps)
-        archiveFileName.set("admin-part.jar")
-        from(jar)
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=io.ktor.locations.KtorExperimentalLocationsAPI"
     }
+
+    val adminShadow by registering(ShadowJar::class)
+    adminShadow {
+        group = "shadow"
+        archiveFileName.set("admin-part.jar")
+        isZip64 = true
+        from(jar)
+        configurations = listOf(project.configurations.runtimeClasspath.get())
+        dependencies {
+            exclude("META-INF/**")
+            exclude(dependency("com.epam.drill:"))
+            exclude(dependency("org.jetbrains.kotlin:"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-runtime:"))
+            exclude(dependency("org.jetbrains:annotations:"))
+        }
+        val shadowPackagePrefix = "${rootProject.group}.test2code.shadow."
+        val forReplacement = listOf(
+            "io.vavr",
+            "kotlinx.collections.immutable",
+            "org.jacoco",
+            "org.objectweb"
+        )
+        for (pattern in forReplacement) {
+            relocate(pattern, "$shadowPackagePrefix.$pattern.")
+        }
+        exclude("module-info.class")
+    }
+
     val prepareDist by registering(Copy::class) {
-        from(rootProject.tasks["testDistZip"])
+        from(rootProject.tasks.named("testDistZip"))
         into(file("distr").resolve("adminStorage"))
     }
 
-    getByPath("testIntegrationClasses").dependsOn(prepareDist)
+    named("testIntegrationClasses") {
+        dependsOn(prepareDist)
+    }
 
-    named("clean") {
+    val integrationTest by registering(Test::class) {
+        useJUnitPlatform()
+        systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
+        description = "Runs the integration tests"
+        group = "verification"
+        testClassesDirs = sourceSets[testIntegrationModuleName].output.classesDirs
+        classpath = sourceSets[testIntegrationModuleName].runtimeClasspath
+        mustRunAfter(test)
+    }
+
+    check {
+        dependsOn(integrationTest)
+    }
+
+    clean {
         delete("distr", "work")
     }
 }
-
 
 @Suppress("unused")
 fun DependencyHandler.ktor(module: String, version: String? = ktorVersion): Any =
