@@ -8,24 +8,43 @@ allprojects {
     apply(plugin = "com.epam.drill.version.plugin")
 }
 
-tasks {
-    val pluginConfigJson = file("plugin_config.json")
-    distributions {
-        main {
-            contents {
-                from(getByPath(":admin-part:adminShadow"), getByPath(":agent-part:agentShadow"), pluginConfigJson)
-                into("/")
-            }
-        }
-        create("test") {
-            contents {
-                from(getByPath(":admin-part:adminShadow"), getByPath(":agent-part:agentShadowTest"), pluginConfigJson)
-                into("/")
-            }
+val pluginConfigJson = file("plugin_config.json")
+distributions {
+    val adminShadow = provider {
+        tasks.getByPath(":admin-part:adminShadow")
+    }
+
+    val agentShadow = provider {
+        tasks.getByPath(":agent-part:agentShadow")
+    }
+
+    val agentShadowTest = provider {
+        tasks.getByPath(":agent-part:agentShadowTest")
+    }
+
+    main {
+        contents {
+            from(
+                adminShadow,
+                agentShadow,
+                pluginConfigJson
+            )
+            into("/")
         }
     }
 
+    create("test") {
+        contents {
+            from(
+                adminShadow,
+                agentShadowTest,
+                pluginConfigJson
+            )
+            into("/")
+        }
+    }
 }
+
 publishing {
     repositories {
         maven {

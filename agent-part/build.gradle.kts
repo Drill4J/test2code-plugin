@@ -1,10 +1,10 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
-    kotlin("jvm")
+    `kotlin-platform-jvm`
     `kotlinx-serialization`
     `kotlinx-atomicfu`
-    id("com.github.johnrengelman.shadow") version "5.1.0"
+    id("com.github.johnrengelman.shadow")
 }
 val vavrVersion = "0.10.0"
 val bcelVersion = "6.3.1"
@@ -45,14 +45,15 @@ dependencies {
 }
 
 tasks {
-    val jar by existing(Jar::class)
-    val agentShadow by registering(ShadowJar::class) {
+    val agentShadow by registering(ShadowJar::class)
+    agentShadow {
         configurations = listOf(agent)
         configureProd()
         archiveFileName.set("agent-part.jar")
         from(jar)
     }
-    val agentShadowTest by registering(ShadowJar::class) {
+    val agentShadowTest by registering(ShadowJar::class)
+    agentShadowTest {
         configurations = listOf(commonJarDepsTest)
         configureTest()
         archiveFileName.set("agent-part.jar")

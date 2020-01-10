@@ -11,8 +11,8 @@ repositories {
 }
 
 dependencies {
-    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
+    compileOnly("com.epam.drill:common-jvm:$drillCommonVersion")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
     testImplementation(kotlin("test-junit"))
 }
