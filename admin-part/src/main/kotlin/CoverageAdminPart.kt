@@ -117,7 +117,12 @@ class CoverageAdminPart(
                 dataStore.accept(writer)
                 byteArrayOutputStream.toByteArray()
             }
-            else -> ""
+            else -> SummaryDto(
+                coverage = 50.0,
+                arrow = ArrowType.INCREASE,
+                risks = 1,
+                testsToRun = 2
+            )
         }
     }
 

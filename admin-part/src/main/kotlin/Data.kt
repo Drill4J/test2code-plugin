@@ -215,4 +215,12 @@ data class LastBuildCoverage(
     val coverage: Double
 )
 
+@Serializable
+data class SummaryDto(
+    val coverage: Double,
+    val arrow: ArrowType?,
+    val risks: Int,
+    val testsToRun: Int
+)
+
 fun lastCoverageId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"
