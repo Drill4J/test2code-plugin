@@ -25,6 +25,14 @@ application {
     applicationDefaultJvmArgs = appJvmArgs
 }
 
+tasks {
+    (run) {
+        dependsOn(":publishTest2codeZipPublicationToMavenLocal")
+        val normalizedPluginName = rootProject.name.replace("-", "_").toUpperCase()
+        environment("${normalizedPluginName}_VERSION", rootProject.version.toString())
+    }
+}
+
 dependencies {
     runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
 }
