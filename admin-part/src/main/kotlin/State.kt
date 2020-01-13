@@ -13,7 +13,6 @@ import org.jacoco.core.data.*
  * The data is represented by the sealed class hierarchy AgentData.
  * In case of inconsistencies of the data a ClassCastException is thrown.
  */
-
 class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
@@ -30,15 +29,6 @@ class PluginInstanceState(
             _data.value = value
         }
 
-    suspend fun setLastBuildCoverage(value: Double) {
-        storeClient.store(
-            LastBuildCoverage(
-                id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
-                coverage = value
-            )
-        )
-    }
-
     val scopeManager = ScopeManager(storeClient)
 
     private val _scopeCounter = atomic(0)
@@ -49,6 +39,18 @@ class PluginInstanceState(
 
     fun init() {
         _data.updateAndGet { ClassDataBuilder }
+    }
+
+    suspend fun storeBuildCoverage(buildCoverage: BuildCoverage, risks: Risks, testsToRun: TestsToRun) {
+        storeClient.store(
+            LastBuildCoverage(
+                id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
+                coverage = buildCoverage.coverage,
+                arrow = buildCoverage.arrow?.name,
+                risks = risks.run { newMethods.count() + modifiedMethods.count() },
+                testsToRun = testsToRun.testsToRun.values.sumBy { it.count() }
+            )
+        )
     }
 
     suspend fun nextVersion(buildVersion: String): String {
@@ -110,3 +112,9 @@ class PluginInstanceState(
         else -> trimmed
     }
 }
+
+suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? {
+    return findById(lastCoverageId(agentId, buildVersion))
+}
+
+private fun lastCoverageId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"

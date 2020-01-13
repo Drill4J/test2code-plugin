@@ -111,18 +111,14 @@ class CoverageAdminPart(
                         it.probes.map { it.value.map { it.probes.map { it.value }.flatten() }.flatten() }.flatten()
                     }.flatten()
                 val dataStore = ExecutionDataStore().with(buildProbes.asSequence())
+                @Suppress("BlockingMethodInNonBlockingContext")
                 val writer = ExecutionDataWriter(byteArrayOutputStream)
                 val info = SessionInfo(buildVersion, System.currentTimeMillis() - 1000, System.currentTimeMillis())
                 writer.visitSessionInfo(info)
                 dataStore.accept(writer)
                 byteArrayOutputStream.toByteArray()
             }
-            else -> SummaryDto(
-                coverage = 50.0,
-                arrow = ArrowType.INCREASE,
-                risks = 1,
-                testsToRun = 2
-            )
+            else -> storeClient.summaryOf(agentId, buildVersion)
         }
     }
 
@@ -375,7 +371,9 @@ class CoverageAdminPart(
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
-        pluginInstanceState.setLastBuildCoverage(coverageInfoSet.coverage.coverage)
+        lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
+        val risks = risks(coverageInfoSet.buildMethods)
+        pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, lastTestsToRun)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
@@ -395,9 +393,8 @@ class CoverageAdminPart(
             coverageInfoSet.methodsCoveredByTestType
         )
 
-        sendRisks(buildVersion, coverageInfoSet.buildMethods)
+        sendRisks(buildVersion, risks)
         pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
-        lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
         sendTestsToRun(lastTestsToRun)
     }
 
@@ -421,8 +418,7 @@ class CoverageAdminPart(
         )
     }
 
-    internal suspend fun sendRisks(buildVersion: String, buildMethods: BuildMethods) {
-        val risks = risks(buildMethods)
+    internal suspend fun sendRisks(buildVersion: String, risks: Risks) {
         sender.send(agentId, buildVersion, Routes.Build.Risks, risks)
     }
 
@@ -499,16 +495,14 @@ class CoverageAdminPart(
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
         val prevBuildVersion = adminData.buildManager[buildVersion]?.prevBuild ?: ""
-        val lastPrevBuildCoverage = storeClient
-            .findById<LastBuildCoverage>(lastCoverageId(agentId, prevBuildVersion))
-            ?.coverage ?: 0.0
+        val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
         val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
             agentInfo.id,
             KoduxTestsAssociatedWithBuild(agentInfo.id, storeClient)
         )
         return PluginInstanceState(
             agentInfo = agentInfo,
-            lastPrevBuildCoverage = lastPrevBuildCoverage,
+            lastPrevBuildCoverage = lastPrevBuildCoverage ?: 0.0,
             prevBuildVersion = prevBuildVersion,
             storeClient = storeClient,
             testsAssociatedWithBuild = testsAssociatedWithBuild

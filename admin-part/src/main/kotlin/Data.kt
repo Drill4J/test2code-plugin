@@ -210,9 +210,11 @@ data class TestsToRun(
 
 @Serializable
 data class LastBuildCoverage(
-    @Id
-    val id: String,
-    val coverage: Double
+    @Id val id: String,
+    val coverage: Double,
+    val arrow: String?,
+    val risks: Int,
+    val testsToRun: Int
 )
 
 @Serializable
@@ -222,5 +224,3 @@ data class SummaryDto(
     val risks: Int,
     val testsToRun: Int
 )
-
-fun lastCoverageId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"
