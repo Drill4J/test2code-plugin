@@ -29,7 +29,7 @@ jobs:
       - name: env
         run: env
       - name: Check
-        run: gradle check
+        run: gradle test
       - name: Publish
         run: |
           gradle -i publishTest2codeZipPublicationToMavenRepository
