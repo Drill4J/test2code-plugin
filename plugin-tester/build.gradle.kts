@@ -26,8 +26,14 @@ application {
 }
 
 tasks {
+
+    val deleteOldPluginVersions by registering(Delete::class) {
+        delete(fileTree("distr/adminStorage") { include("${rootProject.name}-*.zip") })
+    }
+
     (run) {
         dependsOn(":publishTest2codeZipPublicationToMavenLocal")
+        dependsOn(deleteOldPluginVersions)
         val normalizedPluginName = rootProject.name.replace("-", "_").toUpperCase()
         environment("${normalizedPluginName}_VERSION", rootProject.version.toString())
     }
