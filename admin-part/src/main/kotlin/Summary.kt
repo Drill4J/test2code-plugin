@@ -6,7 +6,8 @@ private val emptySummary = SummaryDto(
     coverage = 0.0,
     arrow = null,
     risks = 0,
-    testsToRun = 0
+    testsToRun = 0,
+    _aggCoverages = listOf(0.0)
 )
 
 suspend fun StoreClient.summaryOf(agentid: String, buildVersion: String): SummaryDto {
@@ -17,5 +18,6 @@ private fun LastBuildCoverage.toSummary() = SummaryDto(
     coverage = coverage,
     arrow = arrow?.let { ArrowType.valueOf(it) },
     risks = risks,
-    testsToRun = testsToRun
+    testsToRun = testsToRun,
+    _aggCoverages = listOf(coverage)
 )

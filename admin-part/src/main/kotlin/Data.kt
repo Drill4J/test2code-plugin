@@ -222,5 +222,17 @@ data class SummaryDto(
     val coverage: Double,
     val arrow: ArrowType?,
     val risks: Int,
-    val testsToRun: Int
-)
+    val testsToRun: Int,
+    val _aggCoverages: List<Double>
+) : (Any) -> Any {
+    override fun invoke(other: Any): Any = when(other) {
+        is SummaryDto -> copy(
+            arrow = null,
+            risks = risks + other.risks,
+            testsToRun = testsToRun + other.testsToRun,
+            _aggCoverages = _aggCoverages + other._aggCoverages,
+            coverage = _aggCoverages.average()
+        )
+        else -> this
+    }
+}
