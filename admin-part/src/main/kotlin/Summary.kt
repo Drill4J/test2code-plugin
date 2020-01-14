@@ -10,8 +10,8 @@ private val emptySummary = SummaryDto(
     _aggCoverages = listOf(0.0)
 )
 
-suspend fun StoreClient.summaryOf(agentid: String, buildVersion: String): SummaryDto {
-    return readLastBuildCoverage(agentid, buildVersion)?.toSummary() ?: emptySummary
+suspend fun StoreClient.summaryOf(agentId: String, buildVersion: String): SummaryDto? {
+    return readLastBuildCoverage(agentId, buildVersion)?.toSummary()
 }
 
 private fun LastBuildCoverage.toSummary() = SummaryDto(

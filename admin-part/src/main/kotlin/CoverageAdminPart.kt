@@ -9,6 +9,7 @@ import com.epam.drill.plugins.test2code.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.*
+import kotlinx.serialization.json.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import java.io.*
@@ -118,7 +119,7 @@ class CoverageAdminPart(
                 dataStore.accept(writer)
                 byteArrayOutputStream.toByteArray()
             }
-            else -> storeClient.summaryOf(agentId, buildVersion)
+            else -> storeClient.summaryOf(agentId, buildVersion) ?: JsonNull
         }
     }
 
