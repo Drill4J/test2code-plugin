@@ -226,13 +226,16 @@ data class SummaryDto(
     val _aggCoverages: List<Double>
 ) : (Any) -> Any {
     override fun invoke(other: Any): Any = when(other) {
-        is SummaryDto -> copy(
-            arrow = null,
-            risks = risks + other.risks,
-            testsToRun = testsToRun + other.testsToRun,
-            _aggCoverages = _aggCoverages + other._aggCoverages,
-            coverage = _aggCoverages.average()
-        )
+        is SummaryDto -> {
+            val aggCoverages = _aggCoverages + other._aggCoverages
+            copy(
+                coverage = aggCoverages.average(),
+                arrow = null,
+                risks = risks + other.risks,
+                testsToRun = testsToRun + other.testsToRun,
+                _aggCoverages = aggCoverages
+            )
+        }
         else -> this
     }
 }
