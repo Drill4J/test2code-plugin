@@ -5,13 +5,13 @@ import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.*
 
-interface Scope {
+interface Scope : Sequence<FinishedSession> {
     val id: String
     val buildVersion: String
     val summary: ScopeSummary
 }
 
-class ActiveScope(name: String, override val buildVersion: String) : Scope, Sequence<FinishedSession> {
+class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     override val id = genUuid()
 
@@ -93,7 +93,7 @@ data class FinishedScope(
     override val summary: ScopeSummary,
     val probes: Map<String, List<FinishedSession>>,
     var enabled: Boolean = true
-) : Scope, Sequence<FinishedSession> {
+) : Scope {
 
     override fun iterator() = probes.values.flatten().iterator()
 

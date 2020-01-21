@@ -41,6 +41,9 @@ class CoverageAdminPart(
 
     override suspend fun initialize() {
         pluginInstanceState = pluginInstanceState()
+        if (currentBuildInfo() != null) {
+            processData(Initialized("Storage"))
+        }
     }
 
     override suspend fun applyPackagesChanges() {
@@ -137,7 +140,7 @@ class CoverageAdminPart(
     }
 
     private fun newMethodsCount(): Int {
-        return adminData.buildManager[buildVersion]?.buildSummary?.newMethods ?: 0
+        return currentBuildInfo()?.buildSummary?.newMethods ?: 0
     }
 
     internal suspend fun processData(coverMsg: CoverMessage): Any {
@@ -151,8 +154,13 @@ class CoverageAdminPart(
                 pluginInstanceState.initialized(adminData.buildManager.buildInfos)
                 val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
                 cleanActiveScope(classesData.prevBuildVersion)
-                calculateAndSendActiveScopeCoverage()
+                sendActiveSessions()
+                calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
                 calculateAndSendBuildCoverage()
+                val finishedScopes = pluginInstanceState.scopeManager.allScopes()
+                for (scope in finishedScopes) {
+                    calculateAndSendScopeCoverage(scope)
+                }
                 sendScopeMessages()
             }
             is SessionStarted -> {
@@ -175,11 +183,12 @@ class CoverageAdminPart(
                     else -> {
                         if (session.any()) {
                             val totalInstructions = (pluginInstanceState.classesData() as ClassesData).totalInstructions
-                            val classesBytes = adminData.buildManager[buildVersion]?.classesBytes
+                            val classesBytes = currentBuildInfo()?.classesBytes
                             scope.update(session, classesBytes, totalInstructions)
                             sendScopeMessages()
                         } else println("Session ${session.id} is empty, it won't be added to the active scope")
-                        calculateAndSendActiveScopeCoverage()
+                        sendActiveSessions()
+                        calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
                         println("Session ${session.id} finished.")
                     }
                 }
@@ -190,8 +199,7 @@ class CoverageAdminPart(
 
     internal suspend fun calculateCoverageData(
         finishedSessions: Sequence<FinishedSession>,
-        buildVersion: String = this.buildVersion,
-        isBuildCvg: Boolean = false
+        buildVersion: String = this.buildVersion
     ): CoverageInfoSet {
         val buildInfo = adminData.buildManager[buildVersion]
         val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
@@ -213,12 +221,15 @@ class CoverageAdminPart(
         val bundleCoverage = coverageBuilder.getBundle("")
         val totalCoveragePercent = bundleCoverage.coverage(classesData.totalInstructions)
 
-        val coverageByType = if (isBuildCvg) {
+        val scope = finishedSessions as? Scope
+        val coverageByType = if (scope != null) {
+            scope.summary.coveragesByType
+        } else {
             classesBytes.coveragesByTestType(bundleMap, finishedSessions, classesData.totalInstructions)
-        } else activeScope.summary.coveragesByType
+        }
         println(coverageByType)
 
-        val coverageBlock: Coverage = if (isBuildCvg) {
+        val coverageBlock: Coverage = if (scope == null) {
             val prevBuildVersion = classesData.prevBuildVersion
             val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias ?: ""
             BuildCoverage(
@@ -361,7 +372,8 @@ class CoverageAdminPart(
             }
             val activeScope = pluginInstanceState.activeScope
             println("Current active scope $activeScope")
-            calculateAndSendActiveScopeCoverage()
+            sendActiveSessions()
+            calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
             sendScopeMessages()
             StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
         } else StatusMessage(
@@ -371,7 +383,7 @@ class CoverageAdminPart(
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
-        val coverageInfoSet = calculateCoverageData(sessions, buildVersion, true)
+        val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
         lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
         val risks = risks(coverageInfoSet.buildMethods)
         pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, lastTestsToRun)
@@ -429,48 +441,44 @@ class CoverageAdminPart(
         return Risks(newRisks, modifiedRisks)
     }
 
-    internal suspend fun calculateAndSendActiveScopeCoverage() {
-        val activeScope = pluginInstanceState.activeScope
-        val coverageInfoSet = calculateCoverageData(activeScope)
-        sendActiveSessions()
-
+    internal suspend fun calculateAndSendScopeCoverage(scope: Scope) {
+        val coverageInfoSet = calculateCoverageData(scope)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
                 batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
             }
-            sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(activeScope.id), beautifiedAssociatedTests)
+            sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(scope.id), beautifiedAssociatedTests)
         }
-        sender.send(agentId, buildVersion, Routes.Scope.Coverage(activeScope.id), coverageInfoSet.coverage)
+        sender.send(agentId, buildVersion, Routes.Scope.Coverage(scope.id), coverageInfoSet.coverage)
         sender.send(
             agentId,
             buildVersion,
-            Routes.Scope.CoverageByPackages(activeScope.id),
+            Routes.Scope.CoverageByPackages(scope.id),
             coverageInfoSet.packageCoverage
         )
-        sender.send(agentId, buildVersion, Routes.Scope.Methods(activeScope.id), coverageInfoSet.buildMethods)
+        sender.send(agentId, buildVersion, Routes.Scope.Methods(scope.id), coverageInfoSet.buildMethods)
         sender.send(
             agentId,
             buildVersion,
-            Routes.Scope.TestsUsages(activeScope.id),
+            Routes.Scope.TestsUsages(scope.id),
             coverageInfoSet.testsUsagesInfoByType
         )
         sender.send(
             agentId,
             buildVersion,
-            Routes.Scope.MethodsCoveredByTest(activeScope.id),
+            Routes.Scope.MethodsCoveredByTest(scope.id),
             coverageInfoSet.methodsCoveredByTest
         )
         sender.send(
             agentId,
             buildVersion,
-            Routes.Scope.MethodsCoveredByTestType(activeScope.id),
+            Routes.Scope.MethodsCoveredByTestType(scope.id),
             coverageInfoSet.methodsCoveredByTestType
         )
     }
 
     internal suspend fun cleanTopics(id: String) {
-
         sender.send(agentId, buildVersion, Routes.Scope.AssociatedTests(id), "")
         sender.send(agentId, buildVersion, Routes.Scope.Methods(id), "")
         sender.send(agentId, buildVersion, Routes.Scope.TestsUsages(id), "")
@@ -487,7 +495,7 @@ class CoverageAdminPart(
             sender.send(agentId, it, Routes.Build.CoverageByPackages, "")
             sender.send(agentId, it, Routes.Build.Coverage, "")
         }
-        val classesBytes = adminData.buildManager[buildVersion]!!.classesBytes
+        val classesBytes = currentBuildInfo()!!.classesBytes
         pluginInstanceState = pluginInstanceState()
         processData(InitInfo(classesBytes.keys.count(), ""))
         pluginInstanceState.initialized(adminData.buildManager.buildInfos)
@@ -495,7 +503,7 @@ class CoverageAdminPart(
     }
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
-        val prevBuildVersion = adminData.buildManager[buildVersion]?.prevBuild ?: ""
+        val prevBuildVersion = currentBuildInfo()?.prevBuild ?: ""
         val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
         val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
             agentInfo.id,
@@ -509,6 +517,8 @@ class CoverageAdminPart(
             testsAssociatedWithBuild = testsAssociatedWithBuild
         )
     }
+
+    private fun currentBuildInfo() = adminData.buildManager[buildVersion]
 
     private suspend fun wipeStoredData() {
         storeClient.deleteAll<FinishedScope>()
