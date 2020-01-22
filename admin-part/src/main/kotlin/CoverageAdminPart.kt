@@ -505,7 +505,6 @@ class CoverageAdminPart(
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
         val prevBuildVersion = currentBuildInfo()?.prevBuild ?: ""
-        println("//////prevBuildVersion=$prevBuildVersion")
         val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
         val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
             agentInfo.id,

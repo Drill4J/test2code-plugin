@@ -52,7 +52,7 @@ fun classCoverage(
         val classKey = classCoverage.coverageKey()
         JavaClassCoverage(
             id = classKey.id,
-            name = classNameFromPath(classCoverage.name),
+            name = classCoverage.name.toShortClassName(),
             path = classCoverage.name,
             coverage = classCoverage.coverage,
             totalMethodsCount = classCoverage.methodCounter.totalCount,
@@ -62,7 +62,7 @@ fun classCoverage(
                 val methodKey = methodCoverage.coverageKey(classCoverage)
                 JavaMethodCoverage(
                     id = methodKey.id,
-                    name = beautifyMethodName(methodCoverage.name, classNameFromPath(classCoverage.name)),
+                    name = classCoverage.name.methodName(methodCoverage.name) ?: "",
                     desc = methodCoverage.desc,
                     decl = declaration(methodCoverage.desc),
                     coverage = methodCoverage.coverage,
@@ -77,7 +77,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
         id = key.id,
         packageName = key.packageName,
         className = key.className,
-        methodName = key.methodName,
+        methodName = key.className?.methodName(key.methodName),
         tests = tests
     )
 }.sortedBy { it.methodName }.map { assocTests -> assocTests.copy(tests = assocTests.tests.sortedBy { it.name }) }
@@ -130,11 +130,11 @@ fun Methods.getInfo(
         val coverageRate = data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
         if (!(excludeMissed && coverageRate == CoverageRate.MISSED)) {
             JavaMethod(
-                method.ownerClass,
-                beautifyMethodName(method.name, classNameFromPath(method.ownerClass)),
-                declaration(method.desc),
-                method.hash,
-                coverageRate
+                ownerClass = method.ownerClass,
+                name = method.ownerClass.methodName(method.name) ?: "",
+                desc = declaration(method.desc),
+                hash = method.hash,
+                coverageRate = coverageRate
             )
         } else null
     }.sortedBy { it.name }
@@ -169,12 +169,12 @@ fun Map<TypedTest, IBundleCoverage>.coveredMethods(
     return coveredByTest to coveredByType
 }
 
-private fun classNameFromPath(path: String) = path.substringAfterLast('/')
-
 fun IMethodCoverage.sign() = "$name$desc"
 
-fun beautifyMethodName(name: String, owner: String) = when (name) {
-    "<init>" -> owner
-    "<clinit>" -> "static $owner"
+fun String.methodName(name: String?): String? = when(name) {
+    "<init>" -> toShortClassName()
+    "<clinit>" -> "static ${toShortClassName()}"
     else -> name
 }
+
+fun String.toShortClassName(): String = substringAfterLast('/')
