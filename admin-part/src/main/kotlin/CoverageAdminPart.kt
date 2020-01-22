@@ -384,7 +384,9 @@ class CoverageAdminPart(
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
+        pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
         lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
+
         val risks = risks(coverageInfoSet.buildMethods)
         pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, lastTestsToRun)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
@@ -407,7 +409,6 @@ class CoverageAdminPart(
         )
 
         sendRisks(buildVersion, risks)
-        pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
         sendTestsToRun(lastTestsToRun)
     }
 
@@ -504,6 +505,7 @@ class CoverageAdminPart(
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
         val prevBuildVersion = currentBuildInfo()?.prevBuild ?: ""
+        println("//////prevBuildVersion=$prevBuildVersion")
         val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
         val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
             agentInfo.id,
