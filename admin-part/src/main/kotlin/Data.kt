@@ -205,7 +205,13 @@ data class Risks(
 
 @Serializable
 data class TestsToRun(
-    var testsToRun: Map<String, List<String>>
+    var testTypeToNames: Map<String, List<String>>
+)
+
+@Serializable
+data class TestsToRunDto(
+    val testsToRun: TestsToRun,
+    var count: Int
 )
 
 @Serializable
@@ -214,7 +220,7 @@ data class LastBuildCoverage(
     val coverage: Double,
     val arrow: String?,
     val risks: Int,
-    val testsToRun: Int
+    val testsToRunDto: TestsToRunDto
 )
 
 @Serializable
@@ -222,7 +228,7 @@ data class SummaryDto(
     val coverage: Double,
     val arrow: ArrowType?,
     val risks: Int,
-    val testsToRun: Int,
+    val testsToRunDto: TestsToRunDto,
     val _aggCoverages: List<Double>
 ) : (Any) -> Any {
     override fun invoke(other: Any): Any = when(other) {
@@ -232,7 +238,7 @@ data class SummaryDto(
                 coverage = aggCoverages.average(),
                 arrow = null,
                 risks = risks + other.risks,
-                testsToRun = testsToRun + other.testsToRun,
+                testsToRunDto = testsToRunDto, //TODO EPMDJ-2220
                 _aggCoverages = aggCoverages
             )
         }
