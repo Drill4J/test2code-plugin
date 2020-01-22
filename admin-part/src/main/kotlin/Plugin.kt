@@ -129,7 +129,7 @@ class Test2CodeAdminPart(
     private fun newBuildActionsList(): String {
         val list = mutableListOf<String>()
 
-        if (lastTestsToRun.testsToRun.isNotEmpty()) {
+        if (lastTestsToRun.testTypeToNames.isNotEmpty()) {
             list.add("Run recommended tests to cover modified methods")
         }
 
