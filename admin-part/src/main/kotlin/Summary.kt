@@ -10,6 +10,6 @@ private fun LastBuildCoverage.toSummary() = SummaryDto(
     coverage = coverage,
     arrow = arrow?.let { ArrowType.valueOf(it) },
     risks = risks,
-    infoTestsToRun = infoTestsToRun,
+    testsToRunDto = testsToRunDto,
     _aggCoverages = listOf(coverage)
 )
