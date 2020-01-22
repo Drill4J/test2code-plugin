@@ -58,7 +58,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.testsToRun()!!.apply {
-                    testsToRun.isNotEmpty() shouldBe true
+                    testTypeToNames.isNotEmpty() shouldBe true
                 }
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe ArrowType.DECREASE
@@ -128,7 +128,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.testsToRun()!!.apply {
-                    testsToRun.isEmpty().shouldBeTrue()
+                    testTypeToNames.isEmpty().shouldBeTrue()
                 }
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe null
@@ -185,7 +185,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
             }.reconnect<Build1> { plugUi, _ ->
                 plugUi.testsToRun()!!.apply {
-                    testsToRun.isEmpty() shouldBe true
+                    testTypeToNames.isEmpty() shouldBe true
                 }
                 plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 100.0
