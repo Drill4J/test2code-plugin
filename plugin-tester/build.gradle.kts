@@ -40,5 +40,5 @@ tasks {
 }
 
 dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
+    runtimeOnly("com.epam.drill:admin-core:$adminReleaseVersion-+:all@jar") { isChanging = true }
 }
