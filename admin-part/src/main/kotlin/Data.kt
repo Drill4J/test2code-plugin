@@ -208,6 +208,10 @@ data class TestsToRun(
     var testTypeToNames: Map<String, List<String>>
 )
 
+fun TestsToRun.sumSizeLists(): Int {
+    return testTypeToNames.values.sumBy { it.count() }
+}
+
 @Serializable
 data class TestsToRunDto(
     val testsToRun: TestsToRun,
@@ -234,14 +238,26 @@ data class SummaryDto(
     override fun invoke(other: Any): Any = when(other) {
         is SummaryDto -> {
             val aggCoverages = _aggCoverages + other._aggCoverages
+            val mergedTestsToRun = TestsToRun(mergeTestToRun(other))
             copy(
                 coverage = aggCoverages.average(),
                 arrow = null,
                 risks = risks + other.risks,
-                testsToRunDto = testsToRunDto, //TODO EPMDJ-2220
+                testsToRunDto = TestsToRunDto(
+                    testsToRun = mergedTestsToRun,
+                    count = mergedTestsToRun.sumSizeLists()
+                ),
                 _aggCoverages = aggCoverages
             )
         }
         else -> this
+    }
+
+    private fun mergeTestToRun(other: SummaryDto): Map<String, List<String>> {
+        return (testsToRunDto.testsToRun.testTypeToNames.asSequence() + other.testsToRunDto.testsToRun.testTypeToNames.asSequence())
+            .groupBy({ it.key }, { it.value })
+            .mapValues { (_, values) ->
+                values.flatten().distinct()
+            }
     }
 }

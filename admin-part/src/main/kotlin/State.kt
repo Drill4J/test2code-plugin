@@ -48,7 +48,10 @@ class PluginInstanceState(
                 coverage = buildCoverage.coverage,
                 arrow = buildCoverage.arrow?.name,
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
-                testsToRunDto = TestsToRunDto(testsToRun, testsToRun.testTypeToNames.values.sumBy { it.count() })
+                testsToRunDto = TestsToRunDto(
+                    testsToRun = testsToRun,
+                    count = testsToRun.sumSizeLists()
+                )
             )
         )
     }
