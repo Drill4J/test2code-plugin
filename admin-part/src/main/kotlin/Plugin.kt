@@ -15,7 +15,7 @@ import org.jacoco.core.data.*
 import java.io.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
-class CoverageAdminPart(
+class Test2CodeAdminPart(
     adminData: AdminData,
     sender: Sender,
     val storeClient: StoreClient,
