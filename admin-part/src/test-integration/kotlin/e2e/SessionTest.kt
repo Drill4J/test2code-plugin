@@ -133,10 +133,10 @@ class SessionTest : E2EPluginTest() {
 
                     val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
 
-                    pluginAction(startNewSession2) { status, content ->
-                        status shouldBe HttpStatusCode.OK
+                    pluginAction(startNewSession2) { status2, content2 ->
+                        status2 shouldBe HttpStatusCode.OK
 
-                        val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                        val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
                         plugUi.activeSessions()!!.run { count shouldBe 2 }
                         runWithSession(startSession2.payload.sessionId) {
                             val gt = build.entryPoint()

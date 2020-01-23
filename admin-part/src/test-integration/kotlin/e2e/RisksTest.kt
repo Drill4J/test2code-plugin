@@ -77,7 +77,8 @@ class RisksTest : E2EPluginTest() {
                         gt.test3()
                     }
 
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()) { status, _ -> status shouldBe HttpStatusCode . OK }
+                    val stopSession = StopSession(SessionPayload(startSession.payload.sessionId)).stringify()
+                    pluginAction(stopSession) { status1, _ -> status1 shouldBe HttpStatusCode.OK }
                 }.join()
                 delay(300)//todo move it to core library
                 plugUi.activeSessions()!!.count shouldBe 0

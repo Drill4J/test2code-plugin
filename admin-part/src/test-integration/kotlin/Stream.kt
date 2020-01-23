@@ -1,10 +1,15 @@
+@file:UseExperimental(
+    KtorExperimentalLocationsAPI::class,
+    ExperimentalCoroutinesApi::class
+)
+
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
 import com.epam.drill.admin.common.*
-import com.epam.drill.e2e.*
 import com.epam.drill.admin.endpoints.*
 import com.epam.drill.admin.endpoints.plugin.*
+import com.epam.drill.common.*
+import com.epam.drill.e2e.*
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.routes.*
 import io.ktor.application.*
@@ -18,7 +23,7 @@ import kotlinx.serialization.json.*
 import java.util.concurrent.*
 import kotlin.reflect.*
 import kotlin.reflect.full.*
-
+import kotlin.time.*
 
 class CoverageSocketStreams : PluginStreams() {
 

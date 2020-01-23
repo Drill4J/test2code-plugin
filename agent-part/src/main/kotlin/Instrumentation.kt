@@ -56,9 +56,7 @@ private class CustomInstrumenter(
 
 private class ProbeCounter : ClassProbesVisitor() {
     var count = 0
-        private set(value) {
-            field = value
-        }
+        private set
 
     override fun visitMethod(
         access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?

@@ -116,6 +116,3 @@ class CoverageAgentPart @JvmOverloads constructor(
         send(messageStr)
     }
 }
-
-
-class Foo
