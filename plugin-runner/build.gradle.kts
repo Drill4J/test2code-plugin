@@ -1,6 +1,7 @@
 plugins {
-    java
+    `java-base`
     application
+    id("com.epam.drill.version.plugin")
 }
 
 val appJvmArgs = listOf(
@@ -28,16 +29,17 @@ application {
 tasks {
 
     val deleteOldPluginVersions by registering(Delete::class) {
-        delete(fileTree("distr/adminStorage") { include("${rootProject.name}-*.zip") })
+        delete(fileTree("distr/adminStorage") { include("test2code-plugin-*.zip") })
     }
 
     (run) {
-        dependsOn(":publishTest2codeZipPublicationToMavenLocal")
         dependsOn(deleteOldPluginVersions)
         val normalizedPluginName = rootProject.name.replace("-", "_").toUpperCase()
-        environment("${normalizedPluginName}_VERSION", rootProject.version.toString())
+        environment("${normalizedPluginName}_VERSION", version.toString())
     }
 }
+
+val adminReleaseVersion = "0.5.0"
 
 dependencies {
     runtimeOnly("com.epam.drill:admin-core:$adminReleaseVersion-+:all@jar") { isChanging = true }

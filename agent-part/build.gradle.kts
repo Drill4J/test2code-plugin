@@ -4,17 +4,9 @@ plugins {
     `kotlin-platform-jvm`
     `kotlinx-serialization`
     `kotlinx-atomicfu`
-    id("com.github.johnrengelman.shadow")
 }
 val vavrVersion = "0.10.0"
 val bcelVersion = "6.3.1"
-
-repositories {
-    mavenLocal()
-    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
-    mavenCentral()
-    jcenter()
-}
 
 val commonJarDeps by configurations.creating {}
 val agent by configurations.creating {

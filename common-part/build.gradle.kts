@@ -3,12 +3,6 @@ plugins {
     `kotlinx-serialization`
     `kotlinx-atomicfu`
 }
-repositories {
-    mavenLocal()
-    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
-    mavenCentral()
-    jcenter()
-}
 
 dependencies {
     compileOnly("com.epam.drill:common-jvm:$drillCommonVersion")

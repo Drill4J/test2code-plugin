@@ -8,6 +8,27 @@ allprojects {
     apply(plugin = "com.epam.drill.version.plugin")
 }
 
+subprojects {
+    repositories {
+        mavenLocal()
+        maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
+        mavenCentral()
+        jcenter()
+    }
+
+
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = "1.8"
+            allWarningsAsErrors = true
+            freeCompilerArgs = listOf(
+                "-Xuse-experimental=kotlin.Experimental",
+                "-Xuse-experimental=kotlin.time.ExperimentalTime"
+            )
+        }
+    }
+}
+
 val pluginConfigJson = file("plugin_config.json")
 distributions {
     val adminShadow = provider {
@@ -69,6 +90,10 @@ publishing {
     }
 }
 
-tasks.build {
-    dependsOn("publishTest2codeZipPublicationToMavenLocal")
+tasks {
+    register("run-admin") {
+        group = "application"
+        dependsOn(publishToMavenLocal)
+        dependsOn(gradle.includedBuild("plugin-runner").task(":run"))
+    }
 }

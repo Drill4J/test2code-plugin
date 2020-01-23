@@ -6,14 +6,6 @@ plugins {
     `kotlin-platform-jvm`
     `kotlinx-serialization`
     `kotlinx-atomicfu`
-    id("com.github.johnrengelman.shadow")
-}
-
-repositories {
-    mavenLocal()
-    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
-    mavenCentral()
-    jcenter()
 }
 
 val integrationTestImplementation by configurations.creating {
@@ -94,12 +86,6 @@ sourceSets {
 
 
 tasks {
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=io.ktor.locations.KtorExperimentalLocationsAPI"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-    }
-
     val adminShadow by registering(ShadowJar::class)
     adminShadow {
         group = "shadow"

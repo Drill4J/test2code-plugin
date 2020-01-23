@@ -1,3 +1,5 @@
+@file:UseExperimental(KtorExperimentalLocationsAPI::class)
+
 package com.epam.drill.plugins.test2code.routes
 
 import io.ktor.locations.*
