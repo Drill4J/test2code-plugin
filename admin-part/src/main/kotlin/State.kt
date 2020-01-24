@@ -50,7 +50,7 @@ class PluginInstanceState(
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
                 testsToRun = TestsToRunDto(
                     groupedTests = testsToRun,
-                    count = testsToRun.sumSizeLists())
+                    count = testsToRun.totalCount())
             )
         )
     }
