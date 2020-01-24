@@ -25,9 +25,9 @@ class Test2CodeAdminPart(
 
     override val serDe: SerDe<Action> = commonSerDe
 
-    private val _lastTestsToRun = atomic(TestsToRun(emptyMap()))
+    private val _lastTestsToRun = atomic<GroupedTests>(emptyMap())
 
-    internal var lastTestsToRun: TestsToRun
+    internal var lastTestsToRun: GroupedTests
         get() = _lastTestsToRun.value
         set(value) {
             _lastTestsToRun.value = value
@@ -106,7 +106,7 @@ class Test2CodeAdminPart(
 
     override suspend fun getPluginData(params: Map<String, String>): Any {
         return when (params["type"]) {
-            "tests-to-run" -> TestsToRun.serializer() stringify lastTestsToRun
+            "tests-to-run" -> TestsToRun.serializer() stringify TestsToRun(lastTestsToRun)
             "recommendations" -> newBuildActionsList()
             "coverage-data" -> {
                 val byteArrayOutputStream = ByteArrayOutputStream()
@@ -129,7 +129,7 @@ class Test2CodeAdminPart(
     private fun newBuildActionsList(): String {
         val list = mutableListOf<String>()
 
-        if (lastTestsToRun.testTypeToNames.isNotEmpty()) {
+        if (lastTestsToRun.isNotEmpty()) {
             list.add("Run recommended tests to cover modified methods")
         }
 
@@ -385,7 +385,10 @@ class Test2CodeAdminPart(
         val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
         pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
-        lastTestsToRun = testsToRun(coverageInfoSet.buildMethods)
+        lastTestsToRun = pluginInstanceState.testsAssociatedWithBuild.getTestsToRun(
+            pluginInstanceState,
+            coverageInfoSet.buildMethods.allModifiedMethods.methods
+        )
 
         val risks = risks(coverageInfoSet.buildMethods)
         pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, lastTestsToRun)
@@ -409,7 +412,7 @@ class Test2CodeAdminPart(
         )
 
         sendRisks(buildVersion, risks)
-        sendTestsToRun(lastTestsToRun)
+        sendTestsToRun(TestsToRun(lastTestsToRun))
     }
 
     internal suspend fun sendTestsToRun(testsToRun: TestsToRun) {

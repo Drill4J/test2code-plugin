@@ -203,15 +203,18 @@ data class Risks(
     val modifiedMethods: List<JavaMethod>
 )
 
+typealias GroupedTests = Map<String, List<String>>
+
+//TODO get rid of this unnecessary wrapping
 @Serializable
 data class TestsToRun(
-    var testTypeToNames: Map<String, List<String>>
+    val testTypeToNames: GroupedTests
 )
 
 @Serializable
 data class TestsToRunDto(
-    val testsToRun: TestsToRun,
-    var count: Int
+    val groupedTests : GroupedTests,
+    val count: Int
 )
 
 @Serializable
@@ -220,7 +223,7 @@ data class LastBuildCoverage(
     val coverage: Double,
     val arrow: String?,
     val risks: Int,
-    val testsToRunDto: TestsToRunDto
+    val testsToRun: TestsToRunDto
 )
 
 @Serializable
@@ -231,17 +234,6 @@ data class SummaryDto(
     val testsToRunDto: TestsToRunDto,
     val _aggCoverages: List<Double>
 ) : (Any) -> Any {
-    override fun invoke(other: Any): Any = when(other) {
-        is SummaryDto -> {
-            val aggCoverages = _aggCoverages + other._aggCoverages
-            copy(
-                coverage = aggCoverages.average(),
-                arrow = null,
-                risks = risks + other.risks,
-                testsToRunDto = testsToRunDto, //TODO EPMDJ-2220
-                _aggCoverages = aggCoverages
-            )
-        }
-        else -> this
-    }
+    //TODO separate aggregation implementation from the data class
+    override fun invoke(other: Any): Any = (other as? SummaryDto) + this
 }

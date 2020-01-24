@@ -23,7 +23,7 @@ class PluginInstanceState(
     @Suppress("PropertyName")
     private val _data = atomic<AgentData>(NoData)
 
-    var data: AgentData
+    private var data: AgentData
         get() = _data.value
         private set(value) {
             _data.value = value
@@ -41,14 +41,16 @@ class PluginInstanceState(
         _data.updateAndGet { ClassDataBuilder }
     }
 
-    suspend fun storeBuildCoverage(buildCoverage: BuildCoverage, risks: Risks, testsToRun: TestsToRun) {
+    suspend fun storeBuildCoverage(buildCoverage: BuildCoverage, risks: Risks, testsToRun: GroupedTests) {
         storeClient.store(
             LastBuildCoverage(
                 id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
                 coverage = buildCoverage.coverage,
                 arrow = buildCoverage.arrow?.name,
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
-                testsToRunDto = TestsToRunDto(testsToRun, testsToRun.testTypeToNames.values.sumBy { it.count() })
+                testsToRun = TestsToRunDto(
+                    groupedTests = testsToRun,
+                    count = testsToRun.values.sumBy { it.count() })
             )
         )
     }
