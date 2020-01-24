@@ -17,17 +17,16 @@ operator fun SummaryDto?.plus(other: SummaryDto): SummaryDto = when (this) {
 }
 
 private operator fun TestsToRunDto.plus(testsToRun: TestsToRunDto): TestsToRunDto {
-    val mergedGroupedTests = (groupedTests.keys + testsToRun.groupedTests.keys)
-        .associateWith {
-            setOf(groupedTests[it], testsToRun.groupedTests[it])
-                .filterNotNull()
-                .flatten()
-                .distinct()
+    val mergedGroupedTests = sequenceOf(groupedTests, testsToRun.groupedTests)
+        .flatMap { it.asSequence() }
+        .groupBy({ it.key }, { it.value })
+        .mapValues { (_, values) ->
+            values.flatten().distinct()
         }
-    return TestsToRunDto(mergedGroupedTests, mergedGroupedTests.sumSizeLists())
+    return TestsToRunDto(mergedGroupedTests, mergedGroupedTests.totalCount())
 }
 
-fun GroupedTests.sumSizeLists(): Int {
+fun GroupedTests.totalCount(): Int {
     return this.values.sumBy { it.count() }
 }
 
