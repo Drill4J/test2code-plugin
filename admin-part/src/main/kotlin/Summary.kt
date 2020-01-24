@@ -10,10 +10,25 @@ operator fun SummaryDto?.plus(other: SummaryDto): SummaryDto = when (this) {
             coverage = aggCoverages.average(),
             arrow = null,
             risks = risks + other.risks,
-            testsToRun = testsToRun, //TODO EPMDJ-2220, e.g. testsToRunDto = testsToRunDto + other.testsToRunDto
+            testsToRun = testsToRun + other.testsToRun,
             _aggCoverages = aggCoverages
         )
     }
+}
+
+private operator fun TestsToRunDto.plus(testsToRun: TestsToRunDto): TestsToRunDto {
+    val mergedGroupedTests = (groupedTests.keys + testsToRun.groupedTests.keys)
+        .associateWith {
+            setOf(groupedTests[it], testsToRun.groupedTests[it])
+                .filterNotNull()
+                .flatten()
+                .distinct()
+        }
+    return TestsToRunDto(mergedGroupedTests, mergedGroupedTests.sumSizeLists())
+}
+
+fun GroupedTests.sumSizeLists(): Int {
+    return this.values.sumBy { it.count() }
 }
 
 suspend fun StoreClient.summaryOf(agentId: String, buildVersion: String): SummaryDto? {
