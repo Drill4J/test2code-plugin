@@ -231,7 +231,7 @@ data class SummaryDto(
     val coverage: Double,
     val arrow: ArrowType?,
     val risks: Int,
-    val testsToRunDto: TestsToRunDto,
+    val testsToRun: TestsToRunDto,
     val _aggCoverages: List<Double>
 ) : (Any) -> Any {
     //TODO separate aggregation implementation from the data class

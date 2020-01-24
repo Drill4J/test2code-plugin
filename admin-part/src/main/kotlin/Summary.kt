@@ -10,7 +10,7 @@ operator fun SummaryDto?.plus(other: SummaryDto): SummaryDto = when (this) {
             coverage = aggCoverages.average(),
             arrow = null,
             risks = risks + other.risks,
-            testsToRunDto = testsToRunDto, //TODO EPMDJ-2220, e.g. testsToRunDto = testsToRunDto + other.testsToRunDto
+            testsToRun = testsToRun, //TODO EPMDJ-2220, e.g. testsToRunDto = testsToRunDto + other.testsToRunDto
             _aggCoverages = aggCoverages
         )
     }
@@ -24,6 +24,6 @@ private fun LastBuildCoverage.toSummary() = SummaryDto(
     coverage = coverage,
     arrow = arrow?.let { ArrowType.valueOf(it) },
     risks = risks,
-    testsToRunDto = testsToRun,
+    testsToRun = testsToRun,
     _aggCoverages = listOf(coverage)
 )
