@@ -86,8 +86,7 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
 @Serializable
 data class FinishedScope(
-    @Id
-    override val id: String,
+    @Id override val id: String,
     override val buildVersion: String,
     val name: String,
     override val summary: ScopeSummary,

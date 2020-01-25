@@ -151,7 +151,8 @@ class Test2CodeAdminPart(
                 println("${coverMsg.classesCount} classes to load")
             }
             is Initialized -> {
-                pluginInstanceState.initialized(adminData.buildManager.buildInfos)
+                val buildInfos = adminData.buildManager.buildInfos
+                pluginInstanceState.initialized(buildInfos)
                 val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
                 cleanActiveScope(classesData.prevBuildVersion)
                 sendActiveSessions()
@@ -160,6 +161,10 @@ class Test2CodeAdminPart(
                 val finishedScopes = pluginInstanceState.scopeManager.allScopes()
                 for (scope in finishedScopes) {
                     calculateAndSendScopeCoverage(scope)
+                }
+                val prevBuildVersions = buildInfos.keys.filter { it != buildVersion }
+                for (buildVersion in prevBuildVersions) {
+                    calculateAndSendBuildCoverage(buildVersion)
                 }
                 sendScopeMessages()
             }
@@ -251,7 +256,7 @@ class Test2CodeAdminPart(
         val buildMethods = calculateBundleMethods(
             methodsChanges,
             bundleCoverage
-        ).deletedCoveredMethodsCountEnrichment(pluginInstanceState)
+        ).withDeletedMethodCount(classesData.prevBuildVersion, pluginInstanceState.buildTests)
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
 
         val (coveredByTest, coveredByTestType) = bundleMap.coveredMethods(
@@ -384,9 +389,10 @@ class Test2CodeAdminPart(
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
-        pluginInstanceState.testsAssociatedWithBuild.add(buildVersion, coverageInfoSet.associatedTests)
-        lastTestsToRun = pluginInstanceState.testsAssociatedWithBuild.getTestsToRun(
+        pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests)
+        lastTestsToRun = pluginInstanceState.buildTests.getTestsToRun(
             pluginInstanceState,
+            buildVersion,
             coverageInfoSet.buildMethods.allModifiedMethods.methods
         )
 
@@ -421,17 +427,6 @@ class Test2CodeAdminPart(
             buildVersion,
             Routes.Build.TestsToRun,
             testsToRun
-        )
-    }
-
-    private suspend fun testsToRun(
-        buildMethods: BuildMethods
-    ): TestsToRun {
-        return TestsToRun(
-            pluginInstanceState.testsAssociatedWithBuild.getTestsToRun(
-                pluginInstanceState,
-                buildMethods.allModifiedMethods.methods
-            )
         )
     }
 
@@ -509,16 +504,11 @@ class Test2CodeAdminPart(
     private suspend fun pluginInstanceState(): PluginInstanceState {
         val prevBuildVersion = currentBuildInfo()?.prevBuild ?: ""
         val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
-        val testsAssociatedWithBuild = KoduxTestsAssociatedWithBuildStorageManager(storeClient).getStorage(
-            agentInfo.id,
-            KoduxTestsAssociatedWithBuild(agentInfo.id, storeClient)
-        )
         return PluginInstanceState(
             agentInfo = agentInfo,
             lastPrevBuildCoverage = lastPrevBuildCoverage ?: 0.0,
             prevBuildVersion = prevBuildVersion,
-            storeClient = storeClient,
-            testsAssociatedWithBuild = testsAssociatedWithBuild
+            storeClient = storeClient
         )
     }
 
@@ -526,7 +516,7 @@ class Test2CodeAdminPart(
 
     private suspend fun wipeStoredData() {
         storeClient.deleteAll<FinishedScope>()
-        storeClient.deleteAll<KoduxTestsAssociatedWithBuild>()
+        storeClient.deleteAll<BuildTests>()
         storeClient.deleteAll<LastBuildCoverage>()
         storeClient.deleteAll<ClassesData>()
         initialize()

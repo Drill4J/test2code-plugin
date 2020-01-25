@@ -17,28 +17,30 @@ class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
     val lastPrevBuildCoverage: Double,
-    val agentInfo: AgentInfo,
-    val testsAssociatedWithBuild: TestsAssociatedWithBuild
+    val agentInfo: AgentInfo
 ) {
-    @Suppress("PropertyName")
-    private val _data = atomic<AgentData>(NoData)
-
-    private var data: AgentData
-        get() = _data.value
-        private set(value) {
-            _data.value = value
-        }
 
     val scopeManager = ScopeManager(storeClient)
+
+    val activeScope get() = _activeScope.value
+
+    val buildTests get() = _buildTests.value
+
+    private val _data = atomic<AgentData>(NoData)
+
+    private val _buildTests = atomic(BuildTests(agentInfo.id))
 
     private val _scopeCounter = atomic(0)
 
     private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
 
-    val activeScope get() = _activeScope.value
-
     fun init() {
         _data.updateAndGet { ClassDataBuilder }
+    }
+
+    suspend fun addBuildTests(buildVersion: String, tests: List<AssociatedTests>) {
+        buildTests.add(buildVersion, tests)
+        storeClient.store(buildTests)
     }
 
     suspend fun storeBuildCoverage(buildCoverage: BuildCoverage, risks: Risks, testsToRun: GroupedTests) {
@@ -95,15 +97,16 @@ class PluginInstanceState(
             prevBuildVersion = prevBuildVersion,
             prevBuildCoverage = lastPrevBuildCoverage
         )
-
-        data = classesData
+        _data.value = classesData
+        val buildTests = storeClient.findById(agentInfo.id) ?: storeClient.store(this.buildTests)
+        _buildTests.value = buildTests
         scopeManager.saveClassesData(classesData)
     }
 
     //throw ClassCastException if the ref value is in the wrong state
     suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData =
         if (buildVersion == agentInfo.buildVersion) {
-            data as ClassesData
+            _data.value as ClassesData
         } else scopeManager.classesData(buildVersion) ?: NoData
 
     fun changeActiveScope(name: String) =

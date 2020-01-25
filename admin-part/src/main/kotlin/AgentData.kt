@@ -11,8 +11,7 @@ object ClassDataBuilder : AgentData()
 
 @Serializable
 class ClassesData(
-    @Id
-    val buildVersion: String,
+    @Id val buildVersion: String,
     val totalInstructions: Int,
     val prevBuildVersion: String,
     val prevBuildCoverage: Double
