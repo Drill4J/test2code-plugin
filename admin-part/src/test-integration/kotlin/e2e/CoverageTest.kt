@@ -11,7 +11,7 @@ import org.junit.jupiter.api.*
 class CoverageTest : E2EPluginTest() {
 
     @Test
-    fun `E2E coverage test`() {
+    fun `e2e coverage test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {

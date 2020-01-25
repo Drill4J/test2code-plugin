@@ -14,7 +14,7 @@ import org.junit.jupiter.api.*
 class RisksTest : E2EPluginTest() {
 
     @Test
-    fun `Cover all risks during 2 builds`() {
+    fun `cover all risks during 2 builds`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 

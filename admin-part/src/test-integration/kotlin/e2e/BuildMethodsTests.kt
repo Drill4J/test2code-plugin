@@ -9,7 +9,7 @@ import org.junit.jupiter.api.*
 class BuildMethodsTests : E2EPluginTest() {
 
     @Test
-    fun `Deploy 2 builds without coverage`() {
+    fun `deploy 2 builds without coverage`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
                 plugUi.methods()!!.apply {

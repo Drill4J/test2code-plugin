@@ -14,7 +14,7 @@ import org.junit.jupiter.api.*
 class CoverageByPackagesTest : E2EPluginTest() {
 
     @Test
-    fun `Cover one method in 2 scopes`() {
+    fun `cover one method in 2 scopes`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 

@@ -13,7 +13,7 @@ class SessionTest : E2EPluginTest() {
 
 
     @RepeatedTest(2)
-    fun `E2E test session test`() {
+    fun `e2e test session test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 
@@ -110,7 +110,7 @@ class SessionTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Start and finish 2 session`() {
+    fun `start and finish 2 session`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.activeSessions()!!.run {

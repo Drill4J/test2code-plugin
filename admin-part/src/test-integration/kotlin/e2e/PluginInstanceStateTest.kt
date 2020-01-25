@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 class PluginInstanceStateTest : E2EPluginTest() {
 
     @Test
-    fun `Deploy build2 with finishing active scope and session on previous build`() {
+    fun `deploy build2 with finishing active scope and session on previous build`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.coverageByPackages()
@@ -73,7 +73,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Deploy build2 without finishing active scope and session on previous build`() {
+    fun `deploy build2 without finishing active scope and session on previous build`() {
         lateinit var activeScopeIdFirstBuild: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
@@ -144,7 +144,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Redeploy build1 after finishing active scope and session on this build`() {
+    fun `redeploy build1 after finishing active scope and session on this build`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.coverageByPackages()
@@ -202,7 +202,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Deploy build2 and check state of build1`() {
+    fun `deploy build2 and check state of build1`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.risks()!!.apply {

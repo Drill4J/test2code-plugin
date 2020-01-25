@@ -14,7 +14,7 @@ class ScopeTest : E2EPluginTest() {
 
 
     @Test
-    fun `E2E scope test`() {
+    fun `e2e scope test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
 
@@ -104,7 +104,7 @@ class ScopeTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Finish active scope with ignoring and reignore after that`() {
+    fun `finish active scope with ignoring and reignore after that`() {
         lateinit var ignoredScopeId: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
