@@ -196,7 +196,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         second shouldBe ""
                     }
                 }
-                plugUi.activeScope()!!.name shouldBe "New Scope 1"
+                plugUi.activeScope()!!.name shouldBe "new2"
             }
         }
     }
@@ -248,17 +248,20 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.subscribe(SubscribeInfo(agentId, "30507"))
+                plugUi.buildCoverage()//FIXME EPMDJ-2270 extra write
                 plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 100.0
                     arrow shouldBe null
                     diff shouldBe 100.0
                 }
 
+                plugUi.risks()//FIXME EPMDJ-2270 extra write
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
                 }
 
+                plugUi.activeScope()
                 plugUi.activeScope() shouldBe null
             }
         }

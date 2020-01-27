@@ -77,25 +77,24 @@ class Test2CodeAdminPart(
         }
     }
 
-    internal suspend fun renameScope(payload: RenameScopePayload) =
-        when {
-            pluginInstanceState.scopeNotExisting(payload.scopeId) ->
-                StatusMessage(
-                    StatusCodes.NOT_FOUND,
-                    "Failed to rename scope with id ${payload.scopeId}: scope not found"
-                )
-            pluginInstanceState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
-                pluginInstanceState.renameScope(payload.scopeId, payload.scopeName)
-                val scope: Scope = pluginInstanceState.scopeManager.getScope(payload.scopeId) ?: activeScope
-                sendScopeMessages(scope.buildVersion)
-                sendScopeSummary(scope.summary, scope.buildVersion)
-                StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
-            }
-            else -> StatusMessage(
-                StatusCodes.CONFLICT,
-                "Scope with such name already exists. Please choose a different name."
+    internal suspend fun renameScope(payload: RenameScopePayload): StatusMessage = when {
+        pluginInstanceState.scopeNotExisting(payload.scopeId) ->
+            StatusMessage(
+                StatusCodes.NOT_FOUND,
+                "Failed to rename scope with id ${payload.scopeId}: scope not found"
             )
+        pluginInstanceState.scopeNameNotExisting(payload.scopeName, buildVersion) -> {
+            pluginInstanceState.renameScope(payload.scopeId, payload.scopeName)
+            val scope: Scope = pluginInstanceState.scopeManager.getScope(payload.scopeId) ?: activeScope
+            sendScopeMessages(scope.buildVersion)
+            sendScopeSummary(scope.summary, scope.buildVersion)
+            StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> ${payload.scopeName}")
         }
+        else -> StatusMessage(
+            StatusCodes.CONFLICT,
+            "Scope with such name already exists. Please choose a different name."
+        )
+    }
 
 
     override suspend fun processData(dm: DrillMessage): Any {
@@ -110,7 +109,7 @@ class Test2CodeAdminPart(
             "recommendations" -> newBuildActionsList()
             "coverage-data" -> {
                 val byteArrayOutputStream = ByteArrayOutputStream()
-                val buildProbes = pluginInstanceState.scopeManager.scopesByBuildVersion(buildVersion)
+                val buildProbes = pluginInstanceState.scopeManager.scopes(buildVersion)
                     .map {
                         it.probes.map { it.value.map { it.probes.map { it.value }.flatten() }.flatten() }.flatten()
                     }.flatten()
@@ -158,7 +157,7 @@ class Test2CodeAdminPart(
                 sendActiveSessions()
                 calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
                 calculateAndSendBuildCoverage()
-                val finishedScopes = pluginInstanceState.scopeManager.allScopes()
+                val finishedScopes = pluginInstanceState.scopeManager.scopes()
                 for (scope in finishedScopes) {
                     calculateAndSendScopeCoverage(scope)
                 }
@@ -227,28 +226,30 @@ class Test2CodeAdminPart(
         val totalCoveragePercent = bundleCoverage.coverage(classesData.totalInstructions)
 
         val scope = finishedSessions as? Scope
-        val coverageByType = if (scope != null) {
-            scope.summary.coveragesByType
-        } else {
-            classesBytes.coveragesByTestType(bundleMap, finishedSessions, classesData.totalInstructions)
+        val coverageByType: Map<String, TestTypeSummary> = when (scope) {
+            null -> classesBytes.coveragesByTestType(bundleMap, finishedSessions, classesData.totalInstructions)
+            else -> scope.summary.coveragesByType
         }
         println(coverageByType)
 
-        val coverageBlock: Coverage = if (scope == null) {
-            val prevBuildVersion = classesData.prevBuildVersion
-            val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias ?: ""
-            BuildCoverage(
-                coverage = totalCoveragePercent,
-                diff = totalCoveragePercent - classesData.prevBuildCoverage,
-                previousBuildInfo = prevBuildVersion to prevBuildAlias,
-                coverageByType = coverageByType,
-                arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
-                finishedScopesCount = pluginInstanceState.scopeManager.scopeCountByBuildVersion(buildVersion)
+        val coverageBlock: Coverage = when (scope) {
+            null -> {
+                val prevBuildVersion = classesData.prevBuildVersion
+                val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias ?: ""
+                BuildCoverage(
+                    coverage = totalCoveragePercent,
+                    diff = totalCoveragePercent - classesData.prevBuildCoverage,
+                    previousBuildInfo = prevBuildVersion to prevBuildAlias,
+                    coverageByType = coverageByType,
+                    arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
+                    finishedScopesCount = pluginInstanceState.scopeManager.scopes(buildVersion).count()
+                )
+            }
+            else -> ScopeCoverage(
+                totalCoveragePercent,
+                coverageByType
             )
-        } else ScopeCoverage(
-            totalCoveragePercent,
-            coverageByType
-        )
+        }
         println(coverageBlock)
 
         val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
@@ -322,7 +323,7 @@ class Test2CodeAdminPart(
             agentId,
             buildVersion,
             Routes.Scopes,
-            pluginInstanceState.scopeManager.summariesByBuildVersion(buildVersion)
+            pluginInstanceState.scopeManager.scopes(buildVersion).summaries()
         )
     }
 
@@ -358,7 +359,7 @@ class Test2CodeAdminPart(
         )
     }
 
-    internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload) =
+    internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload): StatusMessage =
         if (pluginInstanceState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
             val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
             if (scopeChange.savePrevScope) {
@@ -378,7 +379,7 @@ class Test2CodeAdminPart(
             val activeScope = pluginInstanceState.activeScope
             println("Current active scope $activeScope")
             sendActiveSessions()
-            calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
+            calculateAndSendScopeCoverage(activeScope)
             sendScopeMessages()
             StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
         } else StatusMessage(
@@ -387,17 +388,20 @@ class Test2CodeAdminPart(
         )
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
-        val sessions = pluginInstanceState.scopeManager.enabledScopesSessionsByBuildVersion(buildVersion)
+        val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
-        pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests)
-        lastTestsToRun = pluginInstanceState.buildTests.getTestsToRun(
+        pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests) //FIXME
+        val testsToRun = pluginInstanceState.buildTests.getTestsToRun(
             pluginInstanceState,
             buildVersion,
             coverageInfoSet.buildMethods.allModifiedMethods.methods
         )
+        if (buildVersion == this.buildVersion) {
+            lastTestsToRun = testsToRun
+        }
 
         val risks = risks(coverageInfoSet.buildMethods)
-        pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, lastTestsToRun)
+        pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, testsToRun)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
@@ -418,7 +422,7 @@ class Test2CodeAdminPart(
         )
 
         sendRisks(buildVersion, risks)
-        sendTestsToRun(TestsToRun(lastTestsToRun))
+        sendTestsToRun(TestsToRun(testsToRun))
     }
 
     internal suspend fun sendTestsToRun(testsToRun: TestsToRun) {

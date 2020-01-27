@@ -5,19 +5,11 @@ import com.epam.kodux.*
 
 class ScopeManager(private val storage: StoreClient) {
 
-    suspend fun allScopes(): Collection<FinishedScope> = storage.getAll()
+    suspend fun scopes(): Sequence<FinishedScope> = storage.getAll<FinishedScope>().asSequence()
 
-    suspend fun scopesByBuildVersion(buildVersion: String): List<FinishedScope> =
-        allScopes().filter { it.buildVersion == buildVersion }
-
-    suspend fun scopeCountByBuildVersion(buildVersion: String): Int = scopesByBuildVersion(buildVersion).count()
-
-    suspend fun enabledScopes() = allScopes().filter { it.enabled }
-
-    suspend fun enabledScopesSessionsByBuildVersion(buildVersion: String): Sequence<FinishedSession> =
-        scopesByBuildVersion(buildVersion).filter { it.enabled }
-            .flatMap { it.probes.values.flatten() }
-            .asSequence()
+    suspend fun scopes(buildVersion: String, enabled: Boolean? = true): Sequence<FinishedScope> {
+        return scopes().filter { it.buildVersion == buildVersion && enabled?.equals(it.enabled) ?: false }
+    }
 
     suspend fun saveScope(scope: FinishedScope) {
         storage.store(scope)
@@ -42,10 +34,4 @@ class ScopeManager(private val storage: StoreClient) {
         }
 
     suspend fun getScope(scopeId: String): FinishedScope? = storage.findById(scopeId)
-
-    suspend fun classesData(buildVersion: String): ClassesData? =
-        storage.findBy<ClassesData> { ClassesData::buildVersion eq buildVersion }.firstOrNull()
-
-    suspend fun summariesByBuildVersion(buildVersion: String): List<ScopeSummary> =
-        scopesByBuildVersion(buildVersion).map { it.summary }
 }

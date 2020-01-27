@@ -54,7 +54,8 @@ class PluginInstanceState(
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
                 testsToRun = TestsToRunDto(
                     groupedTests = testsToRun,
-                    count = testsToRun.totalCount())
+                    count = testsToRun.totalCount()
+                )
             )
         )
     }
@@ -78,8 +79,9 @@ class PluginInstanceState(
         }
     }
 
+
     suspend fun scopeNameNotExisting(name: String, buildVersion: String) =
-        scopeManager.scopesByBuildVersion(buildVersion)
+        scopeManager.scopes(buildVersion)
             .find { it.name == name.trim() } == null && (name.trim() != activeScope.name || agentInfo.buildVersion != buildVersion)
 
     suspend fun scopeNotExisting(id: String) = scopeManager.getScope(id) == null && activeScope.id != id
@@ -105,13 +107,13 @@ class PluginInstanceState(
         scopeManager.saveClassesData(classesData)
     }
 
-    //throw ClassCastException if the ref value is in the wrong state
-    suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when(buildVersion) {
+    suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when (buildVersion) {
         agentInfo.buildVersion -> data as? ClassesData
-        else -> scopeManager.classesData(buildVersion)
+        else -> storeClient.classesData(buildVersion)
     } ?: NoData
 
-    fun changeActiveScope(name: String) =
+
+    fun changeActiveScope(name: String): ActiveScope =
         _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
 
     private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
@@ -119,6 +121,11 @@ class PluginInstanceState(
         else -> trimmed
     }
 }
+
+
+private suspend fun StoreClient.classesData(buildVersion: String) = findBy<ClassesData> {
+    ClassesData::buildVersion eq buildVersion
+}.firstOrNull()
 
 suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? {
     return findById(lastCoverageId(agentId, buildVersion))

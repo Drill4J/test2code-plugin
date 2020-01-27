@@ -11,6 +11,8 @@ interface Scope : Sequence<FinishedSession> {
     val summary: ScopeSummary
 }
 
+fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
+
 class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     override val id = genUuid()

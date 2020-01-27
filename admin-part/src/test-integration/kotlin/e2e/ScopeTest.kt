@@ -41,6 +41,7 @@ class ScopeTest : E2EPluginTest() {
                 val renameScope =
                     RenameScope(RenameScopePayload(activeScope.id, "integration")).stringify()
                 pluginAction(renameScope).join()
+                plugUi.activeScope()//FIXME EPMDJ-2270 extra write
                 plugUi.activeScope()!!.name shouldBe "integration"
 
                 val switchActiveScopeWrong = SwitchActiveScope(ActiveScopeChangePayload("integration")).stringify()
@@ -58,7 +59,7 @@ class ScopeTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Finish active scope and drop it after that`() {
+    fun `finish active scope and drop it after that`() {
         lateinit var droppedScopeId: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
