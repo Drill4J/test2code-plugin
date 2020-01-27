@@ -37,20 +37,20 @@ class Test2CodeAdminPart(
 
     private val buildVersion = agentInfo.buildVersion
 
+    private val activeScope get() = pluginInstanceState.activeScope
+
     lateinit var pluginInstanceState: PluginInstanceState
 
     override suspend fun initialize() {
         pluginInstanceState = pluginInstanceState()
         if (currentBuildInfo() != null) {
-            processData(Initialized("Storage"))
+            processData(Initialized(""))
         }
     }
 
     override suspend fun applyPackagesChanges() {
         wipeStoredData()
     }
-
-    private val activeScope get() = pluginInstanceState.activeScope
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
         val next = pluginInstanceState.nextVersion(buildVersion)

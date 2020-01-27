@@ -20,6 +20,8 @@ class PluginInstanceState(
     val agentInfo: AgentInfo
 ) {
 
+    val data get() = _data.value
+
     val scopeManager = ScopeManager(storeClient)
 
     val activeScope get() = _activeScope.value
@@ -104,10 +106,10 @@ class PluginInstanceState(
     }
 
     //throw ClassCastException if the ref value is in the wrong state
-    suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData =
-        if (buildVersion == agentInfo.buildVersion) {
-            _data.value as ClassesData
-        } else scopeManager.classesData(buildVersion) ?: NoData
+    suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when(buildVersion) {
+        agentInfo.buildVersion -> data as? ClassesData
+        else -> scopeManager.classesData(buildVersion)
+    } ?: NoData
 
     fun changeActiveScope(name: String) =
         _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
