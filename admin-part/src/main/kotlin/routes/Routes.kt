@@ -21,7 +21,6 @@ class Routes {
         @Location("/{scopeId}")
         class Scope(val scopeId: String)
 
-
         @Location("/{scopeId}/associated-tests")
         class AssociatedTests(val scopeId: String)
 

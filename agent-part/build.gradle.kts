@@ -5,8 +5,6 @@ plugins {
     `kotlinx-serialization`
     `kotlinx-atomicfu`
 }
-val vavrVersion = "0.10.0"
-val bcelVersion = "6.3.1"
 
 val commonJarDeps by configurations.creating {}
 val agent by configurations.creating {
@@ -33,39 +31,39 @@ dependencies {
     implementation(project(":common-part"))
     implementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
     implementation("com.epam.drill:common-jvm:$drillCommonVersion")
+
     testImplementation(kotlin("test-junit"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
 }
 
 tasks {
+    val shadowConfig: ShadowJar.() -> Unit = {
+        mergeServiceFiles()
+        isZip64 = true
+        archiveFileName.set("agent-part.jar")
+        from(jar)
+        relocateToMainPackage(
+            "io.vavr",
+            "org.objectweb.asm",
+            "org.apache.bcel",
+            "org.jacoco.core"
+        )
+    }
+
     val agentShadow by registering(ShadowJar::class)
     agentShadow {
+        shadowConfig()
         configurations = listOf(agent)
-        configureProd()
-        archiveFileName.set("agent-part.jar")
-        from(jar)
+        relocateToMainPackage("kotlin")
     }
+
     val agentShadowTest by registering(ShadowJar::class)
     agentShadowTest {
+        shadowConfig()
         configurations = listOf(commonJarDepsTest)
-        configureTest()
-        archiveFileName.set("agent-part.jar")
-        from(jar)
     }
 }
 
-fun ShadowJar.configureProd() {
-    mergeServiceFiles()
-    isZip64 = true
-    relocate("io.vavr", "coverage.io.vavr")
-    relocate("kotlin", "kruntime")
-    relocate("org.apache.bcel", "coverage.org.apache.bcel")
-    relocate("org.objectweb.asm", "coverage.org.objectweb.asm")
-    relocate("org.jacoco.core", "coverage.org.jacoco.core")
-}
-
-fun ShadowJar.configureTest() {
-    mergeServiceFiles()
-    isZip64 = true
-    relocate("org.objectweb.asm", "coverage.org.objectweb.asm")
-    relocate("org.jacoco.core", "coverage.org.jacoco.core")
+fun ShadowJar.relocateToMainPackage(vararg pkgs: String) = pkgs.forEach {
+    relocate(it, "${rootProject.group}.test2code.shadow.$it")
 }

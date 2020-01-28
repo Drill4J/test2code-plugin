@@ -1,4 +1,5 @@
 plugins {
+    base
     distribution
     `maven-publish`
     id("com.epam.drill.version.plugin") apply false
@@ -9,6 +10,8 @@ allprojects {
 }
 
 subprojects {
+    apply(plugin = "org.gradle.base")
+
     repositories {
         mavenLocal()
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
@@ -17,14 +20,20 @@ subprojects {
     }
 
 
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "1.8"
-            allWarningsAsErrors = true
-            freeCompilerArgs = listOf(
-                "-Xuse-experimental=kotlin.Experimental",
-                "-Xuse-experimental=kotlin.time.ExperimentalTime"
-            )
+    tasks {
+        withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+            kotlinOptions {
+                jvmTarget = "1.8"
+                allWarningsAsErrors = true
+                freeCompilerArgs = listOf(
+                    "-Xuse-experimental=kotlin.Experimental",
+                    "-Xuse-experimental=kotlin.time.ExperimentalTime"
+                )
+            }
+        }
+
+        clean {
+            delete("distr", "work")
         }
     }
 }
