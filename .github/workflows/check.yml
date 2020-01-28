@@ -34,4 +34,4 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: test-output
-          path: ./admin-part/build/reports/tests/integrationTest
+          path: ./admin-part/build/reports/tests/test

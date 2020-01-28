@@ -18,8 +18,13 @@ private fun SummaryDto.plus(other: SummaryDto): SummaryDto {
     )
 }
 
-private operator fun TestsToRunDto.plus(testsToRun: TestsToRunDto): TestsToRunDto {
-    val mergedGroupedTests = sequenceOf(groupedTests, testsToRun.groupedTests)
+operator fun TestsToRunDto.plus(other: Any): TestsToRunDto = when (other) {
+    is TestsToRunDto -> plus(other)
+    else -> this
+}
+
+private fun TestsToRunDto.plus(other: TestsToRunDto): TestsToRunDto {
+    val mergedGroupedTests = sequenceOf(groupedTests, other.groupedTests)
         .flatMap { it.asSequence() }
         .groupBy({ it.key }, { it.value })
         .mapValues { (_, values) ->
