@@ -11,10 +11,7 @@ val BuildMethods.allModifiedMethods: MethodsInfo
 
 fun BuildMethods.withDeletedMethodCount(
     buildVersion: String,
-    testsAssociatedWithBuildTests: BuildTests
+    buildTests: BuildTests
 ) = copy(
-    deletedCoveredMethodsCount = testsAssociatedWithBuildTests.deletedCoveredMethodsCount(
-        buildVersion,
-        deletedMethods.methods
-    )
+    deletedCoveredMethodsCount = deletedMethods.methods.testCount(buildTests, buildVersion)
 )

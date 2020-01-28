@@ -8,7 +8,7 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun scopes(): Sequence<FinishedScope> = storage.getAll<FinishedScope>().asSequence()
 
     suspend fun scopes(buildVersion: String, enabled: Boolean? = true): Sequence<FinishedScope> {
-        return scopes().filter { it.buildVersion == buildVersion && enabled?.equals(it.enabled) ?: false }
+        return scopes().filter { it.buildVersion == buildVersion && enabled?.equals(it.enabled) ?: true }
     }
 
     suspend fun saveScope(scope: FinishedScope) {

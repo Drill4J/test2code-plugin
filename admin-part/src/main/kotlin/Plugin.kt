@@ -96,7 +96,6 @@ class Test2CodeAdminPart(
         )
     }
 
-
     override suspend fun processData(dm: DrillMessage): Any {
         val content = dm.content
         val message = CoverMessage.serializer() parse content!!
@@ -105,9 +104,9 @@ class Test2CodeAdminPart(
 
     override suspend fun getPluginData(params: Map<String, String>): Any {
         return when (params["type"]) {
-            "tests-to-run" -> TestsToRun.serializer() stringify TestsToRun(lastTestsToRun)
+            "tests-to-run" -> lastTestsToRun.testsToRunDto()
             "recommendations" -> newBuildActionsList()
-            "coverage-data" -> {
+            "coverage-data" -> { //TODO rewrite or remove this
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 val buildProbes = pluginInstanceState.scopeManager.scopes(buildVersion)
                     .map {
@@ -391,16 +390,16 @@ class Test2CodeAdminPart(
         val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
         pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests) //FIXME
-        val testsToRun = pluginInstanceState.buildTests.getTestsToRun(
-            pluginInstanceState,
+        val buildMethods = coverageInfoSet.buildMethods
+        val testsToRun = pluginInstanceState.testsToRun(
             buildVersion,
-            coverageInfoSet.buildMethods.allModifiedMethods.methods
+            buildMethods.allModifiedMethods.methods
         )
         if (buildVersion == this.buildVersion) {
             lastTestsToRun = testsToRun
         }
 
-        val risks = risks(coverageInfoSet.buildMethods)
+        val risks = risks(buildMethods)
         pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, testsToRun)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
@@ -411,7 +410,7 @@ class Test2CodeAdminPart(
         }
         sender.send(agentId, buildVersion, Routes.Build.Coverage, coverageInfoSet.coverage)
         sender.send(agentId, buildVersion, Routes.Build.CoverageByPackages, coverageInfoSet.packageCoverage)
-        sender.send(agentId, buildVersion, Routes.Build.Methods, coverageInfoSet.buildMethods)
+        sender.send(agentId, buildVersion, Routes.Build.Methods, buildMethods)
         sender.send(agentId, buildVersion, Routes.Build.TestsUsages, coverageInfoSet.testsUsagesInfoByType)
         sender.send(agentId, buildVersion, Routes.Build.MethodsCoveredByTest, coverageInfoSet.methodsCoveredByTest)
         sender.send(

@@ -5,59 +5,55 @@ import kotlinx.serialization.*
 import java.util.concurrent.*
 import kotlin.collections.set
 
-//TODO remove this incoherent mess
-
 @Serializable
 class BuildTests(
     @Id val id: String,
-    val map: MutableMap<String, List<AssociatedTests>> = ConcurrentHashMap()
+    private val map: MutableMap<String, List<AssociatedTests>> = ConcurrentHashMap() //TODO persistent hash map
 ) {
-    private fun testsAssociatedWithMethods(
-        methods: List<JavaMethod>,
-        buildVersion: String
-    ): Sequence<AssociatedTests>? = map[buildVersion]?.filter { test ->
-        methods.any { method -> method.ownerClass == test.className && method.name == test.methodName }
-    }?.asSequence()
-
     fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>) {
         val existingList = map[buildVersion] ?: emptyList()
         map[buildVersion] = existingList + associatedTestsList
     }
 
-    fun deletedCoveredMethodsCount(
-        buildVersion: String,
-        deletedMethods: List<JavaMethod>
-    ): Int = testsAssociatedWithMethods(
-        deletedMethods,
-        buildVersion
-    )?.distinct()?.count() ?: 0
-
-    suspend fun getTestsToRun(
-        state: PluginInstanceState,
-        buildVersion: String,
-        javaMethods: List<JavaMethod>
-    ): Map<String, List<String>> = when (val classesData = state.classesData(buildVersion)) {
-        is ClassesData -> {
-            val scopeManager = state.scopeManager
-            val prevBuildVersion = classesData.prevBuildVersion
-            val testsAssociatedWithMethods = testsAssociatedWithMethods(
-                methods = javaMethods,
-                buildVersion = prevBuildVersion
-            )
-            testsAssociatedWithMethods?.let { assocTestsSeq ->
-                val buildTests: Set<TypedTest> = scopeManager.scopes(buildVersion).typedTests()
-                val prevBuildTests: Set<TypedTest> = scopeManager.scopes(prevBuildVersion).typedTests()
-                assocTestsSeq
-                    .flatMap { it.tests.asSequence() }
-                    .filter { it in prevBuildTests && it !in buildTests }
-                    .groupBy({ it.type }, { it.name })
-
-            }.orEmpty()
-        }
-        else -> emptyMap()
-    }
+    operator fun get(buildVersion: String) = map[buildVersion]
 }
 
+suspend fun PluginInstanceState.testsToRun(
+    buildVersion: String,
+    javaMethods: List<JavaMethod>
+): GroupedTests = when (val classesData = classesData(buildVersion)) {
+    is ClassesData -> {
+        val prevBuildVersion = classesData.prevBuildVersion
+        val testsAssociatedWithMethods = javaMethods.associatedTests(buildTests, prevBuildVersion)
+        testsAssociatedWithMethods?.let { assocTestsSeq ->
+            val curBuildTests: Set<TypedTest> = scopeManager.scopes(buildVersion).typedTests()
+            val prevBuildTests: Set<TypedTest> = scopeManager.scopes(prevBuildVersion).typedTests()
+            assocTestsSeq
+                .flatMap { it.tests.asSequence() }
+                .filter { it in prevBuildTests && it !in curBuildTests }
+                .groupBy({ it.type }, { it.name })
+
+        }.orEmpty()
+    }
+    else -> emptyMap()
+}
+
+fun GroupedTests.testsToRunDto() = TestsToRunDto(
+    groupedTests = this,
+    count = totalCount()
+)
+
+fun Iterable<JavaMethod>.associatedTests(
+    buildTests: BuildTests,
+    buildVersion: String
+): Sequence<AssociatedTests>? = buildTests[buildVersion]?.filter { test ->
+    any { method -> method.ownerClass == test.className && method.name == test.methodName }
+}?.asSequence()
+
+fun Iterable<JavaMethod>.testCount(
+    buildTests: BuildTests,
+    buildVersion: String
+) : Int = associatedTests(buildTests, buildVersion)?.distinct()?.count() ?: 0
 
 private fun Sequence<FinishedScope>.typedTests(): Set<TypedTest> = flatMap { scope ->
     scope.probes.asSequence().flatMap { (_, sessions) ->
