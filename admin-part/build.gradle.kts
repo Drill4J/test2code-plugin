@@ -27,9 +27,6 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
 }
 
-val testIntegrationModuleName = "test-integration"
-
-
 tasks {
     val adminShadow by registering(ShadowJar::class)
     adminShadow {
@@ -39,23 +36,20 @@ tasks {
         from(jar)
         configurations = listOf(project.configurations.runtimeClasspath.get())
         dependencies {
-            exclude("META-INF/**")
+            exclude("/META-INF/**")
+            exclude("/*.class")
+            exclude("/*.html")
             exclude(dependency("com.epam.drill:"))
             exclude(dependency("org.jetbrains.kotlin:"))
             exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-runtime:"))
             exclude(dependency("org.jetbrains:annotations:"))
         }
-        val shadowPackagePrefix = "${rootProject.group}.test2code.shadow."
-        val forReplacement = listOf(
+        relocateToMainPackage(
             "io.vavr",
             "kotlinx.collections.immutable",
             "org.jacoco",
             "org.objectweb"
         )
-        for (pattern in forReplacement) {
-            relocate(pattern, "$shadowPackagePrefix.$pattern.")
-        }
-        exclude("module-info.class")
     }
 }
 

@@ -63,6 +63,7 @@ distributions {
         }
     }
 
+    //TODO Remove: there should be no special distro for integration tests
     create("test") {
         contents {
             from(
