@@ -1,7 +1,7 @@
 package com.epam.drill.plugins.test2code
 
-import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -15,10 +15,10 @@ class ActiveSession(
     testType: String
 ) : Session(id, testType) {
 
-    private val _probes = atomic(list<ExecClassData>())
+    private val _probes = atomic(persistentListOf<ExecClassData>())
 
     fun append(probe: ExecClassData) {
-        _probes.update { it.append(probe) }
+        _probes.update { it.add(probe) }
     }
 
     fun finish() = FinishedSession(

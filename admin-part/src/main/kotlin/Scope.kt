@@ -1,8 +1,8 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.kodux.*
-import io.vavr.kotlin.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
 interface Scope : Sequence<FinishedSession> {
@@ -17,7 +17,7 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     override val id = genUuid()
 
-    private val _sessions = atomic(list<FinishedSession>())
+    private val _sessions = atomic(persistentListOf<FinishedSession>())
 
     private val started: Long = currentTimeMillis()
 
@@ -36,7 +36,7 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
     val activeSessions = AtomicCache<String, ActiveSession>()
 
     fun update(session: FinishedSession, classesBytes: ClassesBytes?, totalInstructions: Int): ScopeSummary {
-        _sessions.update { it.append(session) }
+        _sessions.update { it.add(session) }
         return _summary.updateAndGet { summary ->
             summary.copy(
                 coverage = classesBytes?.coverage(this, totalInstructions) ?: 0.0,

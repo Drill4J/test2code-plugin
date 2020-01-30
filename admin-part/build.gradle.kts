@@ -1,25 +1,35 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
-    `kotlin-platform-jvm`
-    `kotlinx-serialization`
+    kotlin("jvm")
+    kotlin("plugin.serialization")
     `kotlinx-atomicfu`
+    id("com.github.johnrengelman.shadow")
+}
+
+configurations {
+    testImplementation {
+        extendsFrom(shadow.get())
+    }
 }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
-    implementation(project(":common-part"))
-    compileOnly("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
-    compileOnly("com.epam.drill:common-jvm:$drillCommonVersion")
+    //plugin dependencies
+    shadow(project(":common-part")) { isTransitive = false }
+    shadow("org.jacoco:org.jacoco.core:$jacocoVersion")
 
-    compileOnly("com.epam.drill:kodux-jvm:$koduxVersion")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
-    compileOnly("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
-    compileOnly("io.ktor:ktor-locations:$ktorVersion")
+    //provided by drill runtime
+    implementation("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
+    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
 
-    implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
-    implementation("io.vavr:vavr-kotlin:$vavrVersion")
+    //provided by admin
+    //TODO create a platform for admin dependencies
+    implementation("com.epam.drill:kodux-jvm:$koduxVersion")
+    implementation("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
+    implementation("io.ktor:ktor-locations:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3")
 
     testImplementation(kotlin("test-junit"))
@@ -28,25 +38,18 @@ dependencies {
 }
 
 tasks {
-    val adminShadow by registering(ShadowJar::class)
-    adminShadow {
-        group = "shadow"
+    shadowJar {
         archiveFileName.set("admin-part.jar")
         isZip64 = true
-        from(jar)
-        configurations = listOf(project.configurations.runtimeClasspath.get())
+        configurations = listOf(project.configurations.shadow.get())
         dependencies {
-            exclude("/META-INF/**")
-            exclude("/*.class")
-            exclude("/*.html")
-            exclude(dependency("com.epam.drill:"))
-            exclude(dependency("org.jetbrains.kotlin:"))
-            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-runtime:"))
-            exclude(dependency("org.jetbrains:annotations:"))
+            exclude(
+                "/META-INF/**",
+                "/*.class",
+                "/*.html"
+            )
         }
         relocateToMainPackage(
-            "io.vavr",
-            "kotlinx.collections.immutable",
             "org.jacoco",
             "org.objectweb"
         )

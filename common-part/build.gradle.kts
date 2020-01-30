@@ -1,12 +1,12 @@
 plugins {
-    kotlin
-    `kotlinx-serialization`
+    kotlin("jvm")
+    kotlin("plugin.serialization")
     `kotlinx-atomicfu`
 }
 
 dependencies {
-    compileOnly("com.epam.drill:common-jvm:$drillCommonVersion")
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
+    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
+    implementation(kotlin("stdlib"))
     testImplementation(kotlin("test-junit"))
 }

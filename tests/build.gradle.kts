@@ -1,5 +1,4 @@
 plugins {
-    java
     kotlin("jvm")
     `kotlinx-serialization`
 }
@@ -24,7 +23,7 @@ configurations {
 
 dependencies {
     testImplementation(project(":admin-part"))
-    testCompileOnly(project(":common-part"))
+    testImplementation(project(":common-part"))
     testCompileOnly(project(":agent-part"))
 
     testImplementation("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")

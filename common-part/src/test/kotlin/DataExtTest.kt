@@ -5,14 +5,14 @@ import kotlin.test.*
 class DataExtTest {
 
     @Test
-    fun `ByteArray-encode works correctly`() {
+    fun `byteArray-encode works correctly`() {
         val testArray = "some string".toByteArray()
         val encoded = testArray.encode()
         assertEquals("c29tZSBzdHJpbmc=", encoded)
     }
 
     @Test
-    fun `EncodedString-decode works correctly`() {
+    fun `encodedString-decode works correctly`() {
         val encodedString: EncodedString = "c29tZSBzdHJpbmc="
         val actual = encodedString.decode()
         val expected = "some string".toByteArray()
@@ -21,7 +21,7 @@ class DataExtTest {
 
 
     @Test
-    fun `Encodes-Decodes correctly`() {
+    fun `encodes-decodes correctly`() {
         val expected = "some string".toByteArray()
         val encodedArray = expected.encode()
         val actual = encodedArray.decode()

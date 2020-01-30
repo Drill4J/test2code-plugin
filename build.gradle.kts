@@ -3,6 +3,7 @@ plugins {
     distribution
     `maven-publish`
     id("com.epam.drill.version.plugin") apply false
+
 }
 
 allprojects {
@@ -10,7 +11,9 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "org.gradle.base")
+    apply {
+        plugin(BasePlugin::class)
+    }
 
     repositories {
         mavenLocal()
@@ -18,7 +21,6 @@ subprojects {
         mavenCentral()
         jcenter()
     }
-
 
     tasks {
         withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
@@ -41,15 +43,15 @@ subprojects {
 val pluginConfigJson = file("plugin_config.json")
 distributions {
     val adminShadow = provider {
-        tasks.getByPath(":admin-part:adminShadow")
+        tasks.getByPath(":admin-part:shadowJar")
     }
 
     val agentShadow = provider {
-        tasks.getByPath(":agent-part:agentShadow")
+        tasks.getByPath(":agent-part:shadowJar")
     }
 
     val agentShadowTest = provider {
-        tasks.getByPath(":agent-part:agentShadowTest")
+        tasks.getByPath(":agent-part:shadowJarTest")
     }
 
     main {
