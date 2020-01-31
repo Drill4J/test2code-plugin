@@ -11,7 +11,7 @@ import org.junit.jupiter.api.*
 
 class SessionTest : E2EPluginTest() {
 
-
+//remove me
     @RepeatedTest(2)
     fun `e2e test session test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
