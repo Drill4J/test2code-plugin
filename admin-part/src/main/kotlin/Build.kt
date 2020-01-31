@@ -15,3 +15,5 @@ fun BuildMethods.withDeletedMethodCount(
 ) = copy(
     deletedCoveredMethodsCount = deletedMethods.methods.testCount(buildTests, buildVersion)
 )
+
+//some comment. remove it
