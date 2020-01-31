@@ -12,7 +12,7 @@ class BuildTests(
 ) {
     fun add(buildVersion: String, associatedTestsList: List<AssociatedTests>) {
         val existingList = map[buildVersion] ?: emptyList()
-        map[buildVersion] = existingList + associatedTestsList
+        map[buildVersion] = (existingList + associatedTestsList).distinct() //FIXME replace this
     }
 
     operator fun get(buildVersion: String) = map[buildVersion]

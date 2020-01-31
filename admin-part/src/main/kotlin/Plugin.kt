@@ -152,6 +152,10 @@ class Test2CodeAdminPart(
                 val buildInfos = adminData.buildManager.buildInfos
                 pluginInstanceState.initialized(buildInfos)
                 val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
+                val prevBuildVersions = buildInfos.keys.filter { it != buildVersion }
+                for (buildVersion in prevBuildVersions) {
+                    calculateAndSendBuildCoverage(buildVersion)
+                }
                 cleanActiveScope(classesData.prevBuildVersion)
                 sendActiveSessions()
                 calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
@@ -159,10 +163,6 @@ class Test2CodeAdminPart(
                 val finishedScopes = pluginInstanceState.scopeManager.scopes()
                 for (scope in finishedScopes) {
                     calculateAndSendScopeCoverage(scope)
-                }
-                val prevBuildVersions = buildInfos.keys.filter { it != buildVersion }
-                for (buildVersion in prevBuildVersions) {
-                    calculateAndSendBuildCoverage(buildVersion)
                 }
                 sendScopeMessages()
             }
@@ -389,7 +389,10 @@ class Test2CodeAdminPart(
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
         val coverageInfoSet = calculateCoverageData(sessions, buildVersion)
-        pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests) //FIXME
+        //TODO rewrite these add-hoc current build checks
+        if (buildVersion == this.buildVersion) {
+            pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests) //FIXME
+        }
         val buildMethods = coverageInfoSet.buildMethods
         val testsToRun = pluginInstanceState.testsToRun(
             buildVersion,

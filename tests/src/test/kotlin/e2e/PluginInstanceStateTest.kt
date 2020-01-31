@@ -57,6 +57,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
 
             }.reconnect<Build2> { plugUi, _ ->
+                plugUi.testsToRun() //FIXME extra write
                 plugUi.testsToRun()!!.apply {
                     testTypeToNames.isNotEmpty() shouldBe true
                 }
