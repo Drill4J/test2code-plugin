@@ -322,7 +322,7 @@ class Test2CodeAdminPart(
             agentId,
             buildVersion,
             Routes.Scopes,
-            pluginInstanceState.scopeManager.scopes(buildVersion).summaries()
+            pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null).summaries()
         )
     }
 
