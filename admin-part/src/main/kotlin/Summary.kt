@@ -2,18 +2,20 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.kodux.*
 
-operator fun SummaryDto?.plus(other: SummaryDto): SummaryDto = when (this) {
-    null -> other
-    else -> {
-        val aggCoverages = _aggCoverages + other._aggCoverages
-        copy(
-            coverage = aggCoverages.average(),
-            arrow = null,
-            risks = risks + other.risks,
-            testsToRun = testsToRun + other.testsToRun,
-            _aggCoverages = aggCoverages
-        )
-    }
+operator fun SummaryDto.plus(other: Any): SummaryDto = when (other) {
+    is SummaryDto -> plus(other)
+    else -> this
+}
+
+private fun SummaryDto.plus(other: SummaryDto): SummaryDto {
+    val aggCoverages = _aggCoverages + other._aggCoverages
+    return copy(
+        coverage = aggCoverages.average(),
+        arrow = null,
+        risks = risks + other.risks,
+        testsToRun = testsToRun + other.testsToRun,
+        _aggCoverages = aggCoverages
+    )
 }
 
 private operator fun TestsToRunDto.plus(testsToRun: TestsToRunDto): TestsToRunDto {

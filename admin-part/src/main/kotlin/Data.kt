@@ -219,5 +219,5 @@ data class SummaryDto(
     val _aggCoverages: List<Double>
 ) : (Any) -> Any {
     //TODO separate aggregation implementation from the data class
-    override fun invoke(other: Any): Any = (other as? SummaryDto) + this
+    override fun invoke(other: Any): Any = this + other
 }
