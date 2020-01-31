@@ -8,7 +8,7 @@ class DataExtTest {
     fun `byteArray-encode works correctly`() {
         val testArray = "some string".toByteArray()
         val encoded = testArray.encode()
-        assertEquals("c29tZSBzdHJpbmc=", encoded)
+        assertEquals("null", encoded)
     }
 
     @Test

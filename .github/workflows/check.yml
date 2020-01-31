@@ -32,6 +32,7 @@ jobs:
       - name: Check
         run: gradle -si check
       - uses: actions/upload-artifact@v1
+        if: failure()
         with:
           name: test-output
           path: ./admin-part/build/reports/tests/test
