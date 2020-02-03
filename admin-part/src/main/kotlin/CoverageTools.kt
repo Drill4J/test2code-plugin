@@ -86,6 +86,7 @@ fun IBundleCoverage.toDataMap() = packages
     .flatMap { it.classes }
     .flatMap { c -> c.methods.map { (c.name to it.sign()) to it } }.toMap()
 
+//TODO rewrite this
 fun calculateBundleMethods(
     methodChanges: MethodChanges,
     bundleCoverage: IBundleCoverage,
@@ -93,13 +94,11 @@ fun calculateBundleMethods(
 ): BuildMethods {
     val methodsCoverages = bundleCoverage.toDataMap()
 
-    val infos = DiffType.values().map { type ->
+    val infos: Map<DiffType, MethodsInfo> = DiffType.values().map { type ->
         type to (methodChanges.map[type]?.getInfo(methodsCoverages, excludeMissed) ?: MethodsInfo())
     }.toMap()
 
-    val totalInfo = infos
-        .keys.filter { it != DiffType.DELETED }
-        .mapNotNull { infos[it] }
+    val totalInfo: MethodsInfo = infos.filter { it.key != DiffType.DELETED }.values
         .reduce { totalInfo, info ->
             MethodsInfo(
                 totalInfo.totalCount + info.totalCount,
@@ -108,12 +107,25 @@ fun calculateBundleMethods(
             )
         }
 
+    val modifiedNameMethods = infos[DiffType.MODIFIED_NAME]!!
+    val modifiedDescMethods = infos[DiffType.MODIFIED_DESC]!!
+    val modifiedBodyMethods = infos[DiffType.MODIFIED_BODY]!!
+    val allModifiedMethods = listOf(modifiedBodyMethods, modifiedDescMethods, modifiedNameMethods)
+        .flatMap(MethodsInfo::methods)
+        .let { methods ->
+            MethodsInfo(
+                totalCount = methods.count(),
+                coveredCount = methods.count { it.coverageRate != CoverageRate.MISSED },
+                methods = methods
+            )
+        }
     return BuildMethods(
         totalMethods = totalInfo,
         newMethods = infos[DiffType.NEW]!!,
-        modifiedNameMethods = infos[DiffType.MODIFIED_NAME]!!,
-        modifiedDescMethods = infos[DiffType.MODIFIED_DESC]!!,
-        modifiedBodyMethods = infos[DiffType.MODIFIED_BODY]!!,
+        modifiedNameMethods = modifiedNameMethods,
+        modifiedDescMethods = modifiedDescMethods,
+        modifiedBodyMethods = modifiedBodyMethods,
+        allModifiedMethods = allModifiedMethods,
         unaffectedMethods = infos[DiffType.UNAFFECTED]!!,
         deletedMethods = infos[DiffType.DELETED]!!
     )

@@ -50,10 +50,10 @@ fun Iterable<JavaMethod>.associatedTests(
     any { method -> method.ownerClass == test.className && method.name == test.methodName }
 }?.asSequence()
 
-fun Iterable<JavaMethod>.testCount(
+fun MethodsInfo.testCount(
     buildTests: BuildTests,
     buildVersion: String
-) : Int = associatedTests(buildTests, buildVersion)?.distinct()?.count() ?: 0
+) : Int = methods.associatedTests(buildTests, buildVersion)?.distinct()?.count() ?: 0
 
 private fun Sequence<FinishedScope>.typedTests(): Set<TypedTest> = flatMap { scope ->
     scope.probes.asSequence().flatMap { (_, sessions) ->

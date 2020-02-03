@@ -253,10 +253,16 @@ class Test2CodeAdminPart(
 
         val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
 
-        val buildMethods = calculateBundleMethods(
+        val calculatedMethods = calculateBundleMethods(
             methodsChanges,
             bundleCoverage
-        ).withDeletedMethodCount(classesData.prevBuildVersion, pluginInstanceState.buildTests)
+        )
+        val buildMethods = calculatedMethods.copy(
+            deletedCoveredMethodsCount = calculatedMethods.deletedMethods.testCount(
+                pluginInstanceState.buildTests,
+                classesData.prevBuildVersion
+            )
+        )
         val packageCoverage = packageCoverage(bundleCoverage, assocTestsMap)
 
         val (coveredByTest, coveredByTestType) = bundleMap.coveredMethods(
