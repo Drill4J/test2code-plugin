@@ -5,8 +5,11 @@ plugins {
 }
 
 dependencies {
+    implementation(kotlin("stdlib"))
+
+    //provided by drill runtime
     implementation("com.epam.drill:common-jvm:$drillCommonVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
-    implementation(kotlin("stdlib"))
+
     testImplementation(kotlin("test-junit"))
 }
