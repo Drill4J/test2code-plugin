@@ -158,16 +158,12 @@ class Test2CodeAdminPart(
                 val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
                 val prevBuildVersions = buildInfos.keys.filter { it != buildVersion }
                 for (buildVersion in prevBuildVersions) {
-                    calculateAndSendBuildCoverage(buildVersion)
+                    calculateAndSendAllCoverage(buildVersion)
                 }
                 cleanActiveScope(classesData.prevBuildVersion)
                 sendActiveSessions()
+                calculateAndSendAllCoverage(buildVersion)
                 calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
-                calculateAndSendBuildCoverage()
-                val finishedScopes = pluginInstanceState.scopeManager.scopes()
-                for (scope in finishedScopes) {
-                    calculateAndSendScopeCoverage(scope)
-                }
                 sendScopeMessages()
             }
             is SessionStarted -> {
@@ -202,6 +198,12 @@ class Test2CodeAdminPart(
             }
         }
         return ""
+    }
+
+    private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
+        val finishedScopes = pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null)
+        finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
+        calculateAndSendBuildCoverage(buildVersion)
     }
 
     internal suspend fun calculateCoverageData(
@@ -456,8 +458,8 @@ class Test2CodeAdminPart(
         return Risks(newRisks, modifiedRisks)
     }
 
-    internal suspend fun calculateAndSendScopeCoverage(scope: Scope) {
-        val coverageInfoSet = calculateCoverageData(scope)
+    internal suspend fun calculateAndSendScopeCoverage(scope: Scope, buildVersion: String = this.buildVersion) {
+        val coverageInfoSet = calculateCoverageData(scope, buildVersion)
         if (coverageInfoSet.associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${coverageInfoSet.associatedTests.count()}")
             val beautifiedAssociatedTests = coverageInfoSet.associatedTests.map { batch ->
