@@ -120,7 +120,8 @@ class Test2CodeAdminPart(
                 dataStore.accept(writer)
                 byteArrayOutputStream.toByteArray()
             }
-            else -> storeClient.summaryOf(agentId, buildVersion) ?: JsonNull
+            "summary" -> storeClient.summaryOf(agentId, buildVersion) ?: JsonNull
+            else -> Unit
         }
     }
 
