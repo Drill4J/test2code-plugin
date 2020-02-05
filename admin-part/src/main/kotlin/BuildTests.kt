@@ -30,6 +30,7 @@ suspend fun PluginInstanceState.testsToRun(
             val prevBuildTests: Set<TypedTest> = scopeManager.scopes(prevBuildVersion).typedTests()
             assocTestsSeq
                 .flatMap { it.tests.asSequence() }
+                .distinct()
                 .filter { it in prevBuildTests && it !in curBuildTests }
                 .groupBy({ it.type }, { it.name })
 
