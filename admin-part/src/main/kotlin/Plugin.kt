@@ -164,7 +164,7 @@ class Test2CodeAdminPart(
                 sendActiveSessions()
                 calculateAndSendAllCoverage(buildVersion)
                 calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
-                sendScopeMessages()
+                sendActiveScope()
             }
             is SessionStarted -> {
                 activeScope.startSession(coverMsg)
