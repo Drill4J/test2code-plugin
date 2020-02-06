@@ -203,6 +203,7 @@ class Test2CodeAdminPart(
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
         val finishedScopes = pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null)
         finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
+        sendScopes(buildVersion, finishedScopes)
         calculateAndSendBuildCoverage(buildVersion)
     }
 
@@ -330,13 +331,19 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        sender.send(
-            agentId,
-            buildVersion,
-            Routes.Scopes,
-            pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null).summaries()
-        )
+        val scopes = pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null)
+        sendScopes(buildVersion, scopes)
     }
+
+    private suspend fun sendScopes(
+        buildVersion: String,
+        scopes: Sequence<FinishedScope>
+    ) = sender.send(
+        agentId,
+        buildVersion,
+        Routes.Scopes,
+        scopes.summaries()
+    )
 
     internal suspend fun toggleScope(scopeId: String): StatusMessage {
         pluginInstanceState.toggleScope(scopeId)
