@@ -350,7 +350,7 @@ class Test2CodeAdminPart(
         return pluginInstanceState.scopeManager.getScope(scopeId)?.let { scope ->
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
-            calculateAndSendBuildCoverage(scope.buildVersion)
+            recalculateBoundBuilds(scope.buildVersion)
             StatusMessage(
                 StatusCodes.OK,
                 "Scope with id $scopeId toggled to 'enabled' value '${scope.enabled}'"
@@ -366,7 +366,7 @@ class Test2CodeAdminPart(
             cleanTopics(scope.id)
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
-            calculateAndSendBuildCoverage(scope.buildVersion)
+            recalculateBoundBuilds(scope.buildVersion)
             StatusMessage(
                 StatusCodes.OK,
                 "Scope with id $scopeId was removed"
@@ -404,6 +404,13 @@ class Test2CodeAdminPart(
             StatusCodes.CONFLICT,
             "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
         )
+
+    internal suspend fun recalculateBoundBuilds(buildVersion: String = this.buildVersion) {
+        calculateAndSendBuildCoverage(buildVersion)
+        adminData.buildManager[buildVersion]?.nextBuild?.let { nextBuildVersion ->
+            calculateAndSendBuildCoverage(nextBuildVersion)
+        }
+    }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
@@ -443,10 +450,10 @@ class Test2CodeAdminPart(
         )
 
         sendRisks(buildVersion, risks)
-        sendTestsToRun(TestsToRun(testsToRun))
+        updateTestsToRun(TestsToRun(testsToRun), buildVersion)
     }
 
-    internal suspend fun sendTestsToRun(testsToRun: TestsToRun) {
+    internal suspend fun updateTestsToRun(testsToRun: TestsToRun, buildVersion: String) {
         sender.send(
             agentId,
             buildVersion,
