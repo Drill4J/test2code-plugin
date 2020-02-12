@@ -20,8 +20,8 @@ dependencies {
     implementation(kotlin("stdlib"))
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
-    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
+    implementation("com.epam.drill:drill-agent-part-jvm:$drillApiVersion")
+    implementation("com.epam.drill:common-jvm:$drillApiVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
 
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")

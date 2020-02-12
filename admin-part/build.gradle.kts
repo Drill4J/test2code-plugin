@@ -21,8 +21,8 @@ dependencies {
     shadow("org.jacoco:org.jacoco.core:$jacocoVersion")
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
-    implementation("com.epam.drill:common-jvm:$drillCommonVersion")
+    implementation("com.epam.drill:drill-admin-part-jvm:$drillApiVersion")
+    implementation("com.epam.drill:common-jvm:$drillApiVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
 
     //provided by admin

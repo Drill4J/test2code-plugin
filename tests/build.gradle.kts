@@ -26,15 +26,15 @@ dependencies {
     testImplementation(project(":common-part"))
     testCompileOnly(project(":agent-part"))
 
-    testImplementation("com.epam.drill:drill-admin-part-jvm:$drillCommonVersion")
-    testImplementation("com.epam.drill:common-jvm:$drillCommonVersion")
+    testImplementation("com.epam.drill:drill-admin-part-jvm:$drillApiVersion")
+    testImplementation("com.epam.drill:common-jvm:$drillApiVersion")
 
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
 
     testImplementation("com.epam.drill:test-framework:$drillAdminVersion")
     testImplementation("com.epam.drill:admin-core:$drillAdminVersion")
-    testImplementation("com.epam.drill:drill-agent-part-jvm:$drillCommonVersion")
+    testImplementation("com.epam.drill:drill-agent-part-jvm:$drillApiVersion")
 
     testImplementation("com.epam.drill:ktor-swagger:$swaggerVersion")
     testImplementation(ktor("server-test-host"))
