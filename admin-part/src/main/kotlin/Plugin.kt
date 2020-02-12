@@ -155,12 +155,11 @@ class Test2CodeAdminPart(
             is Initialized -> {
                 val buildInfos = adminData.buildManager.buildInfos
                 pluginInstanceState.initialized(buildInfos)
-                val classesData = pluginInstanceState.classesData(buildVersion) as ClassesData
                 val prevBuildVersions = buildInfos.keys.filter { it != buildVersion }
                 for (buildVersion in prevBuildVersions) {
+                    cleanActiveScope(buildVersion)
                     calculateAndSendAllCoverage(buildVersion)
                 }
-                cleanActiveScope(classesData.prevBuildVersion)
                 sendActiveSessions()
                 calculateAndSendAllCoverage(buildVersion)
                 calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
