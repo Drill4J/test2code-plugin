@@ -376,33 +376,36 @@ class Test2CodeAdminPart(
         )
     }
 
-    internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload): StatusMessage =
-        if (pluginInstanceState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
-            val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
-            if (scopeChange.savePrevScope) {
-                if (prevScope.any()) {
-                    val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
-                    sendScopeSummary(finishedScope.summary)
-                    println("$finishedScope have been saved.")
-                    pluginInstanceState.scopeManager.saveScope(finishedScope)
-                    if (finishedScope.enabled) {
-                        calculateAndSendBuildCoverage()
-                    }
-                } else {
-                    println("$prevScope is empty, it won't be added to the build.")
-                    cleanTopics(prevScope.id)
+    internal suspend fun changeActiveScope(scopeChange: ActiveScopeChangePayload): StatusMessage {
+        if (agentInfo.status == AgentStatus.BUSY)
+            return StatusMessage(StatusCodes.CONFLICT, "The agent is busy")
+        if (!pluginInstanceState.scopeNameNotExisting(scopeChange.scopeName, buildVersion))
+            return StatusMessage(
+                StatusCodes.CONFLICT,
+                "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
+            )
+        val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
+        if (scopeChange.savePrevScope) {
+            if (prevScope.any()) {
+                val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
+                sendScopeSummary(finishedScope.summary)
+                println("$finishedScope have been saved.")
+                pluginInstanceState.scopeManager.saveScope(finishedScope)
+                if (finishedScope.enabled) {
+                    calculateAndSendBuildCoverage()
                 }
+            } else {
+                println("$prevScope is empty, it won't be added to the build.")
+                cleanTopics(prevScope.id)
             }
-            val activeScope = pluginInstanceState.activeScope
-            println("Current active scope $activeScope")
-            sendActiveSessions()
-            calculateAndSendScopeCoverage(activeScope)
-            sendScopeMessages()
-            StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
-        } else StatusMessage(
-            StatusCodes.CONFLICT,
-            "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
-        )
+        }
+        val activeScope = pluginInstanceState.activeScope
+        println("Current active scope $activeScope")
+        sendActiveSessions()
+        calculateAndSendScopeCoverage(activeScope)
+        sendScopeMessages()
+        return StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
+    }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
