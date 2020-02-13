@@ -63,15 +63,12 @@ class Test2CodeAdminPart(
             is RenameScope -> renameScope(action.payload)
             is ToggleScope -> toggleScope(action.payload.scopeId)
             is DropScope -> dropScope(action.payload.scopeId)
-            is StartNewSession -> {
-                val startAgentSession = StartSession(
-                    payload = StartSessionPayload(
-                        sessionId = if (action.payload.sessionId.isEmpty()) genUuid() else action.payload.sessionId,
-                        startPayload = action.payload
-                    )
+            is StartNewSession -> StartSession(
+                payload = StartSessionPayload(
+                    sessionId = action.payload.sessionId.ifEmpty(::genUuid),
+                    startPayload = action.payload
                 )
-                serDe.actionSerializer stringify startAgentSession
-            }
+            )
             else -> Unit
         }
     }
