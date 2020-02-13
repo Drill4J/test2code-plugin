@@ -60,11 +60,6 @@ class PluginInstanceState(
         )
     }
 
-    suspend fun nextVersion(buildVersion: String): String {
-        val versionMap = scopeManager.getVersionMap()
-        return versionMap[buildVersion] ?: ""
-    }
-
     suspend fun renameScope(id: String, newName: String) {
         val trimmedNewName = newName.trim()
         if (id == activeScope.id) activeScope.rename(trimmedNewName)
@@ -104,7 +99,7 @@ class PluginInstanceState(
         _data.value = classesData
         val buildTests = storeClient.findById(agentInfo.id) ?: storeClient.store(this.buildTests)
         _buildTests.value = buildTests
-        scopeManager.saveClassesData(classesData)
+        storeClient.store(classesData)
     }
 
     suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when (buildVersion) {

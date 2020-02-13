@@ -53,9 +53,8 @@ class Test2CodeAdminPart(
     }
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
-        val next = pluginInstanceState.nextVersion(buildVersion)
-        if (!next.isBlank())
-            calculateAndSendBuildCoverage(next)
+        //TODO figure out why this is needed
+        calculateAndSendChildrenCoverage(buildVersion)
     }
 
     override suspend fun doAction(action: Action): Any {
@@ -153,12 +152,12 @@ class Test2CodeAdminPart(
                 println("${coverMsg.classesCount} classes to load")
             }
             is Initialized -> {
-                val buildInfos = adminData.buildManager.buildInfos
-                pluginInstanceState.initialized(buildInfos)
-                val prevBuildVersions = buildInfos.keys.filter { it != buildVersion }
-                for (buildVersion in prevBuildVersions) {
-                    cleanActiveScope(buildVersion)
-                    calculateAndSendAllCoverage(buildVersion)
+                val buildManager = adminData.buildManager
+                pluginInstanceState.initialized(buildManager.buildInfos)
+                val otherVersions = buildManager.otherVersions(buildVersion)
+                otherVersions.map(BuildInfo::buildVersion).forEach { version ->
+                    cleanActiveScope(version)
+                    calculateAndSendAllCoverage(version)
                 }
                 sendActiveSessions()
                 calculateAndSendAllCoverage(buildVersion)
@@ -349,7 +348,7 @@ class Test2CodeAdminPart(
         return pluginInstanceState.scopeManager.getScope(scopeId)?.let { scope ->
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
-            calculateAndSendBuildCoverage(scope.buildVersion)
+            calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
             StatusMessage(
                 StatusCodes.OK,
                 "Scope with id $scopeId toggled to 'enabled' value '${scope.enabled}'"
@@ -365,7 +364,7 @@ class Test2CodeAdminPart(
             cleanTopics(scope.id)
             sendScopes(scope.buildVersion)
             sendScopeSummary(scope.summary, scope.buildVersion)
-            calculateAndSendBuildCoverage(scope.buildVersion)
+            calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
             StatusMessage(
                 StatusCodes.OK,
                 "Scope with id $scopeId was removed"
@@ -386,7 +385,7 @@ class Test2CodeAdminPart(
                     println("$finishedScope have been saved.")
                     pluginInstanceState.scopeManager.saveScope(finishedScope)
                     if (finishedScope.enabled) {
-                        calculateAndSendBuildCoverage()
+                        calculateAndSendBuildAndChildrenCoverage()
                     }
                 } else {
                     println("$prevScope is empty, it won't be added to the build.")
@@ -403,6 +402,17 @@ class Test2CodeAdminPart(
             StatusCodes.CONFLICT,
             "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
         )
+
+    internal suspend fun calculateAndSendBuildAndChildrenCoverage(buildVersion: String = this.buildVersion) {
+        calculateAndSendBuildCoverage(buildVersion)
+        calculateAndSendChildrenCoverage(buildVersion)
+    }
+
+    private suspend fun calculateAndSendChildrenCoverage(buildVersion: String) {
+        adminData.buildManager.childrenOf(buildVersion).map(BuildInfo::buildVersion).forEach { version ->
+            calculateAndSendBuildCoverage(version)
+        }
+    }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
         val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
