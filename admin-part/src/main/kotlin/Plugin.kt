@@ -49,7 +49,10 @@ class Test2CodeAdminPart(
     }
 
     override suspend fun applyPackagesChanges() {
-        wipeStoredData()
+        storeClient.deleteBy<FinishedScope> { FinishedScope::buildVersion.eq(buildVersion) }
+        storeClient.deleteById<ClassesData>(buildVersion)
+        pluginInstanceState = pluginInstanceState()
+        processData(Initialized(""))
     }
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
@@ -544,13 +547,4 @@ class Test2CodeAdminPart(
     }
 
     private fun currentBuildInfo() = adminData.buildManager[buildVersion]
-
-    private suspend fun wipeStoredData() {
-        storeClient.deleteAll<FinishedScope>()
-        storeClient.deleteAll<BuildTests>()
-        storeClient.deleteAll<LastBuildCoverage>()
-        storeClient.deleteAll<ClassesData>()
-        initialize()
-    }
-
 }
