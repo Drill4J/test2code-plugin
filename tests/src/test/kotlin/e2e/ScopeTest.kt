@@ -75,7 +75,7 @@ class ScopeTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -120,7 +120,7 @@ class ScopeTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()

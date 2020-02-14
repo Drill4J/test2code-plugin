@@ -25,7 +25,7 @@ class SessionTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
 
                     plugUi.activeSessions()?.run { count shouldBe 1 }
 
@@ -66,7 +66,7 @@ class SessionTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
@@ -84,7 +84,7 @@ class SessionTest : E2EPluginTest() {
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
                 pluginAction(startNewSession2) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession2 = content!!.parseJsonData<StartSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
@@ -123,7 +123,7 @@ class SessionTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -136,7 +136,7 @@ class SessionTest : E2EPluginTest() {
                     pluginAction(startNewSession2) { status2, content2 ->
                         status2 shouldBe HttpStatusCode.OK
 
-                        val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content2!!) as StartSession
+                        val startSession2 = content2!!.parseJsonData<StartSession>()
                         plugUi.activeSessions()!!.run { count shouldBe 2 }
                         runWithSession(startSession2.payload.sessionId) {
                             val gt = build.entryPoint()

@@ -435,18 +435,3 @@ fun Application.resolve(destination: String): Any {
     return feature(Locations).resolve(suitableRout.value, parameters)
 
 }
-
-suspend fun Agent.sendEvent(cov: CoverMessage) {
-    sendPluginData(
-        MessageWrapper(
-            "test-to-code-mapping",
-            DrillMessage(
-                "ad",
-                commonSerDe.stringify(CoverMessage.serializer(), cov)
-            )
-        )
-    )
-}
-
-fun Action.stringify() = commonSerDe.stringify(commonSerDe.actionSerializer, this)
-

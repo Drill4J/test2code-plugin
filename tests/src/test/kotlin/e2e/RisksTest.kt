@@ -29,7 +29,7 @@ class RisksTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
 
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -68,7 +68,7 @@ class RisksTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession = content!!.parseJsonData<StartSession>()
 
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()

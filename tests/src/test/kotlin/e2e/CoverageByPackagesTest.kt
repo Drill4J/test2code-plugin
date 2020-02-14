@@ -33,8 +33,8 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     status shouldBe HttpStatusCode.OK
                     cont = content!!
                 }.join()
-
-                val startSession = commonSerDe.parse(commonSerDe.actionSerializer, cont) as StartSession
+                val startSession = cont.parseJsonData<StartSession>()
+                println(startSession)
                 runWithSession(startSession.payload.sessionId) {
                     val gt = build.entryPoint()
                     gt.test1()
@@ -110,7 +110,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession2) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession2 = commonSerDe.parse(commonSerDe.actionSerializer, content!!) as StartSession
+                    val startSession2 = content!!.parseJsonData<StartSession>()
                     runWithSession(startSession2.payload.sessionId) {
                         val gt = build.entryPoint()
                         gt.test1()

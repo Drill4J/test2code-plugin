@@ -4,7 +4,7 @@ val atomicFuVersion = "0.14.1"
 
 val adminReleaseVersion = "0.5.0"
 
-val drillAdminVersion = "$adminReleaseVersion-52"
+val drillAdminVersion = "$adminReleaseVersion-62"
 
 val drillApiVersion = "0.5.0-15"
 
