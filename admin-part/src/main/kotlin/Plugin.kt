@@ -239,11 +239,10 @@ class Test2CodeAdminPart(
         val coverageBlock: Coverage = when (scope) {
             null -> {
                 val prevBuildVersion = classesData.prevBuildVersion
-                val prevBuildAlias = adminData.buildManager[prevBuildVersion]?.buildAlias ?: ""
                 BuildCoverage(
                     coverage = totalCoveragePercent,
                     diff = totalCoveragePercent - classesData.prevBuildCoverage,
-                    previousBuildInfo = prevBuildVersion to prevBuildAlias,
+                    prevBuildVersion = prevBuildVersion,
                     coverageByType = coverageByType,
                     arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
                     finishedScopesCount = pluginInstanceState.scopeManager.scopes(buildVersion).count()

@@ -64,10 +64,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe ArrowType.DECREASE
                     diff shouldNotBe 0.0
-                    previousBuildInfo.apply {
-                        first shouldBe "30507"
-                        second shouldBe ""
-                    }
+                    prevBuildVersion shouldBe "30507"
                 }
             }
         }
@@ -192,10 +189,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     coverage shouldBe 100.0
                     arrow shouldBe null
                     diff shouldNotBe 0.0
-                    previousBuildInfo.apply {
-                        first shouldBe ""
-                        second shouldBe ""
-                    }
+                    prevBuildVersion shouldBe ""
                 }
                 plugUi.activeScope()!!.name shouldBe "new2"
             }
