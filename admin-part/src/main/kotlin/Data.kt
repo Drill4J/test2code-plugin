@@ -34,7 +34,7 @@ data class ScopeCoverage(
 data class BuildCoverage(
     override val coverage: Double,
     val diff: Double,
-    val previousBuildInfo: Pair<String, String>,
+    val prevBuildVersion: String,
     override val coverageByType: Map<String, TestTypeSummary>,
     val arrow: ArrowType?,
     val finishedScopesCount: Int

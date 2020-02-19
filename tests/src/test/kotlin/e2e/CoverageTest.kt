@@ -17,8 +17,7 @@ class CoverageTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
-                    previousBuildInfo.first shouldBe ""
-                    previousBuildInfo.second shouldBe ""
+                    prevBuildVersion shouldBe ""
                     coverageByType shouldBe emptyMap()
                     arrow shouldBe null
                 }
@@ -26,8 +25,7 @@ class CoverageTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.apply {
                     coverage shouldBe 0.0
                     diff shouldBe 0.0
-                    previousBuildInfo.first shouldBe "30507"
-                    previousBuildInfo.second shouldBe ""
+                    prevBuildVersion shouldBe "30507"
                     coverageByType shouldBe emptyMap()
                     arrow shouldBe null
                 }
