@@ -6,7 +6,7 @@ val adminReleaseVersion = "0.5.0"
 
 val drillAdminVersion = "$adminReleaseVersion-62"
 
-val drillApiVersion = "0.5.0-15"
+val drillApiVersion = "0.5.0-17"
 
 val jacocoVersion = "0.8.3"
 
