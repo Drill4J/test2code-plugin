@@ -1,5 +1,5 @@
 {
-  "id": "test-to-code-mapping",
+  "id": "test2code",
   "name": "Test2Code",
   "description": "Test2Code plugin minimizes your regression suite via Test Impact Analytics by suggesting only affected subset of tests to run, and highlight  untested areas via Test Gap Analysis, providing evidence of how changes are tested and which areas and not tested at all.",
   "type": "Custom",
