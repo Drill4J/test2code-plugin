@@ -26,11 +26,14 @@ dependencies {
 
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
 
-    testImplementation(kotlin("test-junit"))
+    testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
 
     fun ShadowJar.commonConfig() {
         isZip64 = true

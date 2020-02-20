@@ -1,7 +1,6 @@
 package com.epam.drill.plugins.test2code
 
 import org.jacoco.core.analysis.*
-import org.junit.Test
 import kotlin.test.*
 
 class JacocoExtTest {

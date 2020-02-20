@@ -1,13 +1,9 @@
 package com.epam.drill.plugins.test2code
 
-import org.hamcrest.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
-import org.junit.*
-import org.junit.rules.*
 import kotlin.test.*
-import kotlin.test.Test
 
 
 class InstrumentationTest {
@@ -41,9 +37,6 @@ class InstrumentationTest {
 
     val originalClassId = CRC64.classId(originalBytes)
 
-    @get:Rule
-    val collector = ErrorCollector()
-
     @Test
     fun `instrumented class should be larger the the original`() {
         val instrumented = instrument(targetClass.name, originalClassId, originalBytes)
@@ -76,10 +69,11 @@ class InstrumentationTest {
         TestProbeArrayProvider.start(sessionId, "MANUAL")
         @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
-        val runtimeData = TestProbeArrayProvider.stop(sessionId)
-        runtimeData?.forEach {
-            collector.checkThat("test", CoreMatchers.equalTo(it.testName))
-        }
+        val runtimeData = TestProbeArrayProvider.stop(sessionId)!!.toList()
+        val assestions = runtimeData.map { execDatum ->
+            { assertEquals("test", execDatum.testName) }
+        }.toTypedArray()
+        org.junit.jupiter.api.assertAll(*assestions)
     }
 
     private fun addInstrumentedClass() {

@@ -32,12 +32,16 @@ dependencies {
     implementation("io.ktor:ktor-locations:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3")
 
-    testImplementation(kotlin("test-junit"))
+    testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
+
     shadowJar {
         archiveFileName.set("admin-part.jar")
         isZip64 = true
