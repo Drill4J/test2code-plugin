@@ -17,7 +17,8 @@ class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
     val lastPrevBuildCoverage: Double,
-    val agentInfo: AgentInfo
+    val agentInfo: AgentInfo,
+    scopeCounter: Int
 ) {
 
     val data get() = _data.value
@@ -32,7 +33,7 @@ class PluginInstanceState(
 
     private val _buildTests = atomic(BuildTests(agentInfo.id))
 
-    private val _scopeCounter = atomic(0)
+    private val _scopeCounter = atomic(scopeCounter)
 
     private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
 
@@ -48,7 +49,7 @@ class PluginInstanceState(
     suspend fun storeBuildCoverage(buildCoverage: BuildCoverage, risks: Risks, testsToRun: GroupedTests) {
         storeClient.store(
             LastBuildCoverage(
-                id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
+                id = agentBuildId(agentInfo.id, agentInfo.buildVersion),
                 coverage = buildCoverage.coverage,
                 arrow = buildCoverage.arrow?.name,
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
@@ -107,9 +108,10 @@ class PluginInstanceState(
         else -> storeClient.classesData(buildVersion)
     } ?: NoData
 
-
-    fun changeActiveScope(name: String): ActiveScope =
-        _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
+    suspend fun changeActiveScope(name: String): ActiveScope {
+        scopeManager.updateScopeCounter(agentInfo.id, agentInfo.buildVersion, _scopeCounter.value)
+        return _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
+    }
 
     private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
         "" -> "New Scope ${_scopeCounter.incrementAndGet()}"
@@ -117,13 +119,14 @@ class PluginInstanceState(
     }
 }
 
-
 private suspend fun StoreClient.classesData(buildVersion: String) = findBy<ClassesData> {
     ClassesData::buildVersion eq buildVersion
 }.firstOrNull()
 
-suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? {
-    return findById(lastCoverageId(agentId, buildVersion))
-}
+suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? =
+    findById(agentBuildId(agentId, buildVersion))
 
-private fun lastCoverageId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"
+suspend fun StoreClient.readLastScopeCounter(agentId: String, buildVersion: String): Int =
+    findById<ScopeCounter>(agentBuildId(agentId, buildVersion))?.counter ?: 0
+
+fun agentBuildId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"

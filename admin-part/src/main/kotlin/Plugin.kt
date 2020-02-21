@@ -538,11 +538,13 @@ class Test2CodeAdminPart(
     private suspend fun pluginInstanceState(): PluginInstanceState {
         val prevBuildVersion = currentBuildInfo()?.prevBuild ?: ""
         val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
+        val lastScopeCounter = storeClient.readLastScopeCounter(agentId, buildVersion)
         return PluginInstanceState(
             agentInfo = agentInfo,
             lastPrevBuildCoverage = lastPrevBuildCoverage ?: 0.0,
             prevBuildVersion = prevBuildVersion,
-            storeClient = storeClient
+            storeClient = storeClient,
+            scopeCounter = lastScopeCounter
         )
     }
 

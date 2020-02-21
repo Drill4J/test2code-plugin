@@ -100,3 +100,9 @@ data class FinishedScope(
 
     override fun toString() = "fin-scope($id, $name)"
 }
+
+@Serializable
+data class ScopeCounter(
+    @Id val agentBuildId: String,
+    val counter: Int
+)
