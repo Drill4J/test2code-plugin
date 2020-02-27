@@ -140,9 +140,9 @@ class Test2CodeAdminPart(
         return String.serializer().list stringify list
     }
 
-    private fun newMethodsCount(): Int {
-        return currentBuildInfo()?.buildSummary?.newMethods ?: 0
-    }
+    private fun newMethodsCount(): Int = currentBuildInfo()?.run {
+        methodChanges.map[DiffType.NEW]?.count()
+    } ?: 0
 
     internal suspend fun processData(coverMsg: CoverMessage): Any {
         when (coverMsg) {
@@ -153,9 +153,9 @@ class Test2CodeAdminPart(
             }
             is Initialized -> {
                 val buildManager = adminData.buildManager
-                pluginInstanceState.initialized(buildManager.buildInfos)
+                pluginInstanceState.initialized(buildManager)
                 val otherVersions = buildManager.otherVersions(buildVersion)
-                otherVersions.map(BuildInfo::buildVersion).forEach { version ->
+                otherVersions.map(BuildInfo::version).forEach { version ->
                     cleanActiveScope(version)
                     calculateAndSendAllCoverage(version)
                 }
@@ -408,7 +408,7 @@ class Test2CodeAdminPart(
     }
 
     private suspend fun calculateAndSendChildrenCoverage(buildVersion: String) {
-        adminData.buildManager.childrenOf(buildVersion).map(BuildInfo::buildVersion).forEach { version ->
+        adminData.buildManager.childrenOf(buildVersion).map(BuildInfo::version).forEach { version ->
             calculateAndSendBuildCoverage(version)
         }
     }
@@ -519,7 +519,7 @@ class Test2CodeAdminPart(
     }
 
     override suspend fun dropData() {
-        adminData.buildManager.buildInfos.keys.forEach {
+        adminData.buildManager.builds.map(BuildInfo::version).forEach {
             sender.send(agentId, it, Routes.Scopes, "")
             sender.send(agentId, it, Routes.Build.AssociatedTests, "")
             sender.send(agentId, it, Routes.Build.Methods, "")
@@ -530,12 +530,12 @@ class Test2CodeAdminPart(
         val classesBytes = currentBuildInfo()!!.classesBytes
         pluginInstanceState = pluginInstanceState()
         processData(InitInfo(classesBytes.keys.count(), ""))
-        pluginInstanceState.initialized(adminData.buildManager.buildInfos)
+        pluginInstanceState.initialized(adminData.buildManager)
         processData(Initialized())
     }
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
-        val prevBuildVersion = currentBuildInfo()?.prevBuild ?: ""
+        val prevBuildVersion = currentBuildInfo()?.parentVersion ?: ""
         val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
         return PluginInstanceState(
             agentInfo = agentInfo,

@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
+import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
@@ -82,8 +83,8 @@ class PluginInstanceState(
     suspend fun scopeNotExisting(id: String) = scopeManager.getScope(id) == null && activeScope.id != id
 
 
-    suspend fun initialized(buildInfos: Map<String, BuildInfo>) {
-        val buildInfo = buildInfos[agentInfo.buildVersion]
+    suspend fun initialized(buildManager: BuildManager) {
+        val buildInfo = buildManager[agentInfo.buildVersion]
         val classesBytes = buildInfo?.classesBytes ?: emptyMap()
         val coverageBuilder = CoverageBuilder()
         val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)

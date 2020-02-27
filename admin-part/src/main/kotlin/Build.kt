@@ -6,19 +6,18 @@ import com.epam.drill.plugin.api.*
 //TODO move to admin api
 
 fun BuildManager.childrenOf(version: String): List<BuildInfo> {
-    val versions = buildInfos.values
-    return versions.childrenOf(version)
+    return builds.childrenOf(version)
 }
 
 fun BuildManager.otherVersions(version: String): List<BuildInfo> {
-    return childrenOf("").filter { it.buildVersion != version }
+    return childrenOf("").filter { it.version != version }
 }
 
 val Iterable<BuildInfo>.roots: List<BuildInfo>
-    get() = filter { it.prevBuild.isBlank() }
+    get() = filter { it.parentVersion.isBlank() }
 
 fun Iterable<BuildInfo>.childrenOf(version: String): List<BuildInfo> {
-    val other = filter { it.buildVersion != version }
-    val (children, rest) = other.partition { it.prevBuild == version }
-    return children + children.flatMap { rest.childrenOf(it.buildVersion) }
+    val other = filter { it.version != version }
+    val (children, rest) = other.partition { it.parentVersion == version }
+    return children + children.flatMap { rest.childrenOf(it.version) }
 }

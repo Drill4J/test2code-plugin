@@ -181,6 +181,8 @@ fun Map<TypedTest, IBundleCoverage>.coveredMethods(
     return coveredByTest to coveredByType
 }
 
+private val Method.sign get() = "$name$desc"
+
 fun IMethodCoverage.sign() = "$name$desc"
 
 fun String.methodName(name: String?): String? = when(name) {

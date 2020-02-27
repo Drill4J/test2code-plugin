@@ -4,9 +4,9 @@ val atomicFuVersion = "0.14.1"
 
 val adminReleaseVersion = "0.5.0"
 
-val drillAdminVersion = "$adminReleaseVersion-64"
+val drillAdminVersion = "$adminReleaseVersion-69"
 
-val drillApiVersion = "0.5.0-17"
+val drillApiVersion = "0.5.0-20"
 
 val jacocoVersion = "0.8.3"
 

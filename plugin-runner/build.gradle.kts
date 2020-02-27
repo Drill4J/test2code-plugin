@@ -1,7 +1,7 @@
 plugins {
     `java-base`
     application
-    id("com.epam.drill.version.plugin")
+    id("com.epam.drill.version") version "0.16.0"
 }
 
 val appJvmArgs = listOf(
