@@ -1,40 +1,37 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.*
-
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
-    `kotlinx-atomicfu`
+    id("kotlinx-atomicfu")
     id("com.github.johnrengelman.shadow")
 }
 
-configurations {
-    testImplementation {
-        extendsFrom(shadow.get())
-    }
+val jarDeps by configurations.creating
+configurations.implementation {
+    extendsFrom(jarDeps)
 }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
     //plugin dependencies
-    shadow(project(":common-part")) { isTransitive = false }
-    shadow("org.jacoco:org.jacoco.core:$jacocoVersion")
+    jarDeps(project(":common-part")) { isTransitive = false }
+    jarDeps("org.jacoco:org.jacoco.core")
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-admin-part-jvm:$drillApiVersion")
-    implementation("com.epam.drill:common-jvm:$drillApiVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
+    implementation("com.epam.drill:drill-admin-part-jvm")
+    implementation("com.epam.drill:common-jvm")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
 
     //provided by admin
     //TODO create a platform for admin dependencies
-    implementation("com.epam.drill:kodux-jvm:$koduxVersion")
-    implementation("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
-    implementation("io.ktor:ktor-locations:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3")
+    implementation("com.epam.drill:kodux-jvm")
+    implementation("org.jetbrains.xodus:xodus-entity-store")
+    implementation("io.ktor:ktor-locations")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
-    testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.jetbrains.kotlinx:atomicfu")
 }
 
 tasks {
@@ -45,7 +42,7 @@ tasks {
     shadowJar {
         archiveFileName.set("admin-part.jar")
         isZip64 = true
-        configurations = listOf(project.configurations.shadow.get())
+        configurations = listOf(jarDeps)
         dependencies {
             exclude(
                 "/META-INF/**",
@@ -53,13 +50,9 @@ tasks {
                 "/*.html"
             )
         }
-        relocateToMainPackage(
+        listOf(
             "org.jacoco",
             "org.objectweb"
-        )
+        ).forEach { relocate(it, "${rootProject.group}.test2code.shadow.$it") }
     }
-}
-
-fun ShadowJar.relocateToMainPackage(vararg pkgs: String) = pkgs.forEach {
-    relocate(it, "${rootProject.group}.test2code.shadow.$it")
 }

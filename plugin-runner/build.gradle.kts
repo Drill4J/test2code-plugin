@@ -1,7 +1,7 @@
 plugins {
     `java-base`
     application
-    id("com.epam.drill.version") version "0.16.0"
+    id("com.epam.drill.version")
 }
 
 val appJvmArgs = listOf(
@@ -39,8 +39,8 @@ tasks {
     }
 }
 
-val adminReleaseVersion = "0.5.0"
+val drillAdminVersion: String? by extra
 
 dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$adminReleaseVersion-+:all@jar") { isChanging = true }
+    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
 }

@@ -1,33 +1,30 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.*
-
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
-    `kotlinx-atomicfu`
+    id("kotlinx-atomicfu")
     id("com.github.johnrengelman.shadow")
 }
 
-configurations {
-    testImplementation {
-        extendsFrom(shadow.get())
-    }
+val jarDeps by configurations.creating
+configurations.implementation {
+    extendsFrom(jarDeps)
 }
 
 dependencies {
-    shadow(project(":common-part")) { isTransitive = false }
-    shadow("org.jacoco:org.jacoco.core:$jacocoVersion")
+    jarDeps(project(":common-part")) { isTransitive = false }
+    jarDeps("org.jacoco:org.jacoco.core")
 
     implementation(kotlin("stdlib"))
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-agent-part-jvm:$drillApiVersion")
-    implementation("com.epam.drill:common-jvm:$drillApiVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
+    implementation("com.epam.drill:drill-agent-part-jvm")
+    implementation("com.epam.drill:common-jvm")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
 
-    compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
+    compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
+    testImplementation("org.junit.jupiter:junit-jupiter")
 }
 
 tasks {
@@ -35,10 +32,10 @@ tasks {
         useJUnitPlatform()
     }
 
-    fun ShadowJar.commonConfig() {
+    fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.commonConfig() {
         isZip64 = true
         archiveFileName.set("agent-part.jar")
-        configurations = listOf(project.configurations.shadow.get())
+        configurations = listOf(jarDeps)
         dependencies {
             exclude(
                 "/META-INF/**",
@@ -46,10 +43,10 @@ tasks {
                 "/*.html"
             )
         }
-        relocateToMainPackage(
+        listOf(
             "org.objectweb.asm",
             "org.jacoco.core"
-        )
+        ).forEach { relocate(it, "${rootProject.group}.test2code.shadow.$it") }
     }
 
     shadowJar {
@@ -58,14 +55,10 @@ tasks {
         relocate("kotlinx", "kruntimex")
     }
     //TODO remove after fixes in test framework
-    val shadowJarTest by registering(ShadowJar::class)
+    val shadowJarTest by registering(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar::class)
     shadowJarTest {
         group = "shadow"
         from(jar)
         commonConfig()
     }
-}
-
-fun ShadowJar.relocateToMainPackage(vararg pkgs: String) = pkgs.forEach {
-    relocate(it, "${rootProject.group}.test2code.shadow.$it")
 }

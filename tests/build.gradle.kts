@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    `kotlinx-serialization`
+    kotlin("plugin.serialization")
 }
 
 val testBuilds = listOf("build1", "build2")
@@ -21,22 +21,28 @@ configurations {
     }
 }
 
+val drillAdminVersion: String by rootProject
+val ktorVersion: String by rootProject
+val ktorSwaggerVersion: String by rootProject
+
 dependencies {
     testImplementation(project(":admin-part"))
     testImplementation(project(":common-part"))
     testCompileOnly(project(":agent-part"))
 
-    testImplementation("com.epam.drill:drill-admin-part-jvm:$drillApiVersion")
-    testImplementation("com.epam.drill:common-jvm:$drillApiVersion")
-
-    testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
-    testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicFuVersion")
+    testImplementation("com.epam.drill:common-jvm")
+    testImplementation("com.epam.drill:drill-agent-part-jvm")
+    testImplementation("com.epam.drill:drill-admin-part-jvm")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
+    testImplementation("org.jetbrains.kotlinx:atomicfu")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
 
     testImplementation("com.epam.drill:test-framework:$drillAdminVersion")
     testImplementation("com.epam.drill:admin-core:$drillAdminVersion")
-    testImplementation("com.epam.drill:drill-agent-part-jvm:$drillApiVersion")
 
-    testImplementation("com.epam.drill:ktor-swagger:$swaggerVersion")
+    testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
+
+    testImplementation("com.epam.drill:ktor-swagger:$ktorSwaggerVersion")
     testImplementation(ktor("server-test-host"))
     testImplementation(ktor("auth"))
     testImplementation(ktor("auth-jwt"))
@@ -47,18 +53,16 @@ dependencies {
     testImplementation(ktor("client-cio"))
     testImplementation(ktor("serialization"))
 
-    testImplementation("com.epam.drill:kodux-jvm:$koduxVersion")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
-    testImplementation("org.jetbrains.xodus:xodus-entity-store:$xodusVersion")
+    testImplementation("com.epam.drill:kodux-jvm")
+    testImplementation("org.jetbrains.xodus:xodus-entity-store")
 
-    testImplementation("org.jacoco:org.jacoco.core:$jacocoVersion")
-    testImplementation("org.apache.bcel:bcel:$bcelVersion")
-    testImplementation("io.vavr:vavr-kotlin:$vavrVersion")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3")
+    testImplementation("org.jacoco:org.jacoco.core")
+    testImplementation("org.apache.bcel:bcel:6.3.1")
+    testImplementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
 
     testImplementation(kotlin("test-junit5"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("io.mockk:mockk:1.9.3")
 
     testData("com.epam.drill:test-data:$drillAdminVersion")
