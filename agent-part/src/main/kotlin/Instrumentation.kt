@@ -29,7 +29,7 @@ private class CustomInstrumenter(
         }
 
     fun instrument(className: String, classId: Long, classBody: ByteArray): ByteArray {
-        val version = InstrSupport.getVersionMajor(classBody)
+        val version = InstrSupport.getMajorVersion(classBody)
 
         //count probes before transformation
         val counter = ProbeCounter()
