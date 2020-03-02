@@ -42,7 +42,7 @@ dependencies {
 
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
 
-    testImplementation("com.epam.drill:ktor-swagger:$ktorSwaggerVersion")
+    testImplementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
     testImplementation(ktor("server-test-host"))
     testImplementation(ktor("auth"))
     testImplementation(ktor("auth-jwt"))
