@@ -6,9 +6,9 @@ plugins {
     kotlin("jvm") apply false
 }
 
-val drillApiVersion: String by extra
-val atomicFuVersion: String by extra
-val ktorVersion: String by extra
+val drillApiVersion: String by project
+val atomicFuVersion: String by project
+val ktorVersion: String by project
 
 subprojects {
     apply<BasePlugin>()
@@ -116,13 +116,5 @@ publishing {
         create<MavenPublication>("test2codeZip") {
             artifact(tasks["distZip"])
         }
-    }
-}
-
-tasks {
-    register("run-admin") {
-        group = "application"
-        dependsOn(publishToMavenLocal)
-        dependsOn(gradle.includedBuild("plugin-runner").task(":run"))
     }
 }

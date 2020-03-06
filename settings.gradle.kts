@@ -1,6 +1,5 @@
 rootProject.name = "test2code-plugin"
 
-
 pluginManagement {
     val kotlinVersion: String by settings
     val atomicFuVersion: String by settings
@@ -17,11 +16,9 @@ pluginManagement {
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
         maven(url = "https://dl.bintray.com/kotlin/kotlinx/")
     }
+    val substitutions = mapOf("kotlinx-atomicfu" to "org.jetbrains.kotlinx:atomicfu-gradle-plugin")
     resolutionStrategy.eachPlugin {
-        when ("${requested.id}") {
-            "kotlinx-atomicfu" -> "org.jetbrains.kotlinx:atomicfu-gradle-plugin:${target.version}"
-            else -> null
-        }?.let { useModule(it) }
+        substitutions["${requested.id}"]?.let { useModule("$it:${target.version}") }
     }
 }
 
@@ -29,5 +26,4 @@ include(":admin-part")
 include(":agent-part")
 include(":common-part")
 include(":tests")
-
-includeBuild("plugin-runner")
+include(":plugin-runner")

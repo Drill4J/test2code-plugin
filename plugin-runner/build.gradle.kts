@@ -1,7 +1,5 @@
 plugins {
-    `java-base`
     application
-    id("com.epam.drill.version")
 }
 
 val appJvmArgs = listOf(
@@ -14,33 +12,26 @@ val appJvmArgs = listOf(
     "-XX:MaxGCPauseMillis=100"
 )
 
-repositories {
-    mavenLocal()
-    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
-    mavenCentral()
-    jcenter()
-}
-
 application {
     mainClassName = "io.ktor.server.netty.EngineMain"
     applicationDefaultJvmArgs = appJvmArgs
 }
 
 tasks {
-
-    val deleteOldPluginVersions by registering(Delete::class) {
-        delete(fileTree("distr/adminStorage") { include("test2code-plugin-*.zip") })
+    val syncDistro by registering(Sync::class) {
+        from(rootProject.tasks.distZip)
+        into("distr/adminStorage")
     }
 
     (run) {
-        dependsOn(deleteOldPluginVersions)
-        val normalizedPluginName = rootProject.name.replace("-", "_").toUpperCase()
-        environment("${normalizedPluginName}_VERSION", version.toString())
+        dependsOn(syncDistro)
+        environment("DRILL_DEVMODE", true)
+        environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
     }
 }
 
-val drillAdminVersion: String? by extra
+val drillAdminVersion: String by rootProject
 
 dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
+    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
 }
