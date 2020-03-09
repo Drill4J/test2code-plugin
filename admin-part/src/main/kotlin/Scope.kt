@@ -21,6 +21,7 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     private val started: Long = currentTimeMillis()
 
+    //TODO remove summary for this class
     private val _summary = atomic(
         ScopeSummary(
             id = id,
@@ -35,19 +36,8 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
-    fun update(session: FinishedSession, classesBytes: ClassesBytes?, totalInstructions: Int): ScopeSummary {
-        _sessions.update { it.add(session) }
-        return _summary.updateAndGet { summary ->
-            summary.copy(
-                coverage = classesBytes?.coverage(this, totalInstructions) ?: 0.0,
-                coveragesByType = classesBytes?.coveragesByTestType(
-                    classesBytes.bundlesByTests(this),
-                    this,
-                    totalInstructions
-                ) ?: emptyMap()
-            )
-        }
-    }
+    //TODO remove summary related stuff from the active scope
+    fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
 
     fun rename(name: String): ScopeSummary = _summary.getAndUpdate { it.copy(name = name) }
 
@@ -62,26 +52,25 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
-    fun startSession(msg: SessionStarted) {
-        activeSessions(msg.sessionId) { ActiveSession(msg.sessionId, msg.testType) }
+    fun startSession(sessionId: String, testType: String) {
+        activeSessions(sessionId) { ActiveSession(sessionId, testType) }
     }
 
-    fun addProbes(msg: CoverDataPart) {
-        activeSessions[msg.sessionId]?.let { activeSession ->
-            for (probe in msg.data) {
-                activeSession.append(probe)
-            }
-        }
+    fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {
+        activeSessions[sessionId]?.apply { addAll(probes) }
     }
 
     fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)
 
-    fun finishSession(msg: SessionFinished): FinishedSession? {
-        return when (val activeSession = activeSessions.remove(msg.sessionId)) {
-            null -> null
-            else -> activeSession.finish()
+    fun finishSession(
+        sessionId: String,
+        onSuccess: ActiveScope.(FinishedSession) -> Unit
+    ): FinishedSession? = activeSessions.remove(sessionId)
+        ?.let(ActiveSession::finish)
+        ?.also { session ->
+            _sessions.update { it.add(session) }
+            onSuccess(session)
         }
-    }
 
     override fun toString() = "act-scope($id, $name)"
 }

@@ -1,7 +1,6 @@
 package com.epam.drill.plugins.test2code
 
 import org.jacoco.core.analysis.*
-import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
 
 data class CoverageKey(
@@ -16,6 +15,8 @@ data class CoverageKey(
     override fun hashCode() = id.hashCode()
 }
 
+val CoverageKey.isMethod get() = methodName != null
+
 val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
 
 val ICoverageNode.coverage get() = coverage(instructionCounter.totalCount)
@@ -29,37 +30,9 @@ fun IMethodCoverage.coverageRate() = instructionCounter?.run {
 
 }
 
-fun <T> IBundleCoverage.collectAssocTestPairs(test: T): List<Pair<CoverageKey, T>> = packages.flatMap { p ->
-    listOf(p.coverageKey() to test) + p.classes.flatMap { c ->
-        listOf(c.coverageKey() to test) + c.methods.flatMap { m ->
-            if (m.instructionCounter.coveredCount > 0) {
-                listOf(m.coverageKey(c) to test)
-            } else emptyList()
-        }
-    }
-}
-
-val IBundleCoverage.totalsMap: Map<String, ICoverageNode>
-    get() = packages.flatMap { p ->
-        listOf(p.plainPair()) + p.classes.flatMap { c ->
-            listOf(c.plainPair()) + c.methods.map { it.plainPair(c) }
-        }
-
-    }.toMap()
-
-fun ICoverageNode.plainPair(parent: ICoverageNode? = null) = coverageKey(parent).id to plainCopy
-
-
-fun ICoverageNode.coverage(total: Int) = when(total) {
+fun ICoverageNode.coverage(total: Int) = when (total) {
     0 -> 0.0
     else -> instructionCounter.coveredCount * 100.0 / total
-}
-
-fun ExecutionDataStore.with(execData: Sequence<ExecClassData>): ExecutionDataStore {
-    for (execDatum in execData) {
-        put(ExecutionData(execDatum.id, execDatum.className, execDatum.probes.toBooleanArray()))
-    }
-    return this
 }
 
 fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when (this) {
@@ -81,13 +54,6 @@ fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when
     )
     else -> CoverageKey(this.name.crc64)
 }
-
-fun IMethodCoverage.simpleMethodCoverage(ownerClass: String) = SimpleJavaMethodCoverage(
-    name = name,
-    desc = declaration(desc),
-    coverage = coverage,
-    ownerClass = ownerClass
-)
 
 /**
  * Converts ASM method description to declaration in java style with kotlin style of return type.
@@ -124,7 +90,7 @@ fun parseDescTypes(argDesc: String): List<String> {
     return types
 }
 
-fun parseDescType(char: Char, charIterator: CharIterator): String = when(char) {
+fun parseDescType(char: Char, charIterator: CharIterator): String = when (char) {
     'V' -> "void"
     'J' -> "long"
     'Z' -> "boolean"

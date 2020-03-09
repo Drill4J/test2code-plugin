@@ -17,15 +17,15 @@ class ActiveSession(
 
     private val _probes = atomic(persistentListOf<ExecClassData>())
 
-    fun append(probe: ExecClassData) {
-        _probes.update { it.add(probe) }
-    }
+    fun addAll(probes: Collection<ExecClassData>) = _probes.update { it.addAll(probes) }
 
-    fun finish() = FinishedSession(
-        sessionId = id,
-        testTypeName = testType,
-        probes = _probes.value.asSequence().groupBy { TypedTest(it.testName, testType) }
-    )
+    fun finish() = _probes.value.takeIf { it.any() }?.let { probes ->
+        FinishedSession(
+            sessionId = id,
+            testTypeName = testType,
+            probes = probes.groupBy { TypedTest(it.testName, testType) }
+        )
+    }
 }
 
 @Serializable

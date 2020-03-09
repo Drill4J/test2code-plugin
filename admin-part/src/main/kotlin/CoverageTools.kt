@@ -8,11 +8,11 @@ import org.jacoco.core.analysis.*
 data class CoverageInfoSet(
     val associatedTests: List<AssociatedTests>,
     val coverage: Coverage,
-    val buildMethods: BuildMethods,
-    val packageCoverage: List<JavaPackageCoverage>,
-    val testsUsagesInfoByType: List<TestsUsagesInfoByType>,
-    val methodsCoveredByTest: List<MethodsCoveredByTest>,
-    val methodsCoveredByTestType: List<MethodsCoveredByTestType>
+    val buildMethods: BuildMethods = BuildMethods(),
+    val packageCoverage: List<JavaPackageCoverage> = emptyList(),
+    val testsUsagesInfoByType: List<TestsUsagesInfoByType> = emptyList(),
+    val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList(),
+    val methodsCoveredByTestType: List<MethodsCoveredByTestType> = emptyList()
 )
 
 fun testUsages(
@@ -25,52 +25,48 @@ fun testUsages(
             TestUsagesInfo(test.id, test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
         }.sortedBy { it.testName }
 
-fun packageCoverage(
-    bundleCoverage: IBundleCoverage,
+fun IBundleCoverage.packageCoverage(
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
-): List<JavaPackageCoverage> = bundleCoverage.packages
-    .map { packageCoverage ->
-        val packageKey = packageCoverage.coverageKey()
-        JavaPackageCoverage(
-            id = packageKey.id,
-            name = packageCoverage.name,
-            coverage = packageCoverage.coverage,
-            totalClassesCount = packageCoverage.classCounter.totalCount,
-            coveredClassesCount = packageCoverage.classCounter.coveredCount,
-            totalMethodsCount = packageCoverage.methodCounter.totalCount,
-            coveredMethodsCount = packageCoverage.methodCounter.coveredCount,
-            assocTestsCount = assocTestsMap[packageKey]?.count(),
-            classes = classCoverage(packageCoverage.classes, assocTestsMap)
-        )
-    }.toList()
+): List<JavaPackageCoverage> = packages.map { packageCoverage ->
+    val packageKey = packageCoverage.coverageKey()
+    JavaPackageCoverage(
+        id = packageKey.id,
+        name = packageCoverage.name,
+        coverage = packageCoverage.coverage,
+        totalClassesCount = packageCoverage.classCounter.totalCount,
+        coveredClassesCount = packageCoverage.classCounter.coveredCount,
+        totalMethodsCount = packageCoverage.methodCounter.totalCount,
+        coveredMethodsCount = packageCoverage.methodCounter.coveredCount,
+        assocTestsCount = assocTestsMap[packageKey]?.count(),
+        classes = packageCoverage.classes.classCoverage(assocTestsMap)
+    )
+}.toList()
 
-fun classCoverage(
-    classCoverages: Collection<IClassCoverage>,
+private fun Collection<IClassCoverage>.classCoverage(
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
-): List<JavaClassCoverage> = classCoverages
-    .map { classCoverage ->
-        val classKey = classCoverage.coverageKey()
-        JavaClassCoverage(
-            id = classKey.id,
-            name = classCoverage.name.toShortClassName(),
-            path = classCoverage.name,
-            coverage = classCoverage.coverage,
-            totalMethodsCount = classCoverage.methodCounter.totalCount,
-            coveredMethodsCount = classCoverage.methodCounter.coveredCount,
-            assocTestsCount = assocTestsMap[classKey]?.count(),
-            methods = classCoverage.methods.map { methodCoverage ->
-                val methodKey = methodCoverage.coverageKey(classCoverage)
-                JavaMethodCoverage(
-                    id = methodKey.id,
-                    name = classCoverage.name.methodName(methodCoverage.name) ?: "",
-                    desc = methodCoverage.desc,
-                    decl = declaration(methodCoverage.desc),
-                    coverage = methodCoverage.coverage,
-                    assocTestsCount = assocTestsMap[methodKey]?.count()
-                )
-            }.toList()
-        )
-    }.toList()
+): List<JavaClassCoverage> = map { classCoverage ->
+    val classKey = classCoverage.coverageKey()
+    JavaClassCoverage(
+        id = classKey.id,
+        name = classCoverage.name.toShortClassName(),
+        path = classCoverage.name,
+        coverage = classCoverage.coverage,
+        totalMethodsCount = classCoverage.methodCounter.totalCount,
+        coveredMethodsCount = classCoverage.methodCounter.coveredCount,
+        assocTestsCount = assocTestsMap[classKey]?.count(),
+        methods = classCoverage.methods.map { methodCoverage ->
+            val methodKey = methodCoverage.coverageKey(classCoverage)
+            JavaMethodCoverage(
+                id = methodKey.id,
+                name = classCoverage.name.methodName(methodCoverage.name) ?: "",
+                desc = methodCoverage.desc,
+                decl = declaration(methodCoverage.desc),
+                coverage = methodCoverage.coverage,
+                assocTestsCount = assocTestsMap[methodKey]?.count()
+            )
+        }.toList()
+    )
+}.toList()
 
 fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) ->
     AssociatedTests(
@@ -185,7 +181,7 @@ private val Method.sign get() = "$name$desc"
 
 fun IMethodCoverage.sign() = "$name$desc"
 
-fun String.methodName(name: String?): String? = when(name) {
+fun String.methodName(name: String?): String? = when (name) {
     "<init>" -> toShortClassName()
     "<clinit>" -> "static ${toShortClassName()}"
     else -> name

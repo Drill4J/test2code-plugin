@@ -18,10 +18,13 @@ class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
     val lastPrevBuildCoverage: Double,
-    val agentInfo: AgentInfo
+    val agentInfo: AgentInfo,
+    val buildManager: BuildManager
 ) {
 
     val data get() = _data.value
+
+    val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
 
     val scopeManager = ScopeManager(storeClient)
 
@@ -39,6 +42,25 @@ class PluginInstanceState(
 
     fun init() {
         _data.updateAndGet { ClassDataBuilder }
+    }
+
+    suspend fun initialized() {
+        val classesBytes = buildInfo?.classesBytes ?: emptyMap()
+        val coverageBuilder = CoverageBuilder()
+        val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
+        classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
+        val bundleCoverage = coverageBuilder.getBundle("")
+
+        val classesData = ClassesData(
+            buildVersion = agentInfo.buildVersion,
+            totalInstructions = bundleCoverage.instructionCounter.totalCount,
+            prevBuildVersion = prevBuildVersion,
+            prevBuildCoverage = lastPrevBuildCoverage
+        )
+        _data.value = classesData
+        val buildTests = storeClient.findById(agentInfo.id) ?: storeClient.store(this.buildTests)
+        _buildTests.value = buildTests
+        storeClient.store(classesData)
     }
 
     suspend fun addBuildTests(buildVersion: String, tests: List<AssociatedTests>) {
@@ -81,27 +103,6 @@ class PluginInstanceState(
             .find { it.name == name.trim() } == null && (name.trim() != activeScope.name || agentInfo.buildVersion != buildVersion)
 
     suspend fun scopeNotExisting(id: String) = scopeManager.getScope(id) == null && activeScope.id != id
-
-
-    suspend fun initialized(buildManager: BuildManager) {
-        val buildInfo = buildManager[agentInfo.buildVersion]
-        val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-        val coverageBuilder = CoverageBuilder()
-        val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
-        classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
-        val bundleCoverage = coverageBuilder.getBundle("")
-
-        val classesData = ClassesData(
-            buildVersion = agentInfo.buildVersion,
-            totalInstructions = bundleCoverage.instructionCounter.totalCount,
-            prevBuildVersion = prevBuildVersion,
-            prevBuildCoverage = lastPrevBuildCoverage
-        )
-        _data.value = classesData
-        val buildTests = storeClient.findById(agentInfo.id) ?: storeClient.store(this.buildTests)
-        _buildTests.value = buildTests
-        storeClient.store(classesData)
-    }
 
     suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when (buildVersion) {
         agentInfo.buildVersion -> data as? ClassesData
