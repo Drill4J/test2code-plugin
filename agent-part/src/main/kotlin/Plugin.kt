@@ -77,7 +77,7 @@ class CoverageAgentPart @JvmOverloads constructor(
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType
                 println("Start recording for session $sessionId")
-                instrContext.start(sessionId, testType)
+                instrContext.start(sessionId, testType, probesSender(sessionId))
                 sendMessage(SessionStarted(sessionId, testType, currentTimeMillis()))
             }
             is StopSession -> {
@@ -111,8 +111,28 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     }
 
-    private fun sendMessage(message: CoverMessage) {
-        val messageStr = CoverMessage.serializer() stringify message
-        send(messageStr)
-    }
+
+}
+
+//extracted for agent emulator compatibility
+fun AgentPart<*, *>.probesSender(sessionId: String): (List<ExecDatum>) -> Unit = {
+    it.map { datum ->
+            ExecClassData(
+                id = datum.id,
+                className = datum.name,
+                probes = datum.probes.toList(),
+                testName = datum.testName
+            )
+        }
+        .chunked(10)
+        .forEach { dataChunk ->
+//          send data in chunks of 10
+            println(dataChunk.size)
+            sendMessage(CoverDataPart(sessionId, dataChunk))
+        }
+}
+
+fun AgentPart<*, *>.sendMessage(message: CoverMessage) {
+    val messageStr = CoverMessage.serializer() stringify message
+    send(messageStr)
 }

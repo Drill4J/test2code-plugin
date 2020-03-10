@@ -55,4 +55,8 @@ tasks {
             "org.objectweb"
         ).forEach { relocate(it, "${rootProject.group}.test2code.shadow.$it") }
     }
+
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions { freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi" }
+    }
 }

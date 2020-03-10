@@ -8,6 +8,7 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
+import kotlinx.coroutines.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class Test2CodeAdminPart(
@@ -98,6 +99,11 @@ class Test2CodeAdminPart(
             calculateAndSendAllCoverage(buildVersion)
             calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
             sendActiveScope()
+            val isRealTimeDisabled = System.getProperty("plugin.feature.drealtime.disabled")?.toBoolean() == false
+            if (isRealTimeDisabled)
+                println("realtime is disabled")
+            else
+                watchChanges()
         }
         is SessionStarted -> {
             activeScope.startSession(message.sessionId, message.testType)
@@ -110,6 +116,7 @@ class Test2CodeAdminPart(
             sendActiveSessions()
         }
         is CoverDataPart -> {
+            activeScope.fireEvent()
             activeScope.addProbes(message.sessionId, message.data)
         }
         is SessionFinished -> {
@@ -126,6 +133,16 @@ class Test2CodeAdminPart(
             } ?: println("No active session with id $sessionId.")
         }
         else -> println("Message is not supported! $message")
+    }
+
+    private suspend fun watchChanges() = GlobalScope.launch {
+        activeScope.subscribeOnChanges {
+            val finishedSessions = activeSessions.values.asSequence().map { it.finish() }
+            updateSummary { calcSummary(pluginInstanceState, finishedSessions) }
+            sendScopeMessages()
+            val coverageInfoSet = (this + finishedSessions).calculateCoverageData(pluginInstanceState, buildVersion)
+            coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
+        }
     }
 
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {

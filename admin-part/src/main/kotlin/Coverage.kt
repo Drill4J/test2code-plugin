@@ -8,13 +8,14 @@ import kotlin.math.*
 typealias ClassesBytes = Map<String, ByteArray>
 
 internal fun ActiveScope.calcSummary(
-    state: PluginInstanceState
+    state: PluginInstanceState,
+    finishedSession: Sequence<FinishedSession> = emptySequence()
 ): ScopeSummary {
     val classesData = state.data as ClassesData
     val classesBytes = state.buildInfo?.classesBytes
     val totalInstructions = classesData.totalInstructions
     return summary.copy(
-        coverage = classesBytes?.coverage(this, totalInstructions) ?: 0.0,
+        coverage = classesBytes?.coverage(this + finishedSession, totalInstructions) ?: 0.0,
         coveragesByType = classesBytes?.coveragesByTestType(
             bundlesByTests(classesBytes),
             this,
