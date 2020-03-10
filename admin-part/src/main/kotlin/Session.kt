@@ -14,7 +14,6 @@ class ActiveSession(
     id: String,
     testType: String
 ) : Session(id, testType) {
-
     private val _probes = atomic(persistentListOf<ExecClassData>())
 
     fun addAll(probes: Collection<ExecClassData>) = _probes.update { it.addAll(probes) }

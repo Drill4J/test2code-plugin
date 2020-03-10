@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
 
 interface Scope : Sequence<FinishedSession> {
@@ -14,12 +15,19 @@ interface Scope : Sequence<FinishedSession> {
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
 class ActiveScope(name: String, override val buildVersion: String) : Scope {
+    private val eventListener = Channel<Unit>()
 
     override val id = genUuid()
 
     private val _sessions = atomic(persistentListOf<FinishedSession>())
 
     private val started: Long = currentTimeMillis()
+
+    fun fireEvent() {
+        if (!eventListener.isClosedForSend)
+        //test problem
+            eventListener.offer(Unit)
+    }
 
     //TODO remove summary for this class
     private val _summary = atomic(
@@ -71,6 +79,12 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
             _sessions.update { it.add(session) }
             onSuccess(session)
         }
+
+    suspend fun subscribeOnChanges(clb: suspend ActiveScope.() -> Unit) {
+        eventListener.consumeEach {
+            clb(this)
+        }
+    }
 
     override fun toString() = "act-scope($id, $name)"
 }

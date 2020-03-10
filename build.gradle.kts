@@ -27,6 +27,7 @@ subprojects {
         "com.epam.drill:drill-agent-part-jvm:$drillApiVersion",
         "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.14.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3",
         "com.epam.drill:kodux-jvm:0.1.5",
         "org.jetbrains.xodus:xodus-entity-store:1.3.91",

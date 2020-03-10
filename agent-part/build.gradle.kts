@@ -20,7 +20,7 @@ dependencies {
     implementation("com.epam.drill:drill-agent-part-jvm")
     implementation("com.epam.drill:common-jvm")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
-
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(kotlin("test-junit5"))
@@ -60,5 +60,14 @@ tasks {
         group = "shadow"
         from(jar)
         commonConfig()
+    }
+
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions {
+            freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
+            freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.FlowPreview"
+            freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.InternalCoroutinesApi"
+            freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ObsoleteCoroutinesApi"
+        }
     }
 }
