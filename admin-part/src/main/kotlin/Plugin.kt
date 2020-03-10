@@ -118,8 +118,9 @@ class Test2CodeAdminPart(
                 updateSummary { calcSummary(pluginInstanceState) }
             }?.also {
                 sendActiveSessions()
+                sendActiveScope()
                 if (it.any()) {
-                    sendScopeMessages()
+                    sendScopes(buildVersion)
                     calculateAndSendScopeCoverage(activeScope)
                     println("Session $sessionId finished.")
                 } else println("Session with id $sessionId is empty, it won't be added to the active scope.")
@@ -151,9 +152,9 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun sendActiveScope() {
-        val activeScopeSummary = pluginInstanceState.activeScope.summary
-        send(buildVersion, Routes.ActiveScope, activeScopeSummary)
-        sendScopeSummary(activeScopeSummary)
+        val summary = activeScope.summary
+        send(buildVersion, Routes.ActiveScope, summary)
+        sendScopeSummary(summary)
     }
 
     internal suspend fun cleanActiveScope(buildVersion: String) {
