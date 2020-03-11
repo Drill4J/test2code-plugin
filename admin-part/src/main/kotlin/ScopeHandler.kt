@@ -1,6 +1,21 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.message.*
+import kotlinx.coroutines.*
+
+internal fun Test2CodeAdminPart.initActiveScope() {
+    val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
+    if (realtimeEnabled) {
+        GlobalScope.launch {
+            activeScope.subscribeOnChanges { sessions ->
+                updateSummary { it.calculateCoverage(sessions, pluginInstanceState) }
+                sendScopeMessages()
+                val coverageInfoSet = sessions.calculateCoverageData(pluginInstanceState, buildVersion)
+                coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
+            }
+        }
+    }
+}
 
 internal suspend fun Test2CodeAdminPart.changeActiveScope(scopeChange: ActiveScopeChangePayload): StatusMessage =
     if (pluginInstanceState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
@@ -9,7 +24,7 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(scopeChange: ActiveSco
             if (prevScope.any()) {
                 val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
                 sendScopeSummary(finishedScope.summary)
-                println("$finishedScope have been saved.")
+                println("$finishedScope has been saved.")
                 pluginInstanceState.scopeManager.saveScope(finishedScope)
                 if (finishedScope.enabled) {
                     calculateAndSendBuildAndChildrenCoverage()
@@ -19,10 +34,10 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(scopeChange: ActiveSco
                 cleanTopics(prevScope.id)
             }
         }
-        val activeScope = pluginInstanceState.activeScope
+        initActiveScope()
         println("Current active scope $activeScope")
         sendActiveSessions()
-        calculateAndSendScopeCoverage(activeScope)
+        calculateAndSendScopeCoverage()
         sendScopeMessages()
         StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
     } else StatusMessage(

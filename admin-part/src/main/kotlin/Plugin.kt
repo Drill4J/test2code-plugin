@@ -8,7 +8,6 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.routes.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
-import kotlinx.coroutines.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class Test2CodeAdminPart(
@@ -89,6 +88,7 @@ class Test2CodeAdminPart(
         }
         is Initialized -> {
             pluginInstanceState.initialized()
+            initActiveScope()
             val buildManager = adminData.buildManager
             val otherVersions = buildManager.otherVersions(buildVersion)
             otherVersions.map(BuildInfo::version).forEach { version ->
@@ -97,13 +97,8 @@ class Test2CodeAdminPart(
             }
             sendActiveSessions()
             calculateAndSendAllCoverage(buildVersion)
-            calculateAndSendScopeCoverage(pluginInstanceState.activeScope)
+            calculateAndSendScopeCoverage(activeScope)
             sendActiveScope()
-            val isRealTimeDisabled = System.getProperty("plugin.feature.drealtime.disabled")?.toBoolean() == false
-            if (isRealTimeDisabled)
-                println("realtime is disabled")
-            else
-                watchChanges()
         }
         is SessionStarted -> {
             activeScope.startSession(message.sessionId, message.testType)
@@ -116,13 +111,12 @@ class Test2CodeAdminPart(
             sendActiveSessions()
         }
         is CoverDataPart -> {
-            activeScope.fireEvent()
             activeScope.addProbes(message.sessionId, message.data)
         }
         is SessionFinished -> {
             val sessionId = message.sessionId
             activeScope.finishSession(sessionId) {
-                updateSummary { calcSummary(pluginInstanceState) }
+                activeScope.updateSummary { it.calculateCoverage(this, pluginInstanceState) }
             }?.also {
                 sendActiveSessions()
                 if (it.any()) {
@@ -133,16 +127,6 @@ class Test2CodeAdminPart(
             } ?: println("No active session with id $sessionId.")
         }
         else -> println("Message is not supported! $message")
-    }
-
-    private suspend fun watchChanges() = GlobalScope.launch {
-        activeScope.subscribeOnChanges {
-            val finishedSessions = activeSessions.values.asSequence().map { it.finish() }
-            updateSummary { calcSummary(pluginInstanceState, finishedSessions) }
-            sendScopeMessages()
-            val coverageInfoSet = (this + finishedSessions).calculateCoverageData(pluginInstanceState, buildVersion)
-            coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
-        }
     }
 
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
@@ -255,7 +239,10 @@ class Test2CodeAdminPart(
         return Risks(newRisks, modifiedRisks)
     }
 
-    internal suspend fun calculateAndSendScopeCoverage(scope: Scope, buildVersion: String = this.buildVersion) {
+    internal suspend fun calculateAndSendScopeCoverage(
+        scope: Scope = activeScope,
+        buildVersion: String = this.buildVersion
+    ) {
         val coverageInfoSet = scope.calculateCoverageData(pluginInstanceState, buildVersion)
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }

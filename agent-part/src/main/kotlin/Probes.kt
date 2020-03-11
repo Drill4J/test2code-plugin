@@ -13,7 +13,7 @@ import kotlin.coroutines.*
 typealias ProbeArrayProvider = (Long, String, Int) -> BooleanArray
 
 interface SessionProbeArrayProvider : ProbeArrayProvider {
-    fun start(sessionId: String, testType: String, eventCallback: (List<ExecDatum>) -> Unit)
+    fun start(sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit = {})
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun cancel(sessionId: String)
 }
@@ -27,6 +27,12 @@ class ExecDatum(
     val testName: String = ""
 )
 
+fun ExecDatum.toExecClassData() = ExecClassData(
+    id = id,
+    className = name,
+    probes = probes.toList(),
+    testName = testName
+)
 
 typealias ExecData = ConcurrentHashMap<Long, ExecDatum>
 
@@ -69,7 +75,7 @@ class ExecRuntime(
         }
     }.probes
 
-    fun collect() = execData.values.flatMap { it.values.toList() }
+    fun collect() = execData.values.asSequence().flatMap { it.values.asSequence() }
 }
 
 /**
@@ -92,7 +98,9 @@ open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillConte
         }
     }
 
-    override fun start(sessionId: String, testType: String, eventCallback: (List<ExecDatum>) -> Unit) {
+    override fun start(
+        sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit
+    ) {
         val execRuntime = ExecRuntime()
         sessionRuntimes[sessionId] = execRuntime
         ProbesWorker.launch {
@@ -104,7 +112,7 @@ open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillConte
     }
 
     override fun stop(sessionId: String): Sequence<ExecDatum>? {
-        return sessionRuntimes.remove(sessionId)?.collect()?.asSequence()
+        return sessionRuntimes.remove(sessionId)?.collect()
     }
 
     override fun cancel(sessionId: String) {

@@ -110,8 +110,12 @@ class PluginInstanceState(
     } ?: NoData
 
 
-    fun changeActiveScope(name: String): ActiveScope =
-        _activeScope.getAndUpdate { ActiveScope(scopeName(name), agentInfo.buildVersion) }
+    fun changeActiveScope(name: String): ActiveScope = run {
+        _activeScope.getAndUpdate { prevScope ->
+            prevScope.close()
+            ActiveScope(scopeName(name), agentInfo.buildVersion)
+        }
+    }
 
     private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
         "" -> "New Scope ${_scopeCounter.incrementAndGet()}"

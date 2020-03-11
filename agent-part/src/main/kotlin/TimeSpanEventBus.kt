@@ -4,49 +4,47 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
 
-interface TimeSpanEventBus<T> : Channel<T>, Flow<List<T>>
+interface TimeSpanEventBus<T> : Channel<T>, Flow<Sequence<T>>
 
 class TimeSpanEventBusImpl<T>(
     timeout: Long,
     private val coroutineScope: CoroutineScope = GlobalScope,
     private val mainChannel: Channel<T> = Channel(),
     private val ticker: ReceiveChannel<Unit> = ticker(timeout, 0)
-) : TimeSpanEventBus<T>, Channel<T> by mainChannel, Flow<List<T>> {
+) : TimeSpanEventBus<T>, Channel<T> by mainChannel, Flow<Sequence<T>> {
 
-    override fun close(cause: Throwable?): Boolean {
+    override fun close(cause: Throwable?): Boolean = run {
         ticker.cancel()
-        return mainChannel.close(cause)
+        mainChannel.close(cause)
     }
 
-    override suspend fun collect(collector: FlowCollector<List<T>>) {
+    override suspend fun collect(collector: FlowCollector<Sequence<T>>) {
         mainChannel.consumeAsFlow().timeSpanChunked(ticker).collect(collector)
     }
 
-    private fun <T> Flow<T>.timeSpanChunked(ticker: ReceiveChannel<Unit>): Flow<List<T>> {
-        return windowed(ticker) { it.toList() }
-    }
+    private fun <T> Flow<T>.timeSpanChunked(
+        ticker: ReceiveChannel<Unit>
+    ): Flow<Sequence<T>> = windowed(ticker) { it }
 
-    private fun <T, R> Flow<T>.windowed(ticker: ReceiveChannel<Unit>, transform: suspend (List<T>) -> R): Flow<R> {
-        return channelFlow {
-            val buffer = Channel<T>()
+    private fun <T, R> Flow<T>.windowed(
+        ticker: ReceiveChannel<Unit>,
+        transform: suspend (Sequence<T>) -> R
+    ): Flow<R> = channelFlow {
+        val buffer = Channel<T>()
+        coroutineScope.launch {
+            ticker.consumeEach {
+                if (!buffer.isEmpty)
+                    send(transform(buffer.takeAvailable()))
+            }
+        }
+        collect { value ->
             coroutineScope.launch {
-                ticker.consumeEach {
-                    if (!buffer.isEmpty)
-                        send(transform(buffer.takeAvailable()))
-                }
+                buffer.send(value)
             }
-            collect { value ->
-                coroutineScope.launch {
-                    buffer.send(value)
-                }
-            }
-
         }
     }
 }
 
-suspend fun <T> ReceiveChannel<T>.takeAvailable() =
-    flow<T> {
-        @Suppress("ControlFlowWithEmptyBody")
-        while (run { poll()?.let { emit(it) } } != null);
-    }.toList()
+private suspend fun <T> ReceiveChannel<T>.takeAvailable() = sequence {
+    while (poll()?.also { yield(it) } != null) Unit
+}

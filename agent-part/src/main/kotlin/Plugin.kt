@@ -77,7 +77,7 @@ class CoverageAgentPart @JvmOverloads constructor(
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType
                 println("Start recording for session $sessionId")
-                instrContext.start(sessionId, testType, probesSender(sessionId))
+                instrContext.start(sessionId, testType, probeSender(sessionId))
                 sendMessage(SessionStarted(sessionId, testType, currentTimeMillis()))
             }
             is StopSession -> {
@@ -85,18 +85,7 @@ class CoverageAgentPart @JvmOverloads constructor(
                 println("End of recording for session $sessionId")
                 val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
                 if (runtimeData.any()) {
-                    runtimeData.map { datum ->
-                        ExecClassData(
-                            id = datum.id,
-                            className = datum.name,
-                            probes = datum.probes.toList(),
-                            testName = datum.testName
-                        )
-                    }.chunked(10)
-                        .forEach { dataChunk ->
-                            //send data in chunks of 10
-                            sendMessage(CoverDataPart(sessionId, dataChunk))
-                        }
+                    probeSender(sessionId)(runtimeData)
                 } else println("No data for session $sessionId")
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
@@ -110,26 +99,14 @@ class CoverageAgentPart @JvmOverloads constructor(
         }
 
     }
-
-
 }
 
 //extracted for agent emulator compatibility
-fun AgentPart<*, *>.probesSender(sessionId: String): (List<ExecDatum>) -> Unit = {
-    it.map { datum ->
-            ExecClassData(
-                id = datum.id,
-                className = datum.name,
-                probes = datum.probes.toList(),
-                testName = datum.testName
-            )
-        }
-        .chunked(10)
-        .forEach { dataChunk ->
-//          send data in chunks of 10
-            println(dataChunk.size)
-            sendMessage(CoverDataPart(sessionId, dataChunk))
-        }
+fun AgentPart<*, *>.probeSender(sessionId: String): (Sequence<ExecDatum>) -> Unit = { execData ->
+    execData.map(ExecDatum::toExecClassData)
+        .chunked(10) // send data in chunks of 10
+        .map { chunk -> CoverDataPart(sessionId, chunk) }
+        .forEach { message -> sendMessage(message) }
 }
 
 fun AgentPart<*, *>.sendMessage(message: CoverMessage) {

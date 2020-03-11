@@ -15,34 +15,27 @@ interface Scope : Sequence<FinishedSession> {
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
 class ActiveScope(name: String, override val buildVersion: String) : Scope {
-    private val eventListener = Channel<Unit>()
 
     override val id = genUuid()
-
-    private val _sessions = atomic(persistentListOf<FinishedSession>())
-
-    private val started: Long = currentTimeMillis()
-
-    fun fireEvent() {
-        if (!eventListener.isClosedForSend)
-        //test problem
-            eventListener.offer(Unit)
-    }
-
-    //TODO remove summary for this class
-    private val _summary = atomic(
-        ScopeSummary(
-            id = id,
-            name = name,
-            started = started
-        )
-    )
 
     override val summary get() = _summary.value
 
     val name get() = summary.name
 
     val activeSessions = AtomicCache<String, ActiveSession>()
+
+    private val _sessions = atomic(persistentListOf<FinishedSession>())
+
+    //TODO remove summary for this class
+    private val _summary = atomic(
+        ScopeSummary(
+            id = id,
+            name = name,
+            started = currentTimeMillis()
+        )
+    )
+
+    private val changes = Channel<Unit>()
 
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
@@ -54,8 +47,12 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
         buildVersion = buildVersion,
         name = summary.name,
         enabled = enabled,
-        summary = summary.copy(finished = currentTimeMillis(), active = false, enabled = enabled),
-        probes = _sessions.value.asIterable().groupBy { it.testType }
+        summary = summary.copy(
+            finished = currentTimeMillis(),
+            active = false,
+            enabled = enabled
+        ),
+        probes = groupBy(Session::testType)
     )
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
@@ -66,6 +63,9 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {
         activeSessions[sessionId]?.apply { addAll(probes) }
+        if (!changes.isClosedForSend) {
+            changes.offer(Unit)
+        }
     }
 
     fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)
@@ -80,11 +80,14 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
             onSuccess(session)
         }
 
-    suspend fun subscribeOnChanges(clb: suspend ActiveScope.() -> Unit) {
-        eventListener.consumeEach {
-            clb(this)
+    suspend fun subscribeOnChanges(clb: suspend ActiveScope.(Sequence<FinishedSession>) -> Unit) {
+        changes.consumeEach {
+            val actSessionSeq = activeSessions.values.asSequence()
+            clb(this + actSessionSeq.map(ActiveSession::finish))
         }
     }
+
+    fun close() = changes.close()
 
     override fun toString() = "act-scope($id, $name)"
 }
