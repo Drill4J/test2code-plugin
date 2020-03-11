@@ -47,7 +47,7 @@ class InstrumentationTest {
     fun `should provide coverage for run with the instrumented class`() {
         addInstrumentedClass()
         val instrumentedClass = memoryClassLoader.loadClass(targetClass.name)
-        TestProbeArrayProvider.start(sessionId, "MANUAL", {})
+        TestProbeArrayProvider.start(sessionId, "MANUAL")
         @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
         val runtimeData = TestProbeArrayProvider.stop(sessionId)
@@ -66,7 +66,7 @@ class InstrumentationTest {
     fun `should associate execution data with test name and type gathered from request headers`() {
         addInstrumentedClass()
         val instrumentedClass = memoryClassLoader.loadClass(targetClass.name)
-        TestProbeArrayProvider.start(sessionId, "MANUAL", {})
+        TestProbeArrayProvider.start(sessionId, "MANUAL")
         @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
         val runtimeData = TestProbeArrayProvider.stop(sessionId)!!.toList()

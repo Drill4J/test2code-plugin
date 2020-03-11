@@ -84,7 +84,7 @@ tasks {
         dependsOn(prepareDist)
         useJUnitPlatform()
         systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
-        systemProperty("plugin.feature.drealtime.disabled", "true")
+        systemProperty("plugin.feature.drealtime", false)
         mustRunAfter(test)
     }
 

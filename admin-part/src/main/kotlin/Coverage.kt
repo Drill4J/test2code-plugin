@@ -7,21 +7,22 @@ import kotlin.math.*
 
 typealias ClassesBytes = Map<String, ByteArray>
 
-internal fun ActiveScope.calcSummary(
-    state: PluginInstanceState,
-    finishedSession: Sequence<FinishedSession> = emptySequence()
-): ScopeSummary {
+internal fun ScopeSummary.calculateCoverage(
+    sessions: Sequence<FinishedSession>,
+    state: PluginInstanceState
+): ScopeSummary = run {
     val classesData = state.data as ClassesData
-    val classesBytes = state.buildInfo?.classesBytes
-    val totalInstructions = classesData.totalInstructions
-    return summary.copy(
-        coverage = classesBytes?.coverage(this + finishedSession, totalInstructions) ?: 0.0,
-        coveragesByType = classesBytes?.coveragesByTestType(
-            bundlesByTests(classesBytes),
-            this,
-            totalInstructions
-        ) ?: emptyMap()
-    )
+    state.buildInfo?.classesBytes?.let { classesBytes ->
+        val totalInstructions = classesData.totalInstructions
+        copy(
+            coverage = sessions.coverage(classesBytes, totalInstructions),
+            coveragesByType = sessions.coveragesByTestType(
+                sessions.bundlesByTests(classesBytes),
+                classesBytes,
+                totalInstructions
+            )
+        )
+    } ?: this
 }
 
 internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
@@ -50,7 +51,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
 
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
-        null -> classesBytes.coveragesByTestType(bundleMap, this, classesData.totalInstructions)
+        null -> coveragesByTestType(bundleMap, classesBytes, classesData.totalInstructions)
         else -> scope.summary.coveragesByType
     }
     println(coverageByType)
@@ -124,16 +125,16 @@ fun Sequence<FinishedSession>.coverage(classesBytes: ClassesBytes, totalInstruct
 fun ClassesBytes.coverage(data: Sequence<FinishedSession>, totalInstructions: Int) =
     data.flatten().coverageBundle(this).coverage(totalInstructions)
 
-fun ClassesBytes.coveragesByTestType(
+fun Sequence<FinishedSession>.coveragesByTestType(
     bundleMap: Map<TypedTest, IBundleCoverage>,
-    data: Sequence<FinishedSession>,
+    classesBytes: ClassesBytes,
     totalInstructions: Int
 ): Map<String, TestTypeSummary> {
-    return data.groupBy { it.testType }.mapValues { (testType, finishedSessions) ->
+    return groupBy(Session::testType).mapValues { (testType, finishedSessions) ->
         TestTypeSummary(
             testType = testType,
-            coverage = coverage(finishedSessions.asSequence(), totalInstructions),
-            testCount = finishedSessions.flatMap { it.testNames }.distinct().count(),
+            coverage = classesBytes.coverage(finishedSessions.asSequence(), totalInstructions),
+            testCount = finishedSessions.flatMap(FinishedSession::testNames).distinct().count(),
             coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
         )
     }
