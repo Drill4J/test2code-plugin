@@ -70,13 +70,13 @@ data class MethodsInfo(
 data class JavaPackageCoverage(
     val id: String,
     val name: String,
-    val coverage: Double,
-    val totalClassesCount: Int,
-    val coveredClassesCount: Int,
-    val totalMethodsCount: Int,
-    val coveredMethodsCount: Int,
-    val classes: List<JavaClassCoverage>,
-    val assocTestsCount: Int?
+    val totalClassesCount: Int = 0,
+    val totalMethodsCount: Int = 0,
+    val coverage: Double = 0.0,
+    val coveredClassesCount: Int = 0,
+    val coveredMethodsCount: Int = 0,
+    val assocTestsCount: Int? = null,
+    val classes: List<JavaClassCoverage>
 )
 
 @Serializable
@@ -84,11 +84,11 @@ data class JavaClassCoverage(
     val id: String,
     val name: String,
     val path: String,
-    val coverage: Double,
-    val totalMethodsCount: Int,
-    val coveredMethodsCount: Int,
-    val methods: List<JavaMethodCoverage>,
-    val assocTestsCount: Int?
+    val totalMethodsCount: Int = 0,
+    val coverage: Double = 0.0,
+    val coveredMethodsCount: Int = 0,
+    val assocTestsCount: Int? = null,
+    val methods: List<JavaMethodCoverage>
 )
 
 @Serializable
@@ -97,16 +97,8 @@ data class JavaMethodCoverage(
     val name: String,
     val desc: String,
     val decl: String,
-    val coverage: Double,
-    val assocTestsCount: Int?
-)
-
-@Serializable
-data class SimpleJavaMethodCoverage(
-    val name: String,
-    val desc: String,
-    val ownerClass: String,
-    val coverage: Double
+    val coverage: Double = 0.0,
+    val assocTestsCount: Int? = null
 )
 
 @Serializable

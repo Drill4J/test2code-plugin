@@ -23,49 +23,6 @@ fun Map<TypedTest, IBundleCoverage>.testUsages(
         TestUsagesInfo(test.id(), test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
     }.sortedBy { it.testName }
 
-fun IBundleCoverage.packageCoverage(
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>
-): List<JavaPackageCoverage> = packages.map { packageCoverage ->
-    val packageKey = packageCoverage.coverageKey()
-    JavaPackageCoverage(
-        id = packageKey.id,
-        name = packageCoverage.name,
-        coverage = packageCoverage.coverage,
-        totalClassesCount = packageCoverage.classCounter.totalCount,
-        coveredClassesCount = packageCoverage.classCounter.coveredCount,
-        totalMethodsCount = packageCoverage.methodCounter.totalCount,
-        coveredMethodsCount = packageCoverage.methodCounter.coveredCount,
-        assocTestsCount = assocTestsMap[packageKey]?.count(),
-        classes = packageCoverage.classes.classCoverage(assocTestsMap)
-    )
-}.toList()
-
-private fun Collection<IClassCoverage>.classCoverage(
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>
-): List<JavaClassCoverage> = map { classCoverage ->
-    val classKey = classCoverage.coverageKey()
-    JavaClassCoverage(
-        id = classKey.id,
-        name = classCoverage.name.toShortClassName(),
-        path = classCoverage.name,
-        coverage = classCoverage.coverage,
-        totalMethodsCount = classCoverage.methodCounter.totalCount,
-        coveredMethodsCount = classCoverage.methodCounter.coveredCount,
-        assocTestsCount = assocTestsMap[classKey]?.count(),
-        methods = classCoverage.methods.map { methodCoverage ->
-            val methodKey = methodCoverage.coverageKey(classCoverage)
-            JavaMethodCoverage(
-                id = methodKey.id,
-                name = classCoverage.name.methodName(methodCoverage.name) ?: "",
-                desc = methodCoverage.desc,
-                decl = declaration(methodCoverage.desc),
-                coverage = methodCoverage.coverage,
-                assocTestsCount = assocTestsMap[methodKey]?.count()
-            )
-        }.toList()
-    )
-}.toList()
-
 fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) ->
     AssociatedTests(
         id = key.id,

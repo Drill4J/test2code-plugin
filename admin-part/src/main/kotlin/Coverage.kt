@@ -38,7 +38,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     val associatedTests = assocTestsMap.getAssociatedTests()
 
     val totalInstructions = classesData.totalInstructions
-    val bundleCoverage = classesBytes.bundle(toProbes())
+    val bundleCoverage = toProbes().bundle(classesBytes)
     val totalCoveragePercent = bundleCoverage.coverage
 
     val scope = this as? Scope
@@ -79,7 +79,8 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
             classesData.prevBuildVersion
         )
     )
-    val packageCoverage = bundleCoverage.packageCoverage(assocTestsMap)
+
+    val packageCoverage = classesData.packageTree.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         methodsChanges,
@@ -166,14 +167,14 @@ private fun Sequence<Sequence<ExecClassData>>.flatBundle(
     classesBytes: ClassesBytes
 ): IBundleCoverage = flatten().bundle(classesBytes)
 
-fun Sequence<ExecClassData>.bundle(
+internal fun Sequence<ExecClassData>.bundle(
     classesBytes: ClassesBytes
 ): IBundleCoverage = bundle { analyzer ->
     contents.forEach { analyzer.analyzeClass(classesBytes[it.name], it.name) }
 }
 
-private fun ClassesBytes.bundle(
-    data: Sequence<ExecClassData>
+internal fun ClassesBytes.bundle(
+    data: Sequence<ExecClassData> = emptySequence()
 ): IBundleCoverage = data.bundle { analyzer ->
     forEach { (name, bytes) -> analyzer.analyzeClass(bytes, name) }
 }

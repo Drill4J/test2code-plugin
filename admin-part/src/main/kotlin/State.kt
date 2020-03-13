@@ -46,16 +46,13 @@ class PluginInstanceState(
 
     suspend fun initialized() {
         val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-        val coverageBuilder = CoverageBuilder()
-        val analyzer = Analyzer(ExecutionDataStore(), coverageBuilder)
-        classesBytes.forEach { analyzer.analyzeClass(it.value, it.key) }
-        val bundleCoverage = coverageBuilder.getBundle("")
-
+        val bundleCoverage = classesBytes.bundle()
         val classesData = ClassesData(
             buildVersion = agentInfo.buildVersion,
             totalInstructions = bundleCoverage.instructionCounter.totalCount,
             prevBuildVersion = prevBuildVersion,
-            prevBuildCoverage = lastPrevBuildCoverage
+            prevBuildCoverage = lastPrevBuildCoverage,
+            packageTree = bundleCoverage.packageTree()
         )
         _data.value = classesData
         val buildTests = storeClient.findById(agentInfo.id) ?: storeClient.store(this.buildTests)
