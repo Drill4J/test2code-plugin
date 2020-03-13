@@ -30,19 +30,12 @@ class FinishedSession(
     val sessionId: String,
     val testTypeName: String,
     val probes: Map<TypedTest, List<ExecClassData>>
-) : Session(sessionId, testTypeName), Sequence<ExecClassData> {
-
-    val testNames = probes.keys
-
-    override fun iterator() = probes.asSequence()
-        .flatMap { it.value.asSequence() }
-        .iterator()
-}
+) : Session(sessionId, testTypeName)
 
 @Serializable
 data class TypedTest(
     val name: String,
     val type: String
-) {
-    val id get() = "$name:$type"
-}
+)
+
+internal fun TypedTest.id() = "$name:$type"

@@ -15,7 +15,7 @@ internal fun ScopeSummary.calculateCoverage(
     state.buildInfo?.classesBytes?.let { classesBytes ->
         val totalInstructions = classesData.totalInstructions
         copy(
-            coverage = sessions.coverage(classesBytes, totalInstructions),
+            coverage = sessions.toProbes().bundle(classesBytes).coverage(totalInstructions),
             coveragesByType = sessions.coveragesByTestType(
                 sessions.bundlesByTests(classesBytes),
                 classesBytes,
@@ -32,26 +32,18 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     val buildInfo = state.buildManager[buildVersion]
     val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
     val classesData = state.classesData(buildVersion) as ClassesData
-    val probes = flatten()
-    // Analyze all existing classes
-    val coverageBuilder = CoverageBuilder()
-    val dataStore = probes.execDataStore()
-    val initialClassBytes = buildInfo?.classesBytes ?: emptyMap()
-    val analyzer = Analyzer(dataStore, coverageBuilder)
 
-    val bundleMap = bundlesByTests(classesBytes)
-    val assocTestsMap = bundleMap.associatedTests()
+    val bundlesByTests = bundlesByTests(classesBytes)
+    val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
-    initialClassBytes.forEach { (name, bytes) ->
-        analyzer.analyzeClass(bytes, name)
-    }
-    val bundleCoverage = coverageBuilder.getBundle("")
-    val totalCoveragePercent = bundleCoverage.coverage(classesData.totalInstructions)
+    val totalInstructions = classesData.totalInstructions
+    val bundleCoverage = classesBytes.bundle(toProbes())
+    val totalCoveragePercent = bundleCoverage.coverage
 
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
-        null -> coveragesByTestType(bundleMap, classesBytes, classesData.totalInstructions)
+        null -> coveragesByTestType(bundlesByTests, classesBytes, totalInstructions)
         else -> scope.summary.coveragesByType
     }
     println(coverageByType)
@@ -89,7 +81,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     )
     val packageCoverage = bundleCoverage.packageCoverage(assocTestsMap)
 
-    val (coveredByTest, coveredByTestType) = bundleMap.coveredMethods(
+    val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         methodsChanges,
         bundlesByTestTypes(classesBytes)
     )
@@ -99,9 +91,8 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
             it.value.testType,
             it.value.coverage,
             it.value.coveredMethodsCount,
-            testUsages(
-                bundlesByTests(classesBytes),
-                classesData.totalInstructions,
+            bundlesByTests.testUsages(
+                totalInstructions,
                 it.value.testType
             )
         )
@@ -118,32 +109,30 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     )
 }
 
-fun Sequence<FinishedSession>.coverage(classesBytes: ClassesBytes, totalInstructions: Int) =
-    flatten().coverageBundle(classesBytes).coverage(totalInstructions)
-
-
-fun ClassesBytes.coverage(data: Sequence<FinishedSession>, totalInstructions: Int) =
-    data.flatten().coverageBundle(this).coverage(totalInstructions)
-
 fun Sequence<FinishedSession>.coveragesByTestType(
     bundleMap: Map<TypedTest, IBundleCoverage>,
     classesBytes: ClassesBytes,
     totalInstructions: Int
 ): Map<String, TestTypeSummary> {
     return groupBy(Session::testType).mapValues { (testType, finishedSessions) ->
-        TestTypeSummary(
-            testType = testType,
-            coverage = classesBytes.coverage(finishedSessions.asSequence(), totalInstructions),
-            testCount = finishedSessions.flatMap(FinishedSession::testNames).distinct().count(),
-            coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
-        )
+        finishedSessions.asSequence().run {
+            TestTypeSummary(
+                testType = testType,
+                coverage = toProbes().bundle(classesBytes).coverage(totalInstructions),
+                testCount = flatMap(FinishedSession::testNames).distinct().count(),
+                coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
+            )
+        }
     }
 }
 
-fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map { it.toExecutionData() }
+fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassData::toExecutionData)
     .fold(ExecutionDataStore()) { store, execData ->
         store.apply { put(execData) }
     }
+
+internal val FinishedSession.testNames: Sequence<TypedTest>
+    get() = probes.keys.asSequence()
 
 private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
 
@@ -159,25 +148,42 @@ private fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
 private fun Sequence<FinishedSession>.bundlesByTests(
     classesBytes: ClassesBytes
 ): Map<TypedTest, IBundleCoverage> = flatMap { it.probes.asSequence() }
-    .groupBy({ it.key }) { it.value }
-    .mapValues { it.value.asSequence().flatten() }
-    .mapValues { it.value.coverageBundle(classesBytes) }
+    .groupBy({ it.key }) { it.value.asSequence() }
+    .mapValues { it.value.asSequence().flatBundle(classesBytes) }
 
 private fun Sequence<FinishedSession>.bundlesByTestTypes(
     classesBytes: ClassesBytes
 ): Map<String, IBundleCoverage> = flatMap { it.probes.asSequence() }
-    .groupBy({ it.key.type }) { it.value }
-    .mapValues { it.value.asSequence().flatten() }
-    .mapValues { it.value.coverageBundle(classesBytes) }
+    .groupBy({ it.key.type }) { it.value.asSequence() }
+    .mapValues { it.value.asSequence().flatBundle(classesBytes) }
 
-private fun Sequence<ExecClassData>.coverageBundle(
+private fun Sequence<FinishedSession>.toProbes(): Sequence<ExecClassData> = flatMap {
+    it.probes.asSequence()
+}.flatMap { it.value.asSequence() }
+
+
+private fun Sequence<Sequence<ExecClassData>>.flatBundle(
     classesBytes: ClassesBytes
+): IBundleCoverage = flatten().bundle(classesBytes)
+
+fun Sequence<ExecClassData>.bundle(
+    classesBytes: ClassesBytes
+): IBundleCoverage = bundle { analyzer ->
+    contents.forEach { analyzer.analyzeClass(classesBytes[it.name], it.name) }
+}
+
+private fun ClassesBytes.bundle(
+    data: Sequence<ExecClassData>
+): IBundleCoverage = data.bundle { analyzer ->
+    forEach { (name, bytes) -> analyzer.analyzeClass(bytes, name) }
+}
+
+private fun Sequence<ExecClassData>.bundle(
+    analyze: ExecutionDataStore.(Analyzer) -> Unit
 ): IBundleCoverage = CoverageBuilder().also { coverageBuilder ->
     val dataStore = execDataStore()
     val analyzer = Analyzer(dataStore, coverageBuilder)
-    dataStore.contents.forEach {
-        analyzer.analyzeClass(classesBytes[it.name], it.name)
-    }
+    dataStore.analyze(analyzer)
 }.getBundle("")
 
 private fun Map<TypedTest, IBundleCoverage>.associatedTests(): Map<CoverageKey, List<TypedTest>> = run {

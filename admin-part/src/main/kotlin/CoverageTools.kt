@@ -15,15 +15,13 @@ data class CoverageInfoSet(
     val methodsCoveredByTestType: List<MethodsCoveredByTestType> = emptyList()
 )
 
-fun testUsages(
-    bundleMap: Map<TypedTest, IBundleCoverage>,
+fun Map<TypedTest, IBundleCoverage>.testUsages(
     totalCoverageCount: Int,
     testType: String
-): List<TestUsagesInfo> =
-    bundleMap.filter { it.key.type == testType }
-        .map { (test, bundle) ->
-            TestUsagesInfo(test.id, test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
-        }.sortedBy { it.testName }
+): List<TestUsagesInfo> = filter { it.key.type == testType }
+    .map { (test, bundle) ->
+        TestUsagesInfo(test.id(), test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
+    }.sortedBy { it.testName }
 
 fun IBundleCoverage.packageCoverage(
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
@@ -127,7 +125,6 @@ fun calculateBundleMethods(
     )
 }
 
-
 fun Methods.getInfo(
     data: Map<Pair<String, String>, IMethodCoverage>,
     excludeMissed: Boolean
@@ -155,7 +152,7 @@ fun Map<TypedTest, IBundleCoverage>.coveredMethods(
     val coveredByTest = map { (typedTest, bundle) ->
         val changes = calculateBundleMethods(methodChanges, bundle, true)
         MethodsCoveredByTest(
-            id = typedTest.id,
+            id = typedTest.id(),
             testName = typedTest.name,
             testType = typedTest.type,
             newMethods = changes.newMethods.methods,

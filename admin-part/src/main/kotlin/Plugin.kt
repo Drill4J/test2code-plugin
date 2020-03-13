@@ -120,7 +120,7 @@ class Test2CodeAdminPart(
             }?.also {
                 sendActiveSessions()
                 sendActiveScope()
-                if (it.any()) {
+                if (it.probes.any()) {
                     sendScopes(buildVersion)
                     calculateAndSendScopeCoverage(activeScope)
                     println("Session $sessionId finished.")

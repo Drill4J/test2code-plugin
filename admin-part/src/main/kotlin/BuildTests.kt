@@ -58,6 +58,6 @@ fun MethodsInfo.testCount(
 
 private fun Sequence<FinishedScope>.typedTests(): Set<TypedTest> = flatMap { scope ->
     scope.probes.asSequence().flatMap { (_, sessions) ->
-        sessions.asSequence().flatMap { finishedSession -> finishedSession.testNames.asSequence() }
+        sessions.asSequence().flatMap(FinishedSession::testNames)
     }
 }.toSet()
