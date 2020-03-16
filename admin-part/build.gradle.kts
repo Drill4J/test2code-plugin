@@ -21,6 +21,7 @@ dependencies {
     implementation("com.epam.drill:drill-admin-part-jvm")
     implementation("com.epam.drill:common-jvm")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor")
 
     //provided by admin
     //TODO create a platform for admin dependencies

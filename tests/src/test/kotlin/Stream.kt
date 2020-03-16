@@ -1,4 +1,4 @@
-@file:UseExperimental(
+@file:OptIn(
     KtorExperimentalLocationsAPI::class,
     ExperimentalCoroutinesApi::class
 )
@@ -10,7 +10,6 @@ import com.epam.drill.admin.endpoints.*
 import com.epam.drill.admin.endpoints.plugin.*
 import com.epam.drill.common.*
 import com.epam.drill.e2e.*
-import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.routes.*
 import io.ktor.application.*
 import io.ktor.http.*
@@ -18,12 +17,12 @@ import io.ktor.http.cio.websocket.*
 import io.ktor.locations.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import kotlinx.serialization.*
+import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.*
 import java.util.concurrent.*
+import kotlin.collections.set
 import kotlin.reflect.*
 import kotlin.reflect.full.*
-import kotlin.time.*
 
 class CoverageSocketStreams : PluginStreams() {
 

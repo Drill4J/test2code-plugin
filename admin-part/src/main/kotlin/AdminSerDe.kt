@@ -7,11 +7,11 @@ val adminSerDe = SerDe(
     actionSerializer = commonSerDe.actionSerializer,
     ctx = commonSerDe.ctx + SerializersModule {
         polymorphic<Action> {
-            addSubclass(SwitchActiveScope.serializer())
-            addSubclass(RenameScope.serializer())
-            addSubclass(ToggleScope.serializer())
-            addSubclass(DropScope.serializer())
-            addSubclass(StartNewSession.serializer())
+            subclass(SwitchActiveScope.serializer())
+            subclass(RenameScope.serializer())
+            subclass(ToggleScope.serializer())
+            subclass(DropScope.serializer())
+            subclass(StartNewSession.serializer())
         }
     }
 )

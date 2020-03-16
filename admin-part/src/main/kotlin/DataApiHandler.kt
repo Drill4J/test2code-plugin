@@ -1,7 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
-import kotlinx.serialization.*
+import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.*
 import org.jacoco.core.data.*
 import java.io.*

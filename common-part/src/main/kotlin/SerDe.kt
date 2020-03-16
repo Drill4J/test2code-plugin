@@ -7,18 +7,18 @@ val commonSerDe = SerDe(
     actionSerializer = Action.serializer(),
     ctx = SerializersModule {
         polymorphic<Action> {
-            addSubclass(StartSession.serializer())
-            addSubclass(StopSession.serializer())
-            addSubclass(CancelSession.serializer())
+            subclass(StartSession.serializer())
+            subclass(StopSession.serializer())
+            subclass(CancelSession.serializer())
         }
         polymorphic<CoverMessage> {
-            addSubclass(InitInfo.serializer())
-            addSubclass(Initialized.serializer())
+            subclass(InitInfo.serializer())
+            subclass(Initialized.serializer())
 
-            addSubclass(SessionStarted.serializer())
-            addSubclass(SessionCancelled.serializer())
-            addSubclass(CoverDataPart.serializer())
-            addSubclass(SessionFinished.serializer())
+            subclass(SessionStarted.serializer())
+            subclass(SessionCancelled.serializer())
+            subclass(CoverDataPart.serializer())
+            subclass(SessionFinished.serializer())
         }
     }
 )
