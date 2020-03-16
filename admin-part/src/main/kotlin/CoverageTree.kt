@@ -66,8 +66,7 @@ private fun List<JavaClassCoverage>.classCoverage(
 }
 
 internal fun IClassCoverage.toMethodCoverage(
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>,
-    total: Int = 0
+    assocTestsMap: Map<CoverageKey, List<TypedTest>>
 ): List<JavaMethodCoverage> {
     return methods.map { methodCoverage ->
         val methodKey = methodCoverage.coverageKey(this)
@@ -76,7 +75,7 @@ internal fun IClassCoverage.toMethodCoverage(
             name = name.methodName(methodCoverage.name) ?: "",
             desc = methodCoverage.desc,
             decl = declaration(methodCoverage.desc),
-            coverage = methodCoverage.coverage(total),
+            coverage = methodCoverage.coverage(),
             assocTestsCount = assocTestsMap[methodKey]?.count()
         )
     }.toList()
