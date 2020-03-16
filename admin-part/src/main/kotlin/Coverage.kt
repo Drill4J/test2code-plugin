@@ -80,7 +80,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
         )
     )
 
-    val packageCoverage = classesData.treeCoverage(bundleCoverage, assocTestsMap)
+    val packageCoverage = classesData.packageTree.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         methodsChanges,
