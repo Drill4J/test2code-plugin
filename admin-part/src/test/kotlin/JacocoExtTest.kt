@@ -20,7 +20,7 @@ class JacocoExtTest {
         val counter = coverageNode.methodCounter
         assertEquals(0, counter.totalCount)
         assertFalse { counter.coveredRatio.isFinite() }
-        assertEquals(0.0, coverageNode.coverage)
+        assertEquals(0.0, coverageNode.coverage())
     }
 
     @Test

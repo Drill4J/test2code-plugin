@@ -4,6 +4,22 @@ import com.epam.kodux.*
 import kotlinx.serialization.*
 
 @Serializable
+data class ActiveScopeChangePayload(
+    val scopeName: String,
+    val savePrevScope: Boolean = false,
+    val prevScopeEnabled: Boolean = true
+)
+
+@Serializable
+data class RenameScopePayload(
+    val scopeId: String,
+    val scopeName: String
+)
+
+@Serializable
+data class ScopePayload(val scopeId: String = "")
+
+@Serializable
 data class JavaMethod(
     val ownerClass: String,
     val name: String,

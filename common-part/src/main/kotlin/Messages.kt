@@ -2,11 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import kotlinx.serialization.*
 
-@Serializable
-data class CoverConfig(
-        val message: String = ""
-)
-
 @Polymorphic
 @Serializable
 abstract class CoverMessage
@@ -14,11 +9,9 @@ abstract class CoverMessage
 @SerialName("INIT")
 @Serializable
 data class InitInfo(
-        val classesCount: Int,
-        val message: String
+    val classesCount: Int,
+    val message: String
 ) : CoverMessage()
-
-typealias EncodedString = String
 
 @SerialName("INITIALIZED")
 @Serializable
@@ -39,11 +32,3 @@ data class CoverDataPart(val sessionId: String, val data: List<ExecClassData>) :
 @SerialName("SESSION_FINISHED")
 @Serializable
 data class SessionFinished(val sessionId: String, val ts: Long) : CoverMessage()
-
-@Serializable
-data class ExecClassData(
-        val id: Long,
-        val className: String,
-        val probes: List<Boolean>,
-        val testName: String = ""
-)

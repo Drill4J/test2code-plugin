@@ -5,7 +5,7 @@ import kotlinx.serialization.*
 
 fun String.extractJsonData() = substringAfter("\"data\":").substringBeforeLast("}")
 
-fun Action.stringify() = commonSerDe.stringify(commonSerDe.actionSerializer, this)
+fun Action.stringify() = adminSerDe.stringify(adminSerDe.actionSerializer, this)
 
 @UseExperimental(ImplicitReflectionSerializer::class)
 inline fun <reified T> String.parseJsonData() = serializer<T>().parse(extractJsonData())

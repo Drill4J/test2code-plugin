@@ -18,7 +18,7 @@ class Test2CodeAdminPart(
     id: String
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
 
-    override val serDe: SerDe<Action> = commonSerDe
+    override val serDe: SerDe<Action> = adminSerDe
 
     lateinit var pluginInstanceState: PluginInstanceState
 
@@ -30,7 +30,7 @@ class Test2CodeAdminPart(
 
     val buildVersion = agentInfo.buildVersion
 
-    val buildInfo: BuildInfo? get() = adminData.buildManager[agentInfo.buildVersion]
+    val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
     val activeScope get() = pluginInstanceState.activeScope
 
