@@ -8,33 +8,32 @@ internal fun IBundleCoverage.packageTree(): List<JavaPackageCoverage> = packages
         name = packageCoverage.name,
         totalClassesCount = packageCoverage.classCounter.totalCount,
         totalMethodsCount = packageCoverage.methodCounter.totalCount,
-        classes = packageCoverage.classes.classCoverage()
+        classes = packageCoverage.classes.classTree()
     )
 }.toList()
 
-
-internal fun List<JavaPackageCoverage>.treeCoverage(
+internal fun ClassesData.treeCoverage(
     bundle: IBundleCoverage,
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
 ): List<JavaPackageCoverage> = run {
     val packageItr = bundle.packages.iterator()
     var cvg = packageItr.nextOrNull()
-    map { pkg ->
+    packageTree.map { pkg ->
         val pkgCvg = cvg
         val key = pkgCvg?.coverageKey()
         if (pkgCvg != null && pkg.id == key?.id) {
             pkg.copy(
-                coverage = pkgCvg.coverage,
+                coverage = pkgCvg.coverage(totalInstructions),
                 coveredClassesCount = pkgCvg.classCounter.coveredCount,
                 coveredMethodsCount = pkgCvg.methodCounter.coveredCount,
                 assocTestsCount = assocTestsMap[key]?.count(),
-                classes = pkg.classes.classCoverage(pkgCvg.classes, assocTestsMap)
+                classes = pkg.classes.classCoverage(pkgCvg.classes, assocTestsMap, totalInstructions)
             ).also { cvg = packageItr.nextOrNull() }
         } else pkg
     }
 }
 
-internal fun Collection<IClassCoverage>.classCoverage(
+private fun Collection<IClassCoverage>.classTree(
     assocTestsMap: Map<CoverageKey, List<TypedTest>> = emptyMap()
 ): List<JavaClassCoverage> = map { classCoverage ->
     val classKey = classCoverage.coverageKey()
@@ -47,10 +46,10 @@ internal fun Collection<IClassCoverage>.classCoverage(
     )
 }.toList()
 
-
 private fun List<JavaClassCoverage>.classCoverage(
     classCoverages: Collection<IClassCoverage>,
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>
+    assocTestsMap: Map<CoverageKey, List<TypedTest>>,
+    total: Int
 ): List<JavaClassCoverage> = run {
     val itr = classCoverages.iterator()
     var next = itr.nextOrNull()
@@ -58,17 +57,18 @@ private fun List<JavaClassCoverage>.classCoverage(
         next?.run { coverageKey() to this }
             ?.takeIf { it.first.id == classCov.id }?.let { (key, cov) ->
                 classCov.copy(
-                    coverage = cov.coverage,
+                    coverage = cov.coverage(total),
                     coveredMethodsCount = cov.methodCounter.coveredCount,
                     assocTestsCount = assocTestsMap[key]?.count(),
-                    methods = cov.toMethodCoverage(assocTestsMap)
+                    methods = cov.toMethodCoverage(assocTestsMap, total)
                 ).also { next = itr.nextOrNull() }
             } ?: classCov
     }
 }
 
 internal fun IClassCoverage.toMethodCoverage(
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>
+    assocTestsMap: Map<CoverageKey, List<TypedTest>>,
+    total: Int = 0
 ): List<JavaMethodCoverage> {
     return methods.map { methodCoverage ->
         val methodKey = methodCoverage.coverageKey(this)
@@ -77,7 +77,7 @@ internal fun IClassCoverage.toMethodCoverage(
             name = name.methodName(methodCoverage.name) ?: "",
             desc = methodCoverage.desc,
             decl = declaration(methodCoverage.desc),
-            coverage = methodCoverage.coverage,
+            coverage = methodCoverage.coverage(total),
             assocTestsCount = assocTestsMap[methodKey]?.count()
         )
     }.toList()

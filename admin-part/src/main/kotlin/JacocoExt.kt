@@ -19,8 +19,6 @@ val CoverageKey.isMethod get() = methodName != null
 
 val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
 
-val ICoverageNode.coverage get() = coverage(instructionCounter.totalCount)
-
 fun IMethodCoverage.coverageRate() = instructionCounter?.run {
     when (this.totalCount - this.coveredCount) {
         0 -> CoverageRate.FULL
@@ -30,7 +28,7 @@ fun IMethodCoverage.coverageRate() = instructionCounter?.run {
 
 }
 
-fun ICoverageNode.coverage(total: Int) = when (total) {
+fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double = when (total) {
     0 -> 0.0
     else -> instructionCounter.coveredCount * 100.0 / total
 }

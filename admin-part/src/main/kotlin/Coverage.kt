@@ -39,7 +39,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
 
     val totalInstructions = classesData.totalInstructions
     val bundleCoverage = toProbes().bundle(classesBytes)
-    val totalCoveragePercent = bundleCoverage.coverage
+    val totalCoveragePercent = bundleCoverage.coverage(totalInstructions)
 
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
@@ -80,7 +80,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
         )
     )
 
-    val packageCoverage = classesData.packageTree.treeCoverage(bundleCoverage, assocTestsMap)
+    val packageCoverage = classesData.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         methodsChanges,
