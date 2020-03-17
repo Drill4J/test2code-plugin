@@ -8,6 +8,7 @@ internal fun IBundleCoverage.packageTree(): List<JavaPackageCoverage> = packages
         name = packageCoverage.name,
         totalClassesCount = packageCoverage.classCounter.totalCount,
         totalMethodsCount = packageCoverage.methodCounter.totalCount,
+        totalCount = packageCoverage.instructionCounter.totalCount,
         classes = packageCoverage.classes.classTree()
     )
 }.toList()
@@ -23,7 +24,7 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
         val key = pkgCvg?.coverageKey()
         if (pkgCvg != null && pkg.id == key?.id) {
             pkg.copy(
-                coverage = pkgCvg.coverage(),
+                coverage = pkgCvg.coverage(pkg.totalCount),
                 coveredClassesCount = pkgCvg.classCounter.coveredCount,
                 coveredMethodsCount = pkgCvg.methodCounter.coveredCount,
                 assocTestsCount = assocTestsMap[key]?.count(),

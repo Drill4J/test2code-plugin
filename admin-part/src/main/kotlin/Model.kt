@@ -88,6 +88,7 @@ data class JavaPackageCoverage(
     val name: String,
     val totalClassesCount: Int = 0,
     val totalMethodsCount: Int = 0,
+    val totalCount: Int = 0,
     val coverage: Double = 0.0,
     val coveredClassesCount: Int = 0,
     val coveredMethodsCount: Int = 0,
