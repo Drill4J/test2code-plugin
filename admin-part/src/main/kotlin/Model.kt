@@ -36,12 +36,16 @@ enum class CoverageRate {
 
 interface Coverage {
     val coverage: Double
+    val methodCount: Count
+    val riskCount: Count
     val coverageByType: Map<String, TestTypeSummary>
 }
 
 @Serializable
 data class ScopeCoverage(
     override val coverage: Double,
+    override val methodCount: Count,
+    override val riskCount: Count,
     override val coverageByType: Map<String, TestTypeSummary>
 ) : Coverage
 
@@ -49,9 +53,11 @@ data class ScopeCoverage(
 @Serializable
 data class BuildCoverage(
     override val coverage: Double,
+    override val methodCount: Count,
+    override val riskCount: Count,
+    override val coverageByType: Map<String, TestTypeSummary>,
     val diff: Double,
     val prevBuildVersion: String,
-    override val coverageByType: Map<String, TestTypeSummary>,
     val arrow: ArrowType?,
     val finishedScopesCount: Int
 ) : Coverage
@@ -207,7 +213,7 @@ data class TestsToRun(
 
 @Serializable
 data class TestsToRunDto(
-    val groupedTests : GroupedTests,
+    val groupedTests: GroupedTests,
     val count: Int
 ) : (Any) -> Any {
     //TODO separate aggregation implementation from the data class
@@ -234,3 +240,9 @@ data class SummaryDto(
     //TODO separate aggregation implementation from the data class
     override fun invoke(other: Any): Any = this + other
 }
+
+@Serializable
+data class Count(
+    val covered: Int,
+    val total: Int
+)

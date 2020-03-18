@@ -7,6 +7,8 @@ import kotlin.math.*
 
 typealias ClassesBytes = Map<String, ByteArray>
 
+internal val zeroCount = Count(covered = 0, total = 0)
+
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<FinishedSession>,
     state: PluginInstanceState
@@ -48,21 +50,26 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     }
     println(coverageByType)
 
+    val methodCount = bundleCoverage.methodCounter.toCount()
     val coverageBlock: Coverage = when (scope) {
         null -> {
             val prevBuildVersion = classesData.prevBuildVersion
             BuildCoverage(
                 coverage = totalCoveragePercent,
+                methodCount = methodCount,
+                riskCount = zeroCount,
+                coverageByType = coverageByType,
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
                 prevBuildVersion = prevBuildVersion,
-                coverageByType = coverageByType,
                 arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
                 finishedScopesCount = state.scopeManager.scopes(buildVersion).count()
             )
         }
         else -> ScopeCoverage(
             totalCoveragePercent,
-            coverageByType
+            methodCount = methodCount,
+            riskCount = zeroCount,
+            coverageByType = coverageByType
         )
     }
     println(coverageBlock)
