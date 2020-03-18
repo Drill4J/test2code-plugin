@@ -71,5 +71,8 @@ class Routes {
 
         @Location("/test-types/covered-methods")
         object MethodsCoveredByTestType
+
+        @Location("/summary")
+        object Summary
     }
 }

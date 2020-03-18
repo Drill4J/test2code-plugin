@@ -1,7 +1,5 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.kodux.*
-
 operator fun SummaryDto.plus(other: Any): SummaryDto = when (other) {
     is SummaryDto -> plus(other)
     else -> this
@@ -36,15 +34,3 @@ private fun TestsToRunDto.plus(other: TestsToRunDto): TestsToRunDto {
 fun GroupedTests.totalCount(): Int {
     return this.values.sumBy { it.count() }
 }
-
-suspend fun StoreClient.summaryOf(agentId: String, buildVersion: String): SummaryDto? {
-    return readLastBuildCoverage(agentId, buildVersion)?.toSummary()
-}
-
-private fun LastBuildCoverage.toSummary() = SummaryDto(
-    coverage = coverage,
-    arrow = arrow?.let { ArrowType.valueOf(it) },
-    risks = risks,
-    testsToRun = testsToRun,
-    _aggCoverages = listOf(coverage)
-)

@@ -231,6 +231,17 @@ class Test2CodeAdminPart(
         send(buildVersion, Routes.Build.MethodsCoveredByTest, methodsCoveredByTest)
         send(buildVersion, Routes.Build.MethodsCoveredByTestType, methodsCoveredByTestType)
         send(buildVersion, Routes.Build.Risks, risks)
+        val message = SummaryDto(
+            coverage = coverage.coverage,
+            arrow = null,
+            risks = risks.run { newMethods.count() + modifiedMethods.count() },
+            testsToRun = TestsToRunDto(
+                groupedTests = testsToRun,
+                count = testsToRun.totalCount()
+            ),
+            _aggCoverages = listOf(coverage.coverage)
+        )
+        send(agentInfo.serviceGroup, buildVersion, Routes.Build.Summary, message)
         send(buildVersion, Routes.Build.TestsToRun, TestsToRun(testsToRun))
     }
 
@@ -286,6 +297,12 @@ class Test2CodeAdminPart(
         processData(InitInfo(classesBytes.keys.count(), ""))
         pluginInstanceState.initialized()
         processData(Initialized())
+    }
+
+    private suspend fun send(serviceGroup: String, buildVersion: String, destination: Any, message: Any) {
+        if (serviceGroup.isNotEmpty()) {
+            sender.send(agentInfo.serviceGroup, agentInfo.id, buildVersion, destination, message)
+        }
     }
 
     private suspend fun send(buildVersion: String, destination: Any, message: Any) {
