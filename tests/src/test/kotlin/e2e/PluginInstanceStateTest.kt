@@ -101,8 +101,8 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.apply {
                     activeScopeIdFirstBuild = id
-                    coverage shouldBe 100.0
-                    coveragesByType.getValue("MANUAL").apply {
+                    coverage.coverage shouldBe 100.0
+                    coverage.coverageByType.getValue("MANUAL").apply {
                         testType shouldBe "MANUAL"
                         coverage shouldBe 100.0
                         testCount shouldBe 1
@@ -134,8 +134,8 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
                 plugUi.activeScope()!!.apply {
                     id shouldNotBe activeScopeIdFirstBuild
-                    coverage shouldBe 0.0
-                    coveragesByType shouldBe emptyMap()
+                    coverage.coverage shouldBe 0.0
+                    coverage.coverageByType shouldBe emptyMap()
                 }
             }
         }

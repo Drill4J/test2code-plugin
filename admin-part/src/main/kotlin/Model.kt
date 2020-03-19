@@ -183,10 +183,14 @@ data class ScopeSummary(
     val id: String,
     val started: Long,
     val finished: Long = 0L,
-    val coverage: Double = 0.0,
     var enabled: Boolean = true,
     val active: Boolean = true,
-    val coveragesByType: Map<String, TestTypeSummary> = emptyMap()
+    val coverage: ScopeCoverage = ScopeCoverage(
+        coverage = 0.0,
+        methodCount = zeroCount,
+        riskCount = zeroCount,
+        coverageByType = emptyMap()
+    )
 )
 
 @Serializable
@@ -246,3 +250,5 @@ data class Count(
     val covered: Int,
     val total: Int
 )
+
+internal val zeroCount = Count(covered = 0, total = 0)

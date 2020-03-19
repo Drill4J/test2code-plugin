@@ -7,8 +7,6 @@ import kotlin.math.*
 
 typealias ClassesBytes = Map<String, ByteArray>
 
-internal val zeroCount = Count(covered = 0, total = 0)
-
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<FinishedSession>,
     state: PluginInstanceState
@@ -16,12 +14,17 @@ internal fun ScopeSummary.calculateCoverage(
     val classesData = state.data as ClassesData
     state.buildInfo?.classesBytes?.let { classesBytes ->
         val totalInstructions = classesData.totalInstructions
+        val bundle = sessions.toProbes().bundle(classesBytes)
         copy(
-            coverage = sessions.toProbes().bundle(classesBytes).coverage(totalInstructions),
-            coveragesByType = sessions.coveragesByTestType(
-                sessions.bundlesByTests(classesBytes),
-                classesBytes,
-                totalInstructions
+            coverage = ScopeCoverage(
+                coverage = bundle.coverage(totalInstructions),
+                methodCount = bundle.methodCounter.toCount(),
+                riskCount = zeroCount,
+                coverageByType = sessions.coveragesByTestType(
+                    sessions.bundlesByTests(classesBytes),
+                    classesBytes,
+                    totalInstructions
+                )
             )
         )
     } ?: this
@@ -46,7 +49,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
         null -> coveragesByTestType(bundlesByTests, classesBytes, totalInstructions)
-        else -> scope.summary.coveragesByType
+        else -> scope.summary.coverage.coverageByType
     }
     println(coverageByType)
 
