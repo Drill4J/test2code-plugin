@@ -4,6 +4,7 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.session.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
@@ -16,29 +17,28 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     override val confSerializer = CoverConfig.serializer()
 
-    override val serDe = commonSerDe
+    override val serDe: SerDe<Action> = commonSerDe
 
-    val instrumenter = instrumenter(instrContext)
+    private val instrumenter: DrillInstrumenter = instrumenter(instrContext)
 
-    private val _loadedClasses = atomic(emptyMap<String, Long?>())
-
-    private var loadedClasses
-        get() = _loadedClasses.value
-        set(value) {
-            _loadedClasses.value = value
-        }
+    private val _loadedClasses: AtomicRef<LoadedClasses> = atomic(emptyClasses)
 
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
-        val loadedClassesMap = payload.agentData.classMap
-        val initInfo = InitInfo(loadedClassesMap.keys.count(), initializingMessage)
+        val classBytes: Map<String, ByteArray> = payload.agentData.classMap
+        val initInfo = InitInfo(classBytes.keys.count(), initializingMessage)
         sendMessage(initInfo)
-        loadedClasses = loadedClassesMap.map { (className, bytes) ->
-            val classId = CRC64.classId(bytes)
-            className to classId
-        }.toMap()
+        val loadedClasses = classBytes.run {
+            LoadedClasses(
+                names = keys.mapTo(persistentHashSetOf<String>().builder()) { it.replace('/', '.') },
+                checkSums = mapValuesTo(persistentHashMapOf<String, Long>().builder()) { (_, bytes) ->
+                    CRC64.classId(bytes)
+                }.build()
+            )
+        }
+        _loadedClasses.value = loadedClasses
         sendMessage(Initialized(msg = "Initialized"))
-        println("Plugin $id initialized! Loaded ${loadedClassesMap.count()} classes")
+        println("Plugin $id initialized! Loaded ${classBytes.count()} classes")
         retransform()
     }
 
@@ -46,9 +46,11 @@ class CoverageAgentPart @JvmOverloads constructor(
         retransform()
     }
 
-    override fun instrument(className: String, initialBytes: ByteArray): ByteArray? {
-        if (!enabled) return null
-        return loadedClasses[className]?.let { classId ->
+    override fun instrument(
+        className: String,
+        initialBytes: ByteArray
+    ): ByteArray? = takeIf { enabled }?.run {
+        _loadedClasses.value[className]?.let { classId ->
             instrumenter(className, classId, initialBytes)
         }
     }
@@ -58,18 +60,17 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun retransform() {
-        val classes = payload.agentData.classMap.keys.map { it.replace("/", ".") }
-        val filter = DrillRequest.GetAllLoadedClasses().filter { it.name in classes }
-        if (filter.isNotEmpty())
-            DrillRequest.RetransformClasses(filter.toTypedArray())
-        println("${filter.size} classes were re-transformed")
+        val classes = _loadedClasses.value
+        val filtered = DrillRequest.GetAllLoadedClasses().filter { it.name in classes }
+        if (filtered.isNotEmpty()) {
+            DrillRequest.RetransformClasses(filtered.toTypedArray())
+        }
+        println("${filtered.size} classes were retransformed.")
     }
 
     override fun initPlugin() {
-        println("Plugin $id initialized")
-
+        println("Plugin $id initialized.")
     }
-
 
     override suspend fun doAction(action: Action) {
         when (action) {
@@ -113,3 +114,14 @@ fun AgentPart<*, *>.sendMessage(message: CoverMessage) {
     val messageStr = CoverMessage.serializer() stringify message
     send(messageStr)
 }
+
+private class LoadedClasses(
+    private val names: Set<String> = emptySet(),
+    private val checkSums: Map<String, Long> = emptyMap()
+) {
+    operator fun get(path: String): Long? = checkSums[path]
+
+    operator fun contains(name: String): Boolean = names.contains(name)
+}
+
+private val emptyClasses = LoadedClasses()

@@ -1,6 +1,8 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.processing.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.*
@@ -85,24 +87,27 @@ class ExecRuntime(
  */
 open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillContex = DrillContext) :
     SessionProbeArrayProvider {
-    private val sessionRuntimes = ConcurrentHashMap<String, ExecRuntime>()
+    private val sessionRuntimes get() = _runtimes.value
 
-    override fun invoke(id: Long, name: String, probeCount: Int): BooleanArray {
-        val sessionId = instrContext()
-        return when (val sessionRuntime = if (sessionId != null) sessionRuntimes[sessionId] else null) {
-            null -> BooleanArray(probeCount)
-            else -> {
-                val testName = instrContext[DRIlL_TEST_NAME] ?: "default"
-                sessionRuntime(id, name, probeCount, testName)
-            }
+    private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
+
+    override fun invoke(
+        id: Long,
+        name: String,
+        probeCount: Int
+    ): BooleanArray = instrContext()?.let { sessionId ->
+        sessionRuntimes[sessionId]?.let { sessionRuntime ->
+            val testName = instrContext[DRIlL_TEST_NAME] ?: "default"
+            sessionRuntime(id, name, probeCount, testName)
         }
-    }
+    } ?: BooleanArray(probeCount)
 
     override fun start(
         sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit
     ) {
-        val execRuntime = ExecRuntime()
-        sessionRuntimes[sessionId] = execRuntime
+        val execRuntime = _runtimes.updateAndGet {
+            it + (sessionId to ExecRuntime())
+        }[sessionId]!!
         ProbesWorker.launch {
             execRuntime.collect {
                 eventCallback(it)
@@ -111,12 +116,13 @@ open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillConte
 
     }
 
-    override fun stop(sessionId: String): Sequence<ExecDatum>? {
-        return sessionRuntimes.remove(sessionId)?.collect()
+    override fun stop(sessionId: String): Sequence<ExecDatum>? = run {
+        remove(sessionId)?.collect()
     }
 
     override fun cancel(sessionId: String) {
-        sessionRuntimes.remove(sessionId)?.close()
+        remove(sessionId)?.close()
     }
 
+    private fun remove(sessionId: String): ExecRuntime? = _runtimes.getAndUpdate { it - sessionId }[sessionId]
 }

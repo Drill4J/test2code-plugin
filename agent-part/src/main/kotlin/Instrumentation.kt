@@ -21,12 +21,11 @@ private class CustomInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider
 ) : DrillInstrumenter {
 
-    override fun invoke(className: String, classId: Long, classBody: ByteArray) =
-        try {
-            instrument(className, classId, classBody)
-        } catch (e: RuntimeException) {
-            throw IOException("Error while instrumenting $className classId=$classId.", e)
-        }
+    override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray = try {
+        instrument(className, classId, classBody)
+    } catch (e: RuntimeException) {
+        throw IOException("Error while instrumenting $className classId=$classId.", e)
+    }
 
     fun instrument(className: String, classId: Long, classBody: ByteArray): ByteArray {
         val version = InstrSupport.getMajorVersion(classBody)

@@ -5,7 +5,9 @@ plugins {
     id("com.github.johnrengelman.shadow")
 }
 
-val jarDeps by configurations.creating
+val jarDeps by configurations.creating {
+    attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
+}
 configurations.implementation {
     extendsFrom(jarDeps)
 }
@@ -13,6 +15,7 @@ configurations.implementation {
 dependencies {
     jarDeps(project(":common-part")) { isTransitive = false }
     jarDeps("org.jacoco:org.jacoco.core")
+    jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")  { isTransitive = false }
 
     implementation(kotlin("stdlib"))
 
@@ -25,6 +28,7 @@ dependencies {
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.jetbrains.kotlinx:atomicfu")
 }
 
 tasks {
@@ -45,7 +49,8 @@ tasks {
         }
         listOf(
             "org.objectweb.asm",
-            "org.jacoco.core"
+            "org.jacoco.core",
+            "kotlinx.collections.immutable"
         ).forEach { relocate(it, "${rootProject.group}.test2code.shadow.$it") }
     }
 
