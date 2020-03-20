@@ -82,9 +82,17 @@ class Test2CodeAdminPart(
 
     internal suspend fun processData(message: CoverMessage) = when (message) {
         is InitInfo -> {
-            pluginInstanceState.init()
+            if (message.init) {
+                pluginInstanceState.init()
+            }
             println(message.message) //log init message
             println("${message.classesCount} classes to load")
+        }
+        is InitDataPart -> {
+            (pluginInstanceState.data as? DataBuilder)?.also {
+                println(message)
+                it += message.astEntities
+            }
         }
         is Initialized -> {
             pluginInstanceState.initialized()

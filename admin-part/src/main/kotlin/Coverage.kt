@@ -13,7 +13,7 @@ internal fun ScopeSummary.calculateCoverage(
 ): ScopeSummary = run {
     val classesData = state.data as ClassesData
     state.buildInfo?.classesBytes?.let { classesBytes ->
-        val totalInstructions = classesData.totalInstructions
+        val totalInstructions = classesData.packageTree.totalCount
         val bundle = sessions.toProbes().bundle(classesBytes)
         copy(
             coverage = ScopeCoverage(
@@ -42,7 +42,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
-    val totalInstructions = classesData.totalInstructions
+    val totalInstructions = classesData.packageTree.totalCount
     val bundleCoverage = toProbes().bundle(classesBytes)
     val totalCoveragePercent = bundleCoverage.coverage(totalInstructions)
 
@@ -90,7 +90,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
         )
     )
 
-    val packageCoverage = classesData.packageTree.treeCoverage(bundleCoverage, assocTestsMap)
+    val packageCoverage = classesData.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         methodsChanges,

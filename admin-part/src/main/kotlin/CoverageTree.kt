@@ -2,7 +2,7 @@ package com.epam.drill.plugins.test2code
 
 import org.jacoco.core.analysis.*
 
-internal fun IBundleCoverage.packageTree(): List<JavaPackageCoverage> = packages.map { packageCoverage ->
+internal fun IBundleCoverage.toPackages(): List<JavaPackageCoverage> = packages.map { packageCoverage ->
     JavaPackageCoverage(
         id = packageCoverage.coverageKey().id,
         name = packageCoverage.name,
@@ -12,6 +12,35 @@ internal fun IBundleCoverage.packageTree(): List<JavaPackageCoverage> = packages
         classes = packageCoverage.classes.classTree()
     )
 }.toList()
+
+internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
+    groupBy(AstEntity::path).entries.map { (path, astEntities) ->
+        JavaPackageCoverage(
+            id = path.crc64,
+            name = path,
+            totalClassesCount = astEntities.count(),
+            totalMethodsCount = astEntities.flatMap(AstEntity::methods).count(),
+            totalCount = astEntities.flatMap(AstEntity::methods).map(AstMethod::count).sum(),
+            classes = astEntities.map { ast ->
+                JavaClassCoverage(
+                    id = "$path.${ast.name}".crc64,
+                    name = ast.name,
+                    path = path,
+                    totalMethodsCount = ast.methods.count(),
+                    methods = ast.methods.map { astMethod ->
+                        JavaMethodCoverage(
+                            id = "$path.${ast.name}.${astMethod.name}".crc64,
+                            name = astMethod.name,
+                            desc = "",
+                            count = astMethod.count,
+                            decl = astMethod.params.joinToString(prefix = "(", postfix = "):${astMethod.returnType}")
+                        )
+                    }
+                )
+            }
+        )
+    }
+}
 
 internal fun Iterable<JavaPackageCoverage>.treeCoverage(
     bundle: IBundleCoverage,
@@ -77,6 +106,7 @@ internal fun IClassCoverage.toMethodCoverage(
             desc = methodCoverage.desc,
             decl = declaration(methodCoverage.desc),
             coverage = methodCoverage.coverage(),
+            count = methodCoverage.instructionCounter.totalCount,
             assocTestsCount = assocTestsMap[methodKey]?.count()
         )
     }.toList()

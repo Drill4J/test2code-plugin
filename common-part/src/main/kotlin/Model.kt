@@ -8,6 +8,21 @@ data class CoverConfig(
 )
 
 @Serializable
+data class AstEntity(
+    val path: String,
+    val name: String,
+    val methods: List<AstMethod>
+)
+
+@Serializable
+data class AstMethod(
+    val name: String,
+    val params: List<String>,
+    val returnType: String,
+    val count: Int = 0
+)
+
+@Serializable
 data class StartPayload(val testType: String = "MANUAL", val sessionId: String = "")
 
 @Serializable

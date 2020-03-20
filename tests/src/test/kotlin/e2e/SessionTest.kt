@@ -60,7 +60,7 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                plugUi.activeScope()!!.coverage shouldBe 0.0
+                plugUi.activeScope()!!.coverage.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
 
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -79,7 +79,7 @@ class SessionTest : E2EPluginTest() {
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 73.33333333333333
+                plugUi.activeScope()!!.coverage.coverage shouldBe 73.33333333333333
 
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
                 pluginAction(startNewSession2) { status, content ->
@@ -103,7 +103,7 @@ class SessionTest : E2EPluginTest() {
                     pluginAction(switchScope).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 0.0
+                plugUi.activeScope()!!.coverage.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 73.33333333333333
             }
         }
@@ -118,7 +118,7 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                plugUi.activeScope()!!.coverage shouldBe 0.0
+                plugUi.activeScope()!!.coverage.coverage shouldBe 0.0
                 plugUi.buildCoverage()!!.coverage shouldBe 0.0
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->

@@ -10,8 +10,13 @@ abstract class CoverMessage
 @Serializable
 data class InitInfo(
     val classesCount: Int,
-    val message: String
+    val message: String,
+    val init: Boolean = false
 ) : CoverMessage()
+
+@SerialName("INIT_DATA_PART")
+@Serializable
+data class InitDataPart(val astEntities: List<AstEntity>) : CoverMessage()
 
 @SerialName("INITIALIZED")
 @Serializable

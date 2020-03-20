@@ -23,7 +23,7 @@ class ScopeTest : E2EPluginTest() {
                     name shouldBe "New Scope 1"
                     started shouldNotBe 0L
                     finished shouldBe 0L
-                    coverage shouldBe 0.0
+                    coverage.coverage shouldBe 0.0
                     enabled shouldBe true
                     active shouldBe true
                 }
@@ -34,7 +34,7 @@ class ScopeTest : E2EPluginTest() {
                     name shouldBe "New Scope 1"
                     started shouldNotBe 0L
                     finished shouldBe 0L
-                    coverage shouldBe 0.0
+                    coverage.coverage shouldBe 0.0
                     enabled shouldBe true
                     active shouldBe true
                 }
@@ -69,7 +69,7 @@ class ScopeTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
                 plugUi.activeScope()!!.apply {
-                    coverage shouldBe 0.0
+                    coverage.coverage shouldBe 0.0
                     droppedScopeId = id
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -86,7 +86,7 @@ class ScopeTest : E2EPluginTest() {
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 100.0
+                plugUi.activeScope()!!.coverage.coverage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -114,7 +114,7 @@ class ScopeTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
                 plugUi.activeScope()!!.apply {
-                    coverage shouldBe 0.0
+                    coverage.coverage shouldBe 0.0
                     ignoredScopeId = id
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -131,7 +131,7 @@ class ScopeTest : E2EPluginTest() {
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage shouldBe 100.0
+                plugUi.activeScope()!!.coverage.coverage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",

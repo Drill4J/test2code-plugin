@@ -13,6 +13,7 @@ val commonSerDe = SerDe(
         }
         polymorphic<CoverMessage> {
             subclass(InitInfo.serializer())
+            subclass(InitDataPart.serializer())
             subclass(Initialized.serializer())
 
             subclass(SessionStarted.serializer())

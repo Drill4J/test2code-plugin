@@ -5,8 +5,6 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
-import org.jacoco.core.analysis.*
-import org.jacoco.core.data.*
 
 /**
  * Agent state.
@@ -40,24 +38,29 @@ class PluginInstanceState(
 
     private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
 
-    fun init() {
-        _data.updateAndGet { ClassDataBuilder }
-    }
+    fun init() = _data.update { DataBuilder() }
 
     suspend fun initialized() {
-        val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-        val bundleCoverage = classesBytes.bundle()
-        val classesData = ClassesData(
-            buildVersion = agentInfo.buildVersion,
-            totalInstructions = bundleCoverage.instructionCounter.totalCount,
-            prevBuildVersion = prevBuildVersion,
-            prevBuildCoverage = lastPrevBuildCoverage,
-            packageTree = bundleCoverage.packageTree()
-        )
-        _data.value = classesData
-        val buildTests = storeClient.findById(agentInfo.id) ?: storeClient.store(this.buildTests)
-        _buildTests.value = buildTests
+        val classesData = _data.updateAndGet { data ->
+            when (data) {
+                is DataBuilder -> PackageTree(
+                    totalCount = data.flatMap(AstEntity::methods).sumBy(AstMethod::count),
+                    packages = data.toPackages()
+                ).toClassesData()
+                is ClassesData -> data
+                is NoData -> {
+                    val classesBytes = buildInfo?.classesBytes ?: emptyMap()
+                    val bundleCoverage = classesBytes.bundle()
+                    PackageTree(
+                        totalCount = bundleCoverage.instructionCounter.totalCount,
+                        packages = bundleCoverage.toPackages()
+                    ).toClassesData()
+                }
+            }
+        } as ClassesData
         storeClient.store(classesData)
+        val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
+        _buildTests.value = tests
     }
 
     suspend fun addBuildTests(buildVersion: String, tests: List<AssociatedTests>) {
@@ -118,6 +121,13 @@ class PluginInstanceState(
         "" -> "New Scope ${_scopeCounter.incrementAndGet()}"
         else -> trimmed
     }
+
+    private fun PackageTree.toClassesData() = ClassesData(
+        buildVersion = agentInfo.buildVersion,
+        prevBuildVersion = prevBuildVersion,
+        prevBuildCoverage = lastPrevBuildCoverage,
+        packageTree = this
+    )
 }
 
 
