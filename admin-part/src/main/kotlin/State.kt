@@ -72,7 +72,7 @@ class PluginInstanceState(
         storeClient.store(
             LastBuildCoverage(
                 id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
-                coverage = buildCoverage.coverage,
+                coverage = buildCoverage.ratio,
                 arrow = buildCoverage.arrow?.name,
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
                 testsToRun = TestsToRunDto(

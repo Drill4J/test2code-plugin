@@ -15,18 +15,18 @@ class CoverageTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 0.0
+                    ratio shouldBe 0.0
                     diff shouldBe 0.0
                     prevBuildVersion shouldBe ""
-                    coverageByType shouldBe emptyMap()
+                    byTestType shouldBe emptyMap()
                     arrow shouldBe null
                 }
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 0.0
+                    ratio shouldBe 0.0
                     diff shouldBe 0.0
                     prevBuildVersion shouldBe "30507"
-                    coverageByType shouldBe emptyMap()
+                    byTestType shouldBe emptyMap()
                     arrow shouldBe null
                 }
             }

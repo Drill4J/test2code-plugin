@@ -101,8 +101,8 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.apply {
                     activeScopeIdFirstBuild = id
-                    coverage.coverage shouldBe 100.0
-                    coverage.coverageByType.getValue("MANUAL").apply {
+                    coverage.ratio shouldBe 100.0
+                    coverage.byTestType.getValue("MANUAL").apply {
                         testType shouldBe "MANUAL"
                         coverage shouldBe 100.0
                         testCount shouldBe 1
@@ -134,8 +134,8 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
                 plugUi.activeScope()!!.apply {
                     id shouldNotBe activeScopeIdFirstBuild
-                    coverage.coverage shouldBe 0.0
-                    coverage.coverageByType shouldBe emptyMap()
+                    coverage.ratio shouldBe 0.0
+                    coverage.byTestType shouldBe emptyMap()
                 }
             }
         }
@@ -186,7 +186,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     testTypeToNames.isEmpty() shouldBe true
                 }
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 100.0
+                    ratio shouldBe 100.0
                     arrow shouldBe null
                     diff shouldNotBe 0.0
                     prevBuildVersion shouldBe ""
@@ -245,7 +245,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.subscribe(SubscribeInfo(agentId, "30507"))
                 plugUi.buildCoverage()//FIXME EPMDJ-2270 extra write
                 plugUi.buildCoverage()!!.apply {
-                    coverage shouldBe 100.0
+                    ratio shouldBe 100.0
                     arrow shouldBe null
                     diff shouldBe 100.0
                 }

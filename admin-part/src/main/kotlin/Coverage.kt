@@ -17,10 +17,10 @@ internal fun ScopeSummary.calculateCoverage(
         val bundle = sessions.toProbes().bundle(classesBytes)
         copy(
             coverage = ScopeCoverage(
-                coverage = bundle.coverage(totalInstructions),
+                ratio = bundle.coverage(totalInstructions),
                 methodCount = bundle.methodCounter.toCount(),
                 riskCount = zeroCount,
-                coverageByType = sessions.coveragesByTestType(
+                byTestType = sessions.coveragesByTestType(
                     sessions.bundlesByTests(classesBytes),
                     classesBytes,
                     totalInstructions
@@ -49,7 +49,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
         null -> coveragesByTestType(bundlesByTests, classesBytes, totalInstructions)
-        else -> scope.summary.coverage.coverageByType
+        else -> scope.summary.coverage.byTestType
     }
     println(coverageByType)
 
@@ -58,10 +58,10 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
         null -> {
             val prevBuildVersion = classesData.prevBuildVersion
             BuildCoverage(
-                coverage = totalCoveragePercent,
+                ratio = totalCoveragePercent,
                 methodCount = methodCount,
                 riskCount = zeroCount,
-                coverageByType = coverageByType,
+                byTestType = coverageByType,
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
                 prevBuildVersion = prevBuildVersion,
                 arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
@@ -72,7 +72,7 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
             totalCoveragePercent,
             methodCount = methodCount,
             riskCount = zeroCount,
-            coverageByType = coverageByType
+            byTestType = coverageByType
         )
     }
     println(coverageBlock)
