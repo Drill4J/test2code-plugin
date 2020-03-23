@@ -245,7 +245,22 @@ class Test2CodeAdminPart(
         send(buildVersion, Routes.Build.MethodsCoveredByTestType, methodsCoveredByTestType)
         send(buildVersion, Routes.Build.Risks, risks)
         send(buildVersion, Routes.Build.TestsToRun, TestsToRun(testsToRun))
+        send(coverage.toSummaryDto(risks, testsToRun))
     }
+
+    private suspend fun Test2CodeAdminPart.send(
+        summaryDto: SummaryDto
+    ) {
+        val serviceGroup = agentInfo.serviceGroup
+        if (serviceGroup.isNotEmpty()) {
+            val aggregatedMessage = aggregator(serviceGroup, agentId, summaryDto) ?: summaryDto
+            sendToGroup(
+                destination = Routes.Summary,
+                message = aggregatedMessage
+            )
+        }
+    }
+
 
     internal fun BuildMethods.risks(): Risks {
         val newRisks = newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }

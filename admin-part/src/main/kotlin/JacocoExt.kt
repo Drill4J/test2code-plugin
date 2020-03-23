@@ -29,10 +29,8 @@ fun IMethodCoverage.coverageRate() = instructionCounter?.run {
 
 }
 
-fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double = when (total) {
-    0 -> 0.0
-    else -> instructionCounter.coveredCount * 100.0 / total
-}
+fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double =
+    instructionCounter.coveredCount percentOf total
 
 fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when (this) {
     is IMethodCoverage -> CoverageKey(

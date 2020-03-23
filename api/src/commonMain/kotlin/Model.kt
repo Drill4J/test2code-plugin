@@ -233,22 +233,16 @@ data class TestsToRun(
 data class TestsToRunDto(
     val groupedTests: GroupedTests,
     val count: Int
-) : (Any) -> Any {
-    //TODO separate aggregation implementation from the data class
-    override fun invoke(other: Any): Any = this + other
-}
+)
 
 @Serializable
 data class SummaryDto(
     val coverage: Double,
+    val methodCount: Count,
     val arrow: ArrowType?,
     val risks: Int,
-    val testsToRun: TestsToRunDto,
-    val _aggCoverages: List<Double>
-) : (Any) -> Any {
-    //TODO separate aggregation implementation from the data class
-    override fun invoke(other: Any): Any = this + other
-}
+    val testsToRun: TestsToRunDto
+)
 
 @Serializable
 data class Count(

@@ -25,11 +25,7 @@ suspend fun Test2CodeAdminPart.handleGettingData(params: Map<String, String>): A
         dataStore.accept(writer)
         byteArrayOutputStream.toByteArray()
     }
-    else -> {
-        if (params.isEmpty()) {
-            storeClient.summaryOf(agentId, buildVersion) ?: JsonNull
-        } else Unit
-    }
+    else -> Unit
 }
 
 private fun Test2CodeAdminPart.newBuildActionsList(): String {
