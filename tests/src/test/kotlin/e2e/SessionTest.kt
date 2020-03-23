@@ -40,7 +40,6 @@ class SessionTest : E2EPluginTest() {
 
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
-                plugUi.activeSessions()?.count shouldBe 0
 
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()?.run {

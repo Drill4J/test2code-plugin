@@ -139,6 +139,13 @@ fun Sequence<FinishedSession>.coveragesByTestType(
     }
 }
 
+infix fun Int.percentOf(other: Int): Double = when (other) {
+    0 -> 0.0
+    else -> this * 100.0 / other
+}
+
+fun Count.percentage(): Double = covered percentOf total
+
 fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassData::toExecutionData)
     .fold(ExecutionDataStore()) { store, execData ->
         store.apply { put(execData) }

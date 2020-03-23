@@ -94,6 +94,8 @@ class CoverageSocketStreams : PluginStreams() {
     private val scopes: Channel<List<ScopeSummary>?> = Channel()
     suspend fun scopes() = scopes.receive()
 
+    private val summary: Channel<SummaryDto?> = Channel()
+    suspend fun summary() = summary.receive()
 
     override fun queued(incoming: ReceiveChannel<Frame>, out: SendChannel<Frame>, isDebugStream: Boolean) {
         iut = out
@@ -304,6 +306,11 @@ class CoverageSocketStreams : PluginStreams() {
                                                 risks.send(null)
                                             } else
                                                 risks.send(Risks.serializer() parse content)
+                                        }
+                                        is Routes.Summary -> {
+                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                                summary.send(null)
+                                            } else summary.send(SummaryDto.serializer() parse content)
                                         }
                                         else -> TODO("$url not implemented yet")
 
