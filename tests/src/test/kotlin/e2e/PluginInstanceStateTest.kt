@@ -1,10 +1,10 @@
 package com.epam.drill.plugins.test2code.e2e
 
+import com.epam.drill.admin.endpoints.plugin.*
 import com.epam.drill.builds.Build1
 import com.epam.drill.builds.Build2
 import com.epam.drill.e2e.E2EPluginTest
 import com.epam.drill.e2e.plugin.runWithSession
-import com.epam.drill.admin.endpoints.plugin.SubscribeInfo
 import com.epam.drill.plugins.test2code.*
 import io.kotlintest.matchers.boolean.shouldBeTrue
 import io.kotlintest.matchers.doubles.shouldBeGreaterThan
@@ -242,7 +242,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
 
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.subscribe(SubscribeInfo(agentId, "30507"))
+                plugUi.subscribe(AgentSubscription(agentId, "30507"))
                 plugUi.buildCoverage()//FIXME EPMDJ-2270 extra write
                 plugUi.buildCoverage()!!.apply {
                     ratio shouldBe 100.0

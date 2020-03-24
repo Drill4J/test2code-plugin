@@ -33,9 +33,9 @@ class CoverageSocketStreams : PluginStreams() {
 
     lateinit var iut: SendChannel<Frame>
 
-    override suspend fun subscribe(sinf: SubscribeInfo, destination: String) {
+    override suspend fun subscribe(sinf: AgentSubscription, destination: String) {
         pathToCallBackMapping.filterKeys { !it.contains("{") }.forEach {
-            iut.send(UiMessage(WsMessageType.SUBSCRIBE, it.key, SubscribeInfo.serializer() stringify sinf))
+            iut.send(Subscribe(it.key, AgentSubscription.serializer() stringify sinf).toTextFrame())
         }
         delay(1000)
         activeScope()
@@ -104,9 +104,9 @@ class CoverageSocketStreams : PluginStreams() {
                         val parseJson = json.parseJson(it.readText()) as JsonObject
                         if (isDebugStream)
                             println("PLUGIN: $parseJson")
-                        val messageType = WsMessageType.valueOf(parseJson[WsReceiveMessage::type.name]!!.content)
-                        val url = parseJson[WsReceiveMessage::destination.name]!!.content
-                        val content = parseJson[WsReceiveMessage::message.name]!!.toString()
+                        val messageType = WsMessageType.valueOf(parseJson[WsSendMessage::type.name]!!.content)
+                        val url = parseJson[WsSendMessage::destination.name]!!.content
+                        val content = parseJson[WsSendMessage::message.name]!!.toString()
 
                         when (messageType) {
                             WsMessageType.MESSAGE ->
@@ -371,14 +371,13 @@ class CoverageSocketStreams : PluginStreams() {
             Routes.Scope.MethodsCoveredByTestType(scopeId)
         ).forEach {
             iut.send(
-                UiMessage(
-                    WsMessageType.SUBSCRIBE,
-                    app.toLocation(it),
-                    SubscribeInfo.serializer() stringify SubscribeInfo(
-                        agentId,
-                        buildVersion
+                Subscribe(
+                    destination = app.toLocation(it),
+                    message = AgentSubscription.serializer() stringify AgentSubscription(
+                        agentId = agentId,
+                        buildVersion = buildVersion
                     )
-                )
+                ).toTextFrame()
             )
         }
 
