@@ -1,5 +1,7 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.common.*
+import com.epam.drill.plugins.test2code.common.api.*
 import kotlin.test.*
 
 class SerdeTest {

@@ -1,6 +1,6 @@
 @file:OptIn(KtorExperimentalLocationsAPI::class)
 
-package com.epam.drill.plugins.test2code.routes
+package com.epam.drill.plugins.test2code.api.routes
 
 import io.ktor.locations.*
 

@@ -5,7 +5,10 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugin.api.message.*
-import com.epam.drill.plugins.test2code.routes.*
+import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.common.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 
@@ -18,7 +21,7 @@ class Test2CodeAdminPart(
     id: String
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
 
-    override val serDe: SerDe<Action> = adminSerDe
+    override val serDe: SerDe<Action> = apiSerDe
 
     lateinit var pluginInstanceState: PluginInstanceState
 

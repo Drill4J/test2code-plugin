@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugins.test2code.api.*
 import kotlinx.coroutines.*
 
 internal fun Test2CodeAdminPart.initActiveScope() {

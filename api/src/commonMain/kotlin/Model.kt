@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.api
 
 import kotlinx.serialization.*
 

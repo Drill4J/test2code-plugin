@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.api.*
 import com.epam.kodux.*
 
 operator fun SummaryDto.plus(other: Any): SummaryDto = when (other) {

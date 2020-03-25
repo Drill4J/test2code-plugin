@@ -6,6 +6,8 @@ import com.epam.drill.builds.Build2
 import com.epam.drill.e2e.E2EPluginTest
 import com.epam.drill.e2e.plugin.runWithSession
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.matchers.boolean.shouldBeTrue
 import io.kotlintest.matchers.doubles.shouldBeGreaterThan
 import io.kotlintest.shouldBe

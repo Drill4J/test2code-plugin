@@ -1,5 +1,6 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.api
 
+import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.serialization.*
 
 @SerialName("START")

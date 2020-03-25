@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.api
 
 //TODO separate aggregation implementation from model classes, after separation remove this file
 

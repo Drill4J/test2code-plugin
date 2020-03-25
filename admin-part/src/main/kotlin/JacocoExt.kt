@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.api.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.internal.data.*
 
