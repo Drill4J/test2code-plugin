@@ -2,6 +2,17 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
+import com.epam.kodux.*
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class LastBuildCoverage(
+    @Id val id: String,
+    val coverage: Double,
+    val arrow: String?,
+    val risks: Int,
+    val testsToRun: TestsToRunDto
+)
 
 //TODO move to admin api
 

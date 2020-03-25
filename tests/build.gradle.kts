@@ -26,13 +26,13 @@ val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
 
 dependencies {
+    testImplementation(project(":api"))
     testImplementation(project(":admin-part"))
-    testImplementation(project(":common-part"))
     testCompileOnly(project(":agent-part"))
 
-    testImplementation("com.epam.drill:common-jvm")
-    testImplementation("com.epam.drill:drill-agent-part-jvm")
-    testImplementation("com.epam.drill:drill-admin-part-jvm")
+    testImplementation("com.epam.drill:common")
+    testImplementation("com.epam.drill:drill-agent-part")
+    testImplementation("com.epam.drill:drill-admin-part")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
     testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")

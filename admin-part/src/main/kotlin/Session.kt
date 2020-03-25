@@ -32,10 +32,4 @@ class FinishedSession(
     val probes: Map<TypedTest, List<ExecClassData>>
 ) : Session(sessionId, testTypeName)
 
-@Serializable
-data class TypedTest(
-    val name: String,
-    val type: String
-)
-
 internal fun TypedTest.id() = "$name:$type"

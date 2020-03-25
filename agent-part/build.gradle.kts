@@ -13,15 +13,15 @@ configurations.implementation {
 }
 
 dependencies {
-    jarDeps(project(":common-part")) { isTransitive = false }
+    jarDeps(project(":common"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")  { isTransitive = false }
 
     implementation(kotlin("stdlib"))
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-agent-part-jvm")
-    implementation("com.epam.drill:common-jvm")
+    implementation("com.epam.drill:drill-agent-part")
+    implementation("com.epam.drill:common")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     compileOnly("org.jetbrains.kotlinx:atomicfu")

@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.kodux.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -144,6 +143,12 @@ data class AssociatedTests(
 }
 
 @Serializable
+data class TypedTest(
+    val name: String,
+    val type: String
+)
+
+@Serializable
 data class MethodsCoveredByTest(
     val id: String,
     val testName: String,
@@ -200,6 +205,8 @@ data class ScopeSummary(
     )
 )
 
+val zeroCount = Count(covered = 0, total = 0)
+
 @Serializable
 data class TestTypeSummary(
     val testType: String,
@@ -232,15 +239,6 @@ data class TestsToRunDto(
 }
 
 @Serializable
-data class LastBuildCoverage(
-    @Id val id: String,
-    val coverage: Double,
-    val arrow: String?,
-    val risks: Int,
-    val testsToRun: TestsToRunDto
-)
-
-@Serializable
 data class SummaryDto(
     val coverage: Double,
     val arrow: ArrowType?,
@@ -257,5 +255,3 @@ data class Count(
     val covered: Int,
     val total: Int
 )
-
-internal val zeroCount = Count(covered = 0, total = 0)
