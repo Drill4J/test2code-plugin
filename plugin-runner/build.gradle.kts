@@ -28,6 +28,10 @@ tasks {
         environment("DRILL_DEVMODE", true)
         environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
     }
+
+    clean {
+        delete("distr", "work")
+    }
 }
 
 val drillAdminVersion: String by rootProject

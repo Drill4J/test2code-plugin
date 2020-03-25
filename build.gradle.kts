@@ -52,10 +52,6 @@ subprojects {
                 )
             }
         }
-
-        clean {
-            delete("distr", "work")
-        }
     }
 }
 
