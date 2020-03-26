@@ -109,3 +109,11 @@ data class FinishedScope(
 
     override fun toString() = "fin-scope($id, $name)"
 }
+
+@Serializable
+data class ScopeCounter(
+    @Id val id: String = "Scope counter",
+    val quantity: Int
+){
+    fun incrementAndGet() = ScopeCounter(quantity = quantity + 1)
+}

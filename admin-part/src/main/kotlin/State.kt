@@ -14,6 +14,9 @@ import kotlinx.atomicfu.*
  * The data is represented by the sealed class hierarchy AgentData.
  * In case of inconsistencies of the data a ClassCastException is thrown.
  */
+
+private const val DEFAULT_SCOPE_NAME = "New Scope"
+
 class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
@@ -36,9 +39,7 @@ class PluginInstanceState(
 
     private val _buildTests = atomic(BuildTests(agentInfo.id))
 
-    private val _scopeCounter = atomic(0)
-
-    private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
+    private val _activeScope = atomic(ActiveScope("$DEFAULT_SCOPE_NAME 1", agentInfo.buildVersion))
 
     fun init() = _data.update { DataBuilder() }
 
@@ -60,6 +61,9 @@ class PluginInstanceState(
                 }
             }
         } as ClassesData
+        storeClient.scopeCounter().apply {
+            _activeScope.update { ActiveScope("$DEFAULT_SCOPE_NAME $quantity", agentInfo.buildVersion) }
+        }
         storeClient.store(classesData)
         val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
         _buildTests.value = tests
@@ -112,15 +116,16 @@ class PluginInstanceState(
     } ?: NoData
 
 
-    fun changeActiveScope(name: String): ActiveScope = run {
+    suspend fun changeActiveScope(name: String): ActiveScope = run {
+        val scopeName = scopeName(name)
         _activeScope.getAndUpdate { prevScope ->
             prevScope.close()
-            ActiveScope(scopeName(name), agentInfo.buildVersion)
+            ActiveScope(scopeName, agentInfo.buildVersion)
         }
     }
 
-    private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
-        "" -> "New Scope ${_scopeCounter.incrementAndGet()}"
+    private suspend fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
+        "" -> "$DEFAULT_SCOPE_NAME ${storeClient.incrementScopeCount()}"
         else -> trimmed
     }
 
@@ -136,6 +141,12 @@ class PluginInstanceState(
 private suspend fun StoreClient.classesData(buildVersion: String) = findBy<ClassesData> {
     ClassesData::buildVersion eq buildVersion
 }.firstOrNull()
+
+private suspend fun StoreClient.scopeCounter() = findById("Scope counter") ?: ScopeCounter(quantity = 1)
+
+private suspend fun StoreClient.incrementScopeCount() = run {
+    store(ScopeCounter(quantity = scopeCounter().incrementAndGet().quantity))
+}.quantity
 
 suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? {
     return findById(lastCoverageId(agentId, buildVersion))
