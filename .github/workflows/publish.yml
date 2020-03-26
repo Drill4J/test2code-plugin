@@ -14,7 +14,7 @@ jobs:
         run: gradle test
       - name: Publish
         run: |
-          gradle -i publishTest2codeZipPublicationToMavenRepository
+          gradle -i publish
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
