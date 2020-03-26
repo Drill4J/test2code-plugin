@@ -14,6 +14,9 @@ import kotlinx.atomicfu.*
  * The data is represented by the sealed class hierarchy AgentData.
  * In case of inconsistencies of the data a ClassCastException is thrown.
  */
+
+internal const val DEFAULT_SCOPE_NAME = "New Scope"
+
 class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
@@ -36,9 +39,7 @@ class PluginInstanceState(
 
     private val _buildTests = atomic(BuildTests(agentInfo.id))
 
-    private val _scopeCounter = atomic(0)
-
-    private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
+    private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
 
     fun init() = _data.update { DataBuilder() }
 
@@ -62,6 +63,9 @@ class PluginInstanceState(
                 }
             }
         } as ClassesData
+        scopeManager.counter(agentInfo.id, agentInfo.buildVersion)?.run {
+            _activeScope.update { ActiveScope(nth = count, buildVersion = agentInfo.buildVersion) }
+        }
         storeClient.store(classesData)
         val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
         _buildTests.value = tests
@@ -116,16 +120,17 @@ class PluginInstanceState(
         else -> storeClient.classesData(buildVersion)
     } ?: NoData
 
-
-    fun changeActiveScope(name: String): ActiveScope = run {
-        _activeScope.getAndUpdate { prevScope ->
+    suspend fun changeActiveScope(name: String): ActiveScope = activeScope.apply {
+        val scopeCounter = ScopeCounter(AgentBuildId(agentInfo.id, agentInfo.buildVersion), nth).inc()
+        scopeManager.storeCounter(scopeCounter)
+        _activeScope.update { prevScope ->
             prevScope.close()
-            ActiveScope(scopeName(name), agentInfo.buildVersion)
+            ActiveScope(scopeCounter.count, scopeName(name), agentInfo.buildVersion)
         }
     }
 
-    private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
-        "" -> "New Scope ${_scopeCounter.incrementAndGet()}"
+    private fun scopeName(name: String) = when (val trimmed = name.trim()) {
+        "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth + 1}"
         else -> trimmed
     }
 
@@ -136,7 +141,6 @@ class PluginInstanceState(
         packageTree = this
     )
 }
-
 
 private suspend fun StoreClient.classesData(buildVersion: String) = findBy<ClassesData> {
     ClassesData::buildVersion eq buildVersion

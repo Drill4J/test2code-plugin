@@ -18,7 +18,11 @@ interface Scope : Sequence<FinishedSession> {
 
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
-class ActiveScope(name: String, override val buildVersion: String) : Scope {
+class ActiveScope(
+    val nth: Int = 1,
+    name: String = "$DEFAULT_SCOPE_NAME $nth",
+    override val buildVersion: String
+) : Scope {
 
     override val id = genUuid()
 
@@ -129,3 +133,17 @@ data class FinishedScope(
 
     override fun toString() = "fin-scope($id, $name)"
 }
+
+@Serializable
+data class ScopeCounter(
+    @Id val id: AgentBuildId,
+    val count: Int = 1
+)
+
+@Serializable
+data class AgentBuildId(
+    val agentId: String,
+    val buildVersion: String
+)
+
+fun ScopeCounter.inc() = copy(count = count.inc())
