@@ -22,3 +22,17 @@ operator fun TestsToRunDto.plus(other: Any): TestsToRunDto = when (other) {
     is TestsToRunDto -> plus(other)
     else -> this
 }
+
+private fun TestsToRunDto.plus(other: TestsToRunDto): TestsToRunDto {
+    val mergedGroupedTests = sequenceOf(groupedTests, other.groupedTests)
+        .flatMap { it.asSequence() }
+        .groupBy({ it.key }, { it.value })
+        .mapValues { (_, values) ->
+            values.flatten().distinct()
+        }
+    return TestsToRunDto(mergedGroupedTests, mergedGroupedTests.totalCount())
+}
+
+fun GroupedTests.totalCount(): Int {
+    return this.values.sumBy { it.count() }
+}
