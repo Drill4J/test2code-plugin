@@ -6,6 +6,10 @@ plugins {
     kotlin("jvm") apply false
 }
 
+apply(from = "publishing.gradle.kts")
+
+val drillPluginId: String by project
+
 val drillApiVersion: String by project
 val atomicFuVersion: String by project
 val ktorVersion: String by project
@@ -13,6 +17,8 @@ val ktorVersion: String by project
 subprojects {
     apply<BasePlugin>()
     apply(plugin = "com.epam.drill.version.plugin")
+
+    group = "${rootProject.group}.$drillPluginId"
 
     repositories {
         mavenLocal()
@@ -96,25 +102,9 @@ distributions {
 }
 
 publishing {
-    repositories {
-        maven {
-            url = uri("http://oss.jfrog.org/oss-release-local")
-            credentials {
-                username =
-                    if (project.hasProperty("bintrayUser"))
-                        project.property("bintrayUser").toString()
-                    else System.getenv("BINTRAY_USER")
-                password =
-                    if (project.hasProperty("bintrayApiKey"))
-                        project.property("bintrayApiKey").toString()
-                    else System.getenv("BINTRAY_API_KEY")
-            }
-        }
-    }
-
     publications {
         create<MavenPublication>("test2codeZip") {
-            artifact(tasks["distZip"])
+            artifact(tasks.distZip.get())
         }
     }
 }

@@ -1,4 +1,5 @@
-rootProject.name = "test2code-plugin"
+val drillPluginId: String by settings
+rootProject.name = "$drillPluginId-plugin"
 
 apply(from = "plugins.settings.gradle.kts")
 
