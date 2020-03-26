@@ -193,7 +193,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     diff shouldNotBe 0.0
                     prevBuildVersion shouldBe ""
                 }
-                plugUi.activeScope()!!.name shouldBe "new2"
+                plugUi.activeScope()!!.name shouldBe "New Scope 1"
             }
         }
     }

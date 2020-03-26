@@ -35,6 +35,7 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(scopeChange: ActiveSco
                 cleanTopics(prevScope.id)
             }
         }
+        pluginInstanceState.storeData()
         initActiveScope()
         println("Current active scope $activeScope")
         sendActiveSessions()

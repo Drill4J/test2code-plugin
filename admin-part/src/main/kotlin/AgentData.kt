@@ -21,9 +21,10 @@ class DataBuilder : AgentData(), Iterable<AstEntity> {
 }
 
 @Serializable
-class ClassesData(
+data class ClassesData(
     @Id val buildVersion: String,
     val prevBuildVersion: String,
     val prevBuildCoverage: Double,
-    val packageTree: PackageTree
+    val packageTree: PackageTree,
+    val scopeCounter: Int = 1
 ) : AgentData()

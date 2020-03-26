@@ -14,6 +14,9 @@ import kotlinx.atomicfu.*
  * The data is represented by the sealed class hierarchy AgentData.
  * In case of inconsistencies of the data a ClassCastException is thrown.
  */
+
+private const val DEFAULT_SCOPE_NAME = "New Scope"
+
 class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
@@ -35,8 +38,6 @@ class PluginInstanceState(
     private val _data = atomic<AgentData>(NoData)
 
     private val _buildTests = atomic(BuildTests(agentInfo.id))
-
-    private val _scopeCounter = atomic(0)
 
     private val _activeScope = atomic(ActiveScope(scopeName(), agentInfo.buildVersion))
 
@@ -60,10 +61,17 @@ class PluginInstanceState(
                 }
             }
         } as ClassesData
-        storeClient.store(classesData)
+        val data = updateAndGetData(classesData.buildVersion) ?: classesData
+        _activeScope.update { ActiveScope("$DEFAULT_SCOPE_NAME ${data.scopeCounter}", agentInfo.buildVersion) }
+        storeClient.store(data)
         val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
         _buildTests.value = tests
     }
+
+    private suspend fun updateAndGetData(buildVersion: String) =
+        storeClient.classesData(buildVersion)?.run {
+            _data.updateAndGet { copy(scopeCounter = scopeCounter) }
+        } as? ClassesData
 
     suspend fun addBuildTests(buildVersion: String, tests: List<AssociatedTests>) {
         buildTests.add(buildVersion, tests)
@@ -120,7 +128,7 @@ class PluginInstanceState(
     }
 
     private fun scopeName(name: String = "") = when (val trimmed = name.trim()) {
-        "" -> "New Scope ${_scopeCounter.incrementAndGet()}"
+        "" -> "$DEFAULT_SCOPE_NAME ${storeClient.incrementScopeCount()}"
         else -> trimmed
     }
 
@@ -130,6 +138,18 @@ class PluginInstanceState(
         prevBuildCoverage = lastPrevBuildCoverage,
         packageTree = this
     )
+
+    private fun StoreClient.incrementScopeCount(): Int = run {
+        (data as? ClassesData)?.run {
+            _data.updateAndGet { copy(scopeCounter = scopeCounter + 1) } as? ClassesData
+        }?.scopeCounter ?: 1
+    }
+
+    suspend fun storeData() {
+        (data as? ClassesData)?.run {
+            storeClient.store(copy(scopeCounter = scopeCounter))
+        }
+    }
 }
 
 
