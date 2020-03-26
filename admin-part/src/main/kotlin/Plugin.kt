@@ -186,8 +186,10 @@ class Test2CodeAdminPart(
         buildVersion: String,
         scopes: Sequence<FinishedScope>
     ) = sender.send(
-        agentId,
-        buildVersion,
+        AgentSendContext(
+            agentId,
+            buildVersion
+        ),
         Routes.Scopes,
         scopes.summaries()
     )
@@ -300,7 +302,7 @@ class Test2CodeAdminPart(
     }
 
     private suspend fun send(buildVersion: String, destination: Any, message: Any) {
-        sender.send(agentInfo.id, buildVersion, destination, message)
+        sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 
     private suspend fun pluginInstanceState(): PluginInstanceState {
