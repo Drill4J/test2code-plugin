@@ -58,6 +58,7 @@ class RisksTest : E2EPluginTest() {
                     modifiedMethods shouldBe emptyList()
                 }
             }.reconnect<Build2> { plugUi, build ->
+                plugUi.risks()//FIXME EPMDJ-2533 extra write
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 1
                     modifiedMethods.size shouldBe 3
@@ -95,6 +96,7 @@ class RisksTest : E2EPluginTest() {
                 pluginAction(switchScope)
 
                 plugUi.risks()//FIXME EPMDJ-2270 extra write
+                plugUi.risks()//FIXME EPMDJ-2533 extra write
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0

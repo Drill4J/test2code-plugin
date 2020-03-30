@@ -36,7 +36,7 @@ class CoverageSocketStreams : PluginStreams() {
 
     override suspend fun subscribe(sinf: AgentSubscription, destination: String) {
         pathToCallBackMapping.filterKeys { !it.contains("{") }.forEach {
-            iut.send(Subscribe(it.key, AgentSubscription.serializer() stringify sinf).toTextFrame())
+            iut.send(Subscribe(it.key, Subscription.serializer() stringify sinf).toTextFrame())
         }
         delay(1000)
         activeScope()

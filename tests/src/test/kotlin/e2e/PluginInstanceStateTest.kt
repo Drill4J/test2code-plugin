@@ -63,6 +63,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.testsToRun()!!.apply {
                     testTypeToNames.isNotEmpty() shouldBe true
                 }
+                plugUi.buildCoverage()//FIXME EPMDJ-2533 extra write
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe ArrowType.DECREASE
                     diff shouldNotBe 0.0
