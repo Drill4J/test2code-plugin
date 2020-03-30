@@ -37,7 +37,10 @@ fun ExecDatum.toExecClassData() = ExecClassData(
     testName = testName
 )
 
-typealias ExecData = ConcurrentHashMap<Long, ExecDatum>
+typealias ExecData = PersistentMap<Long, ExecDatum>
+
+internal val emptyExecData: ExecData = persistentHashMapOf()
+
 
 object ProbesWorker : CoroutineScope {
     override val coroutineContext: CoroutineContext =
@@ -58,27 +61,32 @@ class ExecRuntime(
     )
 ) : (Long, String, Int, String) -> BooleanArray, TimeSpanEventBus<ExecDatum> by probesDataStream {
 
-    private val execData = ConcurrentHashMap<String, ExecData>()
+    private val _execData = atomic(persistentHashMapOf<String, ExecData>())
 
     override fun invoke(
         id: Long,
         name: String,
         probeCount: Int,
         testName: String
-    ) = execData.getOrPut(testName) { ExecData() }.getOrPut(id) {
-        ExecDatum(
-            id = id,
-            name = name,
-            probes = BooleanArray(probeCount),
-            testName = testName
-        )
-    }.also {
-        ProbesWorker {
-            probesDataStream.send(it)
+    ): BooleanArray = _execData.updateAndGet { tests ->
+        (tests[testName] ?: emptyExecData).let { execData ->
+            if (id !in execData) {
+                val mutatedData = execData.put(
+                    id, ExecDatum(
+                        id = id,
+                        name = name,
+                        probes = BooleanArray(probeCount),
+                        testName = testName
+                    )
+                )
+                tests.put(testName, mutatedData)
+            } else tests
         }
+    }[testName]!![id]!!.also { execDatum ->
+        ProbesWorker { probesDataStream.send(execDatum) }
     }.probes
 
-    fun collect() = execData.values.asSequence().flatMap { it.values.asSequence() }
+    fun collect(): Sequence<ExecDatum> = _execData.value.values.asSequence().flatMap { it.values.asSequence() }
 }
 
 /**
@@ -114,11 +122,11 @@ open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillConte
                 eventCallback(it)
             }
         }
-
     }
 
-    override fun stop(sessionId: String): Sequence<ExecDatum>? = run {
-        remove(sessionId)?.collect()
+    override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.run {
+        close()
+        collect()
     }
 
     override fun cancel(sessionId: String) {
