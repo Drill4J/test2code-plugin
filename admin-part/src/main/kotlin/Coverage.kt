@@ -17,9 +17,11 @@ internal fun ScopeSummary.calculateCoverage(
     state.buildInfo?.classesBytes?.let { classesBytes ->
         val totalInstructions = classesData.packageTree.totalCount
         val bundle = sessions.toProbes().bundle(classesBytes)
+        val coverageCount = Count(bundle.instructionCounter.coveredCount, totalInstructions)
         copy(
             coverage = ScopeCoverage(
-                ratio = bundle.coverage(totalInstructions),
+                ratio = coverageCount.percentage(),
+                count = coverageCount,
                 methodCount = bundle.methodCounter.toCount(),
                 riskCount = zeroCount,
                 byTestType = sessions.coveragesByTestType(
@@ -46,7 +48,8 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
 
     val totalInstructions = classesData.packageTree.totalCount
     val bundleCoverage = toProbes().bundle(classesBytes)
-    val totalCoveragePercent = bundleCoverage.coverage(totalInstructions)
+    val coverageCount = Count(bundleCoverage.instructionCounter.coveredCount, totalInstructions)
+    val totalCoveragePercent = coverageCount.percentage()
 
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
@@ -61,6 +64,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
             val prevBuildVersion = classesData.prevBuildVersion
             BuildCoverage(
                 ratio = totalCoveragePercent,
+                count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
                 byTestType = coverageByType,
@@ -71,7 +75,8 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
             )
         }
         else -> ScopeCoverage(
-            totalCoveragePercent,
+            ratio = totalCoveragePercent,
+            count = coverageCount,
             methodCount = methodCount,
             riskCount = zeroCount,
             byTestType = coverageByType

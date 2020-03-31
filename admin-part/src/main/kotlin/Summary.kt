@@ -29,24 +29,22 @@ class Aggregator : (String, String, SummaryDto) -> SummaryDto? {
 internal fun Coverage.toSummaryDto(
     risks: Risks,
     testsToRun: GroupedTests
-): SummaryDto {
-    return SummaryDto(
-        coverage = methodCount.percentage(),
-        methodCount = methodCount,//todo make right coverage https://jiraeu.epam.com/browse/EPMDJ-2411
-        arrow = null,
-        risks = risks.run { newMethods.count() + modifiedMethods.count() },
-        testsToRun = TestsToRunDto(
-            groupedTests = testsToRun,
-            count = testsToRun.totalCount()
-        )
+): SummaryDto = SummaryDto(
+    coverage = count.percentage(),
+    coverageCount = count,
+    arrow = null,
+    risks = risks.run { newMethods.count() + modifiedMethods.count() },
+    testsToRun = TestsToRunDto(
+        groupedTests = testsToRun,
+        count = testsToRun.totalCount()
     )
-}
+)
 
 operator fun SummaryDto.plus(other: SummaryDto): SummaryDto {
-    val newCount = methodCount + other.methodCount
+    val coverageCount = coverageCount + other.coverageCount
     return copy(
-        coverage = newCount.percentage(),
-        methodCount = newCount,
+        coverage = coverageCount.percentage(),
+        coverageCount = coverageCount,
         arrow = null,
         risks = risks + other.risks,
         testsToRun = testsToRun + other.testsToRun
