@@ -83,10 +83,10 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
             onSuccess(session)
         }
 
-    suspend fun subscribeOnChanges(clb: suspend ActiveScope.(Sequence<FinishedSession>) -> Unit) {
+    suspend fun subscribeOnChanges(clb: suspend ActiveScope.(Sequence<Session>) -> Unit) {
         changes.consumeEach {
             val actSessionSeq = activeSessions.values.asSequence()
-            clb(this + actSessionSeq.map(ActiveSession::finish))
+            clb(this + actSessionSeq)
         }
     }
 

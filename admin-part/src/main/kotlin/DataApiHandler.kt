@@ -15,7 +15,7 @@ suspend fun Test2CodeAdminPart.handleGettingData(params: Map<String, String>): A
         val byteArrayOutputStream = ByteArrayOutputStream()
         val buildProbes = pluginInstanceState.scopeManager.scopes(buildVersion)
             .map {
-                it.probes.map { it.value.map { it.probes.map { it.value }.flatten() }.flatten() }.flatten()
+                it.probes.map { it.value.map { it.probes.values.map { it.values }.flatten() }.flatten() }.flatten()
             }.flatten()
         val dataStore = buildProbes.execDataStore()
         @Suppress("BlockingMethodInNonBlockingContext")
@@ -46,4 +46,3 @@ private fun Test2CodeAdminPart.newBuildActionsList(): String {
 }
 
 private fun BuildInfo.newMethodsCount(): Int = methodChanges.map[DiffType.NEW]?.count() ?: 0
-

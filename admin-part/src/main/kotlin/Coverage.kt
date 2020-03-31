@@ -10,7 +10,7 @@ import kotlin.math.*
 typealias ClassesBytes = Map<String, ByteArray>
 
 internal fun ScopeSummary.calculateCoverage(
-    sessions: Sequence<FinishedSession>,
+    sessions: Sequence<Session>,
     state: PluginInstanceState
 ): ScopeSummary = run {
     val classesData = state.data as ClassesData
@@ -32,7 +32,7 @@ internal fun ScopeSummary.calculateCoverage(
     } ?: this
 }
 
-internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
+internal suspend fun Sequence<Session>.calculateCoverageData(
     state: PluginInstanceState,
     buildVersion: String
 ): CoverageInfoSet {
@@ -122,17 +122,17 @@ internal suspend fun Sequence<FinishedSession>.calculateCoverageData(
     )
 }
 
-fun Sequence<FinishedSession>.coveragesByTestType(
+fun Sequence<Session>.coveragesByTestType(
     bundleMap: Map<TypedTest, IBundleCoverage>,
     classesBytes: ClassesBytes,
     totalInstructions: Int
 ): Map<String, TestTypeSummary> {
-    return groupBy(Session::testType).mapValues { (testType, finishedSessions) ->
-        finishedSessions.asSequence().run {
+    return groupBy(Session::testType).mapValues { (testType, sessions) ->
+        sessions.asSequence().run {
             TestTypeSummary(
                 testType = testType,
                 coverage = toProbes().bundle(classesBytes).coverage(totalInstructions),
-                testCount = flatMap(FinishedSession::testNames).distinct().count(),
+                testCount = flatMap(Session::testNames).distinct().count(),
                 coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
             )
         }
@@ -144,7 +144,7 @@ fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassD
         store.apply { put(execData) }
     }
 
-internal val FinishedSession.testNames: Sequence<TypedTest>
+internal val Session.testNames: Sequence<TypedTest>
     get() = probes.keys.asSequence()
 
 private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
@@ -158,21 +158,21 @@ private fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
     }
 }
 
-private fun Sequence<FinishedSession>.bundlesByTests(
+private fun Sequence<Session>.bundlesByTests(
     classesBytes: ClassesBytes
-): Map<TypedTest, IBundleCoverage> = flatMap { it.probes.asSequence() }
-    .groupBy({ it.key }) { it.value.asSequence() }
+): Map<TypedTest, IBundleCoverage> = flatMap { it.probes.entries.asSequence() }
+    .groupBy({ it.key }) { it.value.values.asSequence() }
     .mapValues { it.value.asSequence().flatBundle(classesBytes) }
 
-private fun Sequence<FinishedSession>.bundlesByTestTypes(
+private fun Sequence<Session>.bundlesByTestTypes(
     classesBytes: ClassesBytes
-): Map<String, IBundleCoverage> = flatMap { it.probes.asSequence() }
-    .groupBy({ it.key.type }) { it.value.asSequence() }
+): Map<String, IBundleCoverage> = flatMap { it.probes.entries.asSequence() }
+    .groupBy({ it.key.type }) { it.value.values.asSequence() }
     .mapValues { it.value.asSequence().flatBundle(classesBytes) }
 
-private fun Sequence<FinishedSession>.toProbes(): Sequence<ExecClassData> = flatMap {
-    it.probes.asSequence()
-}.flatMap { it.value.asSequence() }
+private fun Sequence<Session>.toProbes(): Sequence<ExecClassData> = flatMap {
+    it.probes.values.asSequence()
+}.flatMap { it.values.asSequence() }
 
 
 private fun Sequence<Sequence<ExecClassData>>.flatBundle(
