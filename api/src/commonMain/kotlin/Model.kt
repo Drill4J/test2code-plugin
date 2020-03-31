@@ -35,6 +35,7 @@ enum class CoverageRate {
 
 interface Coverage {
     val ratio: Double
+    val count: Count
     val methodCount: Count
     val riskCount: Count
     val byTestType: Map<String, TestTypeSummary>
@@ -43,6 +44,7 @@ interface Coverage {
 @Serializable
 data class ScopeCoverage(
     override val ratio: Double,
+    override val count: Count,
     override val methodCount: Count,
     override val riskCount: Count,
     override val byTestType: Map<String, TestTypeSummary>
@@ -52,6 +54,7 @@ data class ScopeCoverage(
 @Serializable
 data class BuildCoverage(
     override val ratio: Double,
+    override val count: Count,
     override val methodCount: Count,
     override val riskCount: Count,
     override val byTestType: Map<String, TestTypeSummary>,
@@ -199,6 +202,7 @@ data class ScopeSummary(
     val active: Boolean = true,
     val coverage: ScopeCoverage = ScopeCoverage(
         ratio = 0.0,
+        count = zeroCount,
         methodCount = zeroCount,
         riskCount = zeroCount,
         byTestType = emptyMap()
@@ -238,7 +242,7 @@ data class TestsToRunDto(
 @Serializable
 data class SummaryDto(
     val coverage: Double,
-    val methodCount: Count,
+    val coverageCount: Count,
     val arrow: ArrowType?,
     val risks: Int,
     val testsToRun: TestsToRunDto
