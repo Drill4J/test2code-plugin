@@ -255,7 +255,7 @@ class Test2CodeAdminPart(
         if (serviceGroup.isNotEmpty()) {
             val aggregatedMessage = aggregator(serviceGroup, agentId, summaryDto) ?: summaryDto
             sendToGroup(
-                destination = Routes.Summary,
+                destination = Routes.ServiceGroups.Summary(serviceGroup),
                 message = aggregatedMessage
             )
         }
