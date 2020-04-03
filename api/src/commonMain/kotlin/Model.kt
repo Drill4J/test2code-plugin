@@ -249,6 +249,21 @@ data class SummaryDto(
 )
 
 @Serializable
+data class AgentSummaryDto(
+    val id: String,
+    val name: String,
+    val buildVersion: String,
+    val summary: SummaryDto
+)
+
+@Serializable
+data class ServiceGroupSummaryDto(
+    val name: String,
+    val aggregated: SummaryDto,
+    val summaries: List<AgentSummaryDto>
+)
+
+@Serializable
 data class Count(
     val covered: Int,
     val total: Int
