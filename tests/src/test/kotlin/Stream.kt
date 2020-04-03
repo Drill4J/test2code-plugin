@@ -307,7 +307,7 @@ class CoverageSocketStreams : PluginStreams() {
                                             } else
                                                 risks.send(Risks.serializer() parse content)
                                         }
-                                        is Routes.ServiceGroups.Summary -> {
+                                        is Routes.ServiceGroup.Summary -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 summary.send(null)
                                             } else summary.send(SummaryDto.serializer() parse content)

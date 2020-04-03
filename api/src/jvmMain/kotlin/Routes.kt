@@ -73,9 +73,9 @@ class Routes {
         object MethodsCoveredByTestType
     }
 
-    @Location("/service-groups")
-    class ServiceGroups {
-        @Location("/{groupId}/summary")
-        class Summary(val groupId: String)
+    @Location("/service-group")
+    class ServiceGroup {
+        @Location("/summary")
+        object Summary
     }
 }

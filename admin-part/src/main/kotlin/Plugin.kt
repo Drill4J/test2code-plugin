@@ -253,10 +253,21 @@ class Test2CodeAdminPart(
     ) {
         val serviceGroup = agentInfo.serviceGroup
         if (serviceGroup.isNotEmpty()) {
-            val aggregatedMessage = aggregator(serviceGroup, agentId, summaryDto) ?: summaryDto
+            val agentSummary = AgentSummaryDto(
+                id = agentId,
+                buildVersion = buildVersion,
+                name = agentInfo.name,
+                summary = summaryDto
+            )
+            val aggregatedMessage = aggregator(serviceGroup, agentSummary) ?: summaryDto
+            val summaries = aggregator.getSummaries(serviceGroup) ?: emptyList()
             sendToGroup(
-                destination = Routes.ServiceGroups.Summary(serviceGroup),
-                message = aggregatedMessage
+                destination = Routes.ServiceGroup.Summary,
+                message = ServiceGroupSummaryDto(
+                    name = serviceGroup,
+                    aggregated = aggregatedMessage,
+                    summaries = summaries
+                )
             )
         }
     }

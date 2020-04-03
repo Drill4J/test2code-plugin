@@ -4,26 +4,29 @@ import com.epam.drill.plugins.test2code.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 
-typealias AgentSummary = PersistentMap<String, SummaryDto>
+typealias AgentSummary = PersistentMap<String, AgentSummaryDto>
 
 val aggregator = Aggregator()
 
-class Aggregator : (String, String, SummaryDto) -> SummaryDto? {
+class Aggregator : (String, AgentSummaryDto) -> SummaryDto? {
     private val _summaryStorage = atomic(persistentHashMapOf<String, AgentSummary>())
 
     override operator fun invoke(
         serviceGroup: String,
-        agentId: String,
-        summary: SummaryDto
+        agentSummary: AgentSummaryDto
     ): SummaryDto? {
         val storage = _summaryStorage.updateAndGet {
             val curAgentSummary = it[serviceGroup] ?: persistentHashMapOf()
-            it.put(serviceGroup, curAgentSummary.plus(agentId to summary))
+            it.put(serviceGroup, curAgentSummary.plus(agentSummary.id to agentSummary))
         }
         return storage[serviceGroup]
             ?.values
+            ?.map { it.summary }
             ?.reduce { acc, element -> acc + element }
     }
+
+    fun getSummaries(serviceGroup: String): List<AgentSummaryDto>? =
+        _summaryStorage.value[serviceGroup]?.values?.toList()
 }
 
 internal fun Coverage.toSummaryDto(
