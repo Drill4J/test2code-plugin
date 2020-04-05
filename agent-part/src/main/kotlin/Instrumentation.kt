@@ -3,12 +3,11 @@ package com.epam.drill.plugins.test2code
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
-import java.io.*
 
 /**
  * Instrumenter type
  */
-typealias DrillInstrumenter = (String, Long, ByteArray) -> ByteArray
+typealias DrillInstrumenter = (String, Long, ByteArray) -> ByteArray?
 
 /**
  * JaCoCo instrumenter
@@ -21,10 +20,11 @@ private class CustomInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider
 ) : DrillInstrumenter {
 
-    override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray = try {
+    override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray? = try {
         instrument(className, classId, classBody)
-    } catch (e: RuntimeException) {
-        throw IOException("Error while instrumenting $className classId=$classId.", e)
+    } catch (e: Exception) {
+        println("Error while instrumenting $className classId=$classId: ${e.message}")
+        null
     }
 
     fun instrument(className: String, classId: Long, classBody: ByteArray): ByteArray {

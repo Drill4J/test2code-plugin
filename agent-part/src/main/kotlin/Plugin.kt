@@ -39,12 +39,14 @@ class CoverageAgentPart @JvmOverloads constructor(
             )
         }
         _loadedClasses.value = loadedClasses
-        sendMessage(Initialized(msg = "Initialized"))
-        println("Plugin $id initialized! Loaded ${classBytes.count()} classes")
         retransform()
+        println("Plugin $id initialized! Loaded ${classBytes.count()} classes")
+        sendMessage(Initialized(msg = "Initialized"))
     }
 
     override fun off() {
+        _loadedClasses.value = emptyClasses
+        println("Plugin $id is off")
         retransform()
     }
 
@@ -62,16 +64,23 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun retransform() {
+        val t = System.currentTimeMillis()
+        println("Plugin $id: retransforming classes...")
+        val loadedClasses = DrillRequest.GetAllLoadedClasses()
+        println("Plugin $id: ${loadedClasses.count()} classes total.")
         val classes = _loadedClasses.value
-        val filtered = DrillRequest.GetAllLoadedClasses().filter { it.name in classes }
-        if (filtered.isNotEmpty()) {
-            DrillRequest.RetransformClasses(filtered.toTypedArray())
+        val toTransform = loadedClasses.filter {
+            !it.isAnnotation && !it.isSynthetic && it.name in classes
         }
-        println("${filtered.size} classes were retransformed.")
+        println("Plugin $id: ${toTransform.count()} classes to retransform.")
+        if (toTransform.isNotEmpty()) {
+            DrillRequest.RetransformClasses(toTransform.toTypedArray())
+        }
+        println("Plugin $id: ${toTransform.size} classes retransformed in ${System.currentTimeMillis() - t}ms.")
     }
 
     override fun initPlugin() {
-        println("Plugin $id initialized.")
+        println("Plugin $id: initializing...")
     }
 
     override suspend fun doAction(action: Action) {

@@ -39,7 +39,7 @@ class InstrumentationTest {
 
     @Test
     fun `instrumented class should be larger the the original`() {
-        val instrumented = instrument(targetClass.name, originalClassId, originalBytes)
+        val instrumented = instrument(targetClass.name, originalClassId, originalBytes)!!
         assertTrue { instrumented.count() > originalBytes.count() }
     }
 
@@ -78,7 +78,7 @@ class InstrumentationTest {
 
     private fun addInstrumentedClass() {
         val name = targetClass.name
-        val instrumented = instrument(name, originalClassId, originalBytes)
+        val instrumented = instrument(name, originalClassId, originalBytes)!!
         memoryClassLoader.addDefinition(name, instrumented)
     }
 }
