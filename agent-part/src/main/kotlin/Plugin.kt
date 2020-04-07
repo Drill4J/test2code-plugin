@@ -2,8 +2,8 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.session.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
@@ -28,20 +28,12 @@ class CoverageAgentPart @JvmOverloads constructor(
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
         val classBytes: Map<String, ByteArray> = payload.agentData.classMap
-        val initInfo = InitInfo(classBytes.keys.count(), initializingMessage)
+        val initInfo = InitInfo(classBytes.count(), initializingMessage)
         sendMessage(initInfo)
-        val loadedClasses = classBytes.run {
-            LoadedClasses(
-                names = keys.mapTo(persistentHashSetOf<String>().builder()) { it.replace('/', '.') },
-                checkSums = mapValuesTo(persistentHashMapOf<String, Long>().builder()) { (_, bytes) ->
-                    CRC64.classId(bytes)
-                }.build()
-            )
-        }
-        _loadedClasses.value = loadedClasses
+        updateLoadedClasses()
         retransform()
-        println("Plugin $id initialized! Loaded ${classBytes.count()} classes")
         sendMessage(Initialized(msg = "Initialized"))
+        println("Plugin $id initialized! Loaded ${classBytes.count()} classes")
     }
 
     override fun off() {
@@ -77,6 +69,21 @@ class CoverageAgentPart @JvmOverloads constructor(
             DrillRequest.RetransformClasses(toTransform.toTypedArray())
         }
         println("Plugin $id: ${toTransform.size} classes retransformed in ${System.currentTimeMillis() - t}ms.")
+    }
+
+    private fun updateLoadedClasses() {
+        val t = System.currentTimeMillis()
+        println("Plugin $id: updating loaded classes...")
+        val loadedClasses = payload.agentData.classMap.run {
+            LoadedClasses(
+                names = keys.mapTo(persistentHashSetOf<String>().builder()) { it.replace('/', '.') },
+                checkSums = mapValuesTo(persistentHashMapOf<String, Long>().builder()) { (_, bytes) ->
+                    CRC64.classId(bytes)
+                }.build()
+            )
+        }
+        _loadedClasses.value = loadedClasses
+        println("Plugin $id: updated ${loadedClasses.count()} classes in ${System.currentTimeMillis() - t}ms.")
     }
 
     override fun initPlugin() {
@@ -133,6 +140,8 @@ private class LoadedClasses(
     operator fun get(path: String): Long? = checkSums[path]
 
     operator fun contains(name: String): Boolean = names.contains(name)
+
+    fun count() = names.count()
 }
 
 private val emptyClasses = LoadedClasses()
