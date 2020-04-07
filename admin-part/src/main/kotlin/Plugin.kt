@@ -50,7 +50,6 @@ class Test2CodeAdminPart(
         storeClient.deleteBy<FinishedScope> { FinishedScope::buildVersion.eq(buildVersion) }
         storeClient.deleteById<ClassesData>(buildVersion)
         pluginInstanceState = pluginInstanceState()
-        processData(Initialized(""))
     }
 
     override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
