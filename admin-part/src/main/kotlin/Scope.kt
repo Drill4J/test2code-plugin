@@ -66,12 +66,12 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
 
     fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {
         activeSessions[sessionId]?.apply { addAll(probes) }
-        if (!changes.isClosedForSend) {
-            changes.offer(Unit)
-        }
+        sessionChanged()
     }
 
-    fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)
+    fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)?.also {
+        sessionChanged()
+    }
 
     fun finishSession(
         sessionId: String,
@@ -93,6 +93,12 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
     fun close() = changes.close()
 
     override fun toString() = "act-scope($id, $name)"
+
+    private fun sessionChanged() {
+        if (!changes.isClosedForSend) {
+            changes.offer(Unit)
+        }
+    }
 }
 
 @Serializable
