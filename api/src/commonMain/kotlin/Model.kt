@@ -116,6 +116,7 @@ data class JavaClassCoverage(
     val name: String,
     val path: String,
     val totalMethodsCount: Int = 0,
+    val totalCount: Int = 0,
     val coverage: Double = 0.0,
     val coveredMethodsCount: Int = 0,
     val assocTestsCount: Int? = null,

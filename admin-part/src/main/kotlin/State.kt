@@ -52,10 +52,12 @@ class PluginInstanceState(
                 is ClassesData -> data
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
+                    val javaMethods = buildInfo?.javaMethods ?: emptyMap()
                     val bundleCoverage = classesBytes.bundle()
+                    val packages = bundleCoverage.toPackages(javaMethods)
                     PackageTree(
-                        totalCount = bundleCoverage.instructionCounter.totalCount,
-                        packages = bundleCoverage.toPackages()
+                        totalCount = packages.sumBy { it.totalCount },
+                        packages = packages
                     ).toClassesData()
                 }
             }
