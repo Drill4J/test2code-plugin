@@ -33,8 +33,9 @@ class TimeSpanEventBusImpl<T>(
         val buffer = Channel<T>()
         coroutineScope.launch {
             ticker.consumeEach {
-                if (!buffer.isEmpty)
+                if (!buffer.isEmpty) {
                     send(transform(buffer.takeAvailable()))
+                }
             }
         }
         collect { value ->

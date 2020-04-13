@@ -24,7 +24,7 @@ class InstrumentationTest {
     }
 
 
-    object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub)
+    object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub, { null })
 
 
     val instrument = instrumenter(TestProbeArrayProvider)

@@ -55,11 +55,8 @@ object ProbesWorker : CoroutineScope {
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    private val probesDataStream: TimeSpanEventBus<ExecDatum> = TimeSpanEventBusImpl(
-        10,
-        coroutineScope = GlobalScope
-    )
-) : (Long, String, Int, String) -> BooleanArray, TimeSpanEventBus<ExecDatum> by probesDataStream {
+    private val dataStream: TimeSpanEventBus<ExecDatum>?
+) : (Long, String, Int, String) -> BooleanArray {
 
     private val _execData = atomic(persistentHashMapOf<String, ExecData>())
 
@@ -83,10 +80,20 @@ class ExecRuntime(
             } else tests
         }
     }[testName]!![id]!!.also { execDatum ->
-        ProbesWorker { probesDataStream.send(execDatum) }
+        dataStream?.let { stream -> ProbesWorker { stream.send(execDatum) } }
     }.probes
 
+    fun start(eventCallback: (Sequence<ExecDatum>) -> Unit) = dataStream?.let { stream ->
+        ProbesWorker.launch {
+            stream.collect { dataSeq -> eventCallback(dataSeq) }
+        }
+    }
+
     fun collect(): Sequence<ExecDatum> = _execData.value.values.asSequence().flatMap { it.values.asSequence() }
+
+    fun close() {
+        dataStream?.close()
+    }
 }
 
 /**
@@ -94,8 +101,16 @@ class ExecRuntime(
  * This class is intended to be an ancestor for a concrete probe array provider object.
  * The provider must be a Kotlin singleton object, otherwise the instrumented probe calls will fail.
  */
-open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillContex = DrillContext) :
-    SessionProbeArrayProvider {
+open class SimpleSessionProbeArrayProvider(
+    private val instrContext: IDrillContex = DrillContext,
+    private val probeStreamPrv: () -> TimeSpanEventBus<ExecDatum>? = {
+        TimeSpanEventBusImpl(
+            10,
+            coroutineScope = GlobalScope
+        )
+    }
+) : SessionProbeArrayProvider {
+
     private val sessionRuntimes get() = _runtimes.value
 
     private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
@@ -115,23 +130,16 @@ open class SimpleSessionProbeArrayProvider(private val instrContext: IDrillConte
         sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit
     ) {
         val execRuntime = _runtimes.updateAndGet {
-            it + (sessionId to ExecRuntime())
+            it + (sessionId to ExecRuntime(probeStreamPrv()))
         }[sessionId]!!
-        ProbesWorker.launch {
-            execRuntime.collect {
-                eventCallback(it)
-            }
-        }
+        execRuntime.start(eventCallback)
     }
 
-    override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.run {
-        close()
-        collect()
-    }
+    override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.collect()
 
-    override fun cancel(sessionId: String) {
-        remove(sessionId)?.close()
-    }
+    override fun cancel(sessionId: String) = remove(sessionId).let { Unit }
 
-    private fun remove(sessionId: String): ExecRuntime? = _runtimes.getAndUpdate { it - sessionId }[sessionId]
+    private fun remove(sessionId: String): ExecRuntime? = _runtimes.getAndUpdate {
+        it - sessionId
+    }[sessionId]?.also(ExecRuntime::close)
 }

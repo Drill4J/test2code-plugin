@@ -116,7 +116,6 @@ class CoverageAgentPart @JvmOverloads constructor(
             }
             else -> Unit
         }
-
     }
 }
 
