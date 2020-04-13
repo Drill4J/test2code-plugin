@@ -222,12 +222,16 @@ class Test2CodeAdminPart(
         }
 
         val risks = buildMethods.risks()
-        pluginInstanceState.storeBuildCoverage(coverageInfoSet.coverage as BuildCoverage, risks, testsToRun)
-        coverageInfoSet.sendBuildCoverage(buildVersion, risks, testsToRun)
+        val buildCoverage = coverageInfoSet.coverage as BuildCoverage
+        pluginInstanceState.storeBuildCoverage(buildCoverage, risks, testsToRun)
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
     }
 
     private suspend fun CoverageInfoSet.sendBuildCoverage(
-        buildVersion: String, risks: Risks, testsToRun: GroupedTests
+        buildVersion: String,
+        buildCoverage: BuildCoverage,
+        risks: Risks,
+        testsToRun: GroupedTests
     ) {
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
@@ -236,7 +240,7 @@ class Test2CodeAdminPart(
             }
             send(buildVersion, Routes.Build.AssociatedTests, beautifiedAssociatedTests)
         }
-        send(buildVersion, Routes.Build.Coverage, coverage)
+        send(buildVersion, Routes.Build.Coverage, buildCoverage)
         send(buildVersion, Routes.Build.CoverageByPackages, packageCoverage)
         send(buildVersion, Routes.Build.Methods, buildMethods)
         send(buildVersion, Routes.Build.TestsUsages, testsUsagesInfoByType)
@@ -244,7 +248,7 @@ class Test2CodeAdminPart(
         send(buildVersion, Routes.Build.MethodsCoveredByTestType, methodsCoveredByTestType)
         send(buildVersion, Routes.Build.Risks, risks)
         send(buildVersion, Routes.Build.TestsToRun, TestsToRun(testsToRun))
-        send(coverage.toSummaryDto(risks, testsToRun))
+        send(buildCoverage.toSummaryDto(risks, testsToRun))
     }
 
     private suspend fun Test2CodeAdminPart.send(

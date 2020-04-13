@@ -29,13 +29,13 @@ class Aggregator : (String, AgentSummaryDto) -> SummaryDto? {
         _summaryStorage.value[serviceGroup]?.values?.toList()
 }
 
-internal fun Coverage.toSummaryDto(
+internal fun BuildCoverage.toSummaryDto(
     risks: Risks,
     testsToRun: GroupedTests
 ): SummaryDto = SummaryDto(
     coverage = count.percentage(),
     coverageCount = count,
-    arrow = null,
+    arrow = arrow,
     risks = risks.run { newMethods.count() + modifiedMethods.count() },
     testsToRun = TestsToRunDto(
         groupedTests = testsToRun,
