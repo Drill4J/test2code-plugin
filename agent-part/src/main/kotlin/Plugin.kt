@@ -4,7 +4,6 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.session.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.internal.data.*
@@ -58,7 +57,7 @@ class CoverageAgentPart @JvmOverloads constructor(
     override fun retransform() {
         val t = System.currentTimeMillis()
         println("Plugin $id: retransforming classes...")
-        val loadedClasses = DrillRequest.GetAllLoadedClasses()
+        val loadedClasses = Native.GetAllLoadedClasses()
         println("Plugin $id: ${loadedClasses.count()} classes total.")
         val classes = _loadedClasses.value
         val toTransform = loadedClasses.filter {
@@ -66,7 +65,7 @@ class CoverageAgentPart @JvmOverloads constructor(
         }
         println("Plugin $id: ${toTransform.count()} classes to retransform.")
         if (toTransform.isNotEmpty()) {
-            DrillRequest.RetransformClasses(toTransform.toTypedArray())
+            Native.RetransformClasses(toTransform.toTypedArray())
         }
         println("Plugin $id: ${toTransform.size} classes retransformed in ${System.currentTimeMillis() - t}ms.")
     }
