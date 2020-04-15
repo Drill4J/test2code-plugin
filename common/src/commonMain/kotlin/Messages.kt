@@ -22,6 +22,10 @@ data class InitDataPart(val astEntities: List<AstEntity>) : CoverMessage()
 @Serializable
 data class Initialized(val msg: String = "") : CoverMessage()
 
+@SerialName("SCOPE_INITIALIZED")
+@Serializable
+data class ScopeInitialized(val id: String, val name: String, val ts: Long) : CoverMessage()
+
 @SerialName("SESSION_STARTED")
 @Serializable
 data class SessionStarted(val sessionId: String, val testType: String, val ts: Long) : CoverMessage()
@@ -29,6 +33,10 @@ data class SessionStarted(val sessionId: String, val testType: String, val ts: L
 @SerialName("SESSION_CANCELLED")
 @Serializable
 data class SessionCancelled(val sessionId: String, val ts: Long) : CoverMessage()
+
+@SerialName("ALL_SESSIONS_CANCELLED")
+@Serializable
+data class AllSessionsCancelled(val ids: List<String>, val ts: Long) : CoverMessage()
 
 @SerialName("COVERAGE_DATA_PART")
 @Serializable

@@ -19,6 +19,7 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
     fun start(sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit = {})
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun cancel(sessionId: String)
+    fun cancelAll(): List<String>
 }
 
 const val DRIlL_TEST_NAME = "drill-test-name"
@@ -55,8 +56,15 @@ object ProbesWorker : CoroutineScope {
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    private val dataStream: TimeSpanEventBus<ExecDatum>?
+    private val dataStream: TimeSpanEventBus<ExecDatum>?,
+    callback: (Sequence<ExecDatum>) -> Unit
 ) : (Long, String, Int, String) -> BooleanArray {
+
+    private val callbackJob = dataStream?.let { stream ->
+        ProbesWorker.launch {
+            stream.collect { dataSeq -> callback(dataSeq) }
+        }
+    }
 
     private val _execData = atomic(persistentHashMapOf<String, ExecData>())
 
@@ -79,20 +87,19 @@ class ExecRuntime(
                 tests.put(testName, mutatedData)
             } else tests
         }
-    }[testName]!![id]!!.also { execDatum ->
-        dataStream?.let { stream -> ProbesWorker { stream.send(execDatum) } }
-    }.probes
+    }[testName]!![id]!!.also(::offer).probes
 
-    fun start(eventCallback: (Sequence<ExecDatum>) -> Unit) = dataStream?.let { stream ->
-        ProbesWorker.launch {
-            stream.collect { dataSeq -> eventCallback(dataSeq) }
-        }
-    }
-
-    fun collect(): Sequence<ExecDatum> = _execData.value.values.asSequence().flatMap { it.values.asSequence() }
+    fun collect(): Sequence<ExecDatum> = Sequence {
+        _execData.value.values.iterator()
+    }.flatMap { it.values.asSequence() }
 
     fun close() {
+        callbackJob?.cancel()
         dataStream?.close()
+    }
+
+    private fun offer(datum: ExecDatum) {
+        dataStream?.offer(datum)
     }
 }
 
@@ -104,10 +111,7 @@ class ExecRuntime(
 open class SimpleSessionProbeArrayProvider(
     private val instrContext: IDrillContex = DrillContext,
     private val probeStreamPrv: () -> TimeSpanEventBus<ExecDatum>? = {
-        TimeSpanEventBusImpl(
-            10,
-            coroutineScope = GlobalScope
-        )
+        TimeSpanEventBusImpl(delayMillis = 50)
     }
 ) : SessionProbeArrayProvider {
 
@@ -128,16 +132,22 @@ open class SimpleSessionProbeArrayProvider(
 
     override fun start(
         sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit
-    ) {
-        val execRuntime = _runtimes.updateAndGet {
-            it + (sessionId to ExecRuntime(probeStreamPrv()))
-        }[sessionId]!!
-        execRuntime.start(eventCallback)
+    ) = _runtimes.update {
+        if (sessionId !in it) {
+            it.put(sessionId, ExecRuntime(probeStreamPrv(), eventCallback))
+        } else it
     }
 
     override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.collect()
 
     override fun cancel(sessionId: String) = remove(sessionId).let { Unit }
+
+    override fun cancelAll(): List<String> = _runtimes.getAndUpdate {
+        it.clear()
+    }.map { (id, runtime) ->
+        runtime.close()
+        id
+    }
 
     private fun remove(sessionId: String): ExecRuntime? = _runtimes.getAndUpdate {
         it - sessionId

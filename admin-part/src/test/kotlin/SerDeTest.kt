@@ -14,4 +14,16 @@ class SerDeTest {
             assertEquals(action, parsedAction)
         }
     }
+
+    @Test
+    fun `action InitActiveScope`() {
+        val action = InitActiveScope(
+            payload = InitScopePayload(id = "1231", name = "nasd")
+        )
+        apiSerDe.apply {
+            val str = stringify(actionSerializer, action)
+            val parsedAction = parse(actionSerializer, str)
+            assertEquals(action, parsedAction)
+        }
+    }
 }

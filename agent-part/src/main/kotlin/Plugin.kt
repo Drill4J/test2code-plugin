@@ -36,9 +36,11 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun off() {
+        val cancelledCount = instrContext.cancelAll()
         _loadedClasses.value = emptyClasses
         println("Plugin $id is off")
         retransform()
+        sendMessage(AllSessionsCancelled(cancelledCount, currentTimeMillis()))
     }
 
     override fun instrument(
@@ -91,6 +93,12 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     override suspend fun doAction(action: Action) {
         when (action) {
+            is InitActiveScope -> {
+                val payload = action.payload
+                println("Initializing scope ${payload.id}, ${payload.name}")
+                instrContext.cancelAll()
+                sendMessage(ScopeInitialized(payload.id, payload.name, currentTimeMillis()))
+            }
             is StartSession -> {
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType

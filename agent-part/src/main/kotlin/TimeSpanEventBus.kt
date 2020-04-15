@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.*
 interface TimeSpanEventBus<T> : Channel<T>, Flow<Sequence<T>>
 
 class TimeSpanEventBusImpl<T>(
-    timeout: Long,
+    delayMillis: Long,
     private val coroutineScope: CoroutineScope = GlobalScope,
     private val mainChannel: Channel<T> = Channel(),
-    private val ticker: ReceiveChannel<Unit> = ticker(timeout, 0)
+    private val ticker: ReceiveChannel<Unit> = ticker(delayMillis, 50)
 ) : TimeSpanEventBus<T>, Channel<T> by mainChannel, Flow<Sequence<T>> {
 
     override fun close(cause: Throwable?): Boolean = run {

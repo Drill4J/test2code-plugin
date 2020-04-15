@@ -25,6 +25,8 @@ class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
 
     fun remove(key: K) = _map.getAndUpdate { it.remove(key) }[key]
 
+    fun clear() = _map.getAndUpdate { it.clear() }
+
     override fun toString(): String = map.toString()
 }
 

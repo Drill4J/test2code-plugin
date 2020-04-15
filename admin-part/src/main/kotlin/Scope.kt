@@ -6,6 +6,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
 
@@ -38,7 +39,8 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
         )
     )
 
-    private val changes = Channel<Unit>()
+    private val changes get() = _changes.value
+    private val _changes = atomic<Channel<Unit>?>(null)
 
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
@@ -73,6 +75,12 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
         sessionChanged()
     }
 
+    fun cancelAllSessions() = activeSessions.clear().also {
+        if (it.any()) {
+            sessionChanged()
+        }
+    }
+
     fun finishSession(
         sessionId: String,
         onSuccess: ActiveScope.(FinishedSession) -> Unit
@@ -83,21 +91,25 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
             onSuccess(session)
         }
 
-    suspend fun subscribeOnChanges(clb: suspend ActiveScope.(Sequence<Session>) -> Unit) {
-        changes.consumeEach {
-            val actSessionSeq = activeSessions.values.asSequence()
-            clb(this + actSessionSeq)
+    fun subscribeOnChanges(
+        clb: suspend ActiveScope.(Sequence<Session>) -> Unit
+    ) = _changes.update {
+        it ?: Channel<Unit>().also {
+            GlobalScope.launch {
+                it.consumeEach {
+                    val actSessionSeq = activeSessions.values.asSequence()
+                    clb(this@ActiveScope + actSessionSeq)
+                }
+            }
         }
     }
 
-    fun close() = changes.close()
+    fun close() = changes?.close()
 
     override fun toString() = "act-scope($id, $name)"
 
-    private fun sessionChanged() {
-        if (!changes.isClosedForSend) {
-            changes.offer(Unit)
-        }
+    private fun sessionChanged() = changes?.takeIf { !it.isClosedForSend }?.run {
+        offer(Unit)
     }
 }
 

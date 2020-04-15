@@ -6,8 +6,12 @@ import kotlinx.serialization.*
 @Serializable
 abstract class Action
 
-@SerialName("START_AGENT_SESSION")
 @Serializable
+@SerialName("INIT_ACTIVE_SCOPE")
+data class InitActiveScope(val payload: InitScopePayload) : Action()
+
+@Serializable
+@SerialName("START_AGENT_SESSION")
 data class StartSession(val payload: StartSessionPayload) : Action()
 
 @SerialName("STOP")

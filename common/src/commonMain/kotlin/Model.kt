@@ -23,6 +23,9 @@ data class AstMethod(
 )
 
 @Serializable
+data class InitScopePayload(val id: String, val name: String)
+
+@Serializable
 data class StartPayload(val testType: String = "MANUAL", val sessionId: String = "")
 
 @Serializable

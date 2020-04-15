@@ -2,23 +2,23 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
-import kotlinx.coroutines.*
+import com.epam.drill.plugins.test2code.common.api.*
 
 internal fun Test2CodeAdminPart.initActiveScope() {
     val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
     if (realtimeEnabled) {
-        GlobalScope.launch {
-            activeScope.subscribeOnChanges { sessions ->
-                updateSummary { it.calculateCoverage(sessions, pluginInstanceState) }
-                sendScopeMessages()
-                val coverageInfoSet = sessions.calculateCoverageData(pluginInstanceState, buildVersion)
-                coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
-            }
+        activeScope.subscribeOnChanges { sessions ->
+            updateSummary { it.calculateCoverage(sessions, pluginInstanceState) }
+            sendScopeMessages()
+            val coverageInfoSet = sessions.calculateCoverageData(pluginInstanceState, buildVersion)
+            coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
         }
     }
 }
 
-internal suspend fun Test2CodeAdminPart.changeActiveScope(scopeChange: ActiveScopeChangePayload): StatusMessage =
+internal suspend fun Test2CodeAdminPart.changeActiveScope(
+    scopeChange: ActiveScopeChangePayload
+): Any =
     if (pluginInstanceState.scopeNameNotExisting(scopeChange.scopeName, buildVersion)) {
         val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
         if (scopeChange.savePrevScope) {
@@ -35,17 +35,19 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(scopeChange: ActiveSco
                 cleanTopics(prevScope.id)
             }
         }
-        initActiveScope()
-        println("Current active scope $activeScope")
-        sendActiveSessions()
-        calculateAndSendScopeCoverage()
-        sendScopeMessages()
-        StatusMessage(StatusCodes.OK, "Switched to the new scope \'${scopeChange.scopeName}\'")
+        InitActiveScope(payload = InitScopePayload(id = activeScope.id, name = activeScope.name))
     } else StatusMessage(
         StatusCodes.CONFLICT,
         "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
     )
 
+internal suspend fun Test2CodeAdminPart.scopeInitialized() {
+    initActiveScope()
+    println("Current active scope - $activeScope")
+    sendActiveSessions()
+    calculateAndSendScopeCoverage()
+    sendScopeMessages()
+}
 
 internal suspend fun Test2CodeAdminPart.renameScope(payload: RenameScopePayload): StatusMessage = when {
     pluginInstanceState.scopeNotExisting(payload.scopeId) ->

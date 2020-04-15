@@ -69,7 +69,7 @@ class Test2CodeAdminPart(
                     startPayload = action.payload
                 )
             )
-            else -> println("Actions is not supported! $action")
+            else -> println("Action '$action' is not supported!")
         }
     }
 
@@ -110,6 +110,7 @@ class Test2CodeAdminPart(
             calculateAndSendScopeCoverage(activeScope)
             sendActiveScope()
         }
+        is ScopeInitialized -> scopeInitialized()
         is SessionStarted -> {
             activeScope.startSession(message.sessionId, message.testType)
             println("Session ${message.sessionId} started.")
@@ -118,6 +119,11 @@ class Test2CodeAdminPart(
         is SessionCancelled -> {
             activeScope.cancelSession(message)
             println("Session ${message.sessionId} cancelled.")
+            sendActiveSessions()
+        }
+        is AllSessionsCancelled -> {
+            activeScope.cancelAllSessions()
+            println("All sessions cancelled, ids: ${message.ids}.")
             sendActiveSessions()
         }
         is CoverDataPart -> {
