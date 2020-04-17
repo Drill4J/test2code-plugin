@@ -1,4 +1,4 @@
-name: Build & publish coverage-plugin
+name: Build & publish plugin
 on:
   push:
     tags:
