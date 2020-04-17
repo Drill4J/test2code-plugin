@@ -26,7 +26,7 @@ val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
 
 dependencies {
-    testImplementation(project(":api"))
+    testCompileOnly(project(":api"))
     testImplementation(project(":admin-part"))
     testCompileOnly(project(":agent-part"))
 
@@ -69,12 +69,17 @@ dependencies {
 }
 
 tasks {
-
     val testBuildClassesTasks = testBuilds.map { named("${it}Classes") }
 
-    val prepareDist by registering(Copy::class) {
+    val distrDir = file("distr")
+
+    clean {
+        delete(distrDir)
+    }
+
+    val prepareDist by registering(Sync::class) {
         from(rootProject.tasks.named("testDistZip"))
-        into(file("distr").resolve("adminStorage"))
+        into(distrDir.resolve("adminStorage"))
     }
 
     val integrationTest by registering(Test::class) {
