@@ -71,7 +71,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
                 prevBuildVersion = prevBuildVersion,
                 arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
-                finishedScopesCount = state.scopeManager.scopes(buildVersion).count()
+                finishedScopesCount = state.scopeManager.byVersionEnabled(buildVersion).count()
             )
         }
         else -> ScopeCoverage(

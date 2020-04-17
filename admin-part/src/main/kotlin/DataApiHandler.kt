@@ -2,7 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import kotlinx.serialization.builtins.*
-import kotlinx.serialization.json.*
 import org.jacoco.core.data.*
 import java.io.*
 
@@ -13,7 +12,7 @@ suspend fun Test2CodeAdminPart.handleGettingData(params: Map<String, String>): A
     "recommendations" -> newBuildActionsList()
     "coverage-data" -> { //TODO rewrite or remove this
         val byteArrayOutputStream = ByteArrayOutputStream()
-        val buildProbes = pluginInstanceState.scopeManager.scopes(buildVersion)
+        val buildProbes = pluginInstanceState.scopeManager.byVersionEnabled(buildVersion)
             .map {
                 it.probes.map { it.value.map { it.probes.values.map { it.values }.flatten() }.flatten() }.flatten()
             }.flatten()

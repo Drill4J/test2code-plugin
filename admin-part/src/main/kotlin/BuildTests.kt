@@ -27,8 +27,8 @@ suspend fun PluginInstanceState.testsToRun(
         val prevBuildVersion = classesData.prevBuildVersion
         val testsAssociatedWithMethods = javaMethods.associatedTests(buildTests, prevBuildVersion)
         testsAssociatedWithMethods?.let { assocTestsSeq ->
-            val curBuildTests: Set<TypedTest> = scopeManager.scopes(buildVersion).typedTests()
-            val prevBuildTests: Set<TypedTest> = scopeManager.scopes(prevBuildVersion).typedTests()
+            val curBuildTests: Set<TypedTest> = scopeManager.byVersionEnabled(buildVersion).typedTests()
+            val prevBuildTests: Set<TypedTest> = scopeManager.byVersionEnabled(prevBuildVersion).typedTests()
             assocTestsSeq
                 .flatMap { it.tests.asSequence() }
                 .distinct()

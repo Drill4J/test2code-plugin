@@ -90,23 +90,26 @@ class PluginInstanceState(
     suspend fun renameScope(id: String, newName: String) {
         val trimmedNewName = newName.trim()
         if (id == activeScope.id) activeScope.rename(trimmedNewName)
-        else scopeManager.getScope(id)?.apply {
-            scopeManager.saveScope(this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName)))
+        else scopeManager.byId(id)?.apply {
+            scopeManager.store(this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName)))
         }
     }
 
     suspend fun toggleScope(id: String) {
-        scopeManager.getScope(id)?.apply {
-            scopeManager.saveScope(this.copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
+        scopeManager.byId(id)?.apply {
+            scopeManager.store(this.copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
         }
     }
 
+    suspend fun scopeByName(name: String): Scope? = when (name) {
+        activeScope.name -> activeScope
+        else -> scopeManager.byVersion(agentInfo.buildVersion).firstOrNull { it.name == name }
+    }
 
-    suspend fun scopeNameNotExisting(name: String, buildVersion: String) =
-        scopeManager.scopes(buildVersion)
-            .find { it.name == name.trim() } == null && (name.trim() != activeScope.name || agentInfo.buildVersion != buildVersion)
-
-    suspend fun scopeNotExisting(id: String) = scopeManager.getScope(id) == null && activeScope.id != id
+    suspend fun scopeById(id: String): Scope? = when (id) {
+        activeScope.id -> activeScope
+        else -> scopeManager.byId(id)
+    }
 
     suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when (buildVersion) {
         agentInfo.buildVersion -> data as? ClassesData

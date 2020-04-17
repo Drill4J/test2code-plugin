@@ -147,7 +147,7 @@ class Test2CodeAdminPart(
     }
 
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
-        val finishedScopes = pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null)
+        val finishedScopes = pluginInstanceState.scopeManager.byVersion(buildVersion)
         finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
         sendScopes(buildVersion, finishedScopes)
         calculateAndSendBuildCoverage(buildVersion)
@@ -183,7 +183,7 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        val scopes = pluginInstanceState.scopeManager.scopes(buildVersion, enabled = null)
+        val scopes = pluginInstanceState.scopeManager.byVersion(buildVersion)
         sendScopes(buildVersion, scopes)
     }
 
@@ -212,7 +212,7 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
-        val sessions = pluginInstanceState.scopeManager.scopes(buildVersion).flatten()
+        val sessions = pluginInstanceState.scopeManager.byVersionEnabled(buildVersion).flatten()
         val coverageInfoSet = sessions.calculateCoverageData(pluginInstanceState, buildVersion)
         //TODO rewrite these add-hoc current build checks
         if (buildVersion == this.buildVersion) {

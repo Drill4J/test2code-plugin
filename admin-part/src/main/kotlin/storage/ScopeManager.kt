@@ -5,20 +5,23 @@ import com.epam.kodux.*
 
 class ScopeManager(private val storage: StoreClient) {
 
-    suspend fun scopes(): Sequence<FinishedScope> = storage.getAll<FinishedScope>().asSequence()
+    suspend fun byVersion(
+        buildVersion: String
+    ): Sequence<FinishedScope> = storage.findBy<FinishedScope> {
+        FinishedScope::buildVersion eq buildVersion
+    }.asSequence()
 
-    suspend fun scopes(buildVersion: String, enabled: Boolean? = true): Sequence<FinishedScope> {
-        return scopes().filter { it.buildVersion == buildVersion && enabled?.equals(it.enabled) ?: true }
-    }
+    suspend fun byVersionEnabled(
+        buildVersion: String
+    ): Sequence<FinishedScope> = byVersion(buildVersion).filter { it.enabled }
 
-    suspend fun saveScope(scope: FinishedScope) {
+    suspend fun store(scope: FinishedScope) {
         storage.store(scope)
     }
 
-    suspend fun delete(scopeId: String): FinishedScope? =
-        getScope(scopeId)?.apply {
-            storage.deleteById<FinishedScope>(scopeId)
-        }
+    suspend fun deleteById(scopeId: String): FinishedScope? = byId(scopeId)?.apply {
+        storage.deleteById<FinishedScope>(scopeId)
+    }
 
-    suspend fun getScope(scopeId: String): FinishedScope? = storage.findById(scopeId)
+    suspend fun byId(scopeId: String): FinishedScope? = storage.findById(scopeId)
 }
