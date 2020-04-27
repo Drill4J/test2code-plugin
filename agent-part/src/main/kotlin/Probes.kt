@@ -111,7 +111,8 @@ class ExecRuntime(
 open class SimpleSessionProbeArrayProvider(
     private val instrContext: IDrillContex = DrillContext,
     private val probeStreamPrv: () -> TimeSpanEventBus<ExecDatum>? = {
-        TimeSpanEventBusImpl(delayMillis = 50)
+        val realTimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
+        if (realTimeEnabled) TimeSpanEventBusImpl(delayMillis = 50) else null
     }
 ) : SessionProbeArrayProvider {
 
