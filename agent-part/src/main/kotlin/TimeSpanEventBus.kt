@@ -10,7 +10,7 @@ class TimeSpanEventBusImpl<T>(
     delayMillis: Long,
     private val coroutineScope: CoroutineScope = GlobalScope,
     private val mainChannel: Channel<T> = Channel(),
-    private val ticker: ReceiveChannel<Unit> = ticker(delayMillis, 50)
+    private val ticker: ReceiveChannel<Unit> = ticker(delayMillis, 150L)
 ) : TimeSpanEventBus<T>, Channel<T> by mainChannel, Flow<Sequence<T>> {
 
     override fun close(cause: Throwable?): Boolean = run {
