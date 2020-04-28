@@ -84,12 +84,14 @@ class ActiveScope(name: String, override val buildVersion: String) : Scope {
     fun finishSession(
         sessionId: String,
         onSuccess: ActiveScope.(FinishedSession) -> Unit
-    ): FinishedSession? = activeSessions.remove(sessionId)
-        ?.let(ActiveSession::finish)
-        ?.also { session ->
-            _sessions.update { it.add(session) }
-            onSuccess(session)
+    ): FinishedSession? = activeSessions.remove(sessionId)?.run {
+        finish().also { finished ->
+            if (finished.probes.any()) {
+                _sessions.update { it.add(finished) }
+                onSuccess(finished)
+            }
         }
+    }
 
     fun subscribeOnChanges(
         clb: suspend ActiveScope.(Sequence<Session>) -> Unit

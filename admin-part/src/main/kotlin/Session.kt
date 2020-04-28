@@ -41,7 +41,7 @@ class ActiveSession(
     fun finish() = FinishedSession(
         sessionId = id,
         testTypeName = testType,
-        probes = probes.toMap()
+        probes = probes
     )
 
     companion object {
