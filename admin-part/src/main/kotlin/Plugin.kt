@@ -135,8 +135,8 @@ class Test2CodeAdminPart(
                 activeScope.updateSummary { it.calculateCoverage(this, pluginInstanceState) }
             }?.also {
                 sendActiveSessions()
-                sendActiveScope()
                 if (it.probes.any()) {
+                    sendActiveScope()
                     sendScopes(buildVersion)
                     calculateAndSendScopeCoverage(activeScope)
                     println("Session $sessionId finished.")
