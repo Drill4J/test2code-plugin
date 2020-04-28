@@ -35,6 +35,7 @@ tasks {
     (run) {
         dependsOn(syncDistro)
         environment("DRILL_DEVMODE", true)
+        environment("DRILL_DEFAULT_PACKAGES", "org/springframework/samples/petclinic")
         environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
     }
 }
