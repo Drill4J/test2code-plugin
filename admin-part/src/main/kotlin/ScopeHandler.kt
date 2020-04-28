@@ -23,24 +23,29 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
             val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
-            sendScopeSummary(finishedScope.summary)
-            println("$finishedScope has been saved.")
             pluginInstanceState.scopeManager.store(finishedScope)
-            if (finishedScope.enabled) {
-                calculateAndSendBuildAndChildrenCoverage()
-            }
-        } else {
-            println("$prevScope is empty, it won't be added to the build.")
-            cleanTopics(prevScope.id)
-        }
+            println("$finishedScope has been saved.")
+        } else println("$prevScope is empty, it won't be added to the build.")
     }
-    InitActiveScope(payload = InitScopePayload(id = activeScope.id, name = activeScope.name))
+    InitActiveScope(
+        payload = InitScopePayload(
+            id = activeScope.id,
+            name = activeScope.name,
+            prevId = prevScope.id
+        )
+    )
 } else StatusMessage(
     StatusCodes.CONFLICT,
     "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
 )
 
-internal suspend fun Test2CodeAdminPart.scopeInitialized() {
+internal suspend fun Test2CodeAdminPart.scopeInitialized(prevId: String) {
+    pluginInstanceState.scopeManager.byId(prevId)?.apply {
+        if (enabled) {
+            calculateAndSendBuildAndChildrenCoverage()
+        }
+        sendScopeSummary(summary)
+    } ?: cleanTopics(prevId)
     initActiveScope()
     println("Current active scope - $activeScope")
     sendActiveSessions()

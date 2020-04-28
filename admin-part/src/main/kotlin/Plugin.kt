@@ -110,7 +110,7 @@ class Test2CodeAdminPart(
             calculateAndSendScopeCoverage(activeScope)
             sendActiveScope()
         }
-        is ScopeInitialized -> scopeInitialized()
+        is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> {
             activeScope.startSession(message.sessionId, message.testType)
             println("Session ${message.sessionId} started.")

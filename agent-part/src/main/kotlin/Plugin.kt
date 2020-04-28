@@ -93,11 +93,17 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     override suspend fun doAction(action: Action) {
         when (action) {
-            is InitActiveScope -> {
-                val payload = action.payload
-                println("Initializing scope ${payload.id}, ${payload.name}")
+            is InitActiveScope -> action.payload.apply {
+                println("Initializing scope $id, $name, prevId=$prevId")
                 instrContext.cancelAll()
-                sendMessage(ScopeInitialized(payload.id, payload.name, currentTimeMillis()))
+                sendMessage(
+                    ScopeInitialized(
+                        id = id,
+                        name = name,
+                        prevId = prevId,
+                        ts = currentTimeMillis()
+                    )
+                )
             }
             is StartSession -> {
                 val sessionId = action.payload.sessionId

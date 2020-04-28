@@ -18,7 +18,7 @@ class SerDeTest {
     @Test
     fun `action InitActiveScope`() {
         val action = InitActiveScope(
-            payload = InitScopePayload(id = "1231", name = "nasd")
+            payload = InitScopePayload(id = "222", name = "My scope", prevId = "111")
         )
         apiSerDe.apply {
             val str = stringify(actionSerializer, action)

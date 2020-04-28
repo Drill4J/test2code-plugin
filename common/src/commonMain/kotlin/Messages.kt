@@ -24,7 +24,12 @@ data class Initialized(val msg: String = "") : CoverMessage()
 
 @SerialName("SCOPE_INITIALIZED")
 @Serializable
-data class ScopeInitialized(val id: String, val name: String, val ts: Long) : CoverMessage()
+data class ScopeInitialized(
+    val id: String,
+    val name: String,
+    val prevId: String,
+    val ts: Long
+) : CoverMessage()
 
 @SerialName("SESSION_STARTED")
 @Serializable
