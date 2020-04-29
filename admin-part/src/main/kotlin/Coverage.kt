@@ -16,7 +16,7 @@ internal fun ScopeSummary.calculateCoverage(
     val classesData = state.data as ClassesData
     state.buildInfo?.classesBytes?.let { classesBytes ->
         val totalInstructions = classesData.packageTree.totalCount
-        val bundle = sessions.toProbes().bundle(classesBytes)
+        val bundle = sessions.flatten().bundle(classesBytes)
         val coverageCount = Count(bundle.instructionCounter.coveredCount, totalInstructions)
         copy(
             coverage = ScopeCoverage(
@@ -47,7 +47,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     val associatedTests = assocTestsMap.getAssociatedTests()
 
     val totalInstructions = classesData.packageTree.totalCount
-    val bundleCoverage = toProbes().bundle(classesBytes)
+    val bundleCoverage = flatten().bundle(classesBytes)
     val coverageCount = Count(bundleCoverage.instructionCounter.coveredCount, totalInstructions)
     val totalCoveragePercent = coverageCount.percentage()
 
@@ -136,8 +136,8 @@ fun Sequence<Session>.coveragesByTestType(
         sessions.asSequence().run {
             TestTypeSummary(
                 testType = testType,
-                coverage = toProbes().bundle(classesBytes).coverage(totalInstructions),
-                testCount = flatMap(Session::testNames).distinct().count(),
+                coverage = flatten().bundle(classesBytes).coverage(totalInstructions),
+                testCount = sumBy { it.tests.count() },
                 coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
             )
         }
@@ -156,9 +156,6 @@ fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassD
         store.apply { put(execData) }
     }
 
-internal val Session.testNames: Sequence<TypedTest>
-    get() = probes.keys.asSequence()
-
 private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
 
 private fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
@@ -172,19 +169,20 @@ private fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
 
 private fun Sequence<Session>.bundlesByTests(
     classesBytes: ClassesBytes
-): Map<TypedTest, IBundleCoverage> = flatMap { it.probes.entries.asSequence() }
-    .groupBy({ it.key }) { it.value.values.asSequence() }
-    .mapValues { it.value.asSequence().flatBundle(classesBytes) }
+): Map<TypedTest, IBundleCoverage> = takeIf { it.any() }?.run {
+    groupBy(Session::testType).map { (testType, sessions) ->
+        sessions.asSequence().flatten()
+            .groupBy { TypedTest(it.testName, testType) }
+            .mapValuesTo(mutableMapOf()) { it.value.asSequence().bundle(classesBytes) }
+    }.reduce { m1, m2 ->
+        m1.apply { putAll(m2) }
+    }
+} ?: emptyMap()
 
 private fun Sequence<Session>.bundlesByTestTypes(
     classesBytes: ClassesBytes
-): Map<String, IBundleCoverage> = flatMap { it.probes.entries.asSequence() }
-    .groupBy({ it.key.type }) { it.value.values.asSequence() }
+): Map<String, IBundleCoverage> = groupBy(Session::testType)
     .mapValues { it.value.asSequence().flatBundle(classesBytes) }
-
-private fun Sequence<Session>.toProbes(): Sequence<ExecClassData> = flatMap {
-    it.probes.values.asSequence()
-}.flatMap { it.values.asSequence() }
 
 
 private fun Sequence<Sequence<ExecClassData>>.flatBundle(

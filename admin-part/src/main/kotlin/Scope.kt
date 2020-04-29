@@ -125,7 +125,7 @@ data class FinishedScope(
     var enabled: Boolean = true
 ) : Scope {
 
-    override fun iterator() = probes.values.flatten().iterator()
+    override fun iterator() = probes.values.asSequence().flatten().iterator()
 
     override fun toString() = "fin-scope($id, $name)"
 }

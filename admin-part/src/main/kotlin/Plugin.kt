@@ -135,7 +135,7 @@ class Test2CodeAdminPart(
                 activeScope.updateSummary { it.calculateCoverage(this, pluginInstanceState) }
             }?.also {
                 sendActiveSessions()
-                if (it.probes.any()) {
+                if (it.any()) {
                     sendActiveScope()
                     sendScopes(buildVersion)
                     calculateAndSendScopeCoverage(activeScope)

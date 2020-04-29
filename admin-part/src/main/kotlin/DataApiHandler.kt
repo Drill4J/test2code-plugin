@@ -13,9 +13,10 @@ suspend fun Test2CodeAdminPart.handleGettingData(params: Map<String, String>): A
     "coverage-data" -> { //TODO rewrite or remove this
         val byteArrayOutputStream = ByteArrayOutputStream()
         val buildProbes = pluginInstanceState.scopeManager.byVersionEnabled(buildVersion)
-            .map {
-                it.probes.map { it.value.map { it.probes.values.map { it.values }.flatten() }.flatten() }.flatten()
-            }.flatten()
+            .map { it.probes }
+            .flatMap { it.values.asSequence() }
+            .flatMap { it.asSequence() }
+            .flatten()
         val dataStore = buildProbes.execDataStore()
         @Suppress("BlockingMethodInNonBlockingContext")
         val writer = ExecutionDataWriter(byteArrayOutputStream)
