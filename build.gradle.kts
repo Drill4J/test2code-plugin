@@ -14,6 +14,7 @@ val drillApiVersion: String by project
 val atomicFuVersion: String by project
 val ktorVersion: String by project
 val coroutinesVersion: String by project
+val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
 
 subprojects {
@@ -35,9 +36,10 @@ subprojects {
         "com.epam.drill:drill-admin-part:$drillApiVersion",
         "com.epam.drill:drill-agent-part:$drillApiVersion",
         "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:0.20.0",
-        "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0",
-        "org.jetbrains.kotlinx:kotlinx-serialization-cbor:0.20.0",
+        "org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$kxSerializationVersion",
+        "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kxSerializationVersion",
+        "org.jetbrains.kotlinx:kotlinx-serialization-cbor:$kxSerializationVersion",
+        "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
         "com.epam.drill:kodux-jvm:0.1.8",
