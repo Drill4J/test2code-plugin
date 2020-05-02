@@ -20,6 +20,9 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
     scopeChange: ActiveScopeChangePayload
 ): Any = if (pluginInstanceState.scopeByName(scopeChange.scopeName) == null) {
     val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
+    pluginInstanceState.storeCounter()
+    sendActiveSessions()
+    sendActiveScope()
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
             val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
@@ -40,17 +43,16 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
 )
 
 internal suspend fun Test2CodeAdminPart.scopeInitialized(prevId: String) {
+    initActiveScope()
     pluginInstanceState.scopeManager.byId(prevId)?.apply {
         if (enabled) {
             calculateAndSendBuildAndChildrenCoverage()
         }
         sendScopeSummary(summary)
     } ?: cleanTopics(prevId)
-    initActiveScope()
     println("Current active scope - $activeScope")
-    sendActiveSessions()
     calculateAndSendScopeCoverage()
-    sendScopeMessages()
+    sendScopes(buildVersion)
 }
 
 internal suspend fun Test2CodeAdminPart.renameScope(

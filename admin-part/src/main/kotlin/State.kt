@@ -41,6 +41,8 @@ class PluginInstanceState(
 
     private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
 
+    private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
+
     fun init() = _data.update { DataBuilder() }
 
     suspend fun initialized() {
@@ -120,14 +122,13 @@ class PluginInstanceState(
         else -> storeClient.classesData(buildVersion)
     } ?: NoData
 
-    suspend fun changeActiveScope(name: String): ActiveScope = activeScope.apply {
-        val scopeCounter = ScopeCounter(AgentBuildId(agentInfo.id, agentInfo.buildVersion), nth).inc()
-        scopeManager.storeCounter(scopeCounter)
-        _activeScope.update { prevScope ->
-            prevScope.close()
-            ActiveScope(scopeCounter.count, scopeName(name), agentInfo.buildVersion)
-        }
-    }
+    fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
+        ActiveScope(it.nth.inc(), scopeName(name), agentInfo.buildVersion)
+    }.apply { close() }
+
+    suspend fun storeCounter() = scopeManager.storeCounter(
+        ScopeCounter(agentBuildId, activeScope.nth)
+    )
 
     private fun scopeName(name: String) = when (val trimmed = name.trim()) {
         "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth + 1}"

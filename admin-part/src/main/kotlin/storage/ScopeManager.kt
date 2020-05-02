@@ -25,8 +25,9 @@ class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byId(scopeId: String): FinishedScope? = storage.findById(scopeId)
 
-    suspend fun counter(agentId: String, buildVersion: String) =
-        storage.findById<ScopeCounter>(AgentBuildId(agentId, buildVersion))
+    suspend fun counter(agentId: String, buildVersion: String): ScopeCounter? = storage.run {
+        findById(AgentBuildId(agentId, buildVersion))
+    }
 
     suspend fun storeCounter(scopeCounter: ScopeCounter) = storage.store(scopeCounter)
 }
