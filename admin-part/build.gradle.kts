@@ -24,6 +24,7 @@ dependencies {
     implementation("com.epam.drill:drill-admin-part")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 

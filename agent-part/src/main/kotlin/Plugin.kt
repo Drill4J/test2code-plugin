@@ -6,6 +6,7 @@ import com.epam.drill.plugins.test2code.common.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
