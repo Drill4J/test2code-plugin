@@ -14,6 +14,7 @@ val drillApiVersion: String by project
 val atomicFuVersion: String by project
 val ktorVersion: String by project
 val coroutinesVersion: String by project
+val kxCollectionsVersion: String by project
 
 subprojects {
     apply<BasePlugin>()
@@ -38,7 +39,7 @@ subprojects {
         "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0",
         "org.jetbrains.kotlinx:kotlinx-serialization-cbor:0.20.0",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
-        "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3.1",
+        "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
         "com.epam.drill:kodux-jvm:0.1.8",
         "org.jetbrains.xodus:xodus-entity-store:1.3.91",
         "io.ktor:ktor-locations:$ktorVersion",
