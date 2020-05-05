@@ -6,7 +6,6 @@ import com.epam.drill.plugins.test2code.common.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
-import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
@@ -58,19 +57,7 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun retransform() {
-        val t = System.currentTimeMillis()
-        println("Plugin $id: retransforming classes...")
-        val loadedClasses = Native.GetAllLoadedClasses()
-        println("Plugin $id: ${loadedClasses.count()} classes total.")
-        val classes = _loadedClasses.value
-        val toTransform = loadedClasses.filter {
-            !it.isAnnotation && !it.isSynthetic && it.name in classes
-        }
-        println("Plugin $id: ${toTransform.count()} classes to retransform.")
-        if (toTransform.isNotEmpty()) {
-            Native.RetransformClasses(toTransform.toTypedArray())
-        }
-        println("Plugin $id: ${toTransform.size} classes retransformed in ${System.currentTimeMillis() - t}ms.")
+        Native.RetransformClassesByPackagePrefixes(byteArrayOf())
     }
 
     private fun updateLoadedClasses() {
