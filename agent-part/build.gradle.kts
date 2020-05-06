@@ -23,7 +23,6 @@ dependencies {
     implementation("com.epam.drill:drill-agent-part")
     implementation("com.epam.drill:common")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     compileOnly("org.jetbrains.kotlinx:atomicfu")

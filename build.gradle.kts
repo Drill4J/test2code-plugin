@@ -38,7 +38,6 @@ subprojects {
         "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kxSerializationVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-cbor:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
