@@ -66,8 +66,9 @@ class PluginInstanceState(
             }
         } as ClassesData
         scopeManager.counter(agentInfo.id, agentInfo.buildVersion)?.run {
-            _activeScope.update { ActiveScope(nth = count, buildVersion = agentInfo.buildVersion) }
+            _activeScope.update { ActiveScope(nth = count.inc(), buildVersion = agentInfo.buildVersion) }
         }
+        storeCounter()
         storeClient.store(classesData)
         val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
         _buildTests.value = tests
