@@ -137,7 +137,7 @@ fun Sequence<Session>.coveragesByTestType(
             TestTypeSummary(
                 testType = testType,
                 coverage = flatten().bundle(classesBytes).coverage(totalInstructions),
-                testCount = sumBy { it.tests.count() },
+                testCount = flatMap { it.tests.asSequence() }.distinct().count(),
                 coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
             )
         }
