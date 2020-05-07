@@ -39,7 +39,7 @@ class ScopeTest : E2EPluginTest() {
                     active shouldBe true
                 }
                 val renameScope =
-                    RenameScope(RenameScopePayload(plugUi.activeScope()!!.id, "integration")).stringify()
+                    RenameScope(RenameScopePayload(activeScope.id, "integration")).stringify()
                 pluginAction(renameScope).join()
                 plugUi.activeScope()!!.name shouldBe "integration"
 
@@ -146,4 +146,3 @@ class ScopeTest : E2EPluginTest() {
         }
     }
 }
-

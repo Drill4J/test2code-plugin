@@ -43,7 +43,7 @@ class Test2CodeAdminPart(
 
     override suspend fun initialize() {
         pluginInstanceState = pluginInstanceState()
-        pluginInstanceState.buildInfo?.let { processData(Initialized("")) }
+        pluginInstanceState.readScopeCounter()?.let { processData(Initialized("")) }
     }
 
     override suspend fun applyPackagesChanges() {

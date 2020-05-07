@@ -23,7 +23,6 @@ class BuildMethodsTests : E2EPluginTest() {
                     allModifiedMethods.methods.size shouldBe 0
                 }
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.methods()//FIXME EPMDJ-2533 extra write
                 plugUi.methods()!!.apply {
                     totalMethods.totalCount shouldBe 5
                     newMethods.totalCount shouldBe 1

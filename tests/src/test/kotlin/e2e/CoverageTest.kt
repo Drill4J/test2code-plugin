@@ -22,7 +22,6 @@ class CoverageTest : E2EPluginTest() {
                     arrow shouldBe null
                 }
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.buildCoverage()//FIXME EPMDJ-2533 extra write
                 plugUi.buildCoverage()!!.apply {
                     ratio shouldBe 0.0
                     diff shouldBe 0.0

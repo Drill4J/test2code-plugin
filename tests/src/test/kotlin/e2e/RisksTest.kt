@@ -94,7 +94,6 @@ class RisksTest : E2EPluginTest() {
                 ).stringify()
                 pluginAction(switchScope)
 
-                plugUi.risks()//FIXME EPMDJ-2270 extra write
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
