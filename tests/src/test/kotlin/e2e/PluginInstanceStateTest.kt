@@ -59,11 +59,9 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
 
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.testsToRun() //FIXME extra write
                 plugUi.testsToRun()!!.apply {
                     testTypeToNames.isNotEmpty() shouldBe true
                 }
-                plugUi.buildCoverage()//FIXME EPMDJ-2533 extra write
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe ArrowType.DECREASE
                     diff shouldNotBe 0.0
@@ -194,7 +192,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     diff shouldNotBe 0.0
                     prevBuildVersion shouldBe ""
                 }
-                plugUi.activeScope()!!.name shouldBe "New Scope 2"
+                plugUi.activeScope()!!.name shouldBe "New Scope 3"
             }
         }
     }
@@ -246,20 +244,17 @@ class PluginInstanceStateTest : E2EPluginTest() {
 
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.subscribe(AgentSubscription(agentId, "30507"))
-                plugUi.buildCoverage()//FIXME EPMDJ-2270 extra write
                 plugUi.buildCoverage()!!.apply {
                     ratio shouldBe 100.0
                     arrow shouldBe null
                     diff shouldBe 100.0
                 }
 
-                plugUi.risks()//FIXME EPMDJ-2270 extra write
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
                 }
 
-                plugUi.activeScope()
                 plugUi.activeScope() shouldBe null
             }
         }

@@ -20,7 +20,7 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
     scopeChange: ActiveScopeChangePayload
 ): Any = if (pluginInstanceState.scopeByName(scopeChange.scopeName) == null) {
     val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
-    pluginInstanceState.storeCounter()
+    pluginInstanceState.storeScopeCounter()
     sendActiveSessions()
     sendActiveScope()
     if (scopeChange.savePrevScope) {
