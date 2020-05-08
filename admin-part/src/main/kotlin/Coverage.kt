@@ -192,7 +192,11 @@ private fun Sequence<Sequence<ExecClassData>>.flatBundle(
 internal fun Sequence<ExecClassData>.bundle(
     classesBytes: ClassesBytes
 ): IBundleCoverage = bundle { analyzer ->
-    contents.forEach { analyzer.analyzeClass(classesBytes[it.name], it.name) }
+    contents.forEach { execData ->
+        classesBytes[execData.name]?.let { classesBytes->
+            analyzer.analyzeClass(classesBytes, execData.name)
+        } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
+    }
 }
 
 internal fun ClassesBytes.bundle(
