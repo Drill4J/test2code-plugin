@@ -13,6 +13,7 @@ import kotlinx.serialization.*
 interface Scope : Sequence<FinishedSession> {
     val id: String
     val buildVersion: String
+    val name: String
     val summary: ScopeSummary
 }
 
@@ -28,7 +29,7 @@ class ActiveScope(
 
     override val summary get() = _summary.value
 
-    val name get() = summary.name
+    override val name get() = summary.name
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
@@ -61,7 +62,12 @@ class ActiveScope(
             active = false,
             enabled = enabled
         ),
-        probes = groupBy(Session::testType)
+        data = toList().let { sessions ->
+            ScopeData(
+                sessions = sessions,
+                typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests)
+            )
+        }
     )
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
@@ -120,16 +126,25 @@ class ActiveScope(
 }
 
 @Serializable
+data class ScopeData(
+    val sessions: List<FinishedSession> = emptyList(),
+    val typedTests: Set<TypedTest> = emptySet()
+) {
+    companion object {
+        val empty = ScopeData()
+    }
+}
+
+@Serializable
 data class FinishedScope(
     @Id override val id: String,
     override val buildVersion: String,
-    val name: String,
+    override val name: String,
     override val summary: ScopeSummary,
-    val probes: Map<String, List<FinishedSession>>,
-    var enabled: Boolean = true
+    val enabled: Boolean,
+    val data: ScopeData
 ) : Scope {
-
-    override fun iterator() = probes.values.asSequence().flatten().iterator()
+    override fun iterator() = data.sessions.iterator()
 
     override fun toString() = "fin-scope($id, $name)"
 }

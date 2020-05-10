@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 import java.util.concurrent.*
@@ -23,12 +24,16 @@ suspend fun PluginInstanceState.testsToRun(
     buildVersion: String,
     javaMethods: List<JavaMethod>
 ): GroupedTests = when (val classesData = classesData(buildVersion)) {
-    is ClassesData -> {
+    is ClassData -> {
         val prevBuildVersion = classesData.prevBuildVersion
         val testsAssociatedWithMethods = javaMethods.associatedTests(buildTests, prevBuildVersion)
         testsAssociatedWithMethods?.let { assocTestsSeq ->
-            val curBuildTests: Set<TypedTest> = scopeManager.byVersionEnabled(buildVersion).typedTests()
-            val prevBuildTests: Set<TypedTest> = scopeManager.byVersionEnabled(prevBuildVersion).typedTests()
+            val curBuildTests: Set<TypedTest> = scopeManager.byVersion(
+                buildVersion, withData = true
+            ).enabled().typedTests()
+            val prevBuildTests: Set<TypedTest> = scopeManager.byVersion(
+                prevBuildVersion, withData = true
+            ).enabled().typedTests()
             assocTestsSeq
                 .flatMap { it.tests.asSequence() }
                 .distinct()
@@ -57,8 +62,6 @@ fun MethodsInfo.testCount(
     buildVersion: String
 ) : Int = methods.associatedTests(buildTests, buildVersion)?.distinct()?.count() ?: 0
 
-private fun Sequence<FinishedScope>.typedTests(): Set<TypedTest> = flatMap { scope ->
-    scope.probes.asSequence().flatMap { (_, sessions) ->
-        sessions.asSequence().flatMap { it.tests.asSequence() }
-    }
-}.toSet()
+private fun Sequence<FinishedScope>.typedTests(): Set<TypedTest> = flatMapTo(mutableSetOf()) {
+    it.data.typedTests.asSequence()
+}

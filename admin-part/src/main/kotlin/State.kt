@@ -7,6 +7,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
+import kotlinx.serialization.protobuf.*
 
 /**
  * Agent state.
@@ -52,7 +53,7 @@ class PluginInstanceState(
                     totalCount = data.flatMap(AstEntity::methods).sumBy(AstMethod::count),
                     packages = data.toPackages()
                 ).toClassesData()
-                is ClassesData -> data
+                is ClassData -> data
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
                     val javaMethods = buildInfo?.javaMethods ?: emptyMap()
@@ -64,12 +65,20 @@ class PluginInstanceState(
                     ).toClassesData()
                 }
             }
-        } as ClassesData
+        } as ClassData
         readScopeCounter()?.run {
             _activeScope.update { ActiveScope(nth = count.inc(), buildVersion = agentInfo.buildVersion) }
         }
         storeScopeCounter()
-        storeClient.store(classesData)
+        storeClient.executeInAsyncTransaction {
+            store(classesData.copy(packageTree = PackageTree(0, emptyList())))
+            store(
+                PackageTreeBytes(
+                    buildVersion = classesData.buildVersion,
+                    bytes = ProtoBuf.dump(PackageTree.serializer(), classesData.packageTree)
+                )
+            )
+        }
         val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
         _buildTests.value = tests
     }
@@ -95,16 +104,17 @@ class PluginInstanceState(
     }
 
     suspend fun renameScope(id: String, newName: String) {
-        val trimmedNewName = newName.trim()
-        if (id == activeScope.id) activeScope.rename(trimmedNewName)
-        else scopeManager.byId(id)?.apply {
-            scopeManager.store(this.copy(name = newName, summary = this.summary.copy(name = trimmedNewName)))
+        when (id) {
+            activeScope.id -> activeScope.rename(newName.trim())
+            else -> scopeManager.byId(id)?.apply {
+                scopeManager.store(copy(name = newName, summary = this.summary.copy(name = newName.trim())))
+            }
         }
     }
 
     suspend fun toggleScope(id: String) {
         scopeManager.byId(id)?.apply {
-            scopeManager.store(this.copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
+            scopeManager.store(copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
         }
     }
 
@@ -119,8 +129,8 @@ class PluginInstanceState(
     }
 
     suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when (buildVersion) {
-        agentInfo.buildVersion -> data as? ClassesData
-        else -> storeClient.classesData(buildVersion)
+        agentInfo.buildVersion -> data as? ClassData
+        else -> storeClient.classData(buildVersion)
     } ?: NoData
 
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
@@ -138,7 +148,7 @@ class PluginInstanceState(
         else -> trimmed
     }
 
-    private fun PackageTree.toClassesData() = ClassesData(
+    private fun PackageTree.toClassesData() = ClassData(
         buildVersion = agentInfo.buildVersion,
         prevBuildVersion = prevBuildVersion,
         prevBuildCoverage = lastPrevBuildCoverage,
@@ -146,9 +156,13 @@ class PluginInstanceState(
     )
 }
 
-private suspend fun StoreClient.classesData(buildVersion: String) = findBy<ClassesData> {
-    ClassesData::buildVersion eq buildVersion
-}.firstOrNull()
+private suspend fun StoreClient.classData(buildVersion: String): ClassData? = executeInAsyncTransaction {
+    findById<ClassData>(buildVersion)?.run {
+        findById<PackageTreeBytes>(buildVersion)?.run {
+            ProtoBuf.load(PackageTree.serializer(), bytes)
+        }?.let { copy(packageTree = it) } ?: this
+    }
+}
 
 suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? {
     return findById(lastCoverageId(agentId, buildVersion))

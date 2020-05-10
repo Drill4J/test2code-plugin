@@ -27,7 +27,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     coverage shouldBe 0.0
                     totalClassesCount shouldBe 1
                     classes.size shouldNotBe 0
-                    assocTestsCount shouldBe null
+                    assocTestsCount shouldBe 0
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 lateinit var cont: String
