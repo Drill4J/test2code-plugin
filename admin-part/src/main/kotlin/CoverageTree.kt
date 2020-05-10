@@ -63,7 +63,7 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
                 coverage = pkgCvg.coverage(pkg.totalCount),
                 coveredClassesCount = pkgCvg.classCounter.coveredCount,
                 coveredMethodsCount = pkgCvg.methodCounter.coveredCount,
-                assocTestsCount = assocTestsMap[key]?.count(),
+                assocTestsCount = assocTestsMap[key]?.count() ?: 0,
                 classes = pkg.classes.classCoverage(pkgCvg.classes, assocTestsMap)
             ).also { cvg = packageItr.nextOrNull() }
         } else pkg
@@ -100,7 +100,7 @@ private fun List<JavaClassCoverage>.classCoverage(
                 classCov.copy(
                     coverage = cov.coverage(),
                     coveredMethodsCount = cov.methodCounter.coveredCount,
-                    assocTestsCount = assocTestsMap[key]?.count(),
+                    assocTestsCount = assocTestsMap[key]?.count() ?: 0,
                     methods = cov.toMethodCoverage(assocTestsMap)
                 ).also { next = itr.nextOrNull() }
             } ?: classCov
@@ -120,7 +120,7 @@ internal fun IClassCoverage.toMethodCoverage(
             decl = declaration(methodCoverage.desc),
             coverage = methodCoverage.coverage(),
             count = methodCoverage.instructionCounter.totalCount,
-            assocTestsCount = assocTestsMap[methodKey]?.count()
+            assocTestsCount = assocTestsMap[methodKey]?.count() ?: 0
         )
     }.toList()
 }

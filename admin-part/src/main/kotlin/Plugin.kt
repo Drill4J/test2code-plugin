@@ -9,6 +9,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 
@@ -47,8 +48,8 @@ class Test2CodeAdminPart(
     }
 
     override suspend fun applyPackagesChanges() {
-        storeClient.deleteBy<FinishedScope> { FinishedScope::buildVersion.eq(buildVersion) }
-        storeClient.deleteById<ClassesData>(buildVersion)
+        pluginInstanceState.scopeManager.deleteByVersion(buildVersion)
+        storeClient.deleteById<ClassData>(buildVersion)
         pluginInstanceState = pluginInstanceState()
     }
 
@@ -147,7 +148,9 @@ class Test2CodeAdminPart(
     }
 
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
-        val finishedScopes = pluginInstanceState.scopeManager.byVersion(buildVersion)
+        val finishedScopes = pluginInstanceState.scopeManager.byVersion(
+            buildVersion, withData = true
+        )
         finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
         sendScopes(buildVersion, finishedScopes)
         calculateAndSendBuildCoverage(buildVersion)
@@ -191,14 +194,13 @@ class Test2CodeAdminPart(
         buildVersion: String,
         scopes: Sequence<FinishedScope>
     ) = sender.send(
-        AgentSendContext(
+        context = AgentSendContext(
             agentId,
             buildVersion
         ),
-        Routes.Scopes,
-        scopes.summaries()
+        destination = Routes.Scopes,
+        message = scopes.summaries()
     )
-
 
     internal suspend fun calculateAndSendBuildAndChildrenCoverage(buildVersion: String = this.buildVersion) {
         calculateAndSendBuildCoverage(buildVersion)
@@ -212,8 +214,13 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
-        val sessions = pluginInstanceState.scopeManager.byVersionEnabled(buildVersion).flatten()
-        val coverageInfoSet = sessions.calculateCoverageData(pluginInstanceState, buildVersion)
+        val scopes = pluginInstanceState.scopeManager.run {
+            byVersion(buildVersion, true).enabled()
+        }
+        val sessions = scopes.flatten()
+        val coverageInfoSet = sessions.calculateCoverageData(
+            pluginInstanceState, buildVersion, scopes.count()
+        )
         //TODO rewrite these add-hoc current build checks
         if (buildVersion == this.buildVersion) {
             pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests) //FIXME

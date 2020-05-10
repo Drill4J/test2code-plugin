@@ -21,9 +21,19 @@ class DataBuilder : AgentData(), Iterable<AstEntity> {
 }
 
 @Serializable
-class ClassesData(
+data class ClassData(
     @Id val buildVersion: String,
     val prevBuildVersion: String,
     val prevBuildCoverage: Double,
     val packageTree: PackageTree
-) : AgentData()
+) : AgentData() {
+    override fun equals(other: Any?) = other is ClassData && buildVersion == other.buildVersion
+
+    override fun hashCode() = buildVersion.hashCode()
+}
+
+@Serializable
+class PackageTreeBytes(
+    @Id val buildVersion: String,
+    val bytes: ByteArray
+)

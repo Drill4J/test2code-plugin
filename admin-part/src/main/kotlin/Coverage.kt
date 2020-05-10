@@ -13,7 +13,7 @@ internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
     state: PluginInstanceState
 ): ScopeSummary = run {
-    val classesData = state.data as ClassesData
+    val classesData = state.data as ClassData
     state.buildInfo?.classesBytes?.let { classesBytes ->
         val totalInstructions = classesData.packageTree.totalCount
         val bundle = sessions.flatten().bundle(classesBytes)
@@ -36,11 +36,12 @@ internal fun ScopeSummary.calculateCoverage(
 
 internal suspend fun Sequence<Session>.calculateCoverageData(
     state: PluginInstanceState,
-    buildVersion: String
+    buildVersion: String,
+    scopeCount: Int = 0
 ): CoverageInfoSet {
     val buildInfo = state.buildManager[buildVersion]
     val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
-    val classesData = state.classesData(buildVersion) as ClassesData
+    val classesData = state.classesData(buildVersion) as ClassData
 
     val bundlesByTests = bundlesByTests(classesBytes)
     val assocTestsMap = bundlesByTests.associatedTests()
@@ -71,7 +72,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
                 diff = totalCoveragePercent - classesData.prevBuildCoverage,
                 prevBuildVersion = prevBuildVersion,
                 arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
-                finishedScopesCount = state.scopeManager.byVersionEnabled(buildVersion).count()
+                finishedScopesCount = scopeCount
             )
         }
         else -> ScopeCoverage(
@@ -158,7 +159,7 @@ fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassD
 
 private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
 
-private fun ClassesData.arrowType(totalCoveragePercent: Double): ArrowType? {
+private fun ClassData.arrowType(totalCoveragePercent: Double): ArrowType? {
     val diff = totalCoveragePercent - prevBuildCoverage
     return when {
         abs(diff) < 1E-7 -> null

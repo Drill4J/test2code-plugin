@@ -92,8 +92,8 @@ data class MethodsInfo(
 
 @Serializable
 data class PackageTree(
-    val totalCount: Int,
-    val packages: List<JavaPackageCoverage>
+    val totalCount: Int = 0,
+    val packages: List<JavaPackageCoverage> = emptyList()
 )
 
 @Serializable
@@ -106,7 +106,7 @@ data class JavaPackageCoverage(
     val coverage: Double = 0.0,
     val coveredClassesCount: Int = 0,
     val coveredMethodsCount: Int = 0,
-    val assocTestsCount: Int? = null,
+    val assocTestsCount: Int = 0,
     val classes: List<JavaClassCoverage>
 )
 
@@ -119,7 +119,7 @@ data class JavaClassCoverage(
     val totalCount: Int = 0,
     val coverage: Double = 0.0,
     val coveredMethodsCount: Int = 0,
-    val assocTestsCount: Int? = null,
+    val assocTestsCount: Int = 0,
     val methods: List<JavaMethodCoverage>
 )
 
@@ -131,7 +131,7 @@ data class JavaMethodCoverage(
     val decl: String,
     val count: Int,
     val coverage: Double = 0.0,
-    val assocTestsCount: Int? = null
+    val assocTestsCount: Int = 0
 )
 
 @Serializable
