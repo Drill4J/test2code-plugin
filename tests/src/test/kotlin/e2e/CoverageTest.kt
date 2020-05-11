@@ -25,7 +25,7 @@ class CoverageTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.apply {
                     ratio shouldBe 0.0
                     diff shouldBe 0.0
-                    prevBuildVersion shouldBe "30507"
+                    prevBuildVersion shouldBe "0.1.0"
                     byTestType shouldBe emptyMap()
                     arrow shouldBe null
                 }

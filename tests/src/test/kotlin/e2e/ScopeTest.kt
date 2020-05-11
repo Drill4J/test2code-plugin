@@ -105,17 +105,15 @@ class ScopeTest : E2EPluginTest() {
 
     @Test
     fun `finish active scope with ignoring and reignore after that`() {
-        lateinit var ignoredScopeId: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
                 }
-                plugUi.activeScope()!!.apply {
+                val ignoredScopeId = plugUi.activeScope()!!.apply {
                     coverage.ratio shouldBe 0.0
-                    ignoredScopeId = id
-                }
+                }.id
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK

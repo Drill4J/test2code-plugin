@@ -65,7 +65,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe ArrowType.DECREASE
                     diff shouldNotBe 0.0
-                    prevBuildVersion shouldBe "30507"
+                    prevBuildVersion shouldBe "0.1.0"
                 }
             }
         }
@@ -243,7 +243,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
 
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.subscribe(AgentSubscription(agentId, "30507"))
+                plugUi.subscribe(AgentSubscription(agentId, "0.1.0"))
                 plugUi.buildCoverage()!!.apply {
                     ratio shouldBe 100.0
                     arrow shouldBe null
