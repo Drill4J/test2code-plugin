@@ -112,7 +112,7 @@ open class SimpleSessionProbeArrayProvider(
     private val instrContext: IDrillContex = DrillContext,
     private val probeStreamPrv: () -> TimeSpanEventBus<ExecDatum>? = {
         val realTimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
-        if (realTimeEnabled) TimeSpanEventBusImpl(delayMillis = 500) else null
+        if (realTimeEnabled) TimeSpanEventBusImpl(delayMillis = 1500) else null
     }
 ) : SessionProbeArrayProvider {
 

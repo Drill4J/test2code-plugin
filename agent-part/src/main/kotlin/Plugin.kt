@@ -123,9 +123,14 @@ class CoverageAgentPart @JvmOverloads constructor(
 //extracted for agent emulator compatibility
 fun AgentPart<*, *>.probeSender(sessionId: String): (Sequence<ExecDatum>) -> Unit = { execData ->
     execData.map(ExecDatum::toExecClassData)
-        .chunked(10) // send data in chunks of 10
+        .chunked(128)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
-        .forEach { message -> sendMessage(message) }
+        .sumBy { message ->
+            sendMessage(message)
+            message.data.count()
+        }.takeIf { it > 0 }?.let {
+            sendMessage(SessionChanged(sessionId, it))
+        }
 }
 
 fun AgentPart<*, *>.sendMessage(message: CoverMessage) {

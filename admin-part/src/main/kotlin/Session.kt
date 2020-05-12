@@ -22,11 +22,14 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
+    override val tests: Set<TypedTest>
+        get() = _probes.value.keys
+
     fun addAll(dataPart: Collection<ExecClassData>) = _probes.update {
         it.mutate { map ->
             for (probe in dataPart) {
                 val key = TypedTest(probe.testName, testType)
-                val value = (map[key] ?: emptyTestData).let { testData ->
+                val value = (map[key] ?: persistentHashMapOf()).let { testData ->
                     val value = testData[probe.id]?.merge(probe) ?: probe
                     testData.put(probe.id, value)
                 }
@@ -35,22 +38,17 @@ class ActiveSession(
         }
     }
 
-    override val tests: Set<TypedTest>
-        get() = _probes.value.keys
-
     override fun iterator(): Iterator<ExecClassData> = Sequence {
         _probes.value.values.asSequence().flatMap { it.values.asSequence() }.iterator()
     }.iterator()
 
-    fun finish() = FinishedSession(
-        id = id,
-        testType = testType,
-        tests = tests,
-        probes = toList()
-    )
-
-    companion object {
-        private val emptyTestData = persistentHashMapOf<Long, ExecClassData>()
+    fun finish() = _probes.value.run {
+        FinishedSession(
+            id = id,
+            testType = testType,
+            tests = keys,
+            probes = values.flatMap { it.values }
+        )
     }
 }
 

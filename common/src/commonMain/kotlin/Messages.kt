@@ -47,6 +47,10 @@ data class AllSessionsCancelled(val ids: List<String>, val ts: Long) : CoverMess
 @Serializable
 data class CoverDataPart(val sessionId: String, val data: List<ExecClassData>) : CoverMessage()
 
+@SerialName("SESSION_CHANGED")
+@Serializable
+data class SessionChanged(val sessionId: String, val probeCount: Int) : CoverMessage()
+
 @SerialName("SESSION_FINISHED")
 @Serializable
 data class SessionFinished(val sessionId: String, val ts: Long) : CoverMessage()
