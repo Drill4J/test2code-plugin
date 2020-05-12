@@ -20,6 +20,7 @@ val commonSerDe = SerDe(
             subclass(ScopeInitialized.serializer())
             subclass(SessionStarted.serializer())
             subclass(CoverDataPart.serializer())
+            subclass(SessionChanged.serializer())
             subclass(SessionCancelled.serializer())
             subclass(AllSessionsCancelled.serializer())
             subclass(SessionFinished.serializer())

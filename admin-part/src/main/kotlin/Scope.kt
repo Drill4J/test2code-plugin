@@ -78,7 +78,10 @@ class ActiveScope(
 
     fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {
         activeSessions[sessionId]?.apply { addAll(probes) }
-        sessionChanged()
+    }
+
+    fun sessionChanged() = changes?.takeIf { !it.isClosedForSend }?.run {
+        offer(Unit)
     }
 
     fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)?.also {
@@ -119,10 +122,6 @@ class ActiveScope(
     fun close() = changes?.close()
 
     override fun toString() = "act-scope($id, $name)"
-
-    private fun sessionChanged() = changes?.takeIf { !it.isClosedForSend }?.run {
-        offer(Unit)
-    }
 }
 
 @Serializable

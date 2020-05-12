@@ -130,6 +130,9 @@ class Test2CodeAdminPart(
         is CoverDataPart -> {
             activeScope.addProbes(message.sessionId, message.data)
         }
+        is SessionChanged -> {
+            activeScope.sessionChanged()
+        }
         is SessionFinished -> {
             val sessionId = message.sessionId
             activeScope.finishSession(sessionId) {
