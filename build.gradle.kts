@@ -67,6 +67,19 @@ subprojects {
 }
 
 val pluginConfigJson = file("plugin_config.json")
+
+val prepareConfigJson by tasks.creating(Copy::class) {
+    group = "distribution"
+    from(provider {
+        file("$buildDir/tmp/${pluginConfigJson.name}").apply {
+            parentFile.mkdirs()
+            val json = pluginConfigJson.readText()
+            writeText(json.replace("{version}", "${project.version}"))
+        }
+    })
+    into("$buildDir/config")
+}
+
 distributions {
     val adminShadow = provider {
         tasks.getByPath(":admin-part:shadowJar")
@@ -85,7 +98,7 @@ distributions {
             from(
                 adminShadow,
                 agentShadow,
-                pluginConfigJson
+                prepareConfigJson
             )
             into("/")
         }
@@ -97,7 +110,7 @@ distributions {
             from(
                 adminShadow,
                 agentShadowTest,
-                pluginConfigJson
+                prepareConfigJson
             )
             into("/")
         }
