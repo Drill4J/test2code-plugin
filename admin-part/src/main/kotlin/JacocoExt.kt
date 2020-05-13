@@ -52,7 +52,7 @@ fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when
     else -> CoverageKey(this.name.crc64)
 }
 
-internal fun ICounter.toCount() = Count(covered = coveredCount, total = totalCount)
+internal fun ICounter.toCount(total: Int = totalCount) = Count(covered = coveredCount, total = total)
 
 /**
  * Converts ASM method description to declaration in java style with kotlin style of return type.

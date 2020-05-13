@@ -93,6 +93,7 @@ data class MethodsInfo(
 @Serializable
 data class PackageTree(
     val totalCount: Int = 0,
+    val totalMethodCount: Int = 0,
     val packages: List<JavaPackageCoverage> = emptyList()
 )
 

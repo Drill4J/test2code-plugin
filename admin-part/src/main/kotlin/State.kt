@@ -49,10 +49,13 @@ class PluginInstanceState(
     suspend fun initialized() {
         val classesData = _data.updateAndGet { data ->
             when (data) {
-                is DataBuilder -> PackageTree(
-                    totalCount = data.flatMap(AstEntity::methods).sumBy(AstMethod::count),
-                    packages = data.toPackages()
-                ).toClassesData()
+                is DataBuilder -> data.flatMap(AstEntity::methods).run {
+                    PackageTree(
+                        totalCount = sumBy(AstMethod::count),
+                        totalMethodCount = count(),
+                        packages = data.toPackages()
+                    ).toClassesData()
+                }
                 is ClassData -> data
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
@@ -61,6 +64,7 @@ class PluginInstanceState(
                     val packages = bundleCoverage.toPackages(javaMethods)
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },
+                        totalMethodCount = javaMethods.values.sumBy { it.count() },
                         packages = packages
                     ).toClassesData()
                 }
@@ -71,7 +75,7 @@ class PluginInstanceState(
         }
         storeScopeCounter()
         storeClient.executeInAsyncTransaction {
-            store(classesData.copy(packageTree = PackageTree(0, emptyList())))
+            store(classesData.copy(packageTree = PackageTree()))
             store(
                 PackageTreeBytes(
                     buildVersion = classesData.buildVersion,

@@ -13,16 +13,16 @@ internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
     state: PluginInstanceState
 ): ScopeSummary = run {
-    val classesData = state.data as ClassData
+    val classData = state.data as ClassData
     state.buildInfo?.classesBytes?.let { classesBytes ->
-        val totalInstructions = classesData.packageTree.totalCount
+        val totalInstructions = classData.packageTree.totalCount
         val bundle = sessions.flatten().bundle(classesBytes)
         val coverageCount = Count(bundle.instructionCounter.coveredCount, totalInstructions)
         copy(
             coverage = ScopeCoverage(
                 ratio = coverageCount.percentage(),
                 count = coverageCount,
-                methodCount = bundle.methodCounter.toCount(),
+                methodCount = bundle.methodCounter.toCount(classData.packageTree.totalMethodCount),
                 riskCount = zeroCount,
                 byTestType = sessions.coveragesByTestType(
                     sessions.bundlesByTests(classesBytes),
@@ -41,13 +41,13 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
 ): CoverageInfoSet {
     val buildInfo = state.buildManager[buildVersion]
     val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
-    val classesData = state.classesData(buildVersion) as ClassData
+    val classData = state.classesData(buildVersion) as ClassData
 
     val bundlesByTests = bundlesByTests(classesBytes)
     val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
-    val totalInstructions = classesData.packageTree.totalCount
+    val totalInstructions = classData.packageTree.totalCount
     val bundleCoverage = flatten().bundle(classesBytes)
     val coverageCount = Count(bundleCoverage.instructionCounter.coveredCount, totalInstructions)
     val totalCoveragePercent = coverageCount.percentage()
@@ -59,19 +59,19 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     }
     println(coverageByType)
 
-    val methodCount = bundleCoverage.methodCounter.toCount()
+    val methodCount = bundleCoverage.methodCounter.toCount(classData.packageTree.totalMethodCount)
     val coverageBlock: Coverage = when (scope) {
         null -> {
-            val prevBuildVersion = classesData.prevBuildVersion
+            val prevBuildVersion = classData.prevBuildVersion
             BuildCoverage(
                 ratio = totalCoveragePercent,
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
                 byTestType = coverageByType,
-                diff = totalCoveragePercent - classesData.prevBuildCoverage,
+                diff = totalCoveragePercent - classData.prevBuildCoverage,
                 prevBuildVersion = prevBuildVersion,
-                arrow = if (prevBuildVersion.isNotBlank()) classesData.arrowType(totalCoveragePercent) else null,
+                arrow = if (prevBuildVersion.isNotBlank()) classData.arrowType(totalCoveragePercent) else null,
                 finishedScopesCount = scopeCount
             )
         }
@@ -94,11 +94,11 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     val buildMethods = calculatedMethods.copy(
         deletedCoveredMethodsCount = calculatedMethods.deletedMethods.testCount(
             state.buildTests,
-            classesData.prevBuildVersion
+            classData.prevBuildVersion
         )
     )
 
-    val packageCoverage = classesData.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
+    val packageCoverage = classData.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         methodsChanges,
