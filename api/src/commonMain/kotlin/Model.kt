@@ -239,10 +239,7 @@ data class TestsToRun(
 data class TestsToRunDto(
     val groupedTests: GroupedTests,
     val count: Int
-) : (TestsToRunDto) -> TestsToRunDto {
-    //TODO separate aggregation implementation from the data class
-    override fun invoke(other: TestsToRunDto) = this + other
-}
+)
 
 @Serializable
 data class SummaryDto(
