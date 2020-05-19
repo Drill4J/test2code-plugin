@@ -1,24 +1,29 @@
-name: Check plugin
+name: Check
 on:
   pull_request:
     branches:
-      - develop
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
+      - 'develop'
+      - 'release/*'
+    paths:
+      - '**/src/**'
+      - '**.gradle.kts'
+      - 'gradle.properties'
 
 jobs:
-  build_and_check:
-    name: Check
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - id: cache-gradle
+        uses: actions/cache@v1
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
       - uses: actions/setup-java@v1
         with:
           java-version: 11
-      - name: Check
-        uses: eskatos/gradle-command-action@v1
+      - uses: eskatos/gradle-command-action@v1
         with:
           arguments: -s check
-        env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g
