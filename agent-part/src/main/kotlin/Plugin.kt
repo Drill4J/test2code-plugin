@@ -2,7 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.common.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*

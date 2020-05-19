@@ -58,3 +58,15 @@ operator fun Count.plus(other: Count): Count = copy(
     covered = covered + other.covered,
     total = total + other.total
 )
+
+operator fun TestsToRunDto.plus(other: TestsToRunDto): TestsToRunDto {
+    val mergedGroupedTests = sequenceOf(groupedTests, other.groupedTests)
+        .flatMap { it.asSequence() }
+        .groupBy({ it.key }, { it.value })
+        .mapValues { (_, values) ->
+            values.flatten().distinct()
+        }
+    return TestsToRunDto(mergedGroupedTests, mergedGroupedTests.totalCount())
+}
+
+fun GroupedTests.totalCount(): Int = this.values.sumBy { it.count() }
