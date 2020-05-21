@@ -219,9 +219,13 @@ class Test2CodeAdminPart(
         val scopes = pluginInstanceState.scopeManager.run {
             byVersion(buildVersion, true).enabled()
         }
+        val buildInfo = adminData.buildManager[buildVersion]?.takeIf { it.parentVersion.isNotBlank() }
+        val prevCoverage = buildInfo?.run {
+            storeClient.readBuildCoverage(agentId, parentVersion)?.count
+        }
         val sessions = scopes.flatten()
         val coverageInfoSet = sessions.calculateCoverageData(
-            pluginInstanceState, buildVersion, scopes.count()
+            pluginInstanceState, buildVersion, scopes.count(), prevCoverage
         )
         //TODO rewrite these add-hoc current build checks
         if (buildVersion == this.buildVersion) {
@@ -238,7 +242,7 @@ class Test2CodeAdminPart(
 
         val risks = buildMethods.risks()
         val buildCoverage = coverageInfoSet.coverage as BuildCoverage
-        pluginInstanceState.storeBuildCoverage(buildCoverage, risks, testsToRun)
+        pluginInstanceState.storeBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
     }
 
@@ -349,12 +353,10 @@ class Test2CodeAdminPart(
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 
-    private suspend fun pluginInstanceState(): PluginInstanceState {
+    private fun pluginInstanceState(): PluginInstanceState {
         val prevBuildVersion = buildInfo?.parentVersion ?: ""
-        val lastPrevBuildCoverage = storeClient.readLastBuildCoverage(agentId, prevBuildVersion)?.coverage
         return PluginInstanceState(
             agentInfo = agentInfo,
-            lastPrevBuildCoverage = lastPrevBuildCoverage ?: 0.0,
             prevBuildVersion = prevBuildVersion,
             storeClient = storeClient,
             buildManager = adminData.buildManager
