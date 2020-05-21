@@ -7,9 +7,9 @@ import com.epam.kodux.*
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LastBuildCoverage(
-    @Id val id: String,
-    val coverage: Double,
+data class StoredBuildCoverage(
+    @Id val id: AgentBuildId,
+    val count: Count,
     val arrow: String?,
     val risks: Int,
     val testsToRun: TestsToRunDto
