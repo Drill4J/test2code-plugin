@@ -37,7 +37,8 @@ internal fun ScopeSummary.calculateCoverage(
 internal suspend fun Sequence<Session>.calculateCoverageData(
     state: PluginInstanceState,
     buildVersion: String,
-    scopeCount: Int = 0
+    scopeCount: Int = 0,
+    prevCoverage: Count? = null
 ): CoverageInfoSet {
     val buildInfo = state.buildManager[buildVersion]
     val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
@@ -62,16 +63,16 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     val methodCount = bundleCoverage.methodCounter.toCount(classData.packageTree.totalMethodCount)
     val coverageBlock: Coverage = when (scope) {
         null -> {
-            val prevBuildVersion = classData.prevBuildVersion
+            val diff = totalCoveragePercent - (prevCoverage ?: zeroCount).percentage()
             BuildCoverage(
                 ratio = totalCoveragePercent,
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
                 byTestType = coverageByType,
-                diff = totalCoveragePercent - classData.prevBuildCoverage,
-                prevBuildVersion = prevBuildVersion,
-                arrow = if (prevBuildVersion.isNotBlank()) classData.arrowType(totalCoveragePercent) else null,
+                diff = diff,
+                prevBuildVersion = classData.prevBuildVersion,
+                arrow = prevCoverage?.arrowType(totalCoveragePercent),
                 finishedScopesCount = scopeCount
             )
         }
@@ -159,8 +160,8 @@ fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassD
 
 private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
 
-private fun ClassData.arrowType(totalCoveragePercent: Double): ArrowType? {
-    val diff = totalCoveragePercent - prevBuildCoverage
+private fun Count.arrowType(totalCoverage: Double): ArrowType? {
+    val diff = totalCoverage - percentage()
     return when {
         abs(diff) < 1E-7 -> null
         diff > 0.0 -> ArrowType.INCREASE
@@ -194,7 +195,7 @@ internal fun Sequence<ExecClassData>.bundle(
     classesBytes: ClassesBytes
 ): IBundleCoverage = bundle { analyzer ->
     contents.forEach { execData ->
-        classesBytes[execData.name]?.let { classesBytes->
+        classesBytes[execData.name]?.let { classesBytes ->
             analyzer.analyzeClass(classesBytes, execData.name)
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }

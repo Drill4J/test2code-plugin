@@ -21,7 +21,6 @@ internal const val DEFAULT_SCOPE_NAME = "New Scope"
 class PluginInstanceState(
     val storeClient: StoreClient,
     val prevBuildVersion: String,
-    val lastPrevBuildCoverage: Double,
     val agentInfo: AgentInfo,
     val buildManager: BuildManager
 ) {
@@ -92,11 +91,16 @@ class PluginInstanceState(
         storeClient.store(buildTests)
     }
 
-    suspend fun storeBuildCoverage(buildCoverage: BuildCoverage, risks: Risks, testsToRun: GroupedTests) {
+    suspend fun storeBuildCoverage(
+        buildVersion: String,
+        buildCoverage: BuildCoverage,
+        risks: Risks,
+        testsToRun: GroupedTests
+    ) {
         storeClient.store(
-            LastBuildCoverage(
-                id = lastCoverageId(agentInfo.id, agentInfo.buildVersion),
-                coverage = buildCoverage.ratio,
+            StoredBuildCoverage(
+                id = AgentBuildId(agentInfo.id, buildVersion),
+                count = buildCoverage.count,
                 arrow = buildCoverage.arrow?.name,
                 risks = risks.run { newMethods.count() + modifiedMethods.count() },
                 testsToRun = TestsToRunDto(
@@ -155,7 +159,6 @@ class PluginInstanceState(
     private fun PackageTree.toClassesData() = ClassData(
         buildVersion = agentInfo.buildVersion,
         prevBuildVersion = prevBuildVersion,
-        prevBuildCoverage = lastPrevBuildCoverage,
         packageTree = this
     )
 }
@@ -168,8 +171,6 @@ private suspend fun StoreClient.classData(buildVersion: String): ClassData? = ex
     }
 }
 
-suspend fun StoreClient.readLastBuildCoverage(agentId: String, buildVersion: String): LastBuildCoverage? {
-    return findById(lastCoverageId(agentId, buildVersion))
+suspend fun StoreClient.readBuildCoverage(agentId: String, buildVersion: String): StoredBuildCoverage? {
+    return findById(AgentBuildId(agentId, buildVersion))
 }
-
-private fun lastCoverageId(agentId: String, buildVersion: String) = "$agentId:$buildVersion"
