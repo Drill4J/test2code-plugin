@@ -28,3 +28,27 @@ kotlin {
         }
     }
 }
+
+val kt2dts by configurations.creating
+
+dependencies {
+    kt2dts("com.epam.drill.ts:kt2dts-cli:0.1.0")
+}
+
+tasks.register<JavaExec>("genTsd") {
+    group = "ts"
+    classpath = kt2dts
+    val main by kotlin.jvm().compilations
+    dependsOn(main.compileAllTaskName)
+    CommandLineArgumentProvider {
+        val genPaths = main.output.classesDirs + main.runtimeDependencyFiles.files
+        val drillPluginId: String by project.extra
+        val tsDir = buildDir.resolve("ts").also(File::mkdirs)
+        val tsdFile = tsDir.resolve("$drillPluginId.d.ts")
+        mutableListOf(
+            "--module=@drill4j/$drillPluginId-types",
+            "--output=${tsdFile.path}",
+            "--cp=${genPaths.joinToString(separator = ",")}"
+        )
+    }.let { argumentProviders += it }
+}
