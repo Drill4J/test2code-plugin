@@ -23,7 +23,6 @@ class DataBuilder : AgentData(), Iterable<AstEntity> {
 @Serializable
 data class ClassData(
     @Id val buildVersion: String,
-    val prevBuildVersion: String,
     val packageTree: PackageTree
 ) : AgentData() {
     override fun equals(other: Any?) = other is ClassData && buildVersion == other.buildVersion

@@ -7,6 +7,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.serialization.protobuf.*
 
 /**
@@ -20,7 +21,6 @@ internal const val DEFAULT_SCOPE_NAME = "New Scope"
 
 class PluginInstanceState(
     val storeClient: StoreClient,
-    val prevBuildVersion: String,
     val agentInfo: AgentInfo,
     val buildManager: BuildManager
 ) {
@@ -33,15 +33,15 @@ class PluginInstanceState(
 
     val activeScope get() = _activeScope.value
 
-    val buildTests get() = _buildTests.value
+    val coverages = AtomicCache<AgentBuildId, StoredBuildCoverage>()
+
+    val buildTests = AtomicCache<AgentBuildId, BuildTests>()
+
+    private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
 
     private val _data = atomic<AgentData>(NoData)
 
-    private val _buildTests = atomic(BuildTests(agentInfo.id))
-
     private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
-
-    private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
 
     fun init() = _data.update { DataBuilder() }
 
@@ -81,34 +81,68 @@ class PluginInstanceState(
                     bytes = ProtoBuf.dump(PackageTree.serializer(), classesData.packageTree)
                 )
             )
+            getAll<StoredBuildCoverage>().forEach { stored ->
+                coverages(stored.id) { stored }
+            }
+            getAll<StoredBuildTests>().forEach { stored ->
+                buildTests(stored.id) {
+                    ProtoBuf.load(BuildTests.serializer(), stored.data)
+                }
+            }
         }
-        val tests: BuildTests = storeClient.run { findById(agentInfo.id) ?: store(buildTests) }
-        _buildTests.value = tests
     }
 
-    suspend fun addBuildTests(buildVersion: String, tests: List<AssociatedTests>) {
-        buildTests.add(buildVersion, tests)
-        storeClient.store(buildTests)
+    fun buildId(buildVersion: String) = when (buildVersion) {
+        agentInfo.buildVersion -> agentBuildId
+        else -> agentBuildId.copy(buildVersion = buildVersion)
+    }
+
+    fun updateBuildTests(
+        buildVersion: String,
+        tests: List<AssociatedTests>
+    ) = buildId(buildVersion).let { buildId ->
+        buildTests[buildId] = buildTests[buildId]?.run {
+            copy(assocTests = assocTests.toPersistentSet().addAll(tests))
+        } ?: BuildTests(assocTests = tests.toPersistentSet())
+    }
+
+    fun updateTestsToRun(
+        buildVersion: String,
+        testsToRun: GroupedTests
+    ) = buildId(buildVersion).let { buildId ->
+        buildTests[buildId] = buildTests[buildId]?.run {
+            copy(testsToRun = testsToRun)
+        } ?: BuildTests(testsToRun = testsToRun)
+    }
+
+    fun updateBuildCoverage(
+        buildVersion: String,
+        buildCoverage: BuildCoverage,
+        risks: Risks
+    ) {
+        val id = buildId(buildVersion)
+        val coverage = StoredBuildCoverage(
+            id = id,
+            count = buildCoverage.count,
+            arrow = buildCoverage.arrow?.name,
+            risks = risks.run { newMethods.count() + modifiedMethods.count() }
+        )
+        coverages[id] = coverage
     }
 
     suspend fun storeBuildCoverage(
-        buildVersion: String,
-        buildCoverage: BuildCoverage,
-        risks: Risks,
-        testsToRun: GroupedTests
+        buildVersion: String
     ) {
-        storeClient.store(
-            StoredBuildCoverage(
-                id = AgentBuildId(agentInfo.id, buildVersion),
-                count = buildCoverage.count,
-                arrow = buildCoverage.arrow?.name,
-                risks = risks.run { newMethods.count() + modifiedMethods.count() },
-                testsToRun = TestsToRunDto(
-                    groupedTests = testsToRun,
-                    count = testsToRun.totalCount()
-                )
-            )
-        )
+        val id = buildId(buildVersion)
+        val coverage = coverages[id]
+        val tests = buildTests[id]
+        storeClient.executeInAsyncTransaction {
+            coverage?.let { store(it) }
+            tests?.let { tests ->
+                val data = ProtoBuf.dump(BuildTests.serializer(), tests)
+                store(StoredBuildTests(id, data))
+            }
+        }
     }
 
     suspend fun renameScope(id: String, newName: String) {
@@ -158,7 +192,6 @@ class PluginInstanceState(
 
     private fun PackageTree.toClassesData() = ClassData(
         buildVersion = agentInfo.buildVersion,
-        prevBuildVersion = prevBuildVersion,
         packageTree = this
     )
 }
@@ -169,8 +202,4 @@ private suspend fun StoreClient.classData(buildVersion: String): ClassData? = ex
             ProtoBuf.load(PackageTree.serializer(), bytes)
         }?.let { copy(packageTree = it) } ?: this
     }
-}
-
-suspend fun StoreClient.readBuildCoverage(agentId: String, buildVersion: String): StoredBuildCoverage? {
-    return findById(AgentBuildId(agentId, buildVersion))
 }

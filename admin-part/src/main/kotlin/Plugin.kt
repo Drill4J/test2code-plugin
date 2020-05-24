@@ -10,7 +10,6 @@ import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
-import kotlinx.atomicfu.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class Test2CodeAdminPart(
@@ -25,12 +24,6 @@ class Test2CodeAdminPart(
 
     lateinit var pluginInstanceState: PluginInstanceState
 
-    internal var lastTestsToRun: GroupedTests
-        get() = _lastTestsToRun.value
-        set(value) {
-            _lastTestsToRun.value = value
-        }
-
     val buildVersion = agentInfo.buildVersion
 
     val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
@@ -39,7 +32,10 @@ class Test2CodeAdminPart(
 
     val agentId = agentInfo.id
 
-    private val _lastTestsToRun = atomic<GroupedTests>(emptyMap())
+    internal val lastTestsToRun: GroupedTests
+        get() = pluginInstanceState.run {
+            buildTests[buildId(buildVersion)]?.testsToRun ?: emptyMap()
+        }
 
     override suspend fun initialize() {
         pluginInstanceState = pluginInstanceState()
@@ -219,31 +215,26 @@ class Test2CodeAdminPart(
         val scopes = pluginInstanceState.scopeManager.run {
             byVersion(buildVersion, true).enabled()
         }
-        val buildInfo = adminData.buildManager[buildVersion]?.takeIf { it.parentVersion.isNotBlank() }
-        val prevCoverage = buildInfo?.run {
-            storeClient.readBuildCoverage(agentId, parentVersion)?.count
+        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion
+        val prevCoverage = parentVersion?.let {
+            pluginInstanceState.coverages[pluginInstanceState.buildId(parentVersion)]?.count ?: zeroCount
         }
         val sessions = scopes.flatten()
         val coverageInfoSet = sessions.calculateCoverageData(
             pluginInstanceState, buildVersion, scopes.count(), prevCoverage
         )
-        //TODO rewrite these add-hoc current build checks
-        if (buildVersion == this.buildVersion) {
-            pluginInstanceState.addBuildTests(buildVersion, coverageInfoSet.associatedTests) //FIXME
-        }
+        pluginInstanceState.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
         val buildMethods = coverageInfoSet.buildMethods
         val testsToRun = pluginInstanceState.testsToRun(
             buildVersion,
             buildMethods.allModifiedMethods.methods
         )
-        if (buildVersion == this.buildVersion) {
-            lastTestsToRun = testsToRun
-        }
-
+        pluginInstanceState.updateTestsToRun(buildVersion, testsToRun)
         val risks = buildMethods.risks()
         val buildCoverage = coverageInfoSet.coverage as BuildCoverage
-        pluginInstanceState.storeBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
+        pluginInstanceState.updateBuildCoverage(buildVersion, buildCoverage, risks)
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
+        pluginInstanceState.storeBuildCoverage(buildVersion)
     }
 
     private suspend fun CoverageInfoSet.sendBuildCoverage(
@@ -255,7 +246,7 @@ class Test2CodeAdminPart(
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
-                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
+                batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }
             send(buildVersion, Routes.Build.AssociatedTests, beautifiedAssociatedTests)
         }
@@ -313,7 +304,7 @@ class Test2CodeAdminPart(
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
-                batch.copy(className = batch.className?.replace("${batch.packageName}/", ""))
+                batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }
             send(buildVersion, Routes.Scope.AssociatedTests(scopeId), beautifiedAssociatedTests)
         }
@@ -353,13 +344,9 @@ class Test2CodeAdminPart(
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 
-    private fun pluginInstanceState(): PluginInstanceState {
-        val prevBuildVersion = buildInfo?.parentVersion ?: ""
-        return PluginInstanceState(
-            agentInfo = agentInfo,
-            prevBuildVersion = prevBuildVersion,
-            storeClient = storeClient,
-            buildManager = adminData.buildManager
-        )
-    }
+    private fun pluginInstanceState() = PluginInstanceState(
+        storeClient = storeClient,
+        agentInfo = agentInfo,
+        buildManager = adminData.buildManager
+    )
 }
