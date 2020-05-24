@@ -29,10 +29,10 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
         id = key.id,
         packageName = key.packageName,
         className = key.className,
-        methodName = key.className?.methodName(key.methodName),
-        tests = tests
+        methodName = key.className.methodName(key.methodName),
+        tests = tests.sortedBy { it.name }
     )
-}.sortedBy { it.methodName }.map { assocTests -> assocTests.copy(tests = assocTests.tests.sortedBy { it.name }) }
+}.sortedBy { it.methodName }
 
 fun IBundleCoverage.toDataMap() = packages
     .flatMap { it.classes }
@@ -46,11 +46,12 @@ fun calculateBundleMethods(
 ): BuildMethods {
     val methodsCoverages = bundleCoverage.toDataMap()
 
-    val infos: Map<DiffType, MethodsInfo> = DiffType.values().map { type ->
-        type to (methodChanges.map[type]?.getInfo(methodsCoverages, excludeMissed) ?: MethodsInfo())
+    val infos: Map<DiffType, MethodsInfo> = DiffType.values().asSequence().map { diffType ->
+        diffType to (methodChanges.map[diffType]?.getInfo(methodsCoverages, excludeMissed) ?: MethodsInfo())
     }.toMap()
 
-    val totalInfo: MethodsInfo = infos.filter { it.key != DiffType.DELETED }.values
+    val totalInfo: MethodsInfo = infos.asSequence().filter { it.key != DiffType.DELETED }
+        .map { it.value }
         .reduce { totalInfo, info ->
             MethodsInfo(
                 totalInfo.totalCount + info.totalCount,
@@ -59,9 +60,9 @@ fun calculateBundleMethods(
             )
         }
 
-    val modifiedNameMethods = infos[DiffType.MODIFIED_NAME]!!
-    val modifiedDescMethods = infos[DiffType.MODIFIED_DESC]!!
-    val modifiedBodyMethods = infos[DiffType.MODIFIED_BODY]!!
+    val modifiedNameMethods = infos.getValue(DiffType.MODIFIED_NAME)
+    val modifiedDescMethods = infos.getValue(DiffType.MODIFIED_DESC)
+    val modifiedBodyMethods = infos.getValue(DiffType.MODIFIED_BODY)
     val allModifiedMethods = listOf(modifiedBodyMethods, modifiedDescMethods, modifiedNameMethods)
         .flatMap(MethodsInfo::methods)
         .let { methods ->
@@ -73,13 +74,13 @@ fun calculateBundleMethods(
         }
     return BuildMethods(
         totalMethods = totalInfo,
-        newMethods = infos[DiffType.NEW]!!,
+        newMethods = infos.getValue(DiffType.NEW),
         modifiedNameMethods = modifiedNameMethods,
         modifiedDescMethods = modifiedDescMethods,
         modifiedBodyMethods = modifiedBodyMethods,
         allModifiedMethods = allModifiedMethods,
-        unaffectedMethods = infos[DiffType.UNAFFECTED]!!,
-        deletedMethods = infos[DiffType.DELETED]!!
+        unaffectedMethods = infos.getValue(DiffType.UNAFFECTED),
+        deletedMethods = infos.getValue(DiffType.DELETED)
     )
 }
 
@@ -87,19 +88,19 @@ fun Methods.getInfo(
     data: Map<Pair<String, String>, IMethodCoverage>,
     excludeMissed: Boolean
 ) = MethodsInfo(
-    totalCount = this.count(),
+    totalCount = count(),
     coveredCount = count { data[it.ownerClass to it.sign]?.instructionCounter?.coveredCount ?: 0 > 0 },
-    methods = this.mapNotNull { method ->
+    methods = mapNotNull { method ->
         val coverageRate = data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
-        if (!(excludeMissed && coverageRate == CoverageRate.MISSED)) {
+        coverageRate.takeIf { !excludeMissed || it != CoverageRate.MISSED }?.let {
             JavaMethod(
                 ownerClass = method.ownerClass,
-                name = method.ownerClass.methodName(method.name) ?: "",
+                name = method.ownerClass.methodName(method.name),
                 desc = declaration(method.desc),
                 hash = method.hash,
                 coverageRate = coverageRate
             )
-        } else null
+        }
     }.sortedBy { it.name }
 )
 
@@ -136,7 +137,7 @@ private val Method.sign get() = "$name$desc"
 
 fun IMethodCoverage.sign() = "$name$desc"
 
-fun String.methodName(name: String?): String? = when (name) {
+fun String.methodName(name: String): String = when (name) {
     "<init>" -> toShortClassName()
     "<clinit>" -> "static ${toShortClassName()}"
     else -> name

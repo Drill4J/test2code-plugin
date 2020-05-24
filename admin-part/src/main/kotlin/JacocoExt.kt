@@ -6,27 +6,26 @@ import org.jacoco.core.internal.data.*
 
 data class CoverageKey(
     val id: String,
-    val packageName: String? = null,
-    val className: String? = null,
-    val methodName: String? = null,
-    val methodDesc: String? = null
+    val packageName: String = "",
+    val className: String = "",
+    val methodName: String = "",
+    val methodDesc: String = ""
 ) {
     override fun equals(other: Any?) = other is CoverageKey && id == other.id
 
     override fun hashCode() = id.hashCode()
 }
 
-val CoverageKey.isMethod get() = methodName != null
+val CoverageKey.isMethod get() = methodName.any()
 
 val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
 
 fun IMethodCoverage.coverageRate() = instructionCounter?.run {
-    when (this.totalCount - this.coveredCount) {
-        0 -> CoverageRate.FULL
-        this.totalCount -> CoverageRate.MISSED
-        else -> CoverageRate.PARTLY
+    when (coveredCount) {
+        0 -> CoverageRate.MISSED
+        in 1 until totalCount -> CoverageRate.PARTLY
+        else -> CoverageRate.FULL
     }
-
 }
 
 fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double =
@@ -35,8 +34,8 @@ fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double =
 fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when (this) {
     is IMethodCoverage -> CoverageKey(
         id = "${parent?.name}.${this.name}${this.desc}".crc64,
-        packageName = parent?.name?.substringBeforeLast('/'),
-        className = parent?.name,
+        packageName = parent?.name?.substringBeforeLast('/') ?: "",
+        className = parent?.name ?: "",
         methodName = this.name,
         methodDesc = this.desc
     )

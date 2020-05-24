@@ -115,7 +115,7 @@ internal fun IClassCoverage.toMethodCoverage(
         val methodKey = methodCoverage.coverageKey(this)
         JavaMethodCoverage(
             id = methodKey.id,
-            name = name.methodName(methodCoverage.name) ?: "",
+            name = name.methodName(methodCoverage.name),
             desc = methodCoverage.desc,
             decl = declaration(methodCoverage.desc),
             coverage = methodCoverage.coverage(),

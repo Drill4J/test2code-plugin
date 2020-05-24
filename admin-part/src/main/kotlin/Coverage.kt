@@ -38,7 +38,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     state: PluginInstanceState,
     buildVersion: String,
     scopeCount: Int = 0,
-    prevCoverage: Count? = null
+    otherCoverage: Count? = null
 ): CoverageInfoSet {
     val buildInfo = state.buildManager[buildVersion]
     val classesBytes: ClassesBytes = buildInfo?.classesBytes ?: emptyMap()
@@ -60,19 +60,21 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     }
     println(coverageByType)
 
+    val parentVersion = state.buildManager[buildVersion]?.parentVersion ?: ""
     val methodCount = bundleCoverage.methodCounter.toCount(classData.packageTree.totalMethodCount)
     val coverageBlock: Coverage = when (scope) {
         null -> {
-            val diff = totalCoveragePercent - (prevCoverage ?: zeroCount).percentage()
             BuildCoverage(
                 ratio = totalCoveragePercent,
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
                 byTestType = coverageByType,
-                diff = diff,
-                prevBuildVersion = classData.prevBuildVersion,
-                arrow = prevCoverage?.arrowType(totalCoveragePercent),
+                diff = otherCoverage?.let {
+                    (coverageCount - it).run { first percentOf second  }
+                } ?: coverageCount.percentage(),
+                prevBuildVersion = parentVersion,
+                arrow = otherCoverage?.run { arrowType(coverageCount) },
                 finishedScopesCount = scopeCount
             )
         }
@@ -92,12 +94,11 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
         methodsChanges,
         bundleCoverage
     )
-    val buildMethods = calculatedMethods.copy(
-        deletedCoveredMethodsCount = calculatedMethods.deletedMethods.testCount(
-            state.buildTests,
-            classData.prevBuildVersion
+    val buildMethods = state.buildTests[state.buildId(buildVersion)]?.let {
+        calculatedMethods.copy(
+            deletedCoveredMethodsCount = calculatedMethods.deletedMethods.testCount(it.assocTests)
         )
-    )
+    } ?: calculatedMethods
 
     val packageCoverage = classData.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
 
@@ -146,9 +147,9 @@ fun Sequence<Session>.coveragesByTestType(
     }
 }
 
-infix fun Int.percentOf(other: Int): Double = when (other) {
-    0 -> 0.0
-    else -> this * 100.0 / other
+infix fun Number.percentOf(other: Number): Double = when (val dOther = other.toDouble()) {
+    0.0 -> 0.0
+    else -> toDouble() * 100.0 / dOther
 }
 
 fun Count.percentage(): Double = covered percentOf total
@@ -158,16 +159,25 @@ fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassD
         store.apply { put(execData) }
     }
 
-private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
+internal fun Count.arrowType(other: Count): ArrowType? = (this - other).first.sign.toArrowType()
 
-private fun Count.arrowType(totalCoverage: Double): ArrowType? {
-    val diff = totalCoverage - percentage()
-    return when {
-        abs(diff) < 1E-7 -> null
-        diff > 0.0 -> ArrowType.INCREASE
-        else -> ArrowType.DECREASE
+internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
+    total.gcd(other.total).let { gcd ->
+        val (totalLong, otherTotalLong) = total.toLong() to other.total.toLong()
+        Pair(
+            first = (otherTotalLong / gcd * covered) - (totalLong / gcd * other.covered),
+            second = totalLong / gcd * (otherTotalLong / gcd)
+        )
     }
+} ?: covered.toLong() to total.toLong()
+
+private fun Int.toArrowType(): ArrowType? = when (this) {
+    in Int.MIN_VALUE..-1 -> ArrowType.INCREASE
+    in 1..Int.MAX_VALUE -> ArrowType.DECREASE
+    else -> null
 }
+
+private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
 
 private fun Sequence<Session>.bundlesByTests(
     classesBytes: ClassesBytes
