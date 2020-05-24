@@ -1,19 +1,17 @@
 package com.epam.drill.plugins.test2code.e2e
 
 import com.epam.drill.admin.endpoints.plugin.*
-import com.epam.drill.builds.Build1
-import com.epam.drill.builds.Build2
-import com.epam.drill.e2e.E2EPluginTest
-import com.epam.drill.e2e.plugin.runWithSession
+import com.epam.drill.builds.*
+import com.epam.drill.e2e.*
+import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import io.kotlintest.matchers.boolean.shouldBeTrue
-import io.kotlintest.matchers.doubles.shouldBeGreaterThan
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.ktor.http.HttpStatusCode
-import org.junit.jupiter.api.Test
+import io.kotlintest.*
+import io.kotlintest.matchers.doubles.*
+import io.kotlintest.matchers.numerics.*
+import io.ktor.http.*
+import kotlin.test.*
 
 class PluginInstanceStateTest : E2EPluginTest() {
 
@@ -21,6 +19,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
     fun `deploy build2 with finishing active scope and session on previous build`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
+                plugUi.buildCoverage()
                 plugUi.coverageByPackages()
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
@@ -52,22 +51,27 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         prevScopeEnabled = true
                     )
                 ).stringify()
-                pluginAction(switchScope)
-
-                plugUi.coverageByPackages()!!.apply {
-                    first().coverage shouldBeGreaterThan 0.0
-                }
-
+                pluginAction(switchScope) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                    plugUi.buildCoverage()!!.apply {
+                        count.covered shouldBeGreaterThan 0
+                    }
+                    plugUi.coverageByPackages()!!.apply {
+                        first().coverage shouldBeGreaterThan 0.0
+                    }
+                }.join()
             }.reconnect<Build2> { plugUi, _ ->
-                plugUi.testsToRun()!!.apply {
-                    testTypeToNames.isNotEmpty() shouldBe true
-                }
                 plugUi.buildCoverage()!!.apply {
-                    arrow shouldBe ArrowType.DECREASE
+                    prevBuildVersion shouldBe Build1.version
+                    count.covered shouldBe 0
                     diff shouldNotBe 0.0
-                    prevBuildVersion shouldBe "0.1.0"
+                    arrow shouldBe ArrowType.DECREASE
+                }
+                plugUi.testsToRun()!!.apply {
+                    testTypeToNames shouldNotBe emptyMap<Any, Any>()
                 }
             }
+
         }
     }
 
@@ -127,7 +131,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.testsToRun()!!.apply {
-                    testTypeToNames.isEmpty().shouldBeTrue()
+                    testTypeToNames shouldBe emptyMap()
                 }
                 plugUi.buildCoverage()!!.apply {
                     arrow shouldBe null

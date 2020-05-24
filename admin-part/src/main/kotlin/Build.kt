@@ -4,15 +4,14 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.kodux.*
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
 data class StoredBuildCoverage(
     @Id val id: AgentBuildId,
     val count: Count,
     val arrow: String?,
-    val risks: Int,
-    val testsToRun: TestsToRunDto
+    val risks: Int
 )
 
 //TODO move to admin api

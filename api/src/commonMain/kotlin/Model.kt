@@ -138,10 +138,10 @@ data class JavaMethodCoverage(
 @Serializable
 data class AssociatedTests(
     val id: String,
-    val packageName: String?,
-    val className: String?,
-    val methodName: String?,
-    val tests: List<TypedTest>
+    val packageName: String = "",
+    val className: String = "",
+    val methodName: String = "",
+    val tests: List<TypedTest> = emptyList()
 ) {
     override fun equals(other: Any?) = other is AssociatedTests && id == other.id
     override fun hashCode() = id.hashCode()
