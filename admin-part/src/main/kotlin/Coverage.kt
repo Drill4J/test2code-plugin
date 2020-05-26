@@ -161,7 +161,9 @@ fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassD
 
 internal fun Count.arrowType(other: Count): ArrowType? = (this - other).first.sign.toArrowType()
 
-internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
+internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf {
+    other.total > 0 && other.covered > 0
+}?.run {
     total.gcd(other.total).let { gcd ->
         val (totalLong, otherTotalLong) = total.toLong() to other.total.toLong()
         Pair(

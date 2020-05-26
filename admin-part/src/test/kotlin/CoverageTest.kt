@@ -20,6 +20,8 @@ class CoverageTest {
         assertEquals(1L to 2L, Count(1, 2) - zeroCount)
         assertEquals(0L to 1L, Count(1, 3) - Count(1, 3))
         assertEquals(1L to 6L, Count(1, 2) - Count(1, 3))
+        assertEquals(1L to 2L, Count(1, 2) - Count(0, 3))
+        assertEquals(1L to 2L, Count(1, 2) - Count(2, 0))
     }
 
     @Test
