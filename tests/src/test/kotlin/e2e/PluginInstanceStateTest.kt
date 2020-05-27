@@ -206,7 +206,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 4
+                    newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
                 }
                 plugUi.coverageByPackages()

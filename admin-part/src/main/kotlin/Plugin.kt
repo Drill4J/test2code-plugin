@@ -95,16 +95,18 @@ class Test2CodeAdminPart(
         is Initialized -> {
             pluginInstanceState.initialized()
             initActiveScope()
-            val buildManager = adminData.buildManager
-            val otherVersions = buildManager.otherVersions(buildVersion)
-            otherVersions.map(BuildInfo::version).forEach { version ->
-                cleanActiveScope(version)
-                calculateAndSendAllCoverage(version)
-            }
             sendActiveSessions()
-            calculateAndSendAllCoverage(buildVersion)
-            calculateAndSendScopeCoverage(activeScope)
             sendActiveScope()
+            calculateAndSendScopeCoverage(activeScope)
+            sendScopes(buildVersion)
+            calculateAndSendAllCoverage(buildVersion)
+            adminData.buildManager.otherVersions(buildVersion).map { it.version }.run {
+                forEach { version ->
+                    cleanActiveScope(version)
+                    sendScopes(version)
+                }
+                forEach { calculateAndSendAllCoverage(it) }
+            }
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> {
@@ -149,9 +151,8 @@ class Test2CodeAdminPart(
         val finishedScopes = pluginInstanceState.scopeManager.byVersion(
             buildVersion, withData = true
         )
+        finishedScopes.calculateAndSendBuildCoverage(buildVersion)
         finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
-        sendScopes(buildVersion, finishedScopes)
-        calculateAndSendBuildCoverage(buildVersion)
     }
 
     internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
@@ -215,13 +216,17 @@ class Test2CodeAdminPart(
         val scopes = pluginInstanceState.scopeManager.run {
             byVersion(buildVersion, true).enabled()
         }
-        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion
+        scopes.calculateAndSendBuildCoverage(buildVersion)
+    }
+
+    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(buildVersion: String) {
+        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
         val prevCoverage = parentVersion?.let {
             pluginInstanceState.coverages[pluginInstanceState.buildId(parentVersion)]?.count ?: zeroCount
         }
-        val sessions = scopes.flatten()
+        val sessions = flatten()
         val coverageInfoSet = sessions.calculateCoverageData(
-            pluginInstanceState, buildVersion, scopes.count(), prevCoverage
+            pluginInstanceState, buildVersion, count(), prevCoverage
         )
         pluginInstanceState.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
         val buildMethods = coverageInfoSet.buildMethods
@@ -230,11 +235,13 @@ class Test2CodeAdminPart(
             buildMethods.allModifiedMethods.methods
         )
         pluginInstanceState.updateTestsToRun(buildVersion, testsToRun)
-        val risks = buildMethods.risks()
+        val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
         val buildCoverage = coverageInfoSet.coverage as BuildCoverage
         pluginInstanceState.updateBuildCoverage(buildVersion, buildCoverage, risks)
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
-        pluginInstanceState.storeBuildCoverage(buildVersion)
+        if (buildVersion == agentInfo.buildVersion) {
+            pluginInstanceState.storeBuildCoverage(buildVersion)
+        }
     }
 
     private suspend fun CoverageInfoSet.sendBuildCoverage(
