@@ -23,9 +23,7 @@ class RisksTest : E2EPluginTest() {
                 plugUi.activeScope()!!.coverage.ratio shouldBe 0.0
 
                 plugUi.risks()!!.apply {
-                    newMethods.size shouldBe 4
-                    newMethods.first().name shouldBe "Test"
-                    newMethods.first().desc shouldBe "(): void"
+                    newMethods shouldBe emptyList()
                     modifiedMethods shouldBe emptyList()
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()

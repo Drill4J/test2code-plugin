@@ -44,15 +44,16 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
 
 internal suspend fun Test2CodeAdminPart.scopeInitialized(prevId: String) {
     initActiveScope()
-    pluginInstanceState.scopeManager.byId(prevId)?.apply {
-        if (enabled) {
-            calculateAndSendBuildAndChildrenCoverage()
-        }
+    val prevScope = pluginInstanceState.scopeManager.byId(prevId)
+    prevScope?.apply {
         sendScopeSummary(summary)
     } ?: cleanTopics(prevId)
-    println("Current active scope - $activeScope")
+    sendScopes()
     calculateAndSendScopeCoverage()
-    sendScopes(buildVersion)
+    prevScope?.takeIf { it.enabled }.apply {
+        calculateAndSendBuildAndChildrenCoverage()
+    }
+    println("Current active scope - $activeScope")
 }
 
 internal suspend fun Test2CodeAdminPart.renameScope(
