@@ -5,6 +5,7 @@ import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import mu.*
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
@@ -23,6 +24,8 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private val _loadedClasses: AtomicRef<LoadedClasses> = atomic(emptyClasses)
 
+    private val logger = KotlinLogging.logger("Plugin $id")
+
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
         val classBytes: Map<String, ByteArray> = payload.agentData.classMap
@@ -31,13 +34,13 @@ class CoverageAgentPart @JvmOverloads constructor(
         updateLoadedClasses()
         retransform()
         sendMessage(Initialized(msg = "Initialized"))
-        println("Plugin $id initialized! Loaded ${classBytes.count()} classes")
+        logger.info { "Plugin $id initialized! Loaded ${classBytes.count()} classes" }
     }
 
     override fun off() {
         val cancelledCount = instrContext.cancelAll()
         _loadedClasses.value = emptyClasses
-        println("Plugin $id is off")
+        logger.info { "Plugin $id is off" }
         retransform()
         sendMessage(AllSessionsCancelled(cancelledCount, currentTimeMillis()))
     }
@@ -61,7 +64,7 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private fun updateLoadedClasses() {
         val t = System.currentTimeMillis()
-        println("Plugin $id: updating loaded classes...")
+        logger.info { "Plugin $id: updating loaded classes..." }
         val loadedClasses = payload.agentData.classMap.run {
             LoadedClasses(
                 names = keys.mapTo(persistentHashSetOf<String>().builder()) { it.replace('/', '.') },
@@ -71,17 +74,17 @@ class CoverageAgentPart @JvmOverloads constructor(
             )
         }
         _loadedClasses.value = loadedClasses
-        println("Plugin $id: updated ${loadedClasses.count()} classes in ${System.currentTimeMillis() - t}ms.")
+        logger.info { "Plugin $id: updated ${loadedClasses.count()} classes in ${System.currentTimeMillis() - t}ms." }
     }
 
     override fun initPlugin() {
-        println("Plugin $id: initializing...")
+        logger.info { "Plugin $id: initializing..." }
     }
 
     override suspend fun doAction(action: Action) {
         when (action) {
             is InitActiveScope -> action.payload.apply {
-                println("Initializing scope $id, $name, prevId=$prevId")
+                logger.info { "Initializing scope $id, $name, prevId=$prevId" }
                 instrContext.cancelAll()
                 sendMessage(
                     ScopeInitialized(
@@ -95,22 +98,22 @@ class CoverageAgentPart @JvmOverloads constructor(
             is StartSession -> {
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType
-                println("Start recording for session $sessionId")
+                logger.info { "Start recording for session $sessionId" }
                 instrContext.start(sessionId, testType, probeSender(sessionId))
                 sendMessage(SessionStarted(sessionId, testType, currentTimeMillis()))
             }
             is StopSession -> {
                 val sessionId = action.payload.sessionId
-                println("End of recording for session $sessionId")
+                logger.info { "End of recording for session $sessionId" }
                 val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
                 if (runtimeData.any()) {
                     probeSender(sessionId)(runtimeData)
-                } else println("No data for session $sessionId")
+                } else logger.warn { "No data for session $sessionId" }
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
             is CancelSession -> {
                 val sessionId = action.payload.sessionId
-                println("Cancellation of recording for session $sessionId")
+                logger.info { "Cancellation of recording for session $sessionId" }
                 instrContext.cancel(sessionId)
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }

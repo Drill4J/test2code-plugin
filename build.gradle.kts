@@ -16,6 +16,11 @@ val ktorVersion: String by project
 val coroutinesVersion: String by project
 val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
+val koduxVersion: String by project
+val xodusVersion: String by project //should be transitive from kodux
+val jacocoVersion: String by project
+val junitVersion: String by project
+val drillLoggerVersion: String by project
 
 subprojects {
     apply<BasePlugin>()
@@ -41,11 +46,12 @@ subprojects {
         "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
-        "com.epam.drill:kodux-jvm:0.1.8",
-        "org.jetbrains.xodus:xodus-entity-store:1.3.91",
+        "com.epam.drill:kodux-jvm:$koduxVersion",
+        "org.jetbrains.xodus:xodus-entity-store:$xodusVersion",
         "io.ktor:ktor-locations:$ktorVersion",
-        "org.jacoco:org.jacoco.core:0.8.5",
-        "org.junit.jupiter:junit-jupiter:5.5.2"
+        "org.jacoco:org.jacoco.core:$jacocoVersion",
+        "org.junit.jupiter:junit-jupiter:$junitVersion",
+        "com.epam.drill.logger:logger:$drillLoggerVersion"
     ).map(dependencies.constraints::create)
 
     configurations.all {
