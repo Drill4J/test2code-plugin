@@ -265,7 +265,9 @@ class Test2CodeAdminPart(
         send(buildVersion, Routes.Build.MethodsCoveredByTestType, methodsCoveredByTestType)
         send(buildVersion, Routes.Build.Risks, risks)
         send(buildVersion, Routes.Build.TestsToRun, TestsToRun(testsToRun))
-        send(buildCoverage.toSummaryDto(risks, testsToRun))
+        if (buildVersion == agentInfo.buildVersion) {
+            send(buildCoverage.toSummaryDto(risks, testsToRun))
+        }
     }
 
     private suspend fun Test2CodeAdminPart.send(
