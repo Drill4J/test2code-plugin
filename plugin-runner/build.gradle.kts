@@ -43,5 +43,5 @@ tasks {
 val drillAdminVersion: String by rootProject
 
 dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
+    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
 }

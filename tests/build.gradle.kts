@@ -37,8 +37,8 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:atomicfu")
     testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
 
-    testImplementation("com.epam.drill:test-framework:$drillAdminVersion")
-    testImplementation("com.epam.drill:admin-core:$drillAdminVersion")
+    testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
+    testImplementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
 
     testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
 
@@ -65,7 +65,7 @@ dependencies {
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
 
-    testData("com.epam.drill:test-data:$drillAdminVersion")
+    testData("com.epam.drill:test-data:$drillAdminVersion") { isChanging = true }
 }
 
 tasks {
