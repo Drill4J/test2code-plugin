@@ -181,7 +181,7 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
-        send(buildVersion, Routes.Scope.Scope(scopeSummary.id), scopeSummary)
+        send(buildVersion, Routes.Scope(scopeSummary.id), scopeSummary)
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
@@ -240,6 +240,7 @@ class Test2CodeAdminPart(
         pluginInstanceState.updateBuildCoverage(buildVersion, buildCoverage, risks)
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
+            send(buildCoverage.toSummaryDto(risks, testsToRun))
             pluginInstanceState.storeBuildCoverage(buildVersion)
         }
     }
@@ -249,25 +250,29 @@ class Test2CodeAdminPart(
         buildCoverage: BuildCoverage,
         risks: Risks,
         testsToRun: GroupedTests
-    ) {
+    ) = Routes.Build().let { buildRoute ->
+        send(buildVersion, Routes.Build.Coverage(buildRoute), buildCoverage)
+        send(buildVersion, Routes.Build.Methods(buildRoute), buildMethods.toSummaryDto())
+        send(buildVersion, Routes.Build.CoverageByPackages(buildRoute), packageCoverage)
+        Routes.Build.Methods(buildRoute).let {
+            send(buildVersion, Routes.Build.Methods.All(it), buildMethods.totalMethods)
+            send(buildVersion, Routes.Build.Methods.New(it), buildMethods.newMethods)
+            send(buildVersion, Routes.Build.Methods.Modified(it), buildMethods.allModifiedMethods)
+            send(buildVersion, Routes.Build.Methods.Deleted(it), buildMethods.deletedMethods)
+            send(buildVersion, Routes.Build.Methods.Unaffected(it), buildMethods.unaffectedMethods)
+        }
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
                 batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }
-            send(buildVersion, Routes.Build.AssociatedTests, beautifiedAssociatedTests)
+            send(buildVersion, Routes.Build.AssociatedTests(buildRoute), beautifiedAssociatedTests)
         }
-        send(buildVersion, Routes.Build.Coverage, buildCoverage)
-        send(buildVersion, Routes.Build.CoverageByPackages, packageCoverage)
-        send(buildVersion, Routes.Build.Methods, buildMethods)
-        send(buildVersion, Routes.Build.TestsUsages, testsUsagesInfoByType)
-        send(buildVersion, Routes.Build.MethodsCoveredByTest, methodsCoveredByTest)
-        send(buildVersion, Routes.Build.MethodsCoveredByTestType, methodsCoveredByTestType)
-        send(buildVersion, Routes.Build.Risks, risks)
-        send(buildVersion, Routes.Build.TestsToRun, TestsToRun(testsToRun))
-        if (buildVersion == agentInfo.buildVersion) {
-            send(buildCoverage.toSummaryDto(risks, testsToRun))
-        }
+        send(buildVersion, Routes.Build.TestsUsages(buildRoute), testsUsagesInfoByType)
+        send(buildVersion, Routes.Build.MethodsCoveredByTest(buildRoute), methodsCoveredByTest)
+        send(buildVersion, Routes.Build.MethodsCoveredByTestType(buildRoute), methodsCoveredByTestType)
+        send(buildVersion, Routes.Build.Risks(buildRoute), risks)
+        send(buildVersion, Routes.Build.TestsToRun(buildRoute), TestsToRun(testsToRun))
     }
 
     private suspend fun Test2CodeAdminPart.send(
@@ -284,7 +289,7 @@ class Test2CodeAdminPart(
             val aggregatedMessage = aggregator(serviceGroup, agentSummary) ?: summaryDto
             val summaries = aggregator.getSummaries(serviceGroup) ?: emptyList()
             sendToGroup(
-                destination = Routes.ServiceGroup.Summary,
+                destination = Routes.ServiceGroup.Summary(Routes.ServiceGroup()),
                 message = ServiceGroupSummaryDto(
                     name = serviceGroup,
                     aggregated = aggregatedMessage,
@@ -309,38 +314,62 @@ class Test2CodeAdminPart(
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }
 
-    internal suspend fun CoverageInfoSet.sendScopeCoverage(buildVersion: String, scopeId: String) {
+    internal suspend fun CoverageInfoSet.sendScopeCoverage(
+        buildVersion: String,
+        scopeId: String
+    ) = Routes.Scope(scopeId).let { scope ->
+        send(buildVersion, Routes.Scope.Coverage(scope), coverage)
+        send(buildVersion, Routes.Scope.Methods(scope), buildMethods.toSummaryDto())
+        send(buildVersion, Routes.Scope.CoverageByPackages(scope), packageCoverage)
+        Routes.Scope.Methods(scope).let { methods ->
+            send(buildVersion, Routes.Scope.Methods.All(methods), buildMethods.totalMethods)
+            send(buildVersion, Routes.Scope.Methods.New(methods), buildMethods.newMethods)
+            send(buildVersion, Routes.Scope.Methods.Modified(methods), buildMethods.allModifiedMethods)
+            send(buildVersion, Routes.Scope.Methods.Deleted(methods), buildMethods.deletedMethods)
+            send(buildVersion, Routes.Scope.Methods.Unaffected(methods), buildMethods.unaffectedMethods)
+        }
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
                 batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }
-            send(buildVersion, Routes.Scope.AssociatedTests(scopeId), beautifiedAssociatedTests)
+            send(buildVersion, Routes.Scope.AssociatedTests(scope), beautifiedAssociatedTests)
         }
-        send(buildVersion, Routes.Scope.Coverage(scopeId), coverage)
-        send(buildVersion, Routes.Scope.CoverageByPackages(scopeId), packageCoverage)
-        send(buildVersion, Routes.Scope.Methods(scopeId), buildMethods)
-        send(buildVersion, Routes.Scope.TestsUsages(scopeId), testsUsagesInfoByType)
-        send(buildVersion, Routes.Scope.MethodsCoveredByTest(scopeId), methodsCoveredByTest)
-        send(buildVersion, Routes.Scope.MethodsCoveredByTestType(scopeId), methodsCoveredByTestType)
+        send(buildVersion, Routes.Scope.TestsUsages(scope), testsUsagesInfoByType)
+        send(buildVersion, Routes.Scope.MethodsCoveredByTest(scope), methodsCoveredByTest)
+        send(buildVersion, Routes.Scope.MethodsCoveredByTestType(scope), methodsCoveredByTestType)
     }
 
-    internal suspend fun cleanTopics(id: String) {
-        send(buildVersion, Routes.Scope.AssociatedTests(id), "")
-        send(buildVersion, Routes.Scope.Methods(id), "")
-        send(buildVersion, Routes.Scope.TestsUsages(id), "")
-        send(buildVersion, Routes.Scope.CoverageByPackages(id), "")
-        send(buildVersion, Routes.Scope.Coverage(id), "")
+    internal suspend fun cleanTopics(id: String) = Routes.Scope(id).let { scope ->
+        send(buildVersion, Routes.Scope.AssociatedTests(scope), "")
+        Routes.Scope.Methods(scope).let {
+            send(buildVersion, it, "")
+            send(buildVersion, Routes.Scope.Methods.All(it), "")
+            send(buildVersion, Routes.Scope.Methods.New(it), "")
+            send(buildVersion, Routes.Scope.Methods.Modified(it), "")
+            send(buildVersion, Routes.Scope.Methods.Deleted(it), "")
+        }
+        send(buildVersion, Routes.Scope.TestsUsages(scope), "")
+        send(buildVersion, Routes.Scope.CoverageByPackages(scope), "")
+        send(buildVersion, Routes.Scope.Coverage(scope), "")
     }
 
     override suspend fun dropData() {
-        adminData.buildManager.builds.map(BuildInfo::version).forEach {
-            send(it, Routes.Scopes, "")
-            send(it, Routes.Build.AssociatedTests, "")
-            send(it, Routes.Build.Methods, "")
-            send(it, Routes.Build.TestsUsages, "")
-            send(it, Routes.Build.CoverageByPackages, "")
-            send(it, Routes.Build.Coverage, "")
+        adminData.buildManager.builds.map(BuildInfo::version).forEach { buildVersion ->
+            send(buildVersion, Routes.Scopes, "")
+            Routes.Build().let { buildRoute ->
+                send(buildVersion, Routes.Build.AssociatedTests(buildRoute), "")
+                Routes.Build.Methods(buildRoute).let { methodsRoute ->
+                    send(buildVersion, methodsRoute, "")
+                    send(buildVersion, Routes.Build.Methods.All(methodsRoute), "")
+                    send(buildVersion, Routes.Build.Methods.New(methodsRoute), "")
+                    send(buildVersion, Routes.Build.Methods.Modified(methodsRoute), "")
+                    send(buildVersion, Routes.Build.Methods.Deleted(methodsRoute), "")
+                }
+                send(buildVersion, Routes.Build.TestsUsages(buildRoute), "")
+                send(buildVersion, Routes.Build.CoverageByPackages(buildRoute), "")
+                send(buildVersion, Routes.Build.Coverage(buildRoute), "")
+            }
         }
         val classesBytes = buildInfo?.classesBytes ?: emptyMap()
         pluginInstanceState = pluginInstanceState()

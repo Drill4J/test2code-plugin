@@ -16,66 +16,94 @@ class Routes {
     object Scopes
 
 
-    @Location("/scope")
-    class Scope {
-        @Location("/{scopeId}")
-        class Scope(val scopeId: String)
+    @Location("/scope/{scopeId}")
+    class Scope(val scopeId: String) {
 
-        @Location("/{scopeId}/associated-tests")
-        class AssociatedTests(val scopeId: String)
+        @Location("/coverage")
+        class Coverage(val scope: Scope)
 
-        @Location("/{scopeId}/methods")
-        class Methods(val scopeId: String)
+        @Location("/associated-tests")
+        class AssociatedTests(val scope: Scope)
 
-        @Location("/{scopeId}/tests-usages")
-        class TestsUsages(val scopeId: String)
+        @Location("/coverage-by-packages")
+        class CoverageByPackages(val scope: Scope)
 
-        @Location("/{scopeId}/coverage-by-packages")
-        class CoverageByPackages(val scopeId: String)
+        @Location("/methods")
+        class Methods(val scope: Scope) {
+            @Location("/all")
+            class All(val methods: Methods)
 
-        @Location("/{scopeId}/coverage")
-        class Coverage(val scopeId: String)
+            @Location("/new")
+            class New(val methods: Methods)
 
-        @Location("/{scopeId}/tests/covered-methods")
-        class MethodsCoveredByTest(val scopeId: String)
+            @Location("/modified")
+            class Modified(val methods: Methods)
 
-        @Location("/{scopeId}/test-types/covered-methods")
-        class MethodsCoveredByTestType(val scopeId: String)
+            @Location("/deleted")
+            class Deleted(val methods: Methods)
+
+            @Location("/unaffected")
+            class Unaffected(val methods: Methods)
+        }
+
+        @Location("/tests-usages")
+        class TestsUsages(val scope: Scope)
+
+        @Location("/tests/covered-methods")
+        class MethodsCoveredByTest(val scope: Scope)
+
+        @Location("/test-types/covered-methods")
+        class MethodsCoveredByTestType(val scope: Scope)
     }
 
     @Location("/build")
     class Build {
+        @Location("/coverage")
+        class Coverage(val build: Build)
+
         @Location("/associated-tests")
-        object AssociatedTests
+        class AssociatedTests(val build: Build)
 
         @Location("/methods")
-        object Methods
+        class Methods(val build: Build) {
+            @Location("/all")
+            class All(val methods: Methods)
+
+            @Location("/new")
+            class New(val methods: Methods)
+
+            @Location("/modified")
+            class Modified(val methods: Methods)
+
+            @Location("/deleted")
+            class Deleted(val methods: Methods)
+
+            @Location("/unaffected")
+            class Unaffected(val methods: Methods)
+        }
 
         @Location("/tests-usages")
-        object TestsUsages
+        class TestsUsages(val build: Build)
 
         @Location("/coverage-by-packages")
-        object CoverageByPackages
-
-        @Location("/coverage")
-        object Coverage
+        class CoverageByPackages(val build: Build)
 
         @Location("/risks")
-        object Risks
+        class Risks(val build: Build)
 
         @Location("/tests-to-run")
-        object TestsToRun
+        class TestsToRun(val build: Build)
 
         @Location("/tests/covered-methods")
-        object MethodsCoveredByTest
+        class MethodsCoveredByTest(val build: Build)
 
         @Location("/test-types/covered-methods")
-        object MethodsCoveredByTestType
+        class MethodsCoveredByTestType(val build: Build)
     }
 
     @Location("/service-group")
     class ServiceGroup {
         @Location("/summary")
-        object Summary
+        class Summary(val serviceGroup: ServiceGroup)
     }
 }

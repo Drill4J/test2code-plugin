@@ -70,6 +70,14 @@ enum class ArrowType {
 }
 
 @Serializable
+data class MethodsSummaryDto(
+    val all: Count,
+    val new: Count,
+    val modified: Count,
+    val deleted: Count
+)
+
+@Serializable
 data class BuildMethods(
     val totalMethods: MethodsInfo = MethodsInfo(),
     val newMethods: MethodsInfo = MethodsInfo(),
