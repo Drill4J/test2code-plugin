@@ -13,25 +13,19 @@ class BuildMethodsTests : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
                 plugUi.methods()!!.apply {
-                    totalMethods.totalCount shouldBe 4
-                    newMethods.totalCount shouldBe 4
-                    modifiedNameMethods.totalCount shouldBe 0
-                    modifiedDescMethods.totalCount shouldBe 0
-                    modifiedBodyMethods.totalCount shouldBe 0
-                    deletedMethods.totalCount shouldBe 0
-                    deletedCoveredMethodsCount shouldBe 0
-                    allModifiedMethods.methods.size shouldBe 0
+                    all.total shouldBe 4
+                    new.total shouldBe 4
+                    modified.total shouldBe 0
+                    deleted.covered shouldBe 0
+                    deleted.total shouldBe 0
                 }
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.methods()!!.apply {
-                    totalMethods.totalCount shouldBe 5
-                    newMethods.totalCount shouldBe 1
-                    modifiedNameMethods.totalCount shouldBe 0
-                    modifiedDescMethods.totalCount shouldBe 0
-                    modifiedBodyMethods.totalCount shouldBe 3
-                    deletedMethods.totalCount shouldBe 0
-                    deletedCoveredMethodsCount shouldBe 0
-                    allModifiedMethods.methods.size shouldBe 3
+                    all.total shouldBe 5
+                    new.total shouldBe 1
+                    modified.total shouldBe 3
+                    deleted.covered shouldBe 0
+                    deleted.total shouldBe 0
                 }
             }
         }
