@@ -35,7 +35,7 @@ dependencies {
     kt2dts("com.epam.drill.ts:kt2dts-cli:0.1.0")
 }
 
-tasks.register<JavaExec>("genTsd") {
+val genTsd by tasks.registering(JavaExec::class) {
     group = "ts"
     classpath = kt2dts
     val main by kotlin.jvm().compilations
@@ -51,4 +51,8 @@ tasks.register<JavaExec>("genTsd") {
             "--cp=${genPaths.joinToString(separator = ",")}"
         )
     }.let { argumentProviders += it }
+}
+
+tasks.compileKotlinMetadata {
+    dependsOn(genTsd)
 }
