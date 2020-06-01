@@ -30,8 +30,9 @@ class ActiveSession(
             for (probe in dataPart) {
                 val key = TypedTest(probe.testName, testType)
                 val value = (map[key] ?: persistentHashMapOf()).let { testData ->
-                    val value = testData[probe.id]?.merge(probe) ?: probe
-                    testData.put(probe.id, value)
+                    val probeId = probe.id()
+                    val value = testData[probeId]?.merge(probe) ?: probe
+                    testData.put(probeId, value)
                 }
                 map[key] = value
             }
@@ -68,12 +69,13 @@ data class FinishedSession(
 
 internal fun TypedTest.id() = "$name:$type"
 
+private fun ExecClassData.id(): Long = id.takeIf { it != 0L } ?: className.crc64()
 
-private fun ExecClassData.merge(other: ExecClassData): ExecClassData = copy(
+internal fun ExecClassData.merge(other: ExecClassData): ExecClassData = copy(
     probes = probes.merge(other.probes)
 )
 
-private fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
+internal fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
     if (i < other.size) {
         b || other[i]
     } else b

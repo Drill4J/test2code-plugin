@@ -3,21 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import org.jacoco.core.analysis.*
-
-internal fun IBundleCoverage.toPackages(
-    parsedClasses: Map<String, Methods>
-): List<JavaPackageCoverage> = packages.map { packageCoverage ->
-    val classes = packageCoverage.classes.classTree(parsedClasses)
-    JavaPackageCoverage(
-        id = packageCoverage.coverageKey().id,
-        name = packageCoverage.name,
-        totalClassesCount = classes.count(),
-        totalMethodsCount = classes.sumBy { it.totalMethodsCount },
-        totalCount = packageCoverage.instructionCounter.totalCount,
-        classes = classes
-    )
-}.toList()
+import com.epam.drill.plugins.test2code.coverage.*
 
 internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
     groupBy(AstEntity::path).entries.map { (path, astEntities) ->
@@ -39,18 +25,34 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
                             id = "$path.${ast.name}.${astMethod.name}".crc64,
                             name = astMethod.name,
                             desc = "",
-                            count = astMethod.count,
+                            count = astMethod.probes.size,
                             decl = astMethod.params.joinToString(prefix = "(", postfix = "):${astMethod.returnType}")
                         )
-                    }
+                    },
+                    probes = ast.methods.flatMap(AstMethod::probes)
                 )
             }
         )
     }
 }
 
+internal fun BundleCounter.toPackages(
+    parsedClasses: Map<String, Methods>
+): List<JavaPackageCoverage> = packages.map { packageCoverage ->
+    val classes = packageCoverage.classes.classTree(parsedClasses)
+    JavaPackageCoverage(
+        id = packageCoverage.coverageKey().id,
+        name = packageCoverage.name,
+        totalClassesCount = classes.count(),
+        totalMethodsCount = classes.sumBy { it.totalMethodsCount },
+        totalCount = packageCoverage.count.total,
+        classes = classes
+    )
+}.toList()
+
+
 internal fun Iterable<JavaPackageCoverage>.treeCoverage(
-    bundle: IBundleCoverage,
+    bundle: BundleCounter,
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
 ): List<JavaPackageCoverage> = run {
     val packageItr = bundle.packages.iterator()
@@ -60,9 +62,9 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
         val key = pkgCvg?.coverageKey()
         if (pkgCvg != null && pkg.id == key?.id) {
             pkg.copy(
-                coverage = pkgCvg.coverage(pkg.totalCount),
-                coveredClassesCount = pkgCvg.classCounter.coveredCount,
-                coveredMethodsCount = pkgCvg.methodCounter.coveredCount,
+                coverage = pkgCvg.count.copy(total = pkg.totalCount).percentage(),
+                coveredClassesCount = pkgCvg.classCount.covered,
+                coveredMethodsCount = pkgCvg.methodCount.covered,
                 assocTestsCount = assocTestsMap[key]?.count() ?: 0,
                 classes = pkg.classes.classCoverage(pkgCvg.classes, assocTestsMap)
             ).also { cvg = packageItr.nextOrNull() }
@@ -70,11 +72,11 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
     }
 }
 
-private fun Collection<IClassCoverage>.classTree(
+private fun Collection<ClassCounter>.classTree(
     parsedClasses: Map<String, Methods>
 ): List<JavaClassCoverage> = map { classCoverage ->
     val classKey = classCoverage.coverageKey()
-    val parsedMethods = parsedClasses[classCoverage.name] ?: emptyList()
+    val parsedMethods = parsedClasses[classCoverage.fullName] ?: emptyList()
     val methods = classCoverage.toMethodCoverage { methodCov ->
         parsedMethods.any { it.name == methodCov.name && it.desc == methodCov.desc }
     }
@@ -84,12 +86,13 @@ private fun Collection<IClassCoverage>.classTree(
         path = classCoverage.name,
         totalMethodsCount = methods.count(),
         totalCount = methods.sumBy { it.count },
-        methods = methods
+        methods = methods,
+        probes = emptyList()
     )
 }.toList()
 
 private fun List<JavaClassCoverage>.classCoverage(
-    classCoverages: Collection<IClassCoverage>,
+    classCoverages: Collection<ClassCounter>,
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
 ): List<JavaClassCoverage> = run {
     val itr = classCoverages.iterator()
@@ -98,8 +101,8 @@ private fun List<JavaClassCoverage>.classCoverage(
         next?.run { coverageKey() to this }
             ?.takeIf { it.first.id == classCov.id }?.let { (key, cov) ->
                 classCov.copy(
-                    coverage = cov.coverage(),
-                    coveredMethodsCount = cov.methodCounter.coveredCount,
+                    coverage = cov.count.percentage(),
+                    coveredMethodsCount = cov.methods.sumBy { it.count.covered },
                     assocTestsCount = assocTestsMap[key]?.count() ?: 0,
                     methods = cov.toMethodCoverage(assocTestsMap)
                 ).also { next = itr.nextOrNull() }
@@ -107,9 +110,9 @@ private fun List<JavaClassCoverage>.classCoverage(
     }
 }
 
-internal fun IClassCoverage.toMethodCoverage(
+internal fun ClassCounter.toMethodCoverage(
     assocTestsMap: Map<CoverageKey, List<TypedTest>> = emptyMap(),
-    filter: (IMethodCoverage) -> Boolean = { true }
+    filter: (MethodCounter) -> Boolean = { true }
 ): List<JavaMethodCoverage> {
     return methods.filter(filter).map { methodCoverage ->
         val methodKey = methodCoverage.coverageKey(this)
@@ -117,9 +120,9 @@ internal fun IClassCoverage.toMethodCoverage(
             id = methodKey.id,
             name = name.methodName(methodCoverage.name),
             desc = methodCoverage.desc,
-            decl = declaration(methodCoverage.desc),
-            coverage = methodCoverage.coverage(),
-            count = methodCoverage.instructionCounter.totalCount,
+            decl = methodCoverage.decl,
+            coverage = methodCoverage.count.percentage(),
+            count = methodCoverage.count.total,
             assocTestsCount = assocTestsMap[methodKey]?.count() ?: 0
         )
     }.toList()

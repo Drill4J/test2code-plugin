@@ -2,7 +2,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
-import org.jacoco.core.analysis.*
+import com.epam.drill.plugins.test2code.coverage.*
 
 //TODO Rewrite all of this, remove the file
 
@@ -16,12 +16,17 @@ data class CoverageInfoSet(
     val methodsCoveredByTestType: List<MethodsCoveredByTestType> = emptyList()
 )
 
-fun Map<TypedTest, IBundleCoverage>.testUsages(
+fun Map<TypedTest, BundleCounter>.testUsages(
     totalCoverageCount: Int,
     testType: String
 ): List<TestUsagesInfo> = filter { it.key.type == testType }
     .map { (test, bundle) ->
-        TestUsagesInfo(test.id(), test.name, bundle.methodCounter.coveredCount, bundle.coverage(totalCoverageCount))
+        TestUsagesInfo(
+            id = test.id(),
+            testName = test.name,
+            methodCalls = bundle.methodCount.covered,
+            coverage = bundle.count.copy(total = totalCoverageCount).percentage()
+        )
     }.sortedBy { it.testName }
 
 fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) ->
@@ -34,14 +39,10 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
     )
 }.sortedBy { it.methodName }
 
-fun IBundleCoverage.toDataMap() = packages
-    .flatMap { it.classes }
-    .flatMap { c -> c.methods.map { (c.name to it.sign()) to it } }.toMap()
-
 //TODO rewrite this
 fun calculateBundleMethods(
     methodChanges: MethodChanges,
-    bundleCoverage: IBundleCoverage,
+    bundleCoverage: BundleCounter,
     excludeMissed: Boolean = false
 ): BuildMethods {
     val methodsCoverages = bundleCoverage.toDataMap()
@@ -85,18 +86,18 @@ fun calculateBundleMethods(
 }
 
 fun Methods.getInfo(
-    data: Map<Pair<String, String>, IMethodCoverage>,
+    data: Map<Pair<String, String>, MethodCounter>,
     excludeMissed: Boolean
 ) = MethodsInfo(
     totalCount = count(),
-    coveredCount = count { data[it.ownerClass to it.sign]?.instructionCounter?.coveredCount ?: 0 > 0 },
+    coveredCount = count { data[it.ownerClass to it.sign]?.count?.covered ?: 0 > 0 },
     methods = mapNotNull { method ->
         val coverageRate = data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
         coverageRate.takeIf { !excludeMissed || it != CoverageRate.MISSED }?.let {
             JavaMethod(
                 ownerClass = method.ownerClass,
                 name = method.ownerClass.methodName(method.name),
-                desc = declaration(method.desc),
+                desc = method.desc.takeIf { "):" in it } ?: declaration(method.desc), //TODO js methods
                 hash = method.hash,
                 coverageRate = coverageRate
             )
@@ -104,9 +105,9 @@ fun Methods.getInfo(
     }.sortedBy { it.name }
 )
 
-fun Map<TypedTest, IBundleCoverage>.coveredMethods(
+fun Map<TypedTest, BundleCounter>.coveredMethods(
     methodChanges: MethodChanges,
-    bundlesByType: Map<String, IBundleCoverage>
+    bundlesByType: Map<String, BundleCounter>
 ): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {
     val coveredByTest = map { (typedTest, bundle) ->
         val changes = calculateBundleMethods(methodChanges, bundle, true)
@@ -135,12 +136,8 @@ fun Map<TypedTest, IBundleCoverage>.coveredMethods(
 
 private val Method.sign get() = "$name$desc"
 
-fun IMethodCoverage.sign() = "$name$desc"
-
 fun String.methodName(name: String): String = when (name) {
     "<init>" -> toShortClassName()
     "<clinit>" -> "static ${toShortClassName()}"
     else -> name
 }
-
-fun String.toShortClassName(): String = substringAfterLast('/')
