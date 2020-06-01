@@ -1,55 +1,73 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import org.jacoco.core.analysis.*
+import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
 
-data class CoverageKey(
-    val id: String,
-    val packageName: String = "",
-    val className: String = "",
-    val methodName: String = "",
-    val methodDesc: String = ""
-) {
-    override fun equals(other: Any?) = other is CoverageKey && id == other.id
-
-    override fun hashCode() = id.hashCode()
-}
-
-val CoverageKey.isMethod get() = methodName.any()
-
-val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
-
-fun IMethodCoverage.coverageRate() = instructionCounter?.run {
-    when (coveredCount) {
-        0 -> CoverageRate.MISSED
-        in 1 until totalCount -> CoverageRate.PARTLY
-        else -> CoverageRate.FULL
+internal fun Sequence<ExecClassData>.bundle(
+    classesBytes: ClassesBytes
+): BundleCounter = bundle { analyzer ->
+    contents.forEach { execData ->
+        classesBytes[execData.name]?.let { classesBytes ->
+            analyzer.analyzeClass(classesBytes, execData.name)
+        } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
-}
+}.toCounter()
+
+internal fun ClassesBytes.bundle(
+    data: Sequence<ExecClassData> = emptySequence()
+): BundleCounter = data.bundle { analyzer ->
+    forEach { (name, bytes) -> analyzer.analyzeClass(bytes, name) }
+}.toCounter()
+
+private fun Sequence<ExecClassData>.bundle(
+    analyze: ExecutionDataStore.(Analyzer) -> Unit
+): IBundleCoverage = CoverageBuilder().also { coverageBuilder ->
+    val dataStore = execDataStore()
+    val analyzer = Analyzer(dataStore, coverageBuilder)
+    dataStore.analyze(analyzer)
+}.getBundle("")
+
+
+internal fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassData::toExecutionData)
+    .fold(ExecutionDataStore()) { store, execData ->
+        store.apply { put(execData) }
+    }
+
+internal fun IBundleCoverage.toCounter() = BundleCounter(
+    name = "",
+    count = instructionCounter.toCount(),
+    methodCount = methodCounter.toCount(),
+    packages = packages.map { p ->
+        PackageCounter(
+            name = p.name,
+            count = p.instructionCounter.toCount(),
+            classCount = p.classCounter.toCount(),
+            methodCount = p.methodCounter.toCount(),
+            classes = p.classes.map { c ->
+                ClassCounter(
+                    path = p.name,
+                    name = c.name.toShortClassName(),
+                    count = c.instructionCounter.toCount(),
+                    methods = c.methods.map { m ->
+                        MethodCounter(
+                            name = m.name,
+                            desc = m.desc,
+                            decl = declaration(m.desc),
+                            count = m.instructionCounter.toCount()
+                        )
+                    }
+                )
+            }
+        )
+    }
+)
 
 fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double =
     instructionCounter.coveredCount percentOf total
-
-fun ICoverageNode.coverageKey(parent: ICoverageNode? = null): CoverageKey = when (this) {
-    is IMethodCoverage -> CoverageKey(
-        id = "${parent?.name}.${this.name}${this.desc}".crc64,
-        packageName = parent?.name?.substringBeforeLast('/') ?: "",
-        className = parent?.name ?: "",
-        methodName = this.name,
-        methodDesc = this.desc
-    )
-    is IClassCoverage -> CoverageKey(
-        id = this.name.crc64,
-        packageName = this.name.substringBeforeLast('/'),
-        className = this.name
-    )
-    is IPackageCoverage -> CoverageKey(
-        id = this.name.crc64,
-        packageName = this.name
-    )
-    else -> CoverageKey(this.name.crc64)
-}
 
 internal fun ICounter.toCount(total: Int = totalCount) = Count(covered = coveredCount, total = total)
 
@@ -106,3 +124,5 @@ fun parseDescType(char: Char, charIterator: CharIterator): String = when (char) 
     }
     else -> "!Error"
 }
+
+private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())

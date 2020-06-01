@@ -3,7 +3,6 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
@@ -48,12 +47,20 @@ class PluginInstanceState(
     suspend fun initialized() {
         val classesData = _data.updateAndGet { data ->
             when (data) {
-                is DataBuilder -> data.flatMap(AstEntity::methods).run {
+                is DataBuilder -> data.flatMap { e -> e.methods.map { e to it} }.run {
+                    val methods = map { (e, m) ->
+                        Method(
+                            ownerClass = "${e.path}/${e.name}",
+                            name = m.name,
+                            desc = "(${m.params.joinToString(",")}):${m.returnType}",
+                            hash = "".crc64
+                        )
+                    }
                     PackageTree(
-                        totalCount = sumBy(AstMethod::count),
+                        totalCount = sumBy { it.second.count },
                         totalMethodCount = count(),
                         packages = data.toPackages()
-                    ).toClassesData()
+                    ).toClassesData(MethodChanges(mapOf(DiffType.UNAFFECTED to methods)))
                 }
                 is ClassData -> data
                 is NoData -> {
@@ -65,7 +72,7 @@ class PluginInstanceState(
                         totalCount = packages.sumBy { it.totalCount },
                         totalMethodCount = javaMethods.values.sumBy { it.count() },
                         packages = packages
-                    ).toClassesData()
+                    ).toClassesData(buildInfo?.methodChanges ?: MethodChanges())
                 }
             }
         } as ClassData
@@ -190,9 +197,10 @@ class PluginInstanceState(
         else -> trimmed
     }
 
-    private fun PackageTree.toClassesData() = ClassData(
+    private fun PackageTree.toClassesData(methodChanges: MethodChanges) = ClassData(
         buildVersion = agentInfo.buildVersion,
-        packageTree = this
+        packageTree = this,
+        methodChanges = methodChanges
     )
 }
 

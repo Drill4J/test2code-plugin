@@ -129,7 +129,8 @@ data class JavaClassCoverage(
     val coverage: Double = 0.0,
     val coveredMethodsCount: Int = 0,
     val assocTestsCount: Int = 0,
-    val methods: List<JavaMethodCoverage>
+    val methods: List<JavaMethodCoverage>,
+    val probes: List<Int> = emptyList()
 )
 
 @Serializable
@@ -140,8 +141,16 @@ data class JavaMethodCoverage(
     val decl: String,
     val count: Int,
     val coverage: Double = 0.0,
-    val assocTestsCount: Int = 0
+    val assocTestsCount: Int = 0,
+    val probeRange: ProbeRange = ProbeRange.EMPTY
 )
+
+@Serializable
+data class ProbeRange(val first: Int, val last: Int) {
+    companion object {
+        val EMPTY = ProbeRange(0, 0)
+    }
+}
 
 @Serializable
 data class AssociatedTests(

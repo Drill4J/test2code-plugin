@@ -19,7 +19,8 @@ data class AstMethod(
     val name: String,
     val params: List<String>,
     val returnType: String,
-    val count: Int = 0
+    val count: Int = 0,
+    val probes: List<Int> = emptyList()
 )
 
 @Serializable
@@ -40,7 +41,7 @@ data class SessionPayload(val sessionId: String)
 
 @Serializable
 data class ExecClassData(
-    val id: Long,
+    val id: Long = 0L,
     val className: String,
     val probes: List<Boolean>,
     val testName: String = ""

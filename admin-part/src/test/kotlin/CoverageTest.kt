@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import kotlin.test.*
 
 class CoverageTest {
