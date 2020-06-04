@@ -20,7 +20,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.buildCoverage()
-                plugUi.coverageByPackages()
+                plugUi.coveragePackages()
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
@@ -56,7 +56,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     plugUi.buildCoverage()!!.apply {
                         count.covered shouldBeGreaterThan 0
                     }
-                    plugUi.coverageByPackages()!!.apply {
+                    plugUi.coveragePackages()!!.apply {
                         first().coverage shouldBeGreaterThan 0.0
                     }
                 }.join()
@@ -80,7 +80,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
         lateinit var activeScopeIdFirstBuild: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                plugUi.coverageByPackages()
+                plugUi.coveragePackages()
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
@@ -150,7 +150,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
     fun `redeploy build1 after finishing active scope and session on this build`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                plugUi.coverageByPackages()
+                plugUi.coveragePackages()
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
@@ -182,7 +182,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 ).stringify()
                 pluginAction(switchScope).join()
 
-                plugUi.coverageByPackages()!!.apply {
+                plugUi.coveragePackages()!!.apply {
                     first().coverage shouldBeGreaterThan 0.0
                 }
 
@@ -209,7 +209,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     newMethods.count() shouldBe 0
                     modifiedMethods.count() shouldBe 0
                 }
-                plugUi.coverageByPackages()
+                plugUi.coveragePackages()
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()

@@ -43,7 +43,7 @@ class CoverageSocketStreams : PluginStreams() {
         activeSessions()
         associatedTests()
         buildCoverage()
-        coverageByPackages()
+        coveragePackages()
         methods()
         risks()
         testsToRun()
@@ -68,10 +68,8 @@ class CoverageSocketStreams : PluginStreams() {
     private val buildCoverage = Channel<BuildCoverage?>()
     suspend fun buildCoverage() = buildCoverage.receive()
 
-
-    private val coverageByPackages = Channel<List<JavaPackageCoverage>?>()
-    suspend fun coverageByPackages() = coverageByPackages.receive()
-
+    private val coveragePackages = Channel<List<JavaPackageCoverage>?>()
+    suspend fun coveragePackages() = coveragePackages.receive()
 
     private val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
     suspend fun testsUsages() = testsUsages.receive()
@@ -195,15 +193,19 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
-                                        is Routes.Scope.CoverageByPackages -> {
+                                        is Routes.Scope.CoverageByPackages -> Unit //TODO remove
+                                        is Routes.Scope.Coverage.Packages -> {
                                             delay(100)
-                                            val coverageByPackages =
-                                                scopeSubscriptions.getValue(resolve.scope.scopeId).first.coverageByPackages
+                                            val coveragePackages = run {
+                                                scopeSubscriptions.getValue(
+                                                    resolve.coverage.scope.scopeId
+                                                ).first.coveragePackages
+                                            }
 
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coverageByPackages.send(null)
+                                                coveragePackages.send(null)
                                             } else {
-                                                coverageByPackages.send(
+                                                coveragePackages.send(
                                                     JavaPackageCoverage.serializer().list parse content
                                                 )
                                             }
@@ -271,11 +273,12 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
-                                        is Routes.Build.CoverageByPackages -> {
+                                        is Routes.Build.CoverageByPackages -> Unit //TODO remove
+                                        is Routes.Build.Coverage.Packages -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coverageByPackages.send(null)
+                                                coveragePackages.send(null)
                                             } else {
-                                                coverageByPackages.send(
+                                                coveragePackages.send(
                                                     JavaPackageCoverage.serializer().list parse content
                                                 )
                                             }
@@ -355,10 +358,8 @@ class CoverageSocketStreams : PluginStreams() {
         internal val coverage = Channel<Coverage?>()
         suspend fun coverage() = coverage.receive()
 
-
-        internal val coverageByPackages = Channel<List<JavaPackageCoverage>?>()
-        suspend fun coverageByPackages() = coverageByPackages.receive()
-
+        internal val coveragePackages = Channel<List<JavaPackageCoverage>?>()
+        suspend fun coveragePackages() = coveragePackages.receive()
 
         internal val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
         suspend fun testsUsages() = testsUsages.receive()
@@ -381,11 +382,12 @@ class CoverageSocketStreams : PluginStreams() {
         block: suspend ScopeContext.() -> Unit
     ) {
         val scope = Routes.Scope(scopeId)
+        val coverage = Routes.Scope.Coverage(scope)
         arrayOf(
             scope,
             Routes.Scope.Methods(scope),
-            Routes.Scope.Coverage(scope),
-            Routes.Scope.CoverageByPackages(scope),
+            coverage,
+            Routes.Scope.Coverage.Packages(coverage),
             Routes.Scope.TestsUsages(scope),
             Routes.Scope.AssociatedTests(scope),
             Routes.Scope.AssociatedTests(scope),

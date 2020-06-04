@@ -8,6 +8,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
+import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import org.junit.jupiter.api.*
@@ -20,13 +21,12 @@ class CoverageByPackagesTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 
-                plugUi.coverageByPackages()!!.first().apply {
+                plugUi.coveragePackages()!!.first().apply {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 0
                     name shouldBe "com/epam/test"
                     coverage shouldBe 0.0
                     totalClassesCount shouldBe 1
-                    classes.size shouldNotBe 0
                     assocTestsCount shouldBe 0
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -52,13 +52,13 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 plugUi.methodsCoveredByTestType()
 
                 plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
-                    coverageByPackages()!!.first().apply {
+                    coveragePackages()!!.first().apply {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
                         name shouldBe "com/epam/test"
-                        coverage shouldBe 46.666666666666664
+                        coverage shouldBeGreaterThan  46.6
                         totalClassesCount shouldBe 1
-                        classes.size shouldNotBe 0
+                        classes shouldBe emptyList()
                         assocTestsCount shouldBe 1
                     }
                     methodsCoveredByTest()!!.first().apply {
@@ -82,13 +82,12 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope)
-                plugUi.coverageByPackages()!!.first().apply {
+                plugUi.coveragePackages()!!.first().apply {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
                     name shouldBe "com/epam/test"
-                    coverage shouldBe 46.666666666666664
+                    coverage shouldBeGreaterThan  46.6
                     totalClassesCount shouldBe 1
-                    classes.size shouldNotBe 0
                     assocTestsCount shouldBe 1
                 }
 
@@ -125,13 +124,12 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 delay(300)//todo move it to core library
 
                 plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
-                    coverageByPackages()!!.first().apply {
+                    coveragePackages()!!.first().apply {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
                         name shouldBe "com/epam/test"
-                        coverage shouldBe 46.666666666666664
+                        coverage shouldBeGreaterThan  46.6
                         totalClassesCount shouldBe 1
-                        classes.size shouldNotBe 0
                         assocTestsCount shouldBe 1
                     }
                 }
@@ -143,13 +141,12 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope2)
-                plugUi.coverageByPackages()!!.first().apply {
+                plugUi.coveragePackages()!!.first().apply {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
                     name shouldBe "com/epam/test"
-                    coverage shouldBe 46.666666666666664
+                    coverage shouldBeGreaterThan  46.6
                     totalClassesCount shouldBe 1
-                    classes.size shouldNotBe 0
                     assocTestsCount shouldBe 1
                 }
             }

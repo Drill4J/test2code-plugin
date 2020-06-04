@@ -251,9 +251,9 @@ class Test2CodeAdminPart(
         risks: Risks,
         testsToRun: GroupedTests
     ) = Routes.Build().let { buildRoute ->
-        send(buildVersion, Routes.Build.Coverage(buildRoute), buildCoverage)
+        val coverageRoute = Routes.Build.Coverage(buildRoute)
+        send(buildVersion, coverageRoute, buildCoverage)
         send(buildVersion, Routes.Build.Methods(buildRoute), buildMethods.toSummaryDto())
-        send(buildVersion, Routes.Build.CoverageByPackages(buildRoute), packageCoverage)
         Routes.Build.Methods(buildRoute).let {
             send(buildVersion, Routes.Build.Methods.All(it), buildMethods.totalMethods)
             send(buildVersion, Routes.Build.Methods.New(it), buildMethods.newMethods)
@@ -261,6 +261,12 @@ class Test2CodeAdminPart(
             send(buildVersion, Routes.Build.Methods.Deleted(it), buildMethods.deletedMethods)
             send(buildVersion, Routes.Build.Methods.Unaffected(it), buildMethods.unaffectedMethods)
         }
+        val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
+        send(buildVersion, pkgsRoute, packageCoverage.map { it.copy(classes = emptyList()) })
+        packageCoverage.forEach {
+            send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
+        }
+        send(buildVersion, Routes.Build.CoverageByPackages(buildRoute), packageCoverage) //TODO remove
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
@@ -318,9 +324,9 @@ class Test2CodeAdminPart(
         buildVersion: String,
         scopeId: String
     ) = Routes.Scope(scopeId).let { scope ->
-        send(buildVersion, Routes.Scope.Coverage(scope), coverage)
+        val coverageRoute = Routes.Scope.Coverage(scope)
+        send(buildVersion, coverageRoute, coverage)
         send(buildVersion, Routes.Scope.Methods(scope), buildMethods.toSummaryDto())
-        send(buildVersion, Routes.Scope.CoverageByPackages(scope), packageCoverage)
         Routes.Scope.Methods(scope).let { methods ->
             send(buildVersion, Routes.Scope.Methods.All(methods), buildMethods.totalMethods)
             send(buildVersion, Routes.Scope.Methods.New(methods), buildMethods.newMethods)
@@ -328,6 +334,12 @@ class Test2CodeAdminPart(
             send(buildVersion, Routes.Scope.Methods.Deleted(methods), buildMethods.deletedMethods)
             send(buildVersion, Routes.Scope.Methods.Unaffected(methods), buildMethods.unaffectedMethods)
         }
+        val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
+        send(buildVersion, pkgsRoute, packageCoverage.map { it.copy(classes = emptyList()) })
+        packageCoverage.forEach {
+            send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
+        }
+        send(buildVersion, Routes.Scope.CoverageByPackages(scope), packageCoverage) //TODO remove
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
@@ -349,9 +361,15 @@ class Test2CodeAdminPart(
             send(buildVersion, Routes.Scope.Methods.Modified(it), "")
             send(buildVersion, Routes.Scope.Methods.Deleted(it), "")
         }
+        val coverageRoute = Routes.Scope.Coverage(scope)
+        send(buildVersion, coverageRoute, "")
+        (pluginInstanceState.data as? ClassData)?.let { classData ->
+            val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
+            classData.packageTree.packages.forEach {
+                send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
+            }
+        }
         send(buildVersion, Routes.Scope.TestsUsages(scope), "")
-        send(buildVersion, Routes.Scope.CoverageByPackages(scope), "")
-        send(buildVersion, Routes.Scope.Coverage(scope), "")
     }
 
     override suspend fun dropData() {
@@ -366,9 +384,15 @@ class Test2CodeAdminPart(
                     send(buildVersion, Routes.Build.Methods.Modified(methodsRoute), "")
                     send(buildVersion, Routes.Build.Methods.Deleted(methodsRoute), "")
                 }
+                val coverageRoute = Routes.Build.Coverage(buildRoute)
+                send(buildVersion, coverageRoute, "")
+                (pluginInstanceState.data as? ClassData)?.let { classData ->
+                    val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
+                    classData.packageTree.packages.forEach {
+                        send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), "")
+                    }
+                }
                 send(buildVersion, Routes.Build.TestsUsages(buildRoute), "")
-                send(buildVersion, Routes.Build.CoverageByPackages(buildRoute), "")
-                send(buildVersion, Routes.Build.Coverage(buildRoute), "")
             }
         }
         val classesBytes = buildInfo?.classesBytes ?: emptyMap()

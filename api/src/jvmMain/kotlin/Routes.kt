@@ -20,13 +20,19 @@ class Routes {
     class Scope(val scopeId: String) {
 
         @Location("/coverage")
-        class Coverage(val scope: Scope)
+        class Coverage(val scope: Scope) {
+            @Location("/packages")
+            class Packages(val coverage: Coverage) {
+                @Location("/{path}")
+                class Package(val path: String, val packages: Packages)
+            }
+        }
 
         @Location("/associated-tests")
         class AssociatedTests(val scope: Scope)
 
         @Location("/coverage-by-packages")
-        class CoverageByPackages(val scope: Scope)
+        class CoverageByPackages(val scope: Scope) //TODO remove
 
         @Location("/methods")
         class Methods(val scope: Scope) {
@@ -59,7 +65,13 @@ class Routes {
     @Location("/build")
     class Build {
         @Location("/coverage")
-        class Coverage(val build: Build)
+        class Coverage(val build: Build) {
+            @Location("/packages")
+            class Packages(val coverage: Coverage) {
+                @Location("/{path}")
+                class Package(val path: String, val packages: Packages)
+            }
+        }
 
         @Location("/associated-tests")
         class AssociatedTests(val build: Build)
