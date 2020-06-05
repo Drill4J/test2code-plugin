@@ -266,7 +266,6 @@ class Test2CodeAdminPart(
         packageCoverage.forEach {
             send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
-        send(buildVersion, Routes.Build.CoverageByPackages(buildRoute), packageCoverage) //TODO remove
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->
@@ -339,7 +338,6 @@ class Test2CodeAdminPart(
         packageCoverage.forEach {
             send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
-        send(buildVersion, Routes.Scope.CoverageByPackages(scope), packageCoverage) //TODO remove
         if (associatedTests.isNotEmpty()) {
             println("Assoc tests - ids count: ${associatedTests.count()}")
             val beautifiedAssociatedTests = associatedTests.map { batch ->

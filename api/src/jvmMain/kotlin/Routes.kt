@@ -31,9 +31,6 @@ class Routes {
         @Location("/associated-tests")
         class AssociatedTests(val scope: Scope)
 
-        @Location("/coverage-by-packages")
-        class CoverageByPackages(val scope: Scope) //TODO remove
-
         @Location("/methods")
         class Methods(val scope: Scope) {
             @Location("/all")
@@ -96,9 +93,6 @@ class Routes {
 
         @Location("/tests-usages")
         class TestsUsages(val build: Build)
-
-        @Location("/coverage-by-packages")
-        class CoverageByPackages(val build: Build)
 
         @Location("/risks")
         class Risks(val build: Build)

@@ -193,7 +193,6 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
-                                        is Routes.Scope.CoverageByPackages -> Unit //TODO remove
                                         is Routes.Scope.Coverage.Packages -> {
                                             delay(100)
                                             val coveragePackages = run {
@@ -273,7 +272,6 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
-                                        is Routes.Build.CoverageByPackages -> Unit //TODO remove
                                         is Routes.Build.Coverage.Packages -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 coveragePackages.send(null)
