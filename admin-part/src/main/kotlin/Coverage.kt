@@ -3,11 +3,14 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import mu.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import kotlin.math.*
 
 typealias ClassesBytes = Map<String, ByteArray>
+
+private val logger = KotlinLogging.logger {}
 
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
@@ -58,7 +61,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
         null -> coveragesByTestType(bundlesByTests, classesBytes, totalInstructions)
         else -> scope.summary.coverage.byTestType
     }
-    println(coverageByType)
+    logger.info { coverageByType }
 
     val parentVersion = state.buildManager[buildVersion]?.parentVersion ?: ""
     val methodCount = bundleCoverage.methodCounter.toCount(classData.packageTree.totalMethodCount)
@@ -86,7 +89,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
             byTestType = coverageByType
         )
     }
-    println(coverageBlock)
+    logger.info { coverageBlock }
 
     val methodsChanges = buildInfo?.methodChanges ?: MethodChanges()
 
@@ -207,7 +210,7 @@ internal fun Sequence<ExecClassData>.bundle(
     contents.forEach { execData ->
         classesBytes[execData.name]?.let { classesBytes ->
             analyzer.analyzeClass(classesBytes, execData.name)
-        } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
+        } ?: logger.warn { "No class data for ${execData.name}, id=${execData.id}" }
     }
 }
 

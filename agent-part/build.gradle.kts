@@ -16,6 +16,7 @@ dependencies {
     jarDeps(project(":common"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")  { isTransitive = false }
+    jarDeps("io.github.microutils:kotlin-logging:1.7.10")
 
     implementation(kotlin("stdlib"))
 
@@ -50,6 +51,8 @@ tasks {
             )
         }
         listOf(
+            "mu",
+            "org.slf4j",
             "org.objectweb.asm",
             "org.jacoco.core",
             "kotlinx.collections.immutable"

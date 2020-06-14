@@ -3,6 +3,9 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import mu.*
+
+private val logger = KotlinLogging.logger {}
 
 internal fun Test2CodeAdminPart.initActiveScope() {
     val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
@@ -27,8 +30,8 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
         if (prevScope.any()) {
             val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
             pluginInstanceState.scopeManager.store(finishedScope)
-            println("$finishedScope has been saved.")
-        } else println("$prevScope is empty, it won't be added to the build.")
+            logger.info { "$finishedScope has been saved." }
+        } else logger.info { "$prevScope is empty, it won't be added to the build." }
     }
     InitActiveScope(
         payload = InitScopePayload(
@@ -53,7 +56,7 @@ internal suspend fun Test2CodeAdminPart.scopeInitialized(prevId: String) {
     prevScope?.takeIf { it.enabled }.apply {
         calculateAndSendBuildAndChildrenCoverage()
     }
-    println("Current active scope - $activeScope")
+    logger.info { "Current active scope - $activeScope" }
 }
 
 internal suspend fun Test2CodeAdminPart.renameScope(
