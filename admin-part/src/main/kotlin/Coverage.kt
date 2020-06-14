@@ -4,8 +4,11 @@ import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import mu.*
 
 typealias ClassesBytes = Map<String, ByteArray>
+
+private val logger = KotlinLogging.logger {}
 
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
@@ -51,7 +54,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
         null -> coveragesByTestType(bundlesByTests, state, buildVersion)
         else -> scope.summary.coverage.byTestType
     }
-    println(coverageByType)
+    logger.info { coverageByType }
 
     val parentVersion = state.buildManager[buildVersion]?.parentVersion ?: ""
     val methodCount = bundleCoverage.methodCount.copy(total = classData.packageTree.totalMethodCount)
@@ -79,7 +82,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
             byTestType = coverageByType
         )
     }
-    println(coverageBlock)
+    logger.info { coverageBlock }
 
     val methodsChanges = classData.methodChanges
 

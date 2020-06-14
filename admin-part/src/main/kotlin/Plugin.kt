@@ -10,6 +10,7 @@ import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
+import mu.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 class Test2CodeAdminPart(
@@ -31,6 +32,8 @@ class Test2CodeAdminPart(
     val activeScope get() = pluginInstanceState.activeScope
 
     val agentId = agentInfo.id
+
+    private val logger = KotlinLogging.logger("Plugin $id")
 
     internal val lastTestsToRun: GroupedTests
         get() = pluginInstanceState.run {
@@ -65,7 +68,7 @@ class Test2CodeAdminPart(
                     startPayload = action.payload
                 )
             )
-            else -> println("Action '$action' is not supported!")
+            else -> logger.info { "Action '$action' is not supported!" }
         }
     }
 
@@ -83,12 +86,12 @@ class Test2CodeAdminPart(
             if (message.init) {
                 pluginInstanceState.init()
             }
-            println(message.message) //log init message
-            println("${message.classesCount} classes to load")
+            logger.info { message.message } //log init message
+            logger.info { "${message.classesCount} classes to load" }
         }
         is InitDataPart -> {
             (pluginInstanceState.data as? DataBuilder)?.also {
-                println(message)
+                logger.info { message }
                 it += message.astEntities
             }
         }
@@ -111,17 +114,17 @@ class Test2CodeAdminPart(
         is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> {
             activeScope.startSession(message.sessionId, message.testType)
-            println("Session ${message.sessionId} started.")
+            logger.info { "Session ${message.sessionId} started." }
             sendActiveSessions()
         }
         is SessionCancelled -> {
             activeScope.cancelSession(message)
-            println("Session ${message.sessionId} cancelled.")
+            logger.info { "Session ${message.sessionId} cancelled." }
             sendActiveSessions()
         }
         is AllSessionsCancelled -> {
             activeScope.cancelAllSessions()
-            println("All sessions cancelled, ids: ${message.ids}.")
+            logger.info { "All sessions cancelled, ids: ${message.ids}." }
             sendActiveSessions()
         }
         is CoverDataPart -> {
@@ -140,11 +143,11 @@ class Test2CodeAdminPart(
                     sendActiveScope()
                     sendScopes(buildVersion)
                     calculateAndSendScopeCoverage(activeScope)
-                    println("Session $sessionId finished.")
-                } else println("Session with id $sessionId is empty, it won't be added to the active scope.")
-            } ?: println("No active session with id $sessionId.")
+                    logger.info { "Session $sessionId finished." }
+                } else logger.info { "Session with id $sessionId is empty, it won't be added to the active scope." }
+            } ?: logger.info { "No active session with id $sessionId." }
         }
-        else -> println("Message is not supported! $message")
+        else -> logger.info { "Message is not supported! $message" }
     }
 
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
@@ -267,7 +270,7 @@ class Test2CodeAdminPart(
             send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
         if (associatedTests.isNotEmpty()) {
-            println("Assoc tests - ids count: ${associatedTests.count()}")
+            logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             val beautifiedAssociatedTests = associatedTests.map { batch ->
                 batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }
@@ -339,7 +342,7 @@ class Test2CodeAdminPart(
             send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
         if (associatedTests.isNotEmpty()) {
-            println("Assoc tests - ids count: ${associatedTests.count()}")
+            logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             val beautifiedAssociatedTests = associatedTests.map { batch ->
                 batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }

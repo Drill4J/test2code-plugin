@@ -16,6 +16,8 @@ fun instrumenter(probeArrayProvider: ProbeArrayProvider): DrillInstrumenter {
     return CustomInstrumenter(probeArrayProvider)
 }
 
+private val logger = logger("Instrumentation")
+
 private class CustomInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider
 ) : DrillInstrumenter {
@@ -23,7 +25,7 @@ private class CustomInstrumenter(
     override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray? = try {
         instrument(className, classId, classBody)
     } catch (e: Exception) {
-        println("Error while instrumenting $className classId=$classId: ${e.message}")
+        logger.error { "Error while instrumenting $className classId=$classId: ${e.message}" }
         null
     }
 
