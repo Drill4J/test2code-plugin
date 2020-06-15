@@ -18,23 +18,19 @@ class ActiveSession(
     override val testType: String
 ) : Session() {
 
+    override val tests: Set<TypedTest>
+        get() = _probes.value.keys
+
     private val _probes = atomic(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
-    override val tests: Set<TypedTest>
-        get() = _probes.value.keys
-
-    fun addAll(dataPart: Collection<ExecClassData>) = _probes.update {
-        it.mutate { map ->
-            for (probe in dataPart) {
-                val key = TypedTest(probe.testName, testType)
-                val value = (map[key] ?: persistentHashMapOf()).let { testData ->
-                    val value = testData[probe.id]?.merge(probe) ?: probe
-                    testData.put(probe.id, value)
-                }
-                map[key] = value
-            }
+    fun addAll(dataPart: Collection<ExecClassData>) = dataPart.forEach { probe ->
+        val typedTest = TypedTest(probe.testName, testType)
+        _probes.update { map ->
+            val testData = map[typedTest] ?: persistentHashMapOf()
+            val merged = testData[probe.id]?.merge(probe) ?: probe
+            map.put(typedTest, testData.put(probe.id, merged))
         }
     }
 
@@ -50,6 +46,7 @@ class ActiveSession(
             probes = values.flatMap { it.values }
         )
     }
+
 }
 
 @Serializable

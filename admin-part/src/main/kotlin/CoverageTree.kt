@@ -53,20 +53,17 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
     bundle: IBundleCoverage,
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
 ): List<JavaPackageCoverage> = run {
-    val packageItr = bundle.packages.iterator()
-    var cvg = packageItr.nextOrNull()
+    val bundleMap = bundle.packages.associateBy { it.coverageKey().id }
     map { pkg ->
-        val pkgCvg = cvg
-        val key = pkgCvg?.coverageKey()
-        if (pkgCvg != null && pkg.id == key?.id) {
+        bundleMap[pkg.id]?.run {
             pkg.copy(
-                coverage = pkgCvg.coverage(pkg.totalCount),
-                coveredClassesCount = pkgCvg.classCounter.coveredCount,
-                coveredMethodsCount = pkgCvg.methodCounter.coveredCount,
-                assocTestsCount = assocTestsMap[key]?.count() ?: 0,
-                classes = pkg.classes.classCoverage(pkgCvg.classes, assocTestsMap)
-            ).also { cvg = packageItr.nextOrNull() }
-        } else pkg
+                coverage = coverage(pkg.totalCount),
+                coveredClassesCount = classCounter.coveredCount,
+                coveredMethodsCount = methodCounter.coveredCount,
+                assocTestsCount = assocTestsMap[coverageKey()]?.count() ?: 0,
+                classes = pkg.classes.classCoverage(classes, assocTestsMap)
+            )
+        } ?: pkg
     }
 }
 
@@ -92,18 +89,16 @@ private fun List<JavaClassCoverage>.classCoverage(
     classCoverages: Collection<IClassCoverage>,
     assocTestsMap: Map<CoverageKey, List<TypedTest>>
 ): List<JavaClassCoverage> = run {
-    val itr = classCoverages.iterator()
-    var next = itr.nextOrNull()
+    val bundleMap = classCoverages.associateBy { it.coverageKey().id }
     map { classCov ->
-        next?.run { coverageKey() to this }
-            ?.takeIf { it.first.id == classCov.id }?.let { (key, cov) ->
-                classCov.copy(
-                    coverage = cov.coverage(),
-                    coveredMethodsCount = cov.methodCounter.coveredCount,
-                    assocTestsCount = assocTestsMap[key]?.count() ?: 0,
-                    methods = cov.toMethodCoverage(assocTestsMap)
-                ).also { next = itr.nextOrNull() }
-            } ?: classCov
+        bundleMap[classCov.id]?.run {
+            classCov.copy(
+                coverage = coverage(),
+                coveredMethodsCount = methodCounter.coveredCount,
+                assocTestsCount = assocTestsMap[coverageKey()]?.count() ?: 0,
+                methods = toMethodCoverage(assocTestsMap)
+            )
+        } ?: classCov
     }
 }
 
@@ -124,5 +119,3 @@ internal fun IClassCoverage.toMethodCoverage(
         )
     }.toList()
 }
-
-private fun <T> Iterator<T>.nextOrNull() = takeIf(Iterator<*>::hasNext)?.next()
