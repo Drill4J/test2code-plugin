@@ -2,6 +2,14 @@ plugins {
     application
 }
 
+configurations.all { resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES) }
+
+val drillAdminVersion: String by rootProject
+
+dependencies {
+    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
+}
+
 val appJvmArgs = listOf(
     "-server",
     "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006",
@@ -38,10 +46,4 @@ tasks {
         environment("DRILL_DEFAULT_PACKAGES", "org/springframework/samples/petclinic")
         environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
     }
-}
-
-val drillAdminVersion: String by rootProject
-
-dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
 }

@@ -11,6 +11,7 @@ sourceSets {
 val testData: Configuration by configurations.creating {}
 
 configurations {
+    all { resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES) }
     testImplementation {
         extendsFrom(testData)
     }
