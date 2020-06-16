@@ -63,13 +63,13 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     }
                     methodsCoveredByTest()!!.first().apply {
                         testName shouldBe "xxxx"
-                        newMethods.size shouldBe 2
+                        newMethods.size shouldBe 0
                         modifiedMethods.size shouldBe 0
                         unaffectedMethods.size shouldBe 0
                     }
                     methodsCoveredByTestType()!!.first().apply {
                         testType shouldBe "MANUAL"
-                        newMethods.size shouldBe 2
+                        newMethods.size shouldBe 0
                         modifiedMethods.size shouldBe 0
                         unaffectedMethods.size shouldBe 0
                     }
@@ -97,13 +97,13 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 methodsCoveredByTestType.size shouldBe 1
                 methodsCoveredByTest.first().apply {
                     testName shouldBe "xxxx"
-                    newMethods.size shouldBe 2
+                    newMethods.size shouldBe 0
                     modifiedMethods.size shouldBe 0
                     unaffectedMethods.size shouldBe 0
                 }
                 methodsCoveredByTestType.first().apply {
                     testType shouldBe "MANUAL"
-                    newMethods.size shouldBe 2
+                    newMethods.size shouldBe 0
                     modifiedMethods.size shouldBe 0
                     unaffectedMethods.size shouldBe 0
                 }
