@@ -31,8 +31,15 @@ val ast = listOf(
                 name = "bar",
                 params = listOf(),
                 returnType = "void",
+                count = 1,
+                probes = listOf(6)
+            ),
+            AstMethod(
+                name = "baz",
+                params = listOf(),
+                returnType = "void",
                 count = 2,
-                probes = listOf(5, 8)
+                probes = listOf(7, 8)
             )
 
         )
@@ -44,6 +51,6 @@ val probes = listOf(
         id = 0,
         className = "foo/bar/baz.js",
         testName = "default",
-        probes = listOf(false, true, false, true)
+        probes = listOf(false, true, true, false, true)
     )
 )

@@ -20,13 +20,14 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
                     path = path,
                     totalMethodsCount = ast.methods.count(),
                     totalCount = ast.methods.sumBy { it.count },
-                    methods = ast.methods.map { astMethod ->
-                        JavaMethodCoverage(
+                    methods = ast.methods.fold(listOf()) { acc, astMethod ->
+                        acc + JavaMethodCoverage(
                             id = "$path.${ast.name}.${astMethod.name}".crc64,
                             name = astMethod.name,
                             desc = "",
                             count = astMethod.probes.size,
-                            decl = astMethod.params.joinToString(prefix = "(", postfix = "):${astMethod.returnType}")
+                            decl = astMethod.params.joinToString(prefix = "(", postfix = "):${astMethod.returnType}"),
+                            probeRange = ProbeRange(acc.size, (acc.size + astMethod.probes.lastIndex))
                         )
                     },
                     probes = ast.methods.flatMap(AstMethod::probes)

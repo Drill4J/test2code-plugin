@@ -40,11 +40,12 @@ class JsCoverageTest {
         val finished = active.finish(enabled = true)
         val coverageData = finished.calculateCoverageData(state, jsAgentInfo.buildVersion, 1)
         coverageData.run {
-            assertEquals(Count(2, 4), coverage.count)
+            assertEquals(Count(3, 5), coverage.count)
             assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
             packageCoverage[0].classes.run {
                 assertEquals(listOf("foo/bar"), map { it.path })
                 assertEquals(listOf("baz.js"), map { it.name })
+                assertEquals(listOf(50.0, 100.0, 50.0), flatMap { it.methods }.map { it.coverage })
             }
             assertEquals(
                 setOf(TypedTest("default", "MANUAL")),
