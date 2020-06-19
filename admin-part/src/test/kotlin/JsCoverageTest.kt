@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.test.js.*
 import com.epam.kodux.*
 import jetbrains.exodus.entitystore.*
@@ -33,19 +34,18 @@ class JsCoverageTest {
         (state.data as DataBuilder) += ast
         state.initialized()
         val active = state.activeScope
-        val sessionId = genUuid()
-        active.startSession(sessionId, "MANUAL")
-        active.addProbes(sessionId, probes)
-        active.finishSession(sessionId) {}
+        active.test(probes)
+        active.test(probes)
         val finished = active.finish(enabled = true)
         val coverageData = finished.calculateCoverageData(state, jsAgentInfo.buildVersion, 1)
         coverageData.run {
             assertEquals(Count(3, 5), coverage.count)
             assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
-            packageCoverage[0].classes.run {
-                assertEquals(listOf("foo/bar"), map { it.path })
-                assertEquals(listOf("baz.js"), map { it.name })
-                assertEquals(listOf(50.0, 100.0, 50.0), flatMap { it.methods }.map { it.coverage })
+            packageCoverage[0].run {
+                assertEquals(listOf("foo/bar"), classes.map { it.path })
+                assertEquals(listOf("baz.js"), classes.map { it.name })
+                assertEquals(listOf(50.0, 100.0, 50.0), classes.flatMap { it.methods }.map { it.coverage })
+                assertEquals(60.0, coverage)
             }
             assertEquals(
                 setOf(TypedTest("default", "MANUAL")),
@@ -63,5 +63,12 @@ class JsCoverageTest {
             override fun get(version: String) = info[version]
 
         }
+    }
+
+    private fun ActiveScope.test(probes: List<ExecClassData>) {
+        val sessionId = genUuid()
+        startSession(sessionId, "MANUAL")
+        addProbes(sessionId, probes)
+        finishSession(sessionId) {}
     }
 }
