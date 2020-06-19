@@ -3,8 +3,6 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
-import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
 import org.jacoco.core.internal.data.*
 
 private val logger = logger("AgentPart")
@@ -23,14 +21,11 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext)
 
-    private val _loadedClasses: AtomicRef<LoadedClasses> = atomic(emptyClasses)
-
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
         val classBytes: Map<String, ByteArray> = payload.agentData.classMap
         val initInfo = InitInfo(classBytes.count(), initializingMessage)
         sendMessage(initInfo)
-        updateLoadedClasses()
         retransform()
         sendMessage(Initialized(msg = "Initialized"))
         logger.info { "Plugin $id initialized! Loaded ${classBytes.count()} classes" }
@@ -38,7 +33,6 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     override fun off() {
         val cancelledCount = instrContext.cancelAll()
-        _loadedClasses.value = emptyClasses
         logger.info { "Plugin $id is off" }
         retransform()
         sendMessage(AllSessionsCancelled(cancelledCount, currentTimeMillis()))
@@ -48,32 +42,13 @@ class CoverageAgentPart @JvmOverloads constructor(
         className: String,
         initialBytes: ByteArray
     ): ByteArray? = takeIf { enabled }?.run {
-        _loadedClasses.value[className]?.let { classId ->
-            instrumenter(className, classId, initialBytes)
-        }
+        instrumenter(className, CRC64.classId(initialBytes), initialBytes)
     }
 
-    override fun destroyPlugin(unloadReason: UnloadReason) {
-
-    }
+    override fun destroyPlugin(unloadReason: UnloadReason) {}
 
     override fun retransform() {
         Native.RetransformClassesByPackagePrefixes(byteArrayOf())
-    }
-
-    private fun updateLoadedClasses() {
-        val t = System.currentTimeMillis()
-        logger.info { "Plugin $id: updating loaded classes..." }
-        val loadedClasses = payload.agentData.classMap.run {
-            LoadedClasses(
-                names = keys.mapTo(persistentHashSetOf<String>().builder()) { it.replace('/', '.') },
-                checkSums = mapValuesTo(persistentHashMapOf<String, Long>().builder()) { (_, bytes) ->
-                    CRC64.classId(bytes)
-                }.build()
-            )
-        }
-        _loadedClasses.value = loadedClasses
-        logger.info { "Plugin $id: updated ${loadedClasses.count()} classes in ${System.currentTimeMillis() - t}ms." }
     }
 
     override fun initPlugin() {
@@ -138,16 +113,3 @@ fun AgentPart<*, *>.sendMessage(message: CoverMessage) {
     val messageStr = CoverMessage.serializer() stringify message
     send(messageStr)
 }
-
-private class LoadedClasses(
-    private val names: Set<String> = emptySet(),
-    private val checkSums: Map<String, Long> = emptyMap()
-) {
-    operator fun get(path: String): Long? = checkSums[path]
-
-    operator fun contains(name: String): Boolean = names.contains(name)
-
-    fun count() = names.count()
-}
-
-private val emptyClasses = LoadedClasses()
