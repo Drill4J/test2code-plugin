@@ -105,7 +105,7 @@ private fun List<JavaClassCoverage>.classCoverage(
         bundleMap[classCov.id]?.run {
             classCov.copy(
                 coverage = count.percentage(),
-                coveredMethodsCount = methods.sumBy { it.count.covered },
+                coveredMethodsCount = methods.count { it.count.covered > 0 },
                 assocTestsCount = assocTestsMap[coverageKey()]?.count() ?: 0,
                 methods = toMethodCoverage(assocTestsMap)
             )

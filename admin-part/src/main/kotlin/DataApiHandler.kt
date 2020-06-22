@@ -1,29 +1,13 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
-import com.epam.drill.plugins.test2code.storage.*
 import kotlinx.serialization.builtins.*
-import org.jacoco.core.data.*
-import java.io.*
 
 //TODO remove this after the data API has been redesigned
 
-suspend fun Test2CodeAdminPart.handleGettingData(params: Map<String, String>): Any = when (params["type"]) {
+fun Test2CodeAdminPart.handleGettingData(params: Map<String, String>): Any = when (params["type"]) {
     "tests-to-run" -> lastTestsToRun.testsToRunDto()
     "recommendations" -> newBuildActionsList()
-    "coverage-data" -> { //TODO rewrite or remove this
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        val buildProbes = pluginInstanceState.scopeManager.run {
-            byVersion(buildVersion).enabled().flatten().flatten()
-        }
-        val dataStore = buildProbes.execDataStore()
-        @Suppress("BlockingMethodInNonBlockingContext")
-        val writer = ExecutionDataWriter(byteArrayOutputStream)
-        val info = SessionInfo(buildVersion, System.currentTimeMillis() - 1000, System.currentTimeMillis())
-        writer.visitSessionInfo(info)
-        dataStore.accept(writer)
-        byteArrayOutputStream.toByteArray()
-    }
     else -> Unit
 }
 

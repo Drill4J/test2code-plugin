@@ -87,7 +87,7 @@ class ExecRuntime(
                 tests.put(testName, mutatedData)
             } else tests
         }
-    }[testName]!![id]!!.also(::offer).probes
+    }.getValue(testName).getValue(id).also(::offer).probes
 
     fun collect(): Sequence<ExecDatum> = Sequence {
         _execData.value.values.iterator()
