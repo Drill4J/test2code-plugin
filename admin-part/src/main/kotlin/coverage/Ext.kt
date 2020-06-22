@@ -8,7 +8,7 @@ val CoverageKey.isMethod get() = methodName.any()
 
 fun List<Boolean>.toCount() = Count(count { it }, size)
 
-internal fun <T> List<T>.slice(probeRange: ProbeRange) = slice(probeRange.first..probeRange.last)
+internal fun <T> List<T>.slice(probeRange: ProbeRange): List<T> = slice(probeRange.first..probeRange.last)
 
 internal fun Count.percentage(): Double = covered percentOf total
 

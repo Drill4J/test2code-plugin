@@ -33,10 +33,14 @@ class JsCoverageTest {
         (state.data as DataBuilder) += ast
         state.initialized()
         val active = state.activeScope
-        val sessionId = genUuid()
-        active.startSession(sessionId, "MANUAL")
-        active.addProbes(sessionId, probes)
-        active.finishSession(sessionId) {}
+        active.execSession("MANUAL") { sessionId ->
+            addProbes(sessionId, probes)
+        }
+        active.execSession("AUTO") { sessionId ->
+            addProbes(sessionId, IncorrectProbes.underCount)
+            addProbes(sessionId, IncorrectProbes.overCount)
+            addProbes(sessionId, IncorrectProbes.notExisting)
+        }
         val finished = active.finish(enabled = true)
         val coverageData = finished.calculateCoverageData(state, jsAgentInfo.buildVersion, 1)
         coverageData.run {
@@ -45,13 +49,20 @@ class JsCoverageTest {
             packageCoverage[0].classes.run {
                 assertEquals(listOf("foo/bar"), map { it.path })
                 assertEquals(listOf("baz.js"), map { it.name })
-                assertEquals(listOf(50.0, 100.0, 50.0), flatMap { it.methods }.map { it.coverage })
+                assertEquals(listOf(100.0, 0.0, 50.0), flatMap { it.methods }.map { it.coverage })
             }
             assertEquals(
-                setOf(TypedTest("default", "MANUAL")),
+                setOf(TypedTest("default", "MANUAL"), TypedTest("default", "AUTO")),
                 associatedTests.flatMap { it.tests }.toSet()
             )
         }
+    }
+
+    private fun ActiveScope.execSession(testType: String, block: ActiveScope.(String) -> Unit) {
+        val sessionId = genUuid()
+        startSession(sessionId, testType)
+        block(sessionId)
+        finishSession(sessionId) {}
     }
 
     private fun buildManager(): BuildManager {

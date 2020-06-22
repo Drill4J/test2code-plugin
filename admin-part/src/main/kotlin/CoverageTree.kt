@@ -11,27 +11,34 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
             id = path.crc64,
             name = path,
             totalClassesCount = astEntities.count(),
-            totalMethodsCount = astEntities.flatMap(AstEntity::methods).count(),
-            totalCount = astEntities.flatMap(AstEntity::methods).map(AstMethod::count).sum(),
-            classes = astEntities.map { ast ->
-                JavaClassCoverage(
-                    id = "$path.${ast.name}".crc64,
-                    name = ast.name,
-                    path = path,
-                    totalMethodsCount = ast.methods.count(),
-                    totalCount = ast.methods.sumBy { it.count },
-                    methods = ast.methods.fold(listOf()) { acc, astMethod ->
-                        acc + JavaMethodCoverage(
-                            id = "$path.${ast.name}.${astMethod.name}".crc64,
-                            name = astMethod.name,
-                            desc = "",
-                            count = astMethod.probes.size,
-                            decl = astMethod.params.joinToString(prefix = "(", postfix = "):${astMethod.returnType}"),
-                            probeRange = ProbeRange(acc.size, (acc.size + astMethod.probes.lastIndex))
-                        )
-                    },
-                    probes = ast.methods.flatMap(AstMethod::probes)
-                )
+            totalMethodsCount = astEntities.flatMap(AstEntity::methodsWithProbes).count(),
+            totalCount = astEntities.flatMap(AstEntity::methodsWithProbes).map(AstMethod::count).sum(),
+            classes = astEntities.mapNotNull { ast ->
+                ast.methodsWithProbes().takeIf { it.any() }?.let { methods ->
+                    JavaClassCoverage(
+                        id = "$path.${ast.name}".crc64,
+                        name = ast.name,
+                        path = path,
+                        totalMethodsCount = methods.count(),
+                        totalCount = methods.sumBy { it.count },
+                        methods = methods.fold(listOf()) { acc, astMethod ->
+                            acc + JavaMethodCoverage(
+                                id = "$path.${ast.name}.${astMethod.name}".crc64,
+                                name = astMethod.name,
+                                desc = "",
+                                count = astMethod.probes.size,
+                                decl = astMethod.params.joinToString(
+                                    prefix = "(",
+                                    postfix = "):${astMethod.returnType}"
+                                ),
+                                probeRange = (acc.lastOrNull()?.probeRange?.last?.inc() ?: 0).let {
+                                    ProbeRange(it, it + astMethod.probes.lastIndex)
+                                }
+                            )
+                        },
+                        probes = methods.flatMap(AstMethod::probes)
+                    )
+                }
             }
         )
     }
@@ -123,3 +130,5 @@ internal fun ClassCounter.toMethodCoverage(
         )
     }.toList()
 }
+
+private fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }

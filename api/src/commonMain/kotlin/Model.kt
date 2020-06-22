@@ -148,7 +148,7 @@ data class JavaMethodCoverage(
 @Serializable
 data class ProbeRange(val first: Int, val last: Int) {
     companion object {
-        val EMPTY = ProbeRange(0, 0)
+        val EMPTY = ProbeRange(1, 0)
     }
 }
 

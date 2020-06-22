@@ -7,14 +7,22 @@ import com.epam.drill.plugins.test2code.common.api.*
 internal fun Sequence<ExecClassData>.bundle(
     tree: PackageTree
 ): BundleCounter = run {
-    val probesByClasses = groupBy(ExecClassData::className).mapValues {
-        it.value.reduce { acc, execClassData -> acc.merge(execClassData) }.probes
+    val probeCounts: Map<String, Int> = tree.packages.run {
+        flatMap { it.classes }.associateBy({ "${it.path}/${it.name}" }) { it.totalCount }
+    }
+    val probesByClasses: Map<String, List<Boolean>> = filter {
+        it.className in probeCounts
+    }.groupBy(ExecClassData::className).mapValues { (className, execDataList) ->
+        val initialProbe = BooleanArray(probeCounts.getValue(className)) { false }.toList()
+        execDataList.map(ExecClassData::probes).fold(initialProbe) { acc, probes ->
+            acc.merge(probes)
+        }
     }
     val classMethods = tree.packages.flatMap { it.classes }.associate {
         "${it.path}/${it.name}" to it.methods
     }
     val covered = probesByClasses.values.sumBy { probes -> probes.count { it } }
-    val packages = groupBy({ it.className.substringBeforeLast("/") }) { it.className }
+    val packages = probesByClasses.keys.groupBy { it.substringBeforeLast("/") }
     BundleCounter(
         name = "",
         methodCount = zeroCount,
