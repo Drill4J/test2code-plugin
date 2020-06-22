@@ -169,7 +169,10 @@ internal fun Sequence<ExecClassData>.bundle(
     state: PluginInstanceState,
     buildVersion: String = state.agentInfo.buildVersion
 ): BundleCounter = when (state.agentInfo.agentType) {
-    AgentType.JAVA -> bundle(state.buildManager[buildVersion]?.classesBytes ?: emptyMap())
+    AgentType.JAVA -> bundle(
+        probeIds = (state.data as ClassData).probeIds,
+        classBytes = state.buildManager[buildVersion]?.classesBytes ?: emptyMap()
+    )
     else -> bundle((state.data as ClassData).packageTree)
 }
 

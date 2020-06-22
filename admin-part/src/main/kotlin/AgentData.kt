@@ -25,7 +25,8 @@ class DataBuilder : AgentData(), Iterable<AstEntity> {
 data class ClassData(
     @Id val buildVersion: String,
     val packageTree: PackageTree,
-    val methodChanges: MethodChanges
+    val methodChanges: MethodChanges,
+    val probeIds: Map<String, Long> = emptyMap()
 ) : AgentData() {
     override fun equals(other: Any?) = other is ClassData && buildVersion == other.buildVersion
 
@@ -37,3 +38,12 @@ class PackageTreeBytes(
     @Id val buildVersion: String,
     val bytes: ByteArray
 )
+
+@Serializable
+class ProbeIdBytes(
+    @Id val buildVersion: String,
+    val bytes: ByteArray
+)
+
+@Serializable
+internal class ProbeIdData(val map: Map<String, Long>)

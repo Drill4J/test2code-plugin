@@ -42,7 +42,8 @@ class CoverageAgentPart @JvmOverloads constructor(
         className: String,
         initialBytes: ByteArray
     ): ByteArray? = takeIf { enabled }?.run {
-        instrumenter(className, CRC64.classId(initialBytes), initialBytes)
+        val idFromClassName = CRC64.classId(className.encodeToByteArray())
+        instrumenter(className, idFromClassName, initialBytes)
     }
 
     override fun destroyPlugin(unloadReason: UnloadReason) {}

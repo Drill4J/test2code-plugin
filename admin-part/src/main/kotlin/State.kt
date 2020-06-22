@@ -8,6 +8,7 @@ import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.protobuf.*
+import org.jacoco.core.internal.data.*
 
 /**
  * Agent state.
@@ -47,7 +48,7 @@ class PluginInstanceState(
     suspend fun initialized() {
         val classesData = _data.updateAndGet { data ->
             when (data) {
-                is DataBuilder -> data.flatMap { e -> e.methods.map { e to it} }.run {
+                is DataBuilder -> data.flatMap { e -> e.methods.map { e to it } }.run {
                     val methods = map { (e, m) ->
                         Method(
                             ownerClass = "${e.path}/${e.name}",
@@ -66,13 +67,17 @@ class PluginInstanceState(
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
                     val javaMethods = buildInfo?.javaMethods ?: emptyMap()
-                    val bundleCoverage = classesBytes.bundle()
+                    val probeIds: Map<String, Long> = classesBytes.mapValues { CRC64.classId(it.value) }
+                    val bundleCoverage = classesBytes.bundle(probeIds)
                     val packages = bundleCoverage.toPackages(javaMethods)
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },
                         totalMethodCount = javaMethods.values.sumBy { it.count() },
                         packages = packages
-                    ).toClassesData(buildInfo?.methodChanges ?: MethodChanges())
+                    ).toClassesData(
+                        methodChanges = buildInfo?.methodChanges ?: MethodChanges(),
+                        probeIds = probeIds
+                    )
                 }
             }
         } as ClassData
@@ -88,6 +93,14 @@ class PluginInstanceState(
                     bytes = ProtoBuf.dump(PackageTree.serializer(), classesData.packageTree)
                 )
             )
+            if (classesData.probeIds.any()) {
+                store(
+                    ProbeIdBytes(
+                        buildVersion = classesData.buildVersion,
+                        bytes = ProtoBuf.dump(ProbeIdData.serializer(), ProbeIdData(classesData.probeIds))
+                    )
+                )
+            }
             getAll<StoredBuildCoverage>().forEach { stored ->
                 coverages(stored.id) { stored }
             }
@@ -197,17 +210,27 @@ class PluginInstanceState(
         else -> trimmed
     }
 
-    private fun PackageTree.toClassesData(methodChanges: MethodChanges) = ClassData(
+    private fun PackageTree.toClassesData(
+        methodChanges: MethodChanges,
+        probeIds: Map<String, Long> = emptyMap()
+    ) = ClassData(
         buildVersion = agentInfo.buildVersion,
         packageTree = this,
-        methodChanges = methodChanges
+        methodChanges = methodChanges,
+        probeIds = probeIds
     )
 }
 
-private suspend fun StoreClient.classData(buildVersion: String): ClassData? = executeInAsyncTransaction {
+internal suspend fun StoreClient.classData(buildVersion: String): ClassData? = executeInAsyncTransaction {
     findById<ClassData>(buildVersion)?.run {
-        findById<PackageTreeBytes>(buildVersion)?.run {
+        val foundPackageTree = findById<PackageTreeBytes>(buildVersion)?.run {
             ProtoBuf.load(PackageTree.serializer(), bytes)
-        }?.let { copy(packageTree = it) } ?: this
+        }
+        val foundProbeIds = findById<ProbeIdBytes>(buildVersion)?.run {
+            ProtoBuf.load(ProbeIdData.serializer(), bytes).map
+        }
+        val treeMutator: (ClassData) -> ClassData = { foundPackageTree?.run { it.copy(packageTree = this) } ?: it }
+        val probeIdsMutator: (ClassData) -> ClassData = { foundProbeIds?.run { it.copy(probeIds = this) } ?: it }
+        let(treeMutator).let(probeIdsMutator)
     }
 }

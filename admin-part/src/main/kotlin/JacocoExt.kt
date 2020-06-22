@@ -5,34 +5,38 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
-import org.jacoco.core.internal.data.*
 
 internal fun Sequence<ExecClassData>.bundle(
-    classesBytes: ClassesBytes
-): BundleCounter = bundle { analyzer ->
+    probeIds: Map<String, Long>,
+    classBytes: ClassesBytes
+): BundleCounter = bundle(probeIds) { analyzer ->
     contents.forEach { execData ->
-        classesBytes[execData.name]?.let { classesBytes ->
+        classBytes[execData.name]?.let { classesBytes ->
             analyzer.analyzeClass(classesBytes, execData.name)
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
 }.toCounter()
 
 internal fun ClassesBytes.bundle(
+    probeIds: Map<String, Long>,
     data: Sequence<ExecClassData> = emptySequence()
-): BundleCounter = data.bundle { analyzer ->
+): BundleCounter = data.bundle(probeIds) { analyzer ->
     forEach { (name, bytes) -> analyzer.analyzeClass(bytes, name) }
 }.toCounter()
 
 private fun Sequence<ExecClassData>.bundle(
+    probeIds: Map<String, Long>,
     analyze: ExecutionDataStore.(Analyzer) -> Unit
 ): IBundleCoverage = CoverageBuilder().also { coverageBuilder ->
-    val dataStore = execDataStore()
+    val dataStore = execDataStore(probeIds)
     val analyzer = Analyzer(dataStore, coverageBuilder)
     dataStore.analyze(analyzer)
 }.getBundle("")
 
 
-internal fun Sequence<ExecClassData>.execDataStore(): ExecutionDataStore = map(ExecClassData::toExecutionData)
+internal fun Sequence<ExecClassData>.execDataStore(
+    probeIds: Map<String, Long>
+): ExecutionDataStore = mapNotNull { it.toExecutionData(probeIds) }
     .fold(ExecutionDataStore()) { store, execData ->
         store.apply { put(execData) }
     }
@@ -125,4 +129,6 @@ fun parseDescType(char: Char, charIterator: CharIterator): String = when (char) 
     else -> "!Error"
 }
 
-private fun ExecClassData.toExecutionData() = ExecutionData(id, className, probes.toBooleanArray())
+private fun ExecClassData.toExecutionData(probeIds: Map<String, Long>): ExecutionData? = probeIds[className]?.let {
+    ExecutionData(it, className, probes.toBooleanArray())
+}

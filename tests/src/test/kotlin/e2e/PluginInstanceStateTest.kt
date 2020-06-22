@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code.e2e
 
-import com.epam.drill.admin.endpoints.plugin.*
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
@@ -197,69 +196,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     prevBuildVersion shouldBe ""
                 }
                 plugUi.activeScope()!!.name shouldBe "New Scope 3"
-            }
-        }
-    }
-
-    @Test
-    fun `deploy build2 and check state of build1`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent<Build1> { plugUi, build ->
-                plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 0
-                    modifiedMethods.count() shouldBe 0
-                }
-                plugUi.coveragePackages()
-                plugUi.activeSessions()!!.run {
-                    count shouldBe 0
-                    testTypes shouldBe emptySet()
-                }
-
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                pluginAction(startNewSession) { status, content ->
-                    status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
-
-                    plugUi.activeSessions()!!.run { count shouldBe 1 }
-
-                    runWithSession(startSession.payload.sessionId) {
-                        val gt = build.entryPoint()
-                        gt.test1()
-                        gt.test2()
-                        gt.test3()
-                    }
-
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
-                }.join()
-                plugUi.activeSessions()!!.count shouldBe 0
-                val switchScope = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new2",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope).join()
-
-                plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 0
-                    modifiedMethods.count() shouldBe 0
-                }
-
-            }.reconnect<Build2> { plugUi, _ ->
-                plugUi.subscribe(AgentSubscription(agentId, "0.1.0"))
-                plugUi.buildCoverage()!!.apply {
-                    ratio shouldBe 100.0
-                    arrow shouldBe null
-                    diff shouldBe 100.0
-                }
-
-                plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 0
-                    modifiedMethods.count() shouldBe 0
-                }
-
-                plugUi.activeScope() shouldBe null
             }
         }
     }
