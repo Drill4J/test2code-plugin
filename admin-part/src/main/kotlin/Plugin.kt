@@ -154,7 +154,7 @@ class Test2CodeAdminPart(
         val finishedScopes = pluginInstanceState.scopeManager.byVersion(
             buildVersion, withData = true
         )
-        finishedScopes.calculateAndSendBuildCoverage(buildVersion)
+        finishedScopes.enabled().calculateAndSendBuildCoverage(buildVersion)
         finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
     }
 
