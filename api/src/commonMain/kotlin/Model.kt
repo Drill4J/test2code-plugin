@@ -19,11 +19,12 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "")
 
 @Serializable
-data class JavaMethod(
+data class CoverMethod(
     val ownerClass: String,
     val name: String,
     val desc: String,
     val hash: String?,
+    val count: Count,
     val coverageRate: CoverageRate = CoverageRate.MISSED
 )
 
@@ -95,7 +96,7 @@ data class BuildMethods(
 data class MethodsInfo(
     val totalCount: Int = 0,
     val coveredCount: Int = 0,
-    val methods: List<JavaMethod> = emptyList()
+    val methods: List<CoverMethod> = emptyList()
 )
 
 @Serializable
@@ -175,18 +176,18 @@ data class MethodsCoveredByTest(
     val id: String,
     val testName: String,
     val testType: String,
-    val newMethods: List<JavaMethod>,
-    val modifiedMethods: List<JavaMethod>,
-    val unaffectedMethods: List<JavaMethod>
+    val newMethods: List<CoverMethod>,
+    val modifiedMethods: List<CoverMethod>,
+    val unaffectedMethods: List<CoverMethod>
 )
 
 @Serializable
 data class MethodsCoveredByTestType(
     val testType: String,
     val testsCount: Int,
-    val newMethods: List<JavaMethod>,
-    val modifiedMethods: List<JavaMethod>,
-    val unaffectedMethods: List<JavaMethod>
+    val newMethods: List<CoverMethod>,
+    val modifiedMethods: List<CoverMethod>,
+    val unaffectedMethods: List<CoverMethod>
 )
 
 @Serializable
@@ -240,8 +241,8 @@ data class TestTypeSummary(
 
 @Serializable
 data class Risks(
-    val newMethods: List<JavaMethod>,
-    val modifiedMethods: List<JavaMethod>
+    val newMethods: List<CoverMethod>,
+    val modifiedMethods: List<CoverMethod>
 )
 
 typealias GroupedTests = Map<String, List<String>>

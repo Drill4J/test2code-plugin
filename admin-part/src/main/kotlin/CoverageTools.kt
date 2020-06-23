@@ -40,77 +40,25 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
 }.sortedBy { it.methodName }
 
 //TODO rewrite this
-fun calculateBundleMethods(
-    methodChanges: MethodChanges,
+fun ClassData.calculateBundleMethods(
     bundleCoverage: BundleCounter,
-    excludeMissed: Boolean = false
-): BuildMethods {
-    val methodsCoverages = bundleCoverage.toDataMap()
-
-    val infos: Map<DiffType, MethodsInfo> = DiffType.values().asSequence().map { diffType ->
-        diffType to (methodChanges.map[diffType]?.getInfo(methodsCoverages, excludeMissed) ?: MethodsInfo())
-    }.toMap()
-
-    val totalInfo: MethodsInfo = infos.asSequence().filter { it.key != DiffType.DELETED }
-        .map { it.value }
-        .reduce { totalInfo, info ->
-            MethodsInfo(
-                totalInfo.totalCount + info.totalCount,
-                totalInfo.coveredCount + info.coveredCount,
-                totalInfo.methods + info.methods
-            )
-        }
-
-    val modifiedNameMethods = infos.getValue(DiffType.MODIFIED_NAME)
-    val modifiedDescMethods = infos.getValue(DiffType.MODIFIED_DESC)
-    val modifiedBodyMethods = infos.getValue(DiffType.MODIFIED_BODY)
-    val allModifiedMethods = listOf(modifiedBodyMethods, modifiedDescMethods, modifiedNameMethods)
-        .flatMap(MethodsInfo::methods)
-        .let { methods ->
-            MethodsInfo(
-                totalCount = methods.count(),
-                coveredCount = methods.count { it.coverageRate != CoverageRate.MISSED },
-                methods = methods
-            )
-        }
-    return BuildMethods(
-        totalMethods = totalInfo,
-        newMethods = infos.getValue(DiffType.NEW),
-        modifiedNameMethods = modifiedNameMethods,
-        modifiedDescMethods = modifiedDescMethods,
-        modifiedBodyMethods = modifiedBodyMethods,
-        allModifiedMethods = allModifiedMethods,
-        unaffectedMethods = infos.getValue(DiffType.UNAFFECTED),
-        deletedMethods = infos.getValue(DiffType.DELETED)
+    onlyCovered: Boolean = false
+): BuildMethods = methods.toCoverMap(bundleCoverage, onlyCovered).let { covered ->
+    BuildMethods(
+        totalMethods = covered.keys.toInfo(covered),
+        newMethods = methodChanges.new.toInfo(covered),
+        allModifiedMethods = methodChanges.modified.toInfo(covered),
+        unaffectedMethods = methodChanges.unaffected.toInfo(covered),
+        deletedMethods = methodChanges.deleted.toInfo(covered)
     )
 }
 
-fun Methods.getInfo(
-    data: Map<Pair<String, String>, MethodCounter>,
-    excludeMissed: Boolean
-) = MethodsInfo(
-    totalCount = count(),
-    coveredCount = count { data[it.ownerClass to it.sign]?.count?.covered ?: 0 > 0 },
-    methods = mapNotNull { method ->
-        val coverageRate = data[method.ownerClass to method.sign]?.coverageRate() ?: CoverageRate.MISSED
-        coverageRate.takeIf { !excludeMissed || it != CoverageRate.MISSED }?.let {
-            JavaMethod(
-                ownerClass = method.ownerClass,
-                name = method.ownerClass.methodName(method.name),
-                desc = method.desc.takeIf { "):" in it } ?: declaration(method.desc), //TODO js methods
-                hash = method.hash,
-                coverageRate = coverageRate
-            )
-        }
-    }.sortedBy { it.name }
-)
-
 fun Map<TypedTest, BundleCounter>.coveredMethods(
-    methodChanges: MethodChanges,
+    classData: ClassData,
     bundlesByType: Map<String, BundleCounter>
 ): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {
     val coveredByTest = map { (typedTest, bundle) ->
-        val changes = calculateBundleMethods(methodChanges, bundle, true)
+        val changes = classData.calculateBundleMethods(bundle, true)
         MethodsCoveredByTest(
             id = typedTest.id(),
             testName = typedTest.name,
@@ -122,7 +70,7 @@ fun Map<TypedTest, BundleCounter>.coveredMethods(
     }
     val typesCounts = keys.groupBy { it.type }.mapValues { it.value.count() }
     val coveredByType = bundlesByType.map { (type, bundle) ->
-        val changes = calculateBundleMethods(methodChanges, bundle, true)
+        val changes = classData.calculateBundleMethods(bundle, true)
         MethodsCoveredByTestType(
             testType = type,
             testsCount = typesCounts[type] ?: 0,
@@ -134,10 +82,16 @@ fun Map<TypedTest, BundleCounter>.coveredMethods(
     return coveredByTest to coveredByType
 }
 
-private val Method.sign get() = "$name$desc"
-
 fun String.methodName(name: String): String = when (name) {
     "<init>" -> toShortClassName()
     "<clinit>" -> "static ${toShortClassName()}"
     else -> name
 }
+
+private fun Iterable<Method>.toInfo(
+    covered: Map<Method, CoverMethod>
+) = MethodsInfo(
+    totalCount = count(),
+    coveredCount = count { covered[it]?.count?.covered ?: 0 > 0 },
+    methods = mapNotNull(covered::get)
+)

@@ -23,10 +23,10 @@ data class StoredBuildTests(
 
 suspend fun PluginInstanceState.testsToRun(
     buildVersion: String,
-    javaMethods: List<JavaMethod>
+    coverMethods: List<CoverMethod>
 ): GroupedTests = buildManager[buildVersion]?.parentVersion?.takeIf { it.any() }?.let { parentVersion ->
     val assocTests = buildTests[buildId(parentVersion)]?.let {
-        javaMethods.associatedTests(it.assocTests)
+        coverMethods.associatedTests(it.assocTests)
     }
     assocTests?.let { assocTestsSeq ->
         val curBuildTests: Set<TypedTest> = scopeManager.byVersion(
@@ -53,7 +53,7 @@ fun MethodsInfo.testCount(
     tests: Set<AssociatedTests>
 ): Int = methods.associatedTests(tests).count()
 
-fun Iterable<JavaMethod>.associatedTests(
+fun Iterable<CoverMethod>.associatedTests(
     tests: Set<AssociatedTests>
 ): Sequence<AssociatedTests> = tests.filter { test ->
     any { method -> method.ownerClass == test.className && method.name == test.methodName }
