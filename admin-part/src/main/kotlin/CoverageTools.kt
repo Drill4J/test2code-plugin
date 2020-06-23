@@ -39,7 +39,6 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
     )
 }.sortedBy { it.methodName }
 
-//TODO rewrite this
 fun ClassData.calculateBundleMethods(
     bundleCoverage: BundleCounter,
     onlyCovered: Boolean = false
@@ -49,7 +48,9 @@ fun ClassData.calculateBundleMethods(
         newMethods = methodChanges.new.toInfo(covered),
         allModifiedMethods = methodChanges.modified.toInfo(covered),
         unaffectedMethods = methodChanges.unaffected.toInfo(covered),
-        deletedMethods = methodChanges.deleted.toInfo(covered)
+        deletedMethods = methodChanges.deleted.map { it.toCovered() }.run {
+            MethodsInfo(totalCount = count(), methods = this)
+        }
     )
 }
 

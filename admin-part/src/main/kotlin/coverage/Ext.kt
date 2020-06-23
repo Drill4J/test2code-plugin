@@ -78,7 +78,7 @@ private fun Int.toArrowType(): ArrowType? = when (this) {
     else -> null
 }
 
-private fun Method.toCovered(counter: MethodCounter?) = CoverMethod(
+internal fun Method.toCovered(counter: MethodCounter? = null) = CoverMethod(
     ownerClass = ownerClass,
     name = ownerClass.methodName(name),
     desc = desc.takeIf { "):" in it } ?: declaration(desc), //TODO js methods

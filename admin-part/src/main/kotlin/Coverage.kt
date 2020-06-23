@@ -84,9 +84,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val calculatedMethods = classData.calculateBundleMethods(
-        bundleCoverage
-    )
+    val calculatedMethods = classData.calculateBundleMethods(bundleCoverage)
     val buildMethods = state.buildTests[state.buildId(buildVersion)]?.let {
         calculatedMethods.copy(
             deletedCoveredMethodsCount = calculatedMethods.deletedMethods.testCount(it.assocTests)
