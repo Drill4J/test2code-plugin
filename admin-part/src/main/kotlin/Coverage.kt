@@ -40,18 +40,18 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
 ): CoverageInfoSet {
     val classData = state.classesData(buildVersion) as ClassData
 
-    val bundlesByTests = bundlesByTests(state, buildVersion)
+    val bundlesByTests = bundlesByTests(state, buildVersion, classData)
     val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
     val totalInstructions = classData.packageTree.totalCount
-    val bundleCoverage = flatten().bundle(state, buildVersion)
+    val bundleCoverage = flatten().bundle(state, buildVersion, classData)
     val coverageCount = Count(bundleCoverage.count.covered, totalInstructions)
     val totalCoveragePercent = coverageCount.percentage()
 
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
-        null -> coveragesByTestType(bundlesByTests, state, buildVersion)
+        null -> coveragesByTestType(bundlesByTests, state, buildVersion, classData)
         else -> scope.summary.coverage.byTestType
     }
     logger.info { coverageByType }
@@ -97,7 +97,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         classData,
-        bundlesByTestTypes(state, buildVersion)
+        bundlesByTestTypes(state, buildVersion, classData)
     )
 
     val testsUsagesInfoByType = coverageByType.map {
@@ -126,15 +126,17 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
 fun Sequence<Session>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     state: PluginInstanceState,
-    buildVersion: String = state.agentInfo.buildVersion
+    buildVersion: String = state.agentInfo.buildVersion,
+    classData: ClassData = state.data as ClassData
 ): Map<String, TestTypeSummary> = run {
-    val classData = state.data as ClassData
     val totalInstructions = classData.packageTree.totalCount
     groupBy(Session::testType).mapValues { (testType, sessions) ->
         sessions.asSequence().run {
             TestTypeSummary(
                 testType = testType,
-                coverage = flatten().bundle(state, buildVersion).count.copy(total = totalInstructions).percentage(),
+                coverage = flatten().bundle(state, buildVersion, classData).run {
+                    count.copy(total = totalInstructions).percentage()
+                },
                 testCount = flatMap { it.tests.asSequence() }.distinct().count(),
                 coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
             )
@@ -144,12 +146,13 @@ fun Sequence<Session>.coveragesByTestType(
 
 private fun Sequence<Session>.bundlesByTests(
     state: PluginInstanceState,
-    buildVersion: String = state.agentInfo.buildVersion
+    buildVersion: String = state.agentInfo.buildVersion,
+    classData: ClassData = state.data as ClassData
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
     groupBy(Session::testType).map { (testType, sessions) ->
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
-            .mapValuesTo(mutableMapOf()) { it.value.asSequence().bundle(state, buildVersion) }
+            .mapValuesTo(mutableMapOf()) { it.value.asSequence().bundle(state, buildVersion, classData) }
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
     }
@@ -157,20 +160,22 @@ private fun Sequence<Session>.bundlesByTests(
 
 private fun Sequence<Session>.bundlesByTestTypes(
     state: PluginInstanceState,
-    buildVersion: String
+    buildVersion: String,
+    classData: ClassData
 ): Map<String, BundleCounter> = groupBy(Session::testType).mapValues {
-    it.value.asSequence().flatten().bundle(state, buildVersion)
+    it.value.asSequence().flatten().bundle(state, buildVersion, classData)
 }
 
 internal fun Sequence<ExecClassData>.bundle(
     state: PluginInstanceState,
-    buildVersion: String = state.agentInfo.buildVersion
+    buildVersion: String = state.agentInfo.buildVersion,
+    classData: ClassData = state.data as ClassData
 ): BundleCounter = when (state.agentInfo.agentType) {
     AgentType.JAVA -> bundle(
-        probeIds = (state.data as ClassData).probeIds,
+        probeIds = classData.probeIds,
         classBytes = state.buildManager[buildVersion]?.classesBytes ?: emptyMap()
     )
-    else -> bundle((state.data as ClassData).packageTree)
+    else -> bundle(classData.packageTree)
 }
 
 private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, List<TypedTest>> = run {
