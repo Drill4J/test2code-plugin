@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code.coverage
 
+import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import kotlin.math.*
@@ -52,9 +53,18 @@ internal fun BundleCounter.coverageKeys(): Sequence<CoverageKey> = packages.asSe
     }
 }
 
-internal fun BundleCounter.toDataMap(): Map<Pair<String, String>, MethodCounter> = packages.run {
-    flatMap { it.classes }.flatMap { c -> c.methods.map { (c.fullName to it.sign) to it } }
-}.toMap()
+internal fun Iterable<Method>.toCoverMap(
+    bundle: BundleCounter,
+    onlyCovered: Boolean
+): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
+    val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
+        c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
+    }.toMap()
+    mapNotNull { m ->
+        val covered = m.toCovered(map[m.ownerClass to m.sign])
+        covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { m to it }
+    }.toMap()
+}
 
 internal fun MethodCounter.coverageRate() = when (count.covered) {
     0 -> CoverageRate.MISSED
@@ -67,3 +77,14 @@ private fun Int.toArrowType(): ArrowType? = when (this) {
     in 1..Int.MAX_VALUE -> ArrowType.DECREASE
     else -> null
 }
+
+private fun Method.toCovered(counter: MethodCounter?) = CoverMethod(
+    ownerClass = ownerClass,
+    name = ownerClass.methodName(name),
+    desc = desc.takeIf { "):" in it } ?: declaration(desc), //TODO js methods
+    hash = hash,
+    count = counter?.count ?: zeroCount,
+    coverageRate = counter?.coverageRate() ?: CoverageRate.MISSED
+)
+
+private val Method.sign get() = "$name$desc"

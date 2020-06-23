@@ -84,10 +84,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val methodsChanges = classData.methodChanges
-
-    val calculatedMethods = calculateBundleMethods(
-        methodsChanges,
+    val calculatedMethods = classData.calculateBundleMethods(
         bundleCoverage
     )
     val buildMethods = state.buildTests[state.buildId(buildVersion)]?.let {
@@ -99,7 +96,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     val packageCoverage = classData.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
-        methodsChanges,
+        classData,
         bundlesByTestTypes(state, buildVersion)
     )
 

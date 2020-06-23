@@ -13,7 +13,7 @@ class BuildMethodsTests : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, _ ->
                 plugUi.methods()!!.apply {
-                    all.total shouldBe 0
+                    all.total shouldBe 4
                     new.total shouldBe 0
                     modified.total shouldBe 0
                     deleted.covered shouldBe 0

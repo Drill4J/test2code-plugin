@@ -61,20 +61,25 @@ class PluginInstanceState(
                         totalCount = sumBy { it.second.count },
                         totalMethodCount = count(),
                         packages = data.toPackages()
-                    ).toClassesData(MethodChanges(mapOf(DiffType.UNAFFECTED to methods)))
+                    ).toClassesData(
+                        methods = methods,
+                        methodChanges = MethodChanges(mapOf(DiffType.UNAFFECTED to methods))
+                    )
                 }
                 is ClassData -> data
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-                    val javaMethods = buildInfo?.javaMethods ?: emptyMap()
+                    val groupedMethods = buildInfo?.javaMethods ?: emptyMap()
+                    val methods = groupedMethods.flatMap { it.value }
                     val probeIds: Map<String, Long> = classesBytes.mapValues { CRC64.classId(it.value) }
                     val bundleCoverage = classesBytes.bundle(probeIds)
-                    val packages = bundleCoverage.toPackages(javaMethods)
+                    val packages = bundleCoverage.toPackages(groupedMethods)
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },
-                        totalMethodCount = javaMethods.values.sumBy { it.count() },
+                        totalMethodCount = groupedMethods.values.sumBy { it.count() },
                         packages = packages
                     ).toClassesData(
+                        methods = methods,
                         methodChanges = buildInfo?.methodChanges ?: MethodChanges(),
                         probeIds = probeIds
                     )
@@ -211,12 +216,25 @@ class PluginInstanceState(
     }
 
     private fun PackageTree.toClassesData(
+        methods: List<Method>,
         methodChanges: MethodChanges,
         probeIds: Map<String, Long> = emptyMap()
     ) = ClassData(
         buildVersion = agentInfo.buildVersion,
         packageTree = this,
-        methodChanges = methodChanges,
+        methods = methods.sortedBy(Method::name),
+        methodChanges = methodChanges.run {
+            DiffMethods(
+                new = methodsBy(DiffType.NEW).sortedBy(Method::name),
+                modified = listOf(
+                    DiffType.MODIFIED_NAME,
+                    DiffType.MODIFIED_DESC,
+                    DiffType.MODIFIED_BODY
+                ).flatMap { methodsBy(it) }.sortedBy(Method::name),
+                deleted = methodsBy(DiffType.DELETED).sortedBy(Method::name),
+                unaffected = methodsBy(DiffType.UNAFFECTED).sortedBy(Method::name)
+            )
+        },
         probeIds = probeIds
     )
 }
@@ -234,3 +252,5 @@ internal suspend fun StoreClient.classData(buildVersion: String): ClassData? = e
         let(treeMutator).let(probeIdsMutator)
     }
 }
+
+private fun MethodChanges.methodsBy(key: DiffType): List<Method> = map[key] ?: emptyList()
