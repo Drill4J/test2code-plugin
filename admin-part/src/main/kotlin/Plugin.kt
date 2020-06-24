@@ -135,8 +135,9 @@ class Test2CodeAdminPart(
         }
         is SessionFinished -> {
             val sessionId = message.sessionId
+            val context = pluginInstanceState.coverContext()
             activeScope.finishSession(sessionId) {
-                activeScope.updateSummary { it.calculateCoverage(this, pluginInstanceState) }
+                activeScope.updateSummary { it.calculateCoverage(this, context) }
             }?.also {
                 sendActiveSessions()
                 if (it.any()) {
@@ -227,9 +228,10 @@ class Test2CodeAdminPart(
         val prevCoverage = parentVersion?.let {
             pluginInstanceState.coverages[pluginInstanceState.buildId(parentVersion)]?.count ?: zeroCount
         }
+        val context = pluginInstanceState.coverContext(buildVersion)
         val sessions = flatten()
         val coverageInfoSet = sessions.calculateCoverageData(
-            pluginInstanceState, buildVersion, count(), prevCoverage
+            context, count(), prevCoverage
         )
         pluginInstanceState.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
         val buildMethods = coverageInfoSet.buildMethods
@@ -318,7 +320,8 @@ class Test2CodeAdminPart(
         scope: Scope = activeScope,
         buildVersion: String = this.buildVersion
     ) {
-        val coverageInfoSet = scope.calculateCoverageData(pluginInstanceState, buildVersion)
+        val context = pluginInstanceState.coverContext(buildVersion)
+        val coverageInfoSet = scope.calculateCoverageData(context)
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }
 
