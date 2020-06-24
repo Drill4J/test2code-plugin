@@ -11,9 +11,10 @@ internal fun Test2CodeAdminPart.initActiveScope() {
     val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
     if (realtimeEnabled) {
         activeScope.subscribeOnChanges { sessions ->
-            updateSummary { it.calculateCoverage(sessions, pluginInstanceState) }
+            val context = pluginInstanceState.coverContext()
+            updateSummary { it.calculateCoverage(sessions, context) }
             sendScopeMessages()
-            val coverageInfoSet = sessions.calculateCoverageData(pluginInstanceState, buildVersion)
+            val coverageInfoSet = sessions.calculateCoverageData(context)
             coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
         }
     }

@@ -42,7 +42,8 @@ class JsCoverageTest {
             addProbes(sessionId, IncorrectProbes.notExisting)
         }
         val finished = active.finish(enabled = true)
-        val coverageData = finished.calculateCoverageData(state, jsAgentInfo.buildVersion, 1)
+        val context = state.coverContext()
+        val coverageData = finished.calculateCoverageData(context, scopeCount = 1)
         coverageData.run {
             assertEquals(Count(3, 5), coverage.count)
             assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })

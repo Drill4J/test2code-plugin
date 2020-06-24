@@ -39,7 +39,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
     )
 }.sortedBy { it.methodName }
 
-fun ClassData.calculateBundleMethods(
+fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,
     onlyCovered: Boolean = false
 ): BuildMethods = methods.toCoverMap(bundleCoverage, onlyCovered).let { covered ->
@@ -55,11 +55,11 @@ fun ClassData.calculateBundleMethods(
 }
 
 fun Map<TypedTest, BundleCounter>.coveredMethods(
-    classData: ClassData,
+    context: CoverContext,
     bundlesByType: Map<String, BundleCounter>
 ): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {
     val coveredByTest = map { (typedTest, bundle) ->
-        val changes = classData.calculateBundleMethods(bundle, true)
+        val changes = context.calculateBundleMethods(bundle, true)
         MethodsCoveredByTest(
             id = typedTest.id(),
             testName = typedTest.name,
@@ -71,7 +71,7 @@ fun Map<TypedTest, BundleCounter>.coveredMethods(
     }
     val typesCounts = keys.groupBy { it.type }.mapValues { it.value.count() }
     val coveredByType = bundlesByType.map { (type, bundle) ->
-        val changes = classData.calculateBundleMethods(bundle, true)
+        val changes = context.calculateBundleMethods(bundle, true)
         MethodsCoveredByTestType(
             testType = type,
             testsCount = typesCounts[type] ?: 0,

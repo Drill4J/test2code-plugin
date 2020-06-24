@@ -12,52 +12,47 @@ private val logger = KotlinLogging.logger {}
 
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
-    state: PluginInstanceState
+    context: CoverContext
 ): ScopeSummary = run {
-    val classData = state.data as ClassData
-    val bundle = sessions.flatten().bundle(state)
-    val totalInstructions = classData.packageTree.totalCount
+    val bundle = sessions.flatten().bundle(context)
+    val totalInstructions = context.packageTree.totalCount
     val coverageCount = Count(bundle.count.covered, totalInstructions)
     copy(
         coverage = ScopeCoverage(
             ratio = coverageCount.percentage(),
             count = coverageCount,
-            methodCount = bundle.methodCount.copy(total = classData.packageTree.totalMethodCount),
+            methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
             riskCount = zeroCount,
             byTestType = sessions.coveragesByTestType(
-                sessions.bundlesByTests(state),
-                state
+                sessions.bundlesByTests(context),
+                context
             )
         )
     )
 }
 
-internal suspend fun Sequence<Session>.calculateCoverageData(
-    state: PluginInstanceState,
-    buildVersion: String,
+internal fun Sequence<Session>.calculateCoverageData(
+    context: CoverContext,
     scopeCount: Int = 0,
     otherCoverage: Count? = null
 ): CoverageInfoSet {
-    val classData = state.classesData(buildVersion) as ClassData
-
-    val bundlesByTests = bundlesByTests(state, buildVersion)
+    val bundlesByTests = bundlesByTests(context)
     val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
-    val totalInstructions = classData.packageTree.totalCount
-    val bundleCoverage = flatten().bundle(state, buildVersion)
+    val totalInstructions = context.packageTree.totalCount
+    val bundleCoverage = flatten().bundle(context)
     val coverageCount = Count(bundleCoverage.count.covered, totalInstructions)
     val totalCoveragePercent = coverageCount.percentage()
 
     val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
-        null -> coveragesByTestType(bundlesByTests, state, buildVersion)
+        null -> coveragesByTestType(bundlesByTests, context)
         else -> scope.summary.coverage.byTestType
     }
     logger.info { coverageByType }
 
-    val parentVersion = state.buildManager[buildVersion]?.parentVersion ?: ""
-    val methodCount = bundleCoverage.methodCount.copy(total = classData.packageTree.totalMethodCount)
+    val methodCount = bundleCoverage.methodCount.copy(total = context.packageTree.totalMethodCount)
     val coverageBlock: Coverage = when (scope) {
         null -> {
             BuildCoverage(
@@ -69,7 +64,7 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
                 diff = otherCoverage?.let {
                     (coverageCount - it).run { first percentOf second }
                 } ?: coverageCount.percentage(),
-                prevBuildVersion = parentVersion,
+                prevBuildVersion = context.parentVersion,
                 arrow = otherCoverage?.run { arrowType(coverageCount) },
                 finishedScopesCount = scopeCount
             )
@@ -84,18 +79,17 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val calculatedMethods = classData.calculateBundleMethods(bundleCoverage)
-    val buildMethods = state.buildTests[state.buildId(buildVersion)]?.let {
-        calculatedMethods.copy(
-            deletedCoveredMethodsCount = calculatedMethods.deletedMethods.testCount(it.assocTests)
-        )
-    } ?: calculatedMethods
+    val buildMethods = context.calculateBundleMethods(bundleCoverage).run {
+        context.tests?.let {
+            copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.assocTests))
+        } ?: this
+    }
 
-    val packageCoverage = classData.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
+    val packageCoverage = context.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
-        classData,
-        bundlesByTestTypes(state, buildVersion)
+        context,
+        bundlesByTestTypes(context)
     )
 
     val testsUsagesInfoByType = coverageByType.map {
@@ -123,16 +117,14 @@ internal suspend fun Sequence<Session>.calculateCoverageData(
 
 fun Sequence<Session>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
-    state: PluginInstanceState,
-    buildVersion: String = state.agentInfo.buildVersion
+    context: CoverContext
 ): Map<String, TestTypeSummary> = run {
-    val classData = state.data as ClassData
-    val totalInstructions = classData.packageTree.totalCount
+    val totalInstructions = context.packageTree.totalCount
     groupBy(Session::testType).mapValues { (testType, sessions) ->
         sessions.asSequence().run {
             TestTypeSummary(
                 testType = testType,
-                coverage = flatten().bundle(state, buildVersion).count.copy(total = totalInstructions).percentage(),
+                coverage = flatten().bundle(context).count.copy(total = totalInstructions).percentage(),
                 testCount = flatMap { it.tests.asSequence() }.distinct().count(),
                 coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
             )
@@ -141,34 +133,31 @@ fun Sequence<Session>.coveragesByTestType(
 }
 
 private fun Sequence<Session>.bundlesByTests(
-    state: PluginInstanceState,
-    buildVersion: String = state.agentInfo.buildVersion
+    context: CoverContext
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
     groupBy(Session::testType).map { (testType, sessions) ->
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
-            .mapValuesTo(mutableMapOf()) { it.value.asSequence().bundle(state, buildVersion) }
+            .mapValuesTo(mutableMapOf()) { it.value.asSequence().bundle(context) }
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
     }
 } ?: emptyMap()
 
 private fun Sequence<Session>.bundlesByTestTypes(
-    state: PluginInstanceState,
-    buildVersion: String
+    context: CoverContext
 ): Map<String, BundleCounter> = groupBy(Session::testType).mapValues {
-    it.value.asSequence().flatten().bundle(state, buildVersion)
+    it.value.asSequence().flatten().bundle(context)
 }
 
 internal fun Sequence<ExecClassData>.bundle(
-    state: PluginInstanceState,
-    buildVersion: String = state.agentInfo.buildVersion
-): BundleCounter = when (state.agentInfo.agentType) {
+    context: CoverContext
+): BundleCounter = when (context.agentType) {
     AgentType.JAVA -> bundle(
-        probeIds = (state.data as ClassData).probeIds,
-        classBytes = state.buildManager[buildVersion]?.classesBytes ?: emptyMap()
+        probeIds = context.probeIds,
+        classBytes = context.classBytes
     )
-    else -> bundle((state.data as ClassData).packageTree)
+    else -> bundle(context.packageTree)
 }
 
 private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, List<TypedTest>> = run {

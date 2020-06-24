@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
@@ -27,8 +28,6 @@ class PluginInstanceState(
 
     val data get() = _data.value
 
-    val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
-
     val scopeManager = ScopeManager(storeClient)
 
     val activeScope get() = _activeScope.value
@@ -36,6 +35,8 @@ class PluginInstanceState(
     val coverages = AtomicCache<AgentBuildId, StoredBuildCoverage>()
 
     val buildTests = AtomicCache<AgentBuildId, BuildTests>()
+
+    private val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
 
     private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
 
@@ -236,6 +237,22 @@ class PluginInstanceState(
             )
         },
         probeIds = probeIds
+    )
+}
+
+internal suspend fun PluginInstanceState.coverContext(
+    buildVersion: String = agentInfo.buildVersion
+): CoverContext = (classesData(buildVersion) as ClassData).let { classData ->
+    val buildInfo = buildManager[buildVersion]
+    CoverContext(
+        agentType = agentInfo.agentType,
+        packageTree = classData.packageTree,
+        methods = classData.methods,
+        methodChanges = classData.methodChanges,
+        probeIds = classData.probeIds,
+        classBytes = buildInfo?.classesBytes ?: emptyMap(),
+        parentVersion = buildInfo?.parentVersion ?: "",
+        tests = buildTests[buildId(buildVersion)]
     )
 }
 
