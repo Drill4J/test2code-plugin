@@ -9,6 +9,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
 import io.ktor.http.*
+import kotlinx.coroutines.*
 import org.junit.jupiter.api.*
 
 class SessionTest : E2EPluginTest() {
@@ -40,7 +41,7 @@ class SessionTest : E2EPluginTest() {
 
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
-
+                delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()?.run {
                     count shouldBe 0

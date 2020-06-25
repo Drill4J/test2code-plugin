@@ -4,6 +4,7 @@ import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.*
 import io.kotlintest.*
+import kotlinx.coroutines.*
 import org.junit.jupiter.api.*
 
 class BuildMethodsTests : E2EPluginTest() {
@@ -19,6 +20,7 @@ class BuildMethodsTests : E2EPluginTest() {
                     deleted.covered shouldBe 0
                     deleted.total shouldBe 0
                 }
+                delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.methods()!!.apply {
                     all.total shouldBe 5

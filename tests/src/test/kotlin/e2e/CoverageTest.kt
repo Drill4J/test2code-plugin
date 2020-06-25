@@ -5,6 +5,7 @@ import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.*
 import io.kotlintest.*
+import kotlinx.coroutines.*
 import org.junit.jupiter.api.*
 
 
@@ -21,6 +22,7 @@ class CoverageTest : E2EPluginTest() {
                     byTestType shouldBe emptyMap()
                     arrow shouldBe null
                 }
+                delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {
                     ratio shouldBe 0.0

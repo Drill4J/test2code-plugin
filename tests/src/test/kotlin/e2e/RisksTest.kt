@@ -55,6 +55,7 @@ class RisksTest : E2EPluginTest() {
                     newMethods.size shouldBe 0
                     modifiedMethods shouldBe emptyList()
                 }
+                delay(100)
             }.reconnect<Build2> { plugUi, build ->
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 1

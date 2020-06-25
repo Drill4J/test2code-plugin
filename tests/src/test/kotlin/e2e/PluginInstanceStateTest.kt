@@ -10,9 +10,9 @@ import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.kotlintest.matchers.numerics.*
 import io.ktor.http.*
+import kotlinx.coroutines.*
 import kotlin.test.*
 
-@Ignore //TODO fix
 class PluginInstanceStateTest : E2EPluginTest() {
 
     @Test
@@ -60,6 +60,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         first().coverage shouldBeGreaterThan 0.0
                     }
                 }.join()
+                delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {
                     prevBuildVersion shouldBe Build1.version
@@ -128,6 +129,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         gt.test3()
                     }
                 }.join()
+                delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.testsToRun()!!.apply {
@@ -185,7 +187,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.coveragePackages()!!.apply {
                     first().coverage shouldBeGreaterThan 0.0
                 }
-
+                delay(100)
             }.reconnect<Build1> { plugUi, _ ->
                 plugUi.testsToRun()!!.apply {
                     testTypeToNames.isEmpty() shouldBe true
