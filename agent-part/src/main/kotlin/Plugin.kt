@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
+import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
 
 private val logger = logger("AgentPart")
@@ -21,20 +22,27 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext)
 
+    private val _retransformed = atomic(false)
+
     override fun on() {
         val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
         val classBytes: Map<String, ByteArray> = payload.agentData.classMap
         val initInfo = InitInfo(classBytes.count(), initializingMessage)
         sendMessage(initInfo)
-        retransform()
+        if (_retransformed.compareAndSet(expect = false, update = true)) {
+            retransform()
+        }
         sendMessage(Initialized(msg = "Initialized"))
         logger.info { "Plugin $id initialized! Loaded ${classBytes.count()} classes" }
     }
 
     override fun off() {
+        logger.info { "Enabled $enabled" }
         val cancelledCount = instrContext.cancelAll()
         logger.info { "Plugin $id is off" }
-        retransform()
+        if (_retransformed.compareAndSet(expect = true, update = false)) {
+            retransform()
+        }
         sendMessage(AllSessionsCancelled(cancelledCount, currentTimeMillis()))
     }
 
@@ -54,6 +62,8 @@ class CoverageAgentPart @JvmOverloads constructor(
 
     override fun initPlugin() {
         logger.info { "Plugin $id: initializing..." }
+        retransform()
+        _retransformed.value = true
     }
 
     override suspend fun doAction(action: Action) {
