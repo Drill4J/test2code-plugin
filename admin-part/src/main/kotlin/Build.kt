@@ -14,6 +14,11 @@ data class CachedBuildCoverage(
     val riskCount: Count
 )
 
+internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<String> = sequenceOf(
+    "Run recommended tests to cover modified methods".takeIf { testsToRun.any() },
+    "Update your tests to cover risks".takeIf { riskCount.covered < riskCount.total }
+).filterNotNullTo(mutableSetOf())
+
 //TODO move to admin api
 
 fun BuildManager.childrenOf(version: String): List<BuildInfo> {

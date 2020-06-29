@@ -111,5 +111,14 @@ class Routes {
     class ServiceGroup {
         @Location("/summary")
         class Summary(val serviceGroup: ServiceGroup)
+
+        @Location("/data")
+        class Data(val serviceGroup: ServiceGroup) {
+            @Location("/tests-to-run")
+            class TestsToRun(val parent: Data)
+
+            @Location("/recommendations")
+            class Recommendations(val parent: Data)
+        }
     }
 }

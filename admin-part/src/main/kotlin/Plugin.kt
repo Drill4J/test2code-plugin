@@ -35,11 +35,6 @@ class Test2CodeAdminPart(
 
     private val logger = KotlinLogging.logger("Plugin $id")
 
-    internal val lastTestsToRun: GroupedTests
-        get() = pluginInstanceState.run {
-            buildTests[buildId(buildVersion)]?.testsToRun ?: emptyMap()
-        }
-
     override suspend fun initialize() {
         pluginInstanceState = pluginInstanceState()
         pluginInstanceState.readScopeCounter()?.let { processData(Initialized("")) }
@@ -309,14 +304,26 @@ class Test2CodeAdminPart(
             )
             val aggregatedMessage = aggregator(serviceGroup, agentSummary) ?: summaryDto
             val summaries = aggregator.getSummaries(serviceGroup) ?: emptyList()
-            sendToGroup(
-                destination = Routes.ServiceGroup.Summary(Routes.ServiceGroup()),
-                message = ServiceGroupSummaryDto(
-                    name = serviceGroup,
-                    aggregated = aggregatedMessage,
-                    summaries = summaries
+            Routes.ServiceGroup().let { groupParent ->
+                sendToGroup(
+                    destination = Routes.ServiceGroup.Summary(groupParent),
+                    message = ServiceGroupSummaryDto(
+                        name = serviceGroup,
+                        aggregated = aggregatedMessage,
+                        summaries = summaries
+                    )
                 )
-            )
+                Routes.ServiceGroup.Data(groupParent).let {
+                    sendToGroup(
+                        destination = Routes.ServiceGroup.Data.TestsToRun(it),
+                        message = aggregatedMessage.testsToRun
+                    )
+                    sendToGroup(
+                        destination = Routes.ServiceGroup.Data.Recommendations(it),
+                        message = aggregatedMessage.recommendations
+                    )
+                }
+            }
         }
     }
 

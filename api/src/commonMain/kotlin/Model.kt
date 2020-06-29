@@ -266,7 +266,8 @@ data class SummaryDto(
     val coverageCount: Count,
     val arrow: ArrowType?,
     val risks: Int,
-    val testsToRun: TestsToRunDto
+    val testsToRun: TestsToRunDto,
+    val recommendations: Set<String>
 )
 
 @Serializable
