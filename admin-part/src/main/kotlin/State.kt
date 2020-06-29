@@ -92,7 +92,7 @@ class PluginInstanceState(
         }
         storeScopeCounter()
         storeClient.executeInAsyncTransaction {
-            store(classesData.copy(packageTree = PackageTree()))
+            store(classesData.copy(packageTree = PackageTree(), probeIds = emptyMap()))
             store(
                 PackageTreeBytes(
                     buildVersion = classesData.buildVersion,
