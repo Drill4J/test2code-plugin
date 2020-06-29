@@ -42,7 +42,8 @@ internal fun CachedBuildCoverage.toSummaryDto(
             groupedTests = testsToRun,
             count = testsToRun.totalCount()
         )
-    }
+    },
+    recommendations = recommendations(buildTests.testsToRun)
 )
 
 operator fun SummaryDto.plus(other: SummaryDto): SummaryDto {
@@ -52,7 +53,8 @@ operator fun SummaryDto.plus(other: SummaryDto): SummaryDto {
         coverageCount = coverageCount,
         arrow = null,
         risks = risks + other.risks,
-        testsToRun = testsToRun + other.testsToRun
+        testsToRun = testsToRun + other.testsToRun,
+        recommendations = recommendations.union(other.recommendations)
     )
 }
 
