@@ -241,7 +241,14 @@ class Test2CodeAdminPart(
         )
         pluginInstanceState.updateTestsToRun(buildVersion, testsToRun)
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
-        val buildCoverage = coverageInfoSet.coverage as BuildCoverage
+        val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
+            riskCount = buildMethods.run {
+                Count(
+                    covered = newMethods.coveredCount + allModifiedMethods.coveredCount,
+                    total = newMethods.totalCount + allModifiedMethods.totalCount
+                )
+            }
+        )
         pluginInstanceState.updateBuildCoverage(buildVersion, buildCoverage, risks)
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
