@@ -75,6 +75,7 @@ data class MethodsSummaryDto(
     val all: Count,
     val new: Count,
     val modified: Count,
+    val unaffected: Count,
     val deleted: Count
 )
 
