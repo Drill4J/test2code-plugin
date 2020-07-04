@@ -9,8 +9,8 @@ abstract class CoverMessage
 @SerialName("INIT")
 @Serializable
 data class InitInfo(
-    val classesCount: Int,
-    val message: String,
+    val classesCount: Int = 0,
+    val message: String = "",
     val init: Boolean = false
 ) : CoverMessage()
 

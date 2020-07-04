@@ -6,34 +6,32 @@ import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
 
-private val logger = logger("AgentPart")
-
 @Suppress("unused")
 class CoverageAgentPart @JvmOverloads constructor(
-    private val payload: PluginPayload,
+    override val id: String,
+    agentContext: AgentContext,
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
-) : AgentPart<CoverConfig, Action>(payload), InstrumentationPlugin {
-
-    override val id: String = payload.pluginId
+) : AgentPart<CoverConfig, Action>(id, agentContext), Instrumenter {
+    private val logger = agentContext.logging.logger("Plugin $id")
 
     override val confSerializer = CoverConfig.serializer()
 
     override val serDe: SerDe<Action> = commonSerDe
 
-    private val instrumenter: DrillInstrumenter = instrumenter(instrContext)
+    private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
 
     private val _retransformed = atomic(false)
 
     override fun on() {
-        val initializingMessage = "Initializing plugin $id...\nConfig: ${config.message}"
-        val classBytes: Map<String, ByteArray> = payload.agentData.classMap
-        val initInfo = InitInfo(classBytes.count(), initializingMessage)
+        val initInfo = InitInfo(
+            message = "Initializing plugin $id...\nConfig: ${config.message}"
+        )
         sendMessage(initInfo)
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
         }
         sendMessage(Initialized(msg = "Initialized"))
-        logger.info { "Plugin $id initialized! Loaded ${classBytes.count()} classes" }
+        logger.info { "Plugin $id initialized!" }
     }
 
     override fun off() {
@@ -46,6 +44,18 @@ class CoverageAgentPart @JvmOverloads constructor(
         sendMessage(AllSessionsCancelled(cancelledCount, currentTimeMillis()))
     }
 
+    /**
+     * Retransforming does not require an agent part instance.
+     * This method is used in integration tests.
+     */
+    fun retransform() {
+        try {
+            Native.RetransformClassesByPackagePrefixes(byteArrayOf())
+        } catch (ex: Throwable) {
+            logger.error(ex) { "Error retransforming classes." }
+        }
+    }
+
     override fun instrument(
         className: String,
         initialBytes: ByteArray
@@ -55,10 +65,6 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 
     override fun destroyPlugin(unloadReason: UnloadReason) {}
-
-    override fun retransform() {
-        Native.RetransformClassesByPackagePrefixes(byteArrayOf())
-    }
 
     override fun initPlugin() {
         logger.info { "Plugin $id: initializing..." }

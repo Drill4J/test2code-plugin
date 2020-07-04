@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.logger.api.*
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
@@ -12,14 +13,13 @@ typealias DrillInstrumenter = (String, Long, ByteArray) -> ByteArray?
 /**
  * JaCoCo instrumenter
  */
-fun instrumenter(probeArrayProvider: ProbeArrayProvider): DrillInstrumenter {
-    return CustomInstrumenter(probeArrayProvider)
+fun instrumenter(probeArrayProvider: ProbeArrayProvider, logger: Logger): DrillInstrumenter {
+    return CustomInstrumenter(probeArrayProvider, logger)
 }
 
-private val logger = logger("Instrumentation")
-
 private class CustomInstrumenter(
-    private val probeArrayProvider: ProbeArrayProvider
+    private val probeArrayProvider: ProbeArrayProvider,
+    private val logger: Logger
 ) : DrillInstrumenter {
 
     override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray? = try {
