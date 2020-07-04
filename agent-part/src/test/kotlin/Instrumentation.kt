@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.logger.api.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
@@ -26,8 +27,7 @@ class InstrumentationTest {
 
     object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub)
 
-
-    val instrument = instrumenter(TestProbeArrayProvider)
+    val instrument = instrumenter(TestProbeArrayProvider, "".namedLogger(appender = NopLogAppender))
 
     val memoryClassLoader = MemoryClassLoader()
 
