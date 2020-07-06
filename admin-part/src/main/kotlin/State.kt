@@ -32,7 +32,7 @@ class PluginInstanceState(
 
     val activeScope get() = _activeScope.value
 
-    val coverages = AtomicCache<AgentBuildId, StoredBuildCoverage>()
+    val coverages = AtomicCache<AgentBuildId, CachedBuildCoverage>()
 
     val buildTests = AtomicCache<AgentBuildId, BuildTests>()
 
@@ -107,7 +107,7 @@ class PluginInstanceState(
                     )
                 )
             }
-            getAll<StoredBuildCoverage>().forEach { stored ->
+            getAll<CachedBuildCoverage>().forEach { stored ->
                 coverages(stored.id) { stored }
             }
             getAll<StoredBuildTests>().forEach { stored ->
@@ -126,35 +126,28 @@ class PluginInstanceState(
     fun updateBuildTests(
         buildVersion: String,
         tests: List<AssociatedTests>
-    ) = buildId(buildVersion).let { buildId ->
-        buildTests[buildId] = buildTests[buildId]?.run {
-            copy(assocTests = assocTests.toPersistentSet().addAll(tests))
-        } ?: BuildTests(assocTests = tests.toPersistentSet())
-    }
+    ): BuildTests = buildTests(buildId(buildVersion)) {
+        it?.copy(
+            assocTests = it.assocTests.toPersistentSet().addAll(tests)
+        ) ?: BuildTests(assocTests = tests.toPersistentSet())
+    }!!
 
     fun updateTestsToRun(
         buildVersion: String,
         testsToRun: GroupedTests
-    ) = buildId(buildVersion).let { buildId ->
-        buildTests[buildId] = buildTests[buildId]?.run {
-            copy(testsToRun = testsToRun)
-        } ?: BuildTests(testsToRun = testsToRun)
-    }
+    ): BuildTests = buildTests(buildId(buildVersion)) {
+        it?.copy(testsToRun = testsToRun) ?: BuildTests(testsToRun = testsToRun)
+    }!!
 
     fun updateBuildCoverage(
         buildVersion: String,
-        buildCoverage: BuildCoverage,
-        risks: Risks
-    ) {
-        val id = buildId(buildVersion)
-        val coverage = StoredBuildCoverage(
-            id = id,
-            count = buildCoverage.count,
-            arrow = buildCoverage.arrow?.name,
-            risks = risks.run { newMethods.count() + modifiedMethods.count() }
-        )
-        coverages[id] = coverage
-    }
+        buildCoverage: BuildCoverage
+    ) = CachedBuildCoverage(
+        id = buildId(buildVersion),
+        count = buildCoverage.count,
+        arrow = buildCoverage.arrow?.name,
+        riskCount = buildCoverage.riskCount
+    ).also { coverages[it.id] = it }
 
     suspend fun storeBuildCoverage(
         buildVersion: String

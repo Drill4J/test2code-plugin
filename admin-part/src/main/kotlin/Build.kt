@@ -7,11 +7,11 @@ import com.epam.kodux.*
 import kotlinx.serialization.*
 
 @Serializable
-data class StoredBuildCoverage(
+data class CachedBuildCoverage(
     @Id val id: AgentBuildId,
     val count: Count,
     val arrow: String?,
-    val risks: Int
+    val riskCount: Count
 )
 
 //TODO move to admin api
