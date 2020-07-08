@@ -318,6 +318,13 @@ class CoverageSocketStreams : PluginStreams() {
                                                 risks.send(Risks.serializer() parse content)
                                         }
 
+                                        is Routes.Data,
+                                        is Routes.Data.Stats,
+                                        is Routes.Data.TestsToRun,
+                                        is Routes.Data.Recommendations -> {
+                                            //ignore
+                                        }
+
                                         is Routes.ServiceGroup,
                                         is Routes.ServiceGroup.Data,
                                         is Routes.ServiceGroup.Data.Recommendations,

@@ -68,7 +68,7 @@ class Test2CodeAdminPart(
     }
 
     //TODO remove this after the data API has been redesigned
-    override suspend fun getPluginData(params: Map<String, String>) = handleGettingData(params)
+    override suspend fun getPluginData(params: Map<String, String>) = Unit
 
     override suspend fun processData(dm: DrillMessage): Any = dm.content!!.let { content ->
         val message = CoverMessage.serializer() parse content
@@ -251,6 +251,16 @@ class Test2CodeAdminPart(
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
             val summaryDto = cachedCoverage.toSummaryDto(cachedTests)
+            Routes.Data().let {
+                val stats = StatsDto(
+                    coverage = summaryDto.coverage,
+                    risks = summaryDto.risks,
+                    tests = summaryDto.testsToRun.count
+                )
+                send(buildVersion, Routes.Data.Stats(it), stats)
+                send(buildVersion, Routes.Data.Recommendations(it), summaryDto.recommendations)
+                send(buildVersion, Routes.Data.TestsToRun(it), summaryDto.testsToRun)
+            }
             send(summaryDto)
             pluginInstanceState.storeBuildCoverage(buildVersion)
         }

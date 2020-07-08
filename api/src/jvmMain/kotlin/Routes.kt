@@ -4,6 +4,7 @@ package com.epam.drill.plugins.test2code.api.routes
 
 import io.ktor.locations.*
 
+@Suppress("unused")
 class Routes {
 
     @Location("/active-scope")
@@ -105,6 +106,18 @@ class Routes {
 
         @Location("/test-types/covered-methods")
         class MethodsCoveredByTestType(val build: Build)
+    }
+
+    @Location("/data")
+    class Data {
+        @Location("/stats")
+        class Stats(val parent: Data)
+
+        @Location("/tests-to-run")
+        class TestsToRun(val parent: Data)
+
+        @Location("/recommendations")
+        class Recommendations(val parent: Data)
     }
 
     @Location("/service-group")
