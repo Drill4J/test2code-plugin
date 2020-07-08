@@ -65,13 +65,13 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         testName shouldBe "xxxx"
                         newMethods.size shouldBe 0
                         modifiedMethods.size shouldBe 0
-                        unaffectedMethods.size shouldBe 0
+                        unaffectedMethods.size shouldBe 2
                     }
                     methodsCoveredByTestType()!!.first().apply {
                         testType shouldBe "MANUAL"
                         newMethods.size shouldBe 0
                         modifiedMethods.size shouldBe 0
-                        unaffectedMethods.size shouldBe 0
+                        unaffectedMethods.size shouldBe 2
                     }
                 }
                 val switchScope = SwitchActiveScope(
@@ -99,13 +99,13 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     testName shouldBe "xxxx"
                     newMethods.size shouldBe 0
                     modifiedMethods.size shouldBe 0
-                    unaffectedMethods.size shouldBe 0
+                    unaffectedMethods.size shouldBe 2
                 }
                 methodsCoveredByTestType.first().apply {
                     testType shouldBe "MANUAL"
                     newMethods.size shouldBe 0
                     modifiedMethods.size shouldBe 0
-                    unaffectedMethods.size shouldBe 0
+                    unaffectedMethods.size shouldBe 2
                 }
 
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
