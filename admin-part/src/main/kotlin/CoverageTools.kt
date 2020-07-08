@@ -58,6 +58,10 @@ fun Map<TypedTest, BundleCounter>.coveredMethods(
     context: CoverContext,
     bundlesByType: Map<String, BundleCounter>
 ): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {
+    //TODO add total methods and possibly remove this diff details
+    val unaffected: BuildMethods.() -> List<CoverMethod> = {
+        (unaffectedMethods.takeIf { context.parentVersion.any() } ?: totalMethods).methods
+    }
     val coveredByTest = map { (typedTest, bundle) ->
         val changes = context.calculateBundleMethods(bundle, true)
         MethodsCoveredByTest(
@@ -66,7 +70,7 @@ fun Map<TypedTest, BundleCounter>.coveredMethods(
             testType = typedTest.type,
             newMethods = changes.newMethods.methods,
             modifiedMethods = changes.allModifiedMethods.methods,
-            unaffectedMethods = changes.unaffectedMethods.methods
+            unaffectedMethods = changes.unaffected()
         )
     }
     val typesCounts = keys.groupBy { it.type }.mapValues { it.value.count() }
@@ -77,7 +81,7 @@ fun Map<TypedTest, BundleCounter>.coveredMethods(
             testsCount = typesCounts[type] ?: 0,
             newMethods = changes.newMethods.methods,
             modifiedMethods = changes.allModifiedMethods.methods,
-            unaffectedMethods = changes.unaffectedMethods.methods
+            unaffectedMethods = changes.unaffected()
         )
     }
     return coveredByTest to coveredByType
