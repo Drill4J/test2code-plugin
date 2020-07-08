@@ -318,7 +318,10 @@ class CoverageSocketStreams : PluginStreams() {
                                                 risks.send(Risks.serializer() parse content)
                                         }
 
-                                        is Routes.ServiceGroup -> {
+                                        is Routes.ServiceGroup,
+                                        is Routes.ServiceGroup.Data,
+                                        is Routes.ServiceGroup.Data.Recommendations,
+                                        is Routes.ServiceGroup.Data.TestsToRun -> {
                                             //ignore
                                         }
                                         is Routes.ServiceGroup.Summary -> {
@@ -327,7 +330,6 @@ class CoverageSocketStreams : PluginStreams() {
                                             } else summary.send(SummaryDto.serializer() parse content)
                                         }
                                         else -> TODO("$url not implemented yet")
-
                                     }
                                 }
                             else -> TODO("not implemented yet")
