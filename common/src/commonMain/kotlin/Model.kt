@@ -20,7 +20,8 @@ data class AstMethod(
     val params: List<String>,
     val returnType: String,
     val count: Int = 0,
-    val probes: List<Int> = emptyList()
+    val probes: List<Int> = emptyList(),
+    val checksum: String = ""
 )
 
 @Serializable
