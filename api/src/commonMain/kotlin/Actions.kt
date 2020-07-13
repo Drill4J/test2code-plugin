@@ -22,3 +22,7 @@ data class ToggleScope(val payload: ScopePayload) : Action()
 @SerialName("DROP_SCOPE")
 @Serializable
 data class DropScope(val payload: ScopePayload) : Action()
+
+@Serializable
+@SerialName("UPDATE_SETTINGS")
+data class UpdateSettings(val payload: List<Setting>) : Action()

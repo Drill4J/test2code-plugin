@@ -320,6 +320,8 @@ class CoverageSocketStreams : PluginStreams() {
 
                                         is Routes.Data,
                                         is Routes.Data.Stats,
+                                        is Routes.Data.QualityGateSettings,
+                                        is Routes.Data.QualityGate,
                                         is Routes.Data.TestsToRun,
                                         is Routes.Data.Recommendations -> {
                                             //ignore

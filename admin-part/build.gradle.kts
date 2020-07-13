@@ -12,6 +12,10 @@ configurations.implementation {
     extendsFrom(jarDeps)
 }
 
+kotlin.sourceSets.all {
+    languageSettings.useExperimentalAnnotation("kotlinx.coroutines.ExperimentalCoroutinesApi")
+}
+
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
@@ -58,9 +62,5 @@ tasks {
             "org.jacoco",
             "org.objectweb"
         ).forEach { relocate(it, "${rootProject.group}.test2code.shadow.$it") }
-    }
-
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions { freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi" }
     }
 }
