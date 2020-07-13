@@ -57,6 +57,7 @@ class Test2CodeAdminPart(
             is RenameScope -> renameScope(action.payload)
             is ToggleScope -> toggleScope(action.payload.scopeId)
             is DropScope -> dropScope(action.payload.scopeId)
+            is UpdateSettings -> updateSettings(action.payload)
             is StartNewSession -> StartSession(
                 payload = StartSessionPayload(
                     sessionId = action.payload.sessionId.ifEmpty(::genUuid),
@@ -92,6 +93,7 @@ class Test2CodeAdminPart(
         }
         is Initialized -> {
             pluginInstanceState.initialized()
+            initGateSettings()
             initActiveScope()
             sendActiveSessions()
             sendActiveScope()
@@ -251,13 +253,11 @@ class Test2CodeAdminPart(
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
             val summaryDto = cachedCoverage.toSummaryDto(cachedTests)
+            val stats = summaryDto.toStatsDto()
+            val qualityGate = checkQualityGate(stats)
             Routes.Data().let {
-                val stats = StatsDto(
-                    coverage = summaryDto.coverage,
-                    risks = summaryDto.risks,
-                    tests = summaryDto.testsToRun.count
-                )
                 send(buildVersion, Routes.Data.Stats(it), stats)
+                send(buildVersion, Routes.Data.QualityGate(it), qualityGate)
                 send(buildVersion, Routes.Data.Recommendations(it), summaryDto.recommendations)
                 send(buildVersion, Routes.Data.TestsToRun(it), summaryDto.testsToRun)
             }
@@ -434,7 +434,7 @@ class Test2CodeAdminPart(
         processData(Initialized())
     }
 
-    private suspend fun send(buildVersion: String, destination: Any, message: Any) {
+    internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 

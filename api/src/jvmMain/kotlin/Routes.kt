@@ -1,5 +1,3 @@
-@file:OptIn(KtorExperimentalLocationsAPI::class)
-
 package com.epam.drill.plugins.test2code.api.routes
 
 import io.ktor.locations.*
@@ -7,6 +5,7 @@ import io.ktor.locations.*
 @Suppress("unused")
 class Routes {
 
+    @OptIn(KtorExperimentalLocationsAPI::class)
     @Location("/active-scope")
     object ActiveScope
 
@@ -118,6 +117,12 @@ class Routes {
 
         @Location("/recommendations")
         class Recommendations(val parent: Data)
+
+        @Location("/quality-gate-settings")
+        class QualityGateSettings(val parent: Data)
+
+        @Location("/quality-gate")
+        class QualityGate(val parent: Data)
     }
 
     @Location("/service-group")

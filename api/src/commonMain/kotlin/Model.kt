@@ -261,13 +261,6 @@ data class TestsToRunDto(
 )
 
 @Serializable
-data class StatsDto(
-    val coverage: Double,
-    val risks: Int,
-    val tests: Int
-)
-
-@Serializable
 data class SummaryDto(
     val coverage: Double,
     val coverageCount: Count,

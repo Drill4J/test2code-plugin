@@ -36,6 +36,8 @@ class PluginInstanceState(
 
     val buildTests = AtomicCache<AgentBuildId, BuildTests>()
 
+    val qualityGateSettings = AtomicCache<String, ConditionSetting>()
+
     private val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
 
     private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)

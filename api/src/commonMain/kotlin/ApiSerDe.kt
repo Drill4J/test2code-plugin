@@ -8,6 +8,7 @@ val apiSerDe = SerDe(
     actionSerializer = commonSerDe.actionSerializer,
     ctx = commonSerDe.ctx + SerializersModule {
         polymorphic<Action> {
+            subclass(UpdateSettings.serializer())
             subclass(SwitchActiveScope.serializer())
             subclass(RenameScope.serializer())
             subclass(ToggleScope.serializer())
