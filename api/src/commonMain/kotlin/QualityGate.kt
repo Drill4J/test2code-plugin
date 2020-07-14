@@ -11,7 +11,6 @@ data class StatsDto(
 
 enum class GateStatus {
     PASSED,
-    WARNING,
     FAILED,
 }
 

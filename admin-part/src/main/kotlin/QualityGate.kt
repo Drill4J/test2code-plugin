@@ -76,7 +76,6 @@ internal fun Test2CodeAdminPart.checkQualityGate(stats: StatsDto): QualityGate =
     val checkResults = conditions.associate { it.measure to stats.check(it) }
     val status = when (checkResults.values.toSet()) {
         emptySet<Boolean>(), setOf(true) -> GateStatus.PASSED
-        setOf(true, false) -> GateStatus.WARNING
         else -> GateStatus.FAILED
     }
     QualityGate(
