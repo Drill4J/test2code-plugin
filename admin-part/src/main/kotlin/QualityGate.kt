@@ -21,9 +21,9 @@ private object QualityGateData {
     )
 
     private val pairs: List<Pair<KProperty1<StatsDto, Number>, QualityGateCondition>> = listOf(
-        StatsDto::coverage.run { this to toCondition(operator = ConditionOp.GT, value = 0.0) },
-        StatsDto::risks.run { this to toCondition(operator = ConditionOp.LT, value = 1.0) },
-        StatsDto::tests.run { this to toCondition(operator = ConditionOp.LT, value = 1.0) }
+        StatsDto::coverage.run { this to toCondition(operator = ConditionOp.GTE, value = 0.0) },
+        StatsDto::risks.run { this to toCondition(operator = ConditionOp.LTE, value = 1.0) },
+        StatsDto::tests.run { this to toCondition(operator = ConditionOp.LTE, value = 1.0) }
     )
 
     val defaults: Map<String, QualityGateCondition> = pairs.associate {
@@ -116,6 +116,8 @@ private fun StatsDto.check(condition: QualityGateCondition): Boolean = run {
     val value = QualityGateData.properties.getValue(condition.measure).get(this).toDouble()
     when (condition.operator) {
         ConditionOp.LT -> value < condition.value
+        ConditionOp.LTE -> value <= condition.value
         ConditionOp.GT -> value > condition.value
+        ConditionOp.GTE -> value >= condition.value
     }
 }

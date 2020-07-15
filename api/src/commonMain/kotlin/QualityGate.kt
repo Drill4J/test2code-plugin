@@ -20,7 +20,7 @@ data class QualityGate(
     val results: Map<String, Boolean>
 )
 
-enum class ConditionOp { LT, GT }
+enum class ConditionOp { LT, LTE, GT, GTE }
 
 @Serializable
 data class QualityGateCondition(
