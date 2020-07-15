@@ -89,9 +89,10 @@ class CoverageAgentPart @JvmOverloads constructor(
             is StartSession -> {
                 val sessionId = action.payload.sessionId
                 val testType = action.payload.startPayload.testType
+                val isRealtime = action.payload.startPayload.isRealtime
                 logger.info { "Start recording for session $sessionId" }
                 instrContext.start(sessionId, testType, probeSender(sessionId))
-                sendMessage(SessionStarted(sessionId, testType, currentTimeMillis()))
+                sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
             is StopSession -> {
                 val sessionId = action.payload.sessionId

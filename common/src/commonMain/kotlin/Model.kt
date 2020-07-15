@@ -32,7 +32,11 @@ data class InitScopePayload(
 )
 
 @Serializable
-data class StartPayload(val testType: String = "MANUAL", val sessionId: String = "")
+data class StartPayload(
+    val testType: String = "MANUAL",
+    val sessionId: String = "",
+    val isRealtime: Boolean = false
+)
 
 @Serializable
 data class StartSessionPayload(val sessionId: String, val startPayload: StartPayload)
