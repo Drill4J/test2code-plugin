@@ -16,7 +16,7 @@ import kotlin.coroutines.*
 typealias ProbeArrayProvider = (Long, String, Int) -> BooleanArray
 
 interface SessionProbeArrayProvider : ProbeArrayProvider {
-    fun start(sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit = {})
+    fun start(sessionId: String, isRealtime: Boolean, eventCallback: (Sequence<ExecDatum>) -> Unit = {})
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun cancel(sessionId: String)
     fun cancelAll(): List<String>
@@ -109,11 +109,7 @@ class ExecRuntime(
  * The provider must be a Kotlin singleton object, otherwise the instrumented probe calls will fail.
  */
 open class SimpleSessionProbeArrayProvider(
-    private val instrContext: IDrillContex = DrillContext,
-    private val probeStreamPrv: () -> TimeSpanEventBus<ExecDatum>? = {
-        val realTimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
-        if (realTimeEnabled) TimeSpanEventBusImpl(delayMillis = 1500) else null
-    }
+    private val instrContext: IDrillContex = DrillContext
 ) : SessionProbeArrayProvider {
 
     private val sessionRuntimes get() = _runtimes.value
@@ -132,10 +128,16 @@ open class SimpleSessionProbeArrayProvider(
     } ?: BooleanArray(probeCount)
 
     override fun start(
-        sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit
+        sessionId: String, isRealtime: Boolean, eventCallback: (Sequence<ExecDatum>) -> Unit
     ) = _runtimes.update {
         if (sessionId !in it) {
-            it.put(sessionId, ExecRuntime(probeStreamPrv(), eventCallback))
+            it.put(
+                sessionId,
+                ExecRuntime(
+                    TimeSpanEventBusImpl<ExecDatum>(delayMillis = 1500).takeIf { isRealtime },
+                    eventCallback
+                )
+            )
         } else it
     }
 

@@ -94,13 +94,11 @@ class ActiveScope(
     }
 
     fun finishSession(
-        sessionId: String,
-        onSuccess: ActiveScope.(FinishedSession) -> Unit
+        sessionId: String
     ): FinishedSession? = activeSessions.remove(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
                 _sessions.update { it.add(finished) }
-                onSuccess(finished)
             }
         }
     }

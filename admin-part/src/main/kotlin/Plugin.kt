@@ -135,15 +135,9 @@ class Test2CodeAdminPart(
         }
         is SessionFinished -> {
             val sessionId = message.sessionId
-            val context = pluginInstanceState.coverContext()
-            activeScope.finishSession(sessionId) {
-                activeScope.updateSummary { it.calculateCoverage(this, context) }
-            }?.also {
+            activeScope.finishSession(sessionId)?.also {
                 sendActiveSessions()
                 if (it.any()) {
-                    sendActiveScope()
-                    sendScopes(buildVersion)
-                    calculateAndSendScopeCoverage(activeScope)
                     logger.info { "Session $sessionId finished." }
                 } else logger.info { "Session with id $sessionId is empty, it won't be added to the active scope." }
             } ?: logger.info { "No active session with id $sessionId." }

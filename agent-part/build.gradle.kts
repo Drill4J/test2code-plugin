@@ -36,7 +36,6 @@ dependencies {
 tasks {
     test {
         useJUnitPlatform()
-        systemProperty("plugin.feature.drealtime", false)
     }
 
     fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.commonConfig() {

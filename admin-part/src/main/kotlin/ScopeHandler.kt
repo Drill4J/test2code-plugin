@@ -8,15 +8,12 @@ import mu.*
 private val logger = KotlinLogging.logger {}
 
 internal fun Test2CodeAdminPart.initActiveScope() {
-    val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
-    if (realtimeEnabled) {
-        activeScope.subscribeOnChanges { sessions ->
-            val context = pluginInstanceState.coverContext()
-            updateSummary { it.calculateCoverage(sessions, context) }
-            sendScopeMessages()
-            val coverageInfoSet = sessions.calculateCoverageData(context)
-            coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
-        }
+    activeScope.subscribeOnChanges { sessions ->
+        val context = pluginInstanceState.coverContext()
+        updateSummary { it.calculateCoverage(sessions, context) }
+        sendScopeMessages()
+        val coverageInfoSet = sessions.calculateCoverageData(context)
+        coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
     }
 }
 
