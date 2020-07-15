@@ -33,7 +33,12 @@ data class ScopeInitialized(
 
 @SerialName("SESSION_STARTED")
 @Serializable
-data class SessionStarted(val sessionId: String, val testType: String, val ts: Long) : CoverMessage()
+data class SessionStarted(
+    val sessionId: String,
+    val testType: String,
+    val isRealtime: Boolean = false,
+    val ts: Long
+) : CoverMessage()
 
 @SerialName("SESSION_CANCELLED")
 @Serializable
