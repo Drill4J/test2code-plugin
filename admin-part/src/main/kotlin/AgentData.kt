@@ -36,10 +36,10 @@ data class ClassData(
 
 @Serializable
 class DiffMethods(
-    val new: List<Method>,
-    val modified: List<Method>,
-    val deleted: List<Method>,
-    val unaffected: List<Method>
+    val new: Set<Method> = emptySet(),
+    val modified: Set<Method> = emptySet(),
+    val deleted: Set<Method> = emptySet(),
+    val unaffected: Set<Method> = emptySet()
 )
 
 @Serializable
