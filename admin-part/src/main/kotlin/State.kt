@@ -42,6 +42,8 @@ class PluginInstanceState(
 
     private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
 
+    private val agentBuildData = AtomicCache<AgentBuildId, ClassData>()
+
     private val _data = atomic<AgentData>(NoData)
 
     private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
@@ -49,7 +51,10 @@ class PluginInstanceState(
     fun init() = _data.update { DataBuilder() }
 
     suspend fun initialized() {
-        val classesData = _data.updateAndGet { data ->
+        val parentClassData = buildInfo?.parentVersion?.run {
+            takeIf(String::any)?.let { classData(it) }
+        }
+        val classData = _data.updateAndGet { data ->
             when (data) {
                 is DataBuilder -> data.flatMap { e -> e.methods.map { e to it } }.run {
                     val methods = map { (e, m) ->
@@ -57,7 +62,7 @@ class PluginInstanceState(
                             ownerClass = "${e.path}/${e.name}",
                             name = m.name,
                             desc = "(${m.params.joinToString(",")}):${m.returnType}",
-                            hash = "".crc64
+                            hash = m.checksum
                         )
                     }
                     PackageTree(
@@ -66,7 +71,7 @@ class PluginInstanceState(
                         packages = data.toPackages()
                     ).toClassesData(
                         methods = methods,
-                        methodChanges = MethodChanges(mapOf(DiffType.UNAFFECTED to methods))
+                        otherMethods = parentClassData?.methods
                     )
                 }
                 is ClassData -> data
@@ -83,29 +88,30 @@ class PluginInstanceState(
                         packages = packages
                     ).toClassesData(
                         methods = methods,
-                        methodChanges = buildInfo?.methodChanges ?: MethodChanges(),
+                        otherMethods = parentClassData?.methods,
                         probeIds = probeIds
                     )
                 }
             }
         } as ClassData
+        agentBuildData[agentBuildId] = classData
         readScopeCounter()?.run {
             _activeScope.update { ActiveScope(nth = count.inc(), buildVersion = agentInfo.buildVersion) }
         }
         storeScopeCounter()
         storeClient.executeInAsyncTransaction {
-            store(classesData.copy(packageTree = PackageTree(), probeIds = emptyMap()))
+            store(classData.copy(packageTree = PackageTree(), probeIds = emptyMap()))
             store(
                 PackageTreeBytes(
-                    buildVersion = classesData.buildVersion,
-                    bytes = ProtoBuf.dump(PackageTree.serializer(), classesData.packageTree)
+                    buildVersion = classData.buildVersion,
+                    bytes = ProtoBuf.dump(PackageTree.serializer(), classData.packageTree)
                 )
             )
-            if (classesData.probeIds.any()) {
+            if (classData.probeIds.any()) {
                 store(
                     ProbeIdBytes(
-                        buildVersion = classesData.buildVersion,
-                        bytes = ProtoBuf.dump(ProbeIdData.serializer(), ProbeIdData(classesData.probeIds))
+                        buildVersion = classData.buildVersion,
+                        bytes = ProtoBuf.dump(ProbeIdData.serializer(), ProbeIdData(classData.probeIds))
                     )
                 )
             }
@@ -191,10 +197,13 @@ class PluginInstanceState(
         else -> scopeManager.byId(id)
     }
 
-    suspend fun classesData(buildVersion: String = agentInfo.buildVersion): AgentData = when (buildVersion) {
-        agentInfo.buildVersion -> data as? ClassData
-        else -> storeClient.classData(buildVersion)
-    } ?: NoData
+    internal suspend fun classData(
+        buildVersion: String = agentInfo.buildVersion
+    ): ClassData? = buildId(buildVersion).let { buildId ->
+        agentBuildData[buildId] ?: storeClient.classData(buildVersion)?.also {
+            agentBuildData[buildId] = it
+        }
+    }
 
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
         ActiveScope(it.nth.inc(), scopeName(name), agentInfo.buildVersion)
@@ -213,31 +222,20 @@ class PluginInstanceState(
 
     private fun PackageTree.toClassesData(
         methods: List<Method>,
-        methodChanges: MethodChanges,
+        otherMethods: List<Method>?,
         probeIds: Map<String, Long> = emptyMap()
     ) = ClassData(
         buildVersion = agentInfo.buildVersion,
         packageTree = this,
         methods = methods.sortedBy(Method::name),
-        methodChanges = methodChanges.run {
-            DiffMethods(
-                new = methodsBy(DiffType.NEW).sortedBy(Method::name),
-                modified = listOf(
-                    DiffType.MODIFIED_NAME,
-                    DiffType.MODIFIED_DESC,
-                    DiffType.MODIFIED_BODY
-                ).flatMap { methodsBy(it) }.sortedBy(Method::name),
-                deleted = methodsBy(DiffType.DELETED).sortedBy(Method::name),
-                unaffected = methodsBy(DiffType.UNAFFECTED).sortedBy(Method::name)
-            )
-        },
+        methodChanges = otherMethods?.let(methods::diff) ?: DiffMethods(),
         probeIds = probeIds
     )
 }
 
 internal suspend fun PluginInstanceState.coverContext(
     buildVersion: String = agentInfo.buildVersion
-): CoverContext = (classesData(buildVersion) as ClassData).let { classData ->
+): CoverContext = classData(buildVersion)!!.let { classData ->
     val buildInfo = buildManager[buildVersion]
     CoverContext(
         agentType = agentInfo.agentType,
@@ -264,5 +262,3 @@ internal suspend fun StoreClient.classData(buildVersion: String): ClassData? = e
         let(treeMutator).let(probeIdsMutator)
     }
 }
-
-private fun MethodChanges.methodsBy(key: DiffType): List<Method> = map[key] ?: emptyList()
