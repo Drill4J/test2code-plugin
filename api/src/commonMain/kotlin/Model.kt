@@ -261,6 +261,15 @@ data class TestsToRunDto(
 )
 
 @Serializable
+data class BuildStatsDto(
+    val total: Int = 0,
+    val new: Int = 0,
+    val modified: Int = 0,
+    val unaffected: Int = 0,
+    val deleted: Int = 0
+)
+
+@Serializable
 data class SummaryDto(
     val coverage: Double,
     val coverageCount: Count,

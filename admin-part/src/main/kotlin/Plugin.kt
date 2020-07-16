@@ -93,6 +93,9 @@ class Test2CodeAdminPart(
         }
         is Initialized -> {
             pluginInstanceState.initialized()
+            classDataOrNull()?.let {
+                send(buildVersion, Routes.Data().let(Routes.Data::Build) , it.toBuildStatsDto())
+            }
             initGateSettings()
             initActiveScope()
             sendActiveSessions()
@@ -395,7 +398,7 @@ class Test2CodeAdminPart(
         }
         val coverageRoute = Routes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, "")
-        (pluginInstanceState.data as? ClassData)?.let { classData ->
+        classDataOrNull()?.let { classData ->
             val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
             classData.packageTree.packages.forEach {
                 send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
@@ -418,7 +421,7 @@ class Test2CodeAdminPart(
                 }
                 val coverageRoute = Routes.Build.Coverage(buildRoute)
                 send(buildVersion, coverageRoute, "")
-                (pluginInstanceState.data as? ClassData)?.let { classData ->
+                classDataOrNull()?.let { classData ->
                     val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
                     classData.packageTree.packages.forEach {
                         send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), "")
@@ -437,6 +440,8 @@ class Test2CodeAdminPart(
     internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
+
+    private fun classDataOrNull() = pluginInstanceState.data as? ClassData
 
     private fun pluginInstanceState() = PluginInstanceState(
         storeClient = storeClient,

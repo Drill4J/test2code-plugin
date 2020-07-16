@@ -19,6 +19,14 @@ internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<
     "Update your tests to cover risks".takeIf { riskCount.covered < riskCount.total }
 ).filterNotNullTo(mutableSetOf())
 
+internal fun ClassData.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(
+    total = methods.count(),
+    new = methodChanges.new.count(),
+    modified = methodChanges.modified.count(),
+    unaffected = methodChanges.unaffected.count(),
+    deleted = methodChanges.deleted.count()
+)
+
 //TODO move to admin api
 
 fun BuildManager.childrenOf(version: String): List<BuildInfo> {
