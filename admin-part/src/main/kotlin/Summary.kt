@@ -36,7 +36,7 @@ internal fun CachedBuildCoverage.toSummaryDto(
     coverage = count.percentage(),
     coverageCount = count,
     arrow = arrow?.let { ArrowType.valueOf(it) },
-    risks = riskCount.run { total - covered },
+    risks = risks,
     testsToRun = buildTests.run {
         TestsToRunDto(
             groupedTests = testsToRun,

@@ -162,7 +162,7 @@ class PluginInstanceState(
         id = buildId(buildVersion),
         count = buildCoverage.count,
         arrow = buildCoverage.arrow?.name,
-        riskCount = buildCoverage.riskCount
+        risks = buildCoverage.risks.total
     ).also { coverages[it.id] = it }
 
     suspend fun storeBuildCoverage(
