@@ -22,6 +22,8 @@ dependencies {
     //plugin dependencies
     jarDeps(project(":api"))
     jarDeps("org.jacoco:org.jacoco.core")
+    jarDeps("org.apache.bcel:bcel")
+
 
     //provided by drill runtime
     implementation("com.epam.drill:common")

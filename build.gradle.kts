@@ -45,6 +45,7 @@ subprojects {
         "org.jetbrains.xodus:xodus-entity-store:1.3.91",
         "io.ktor:ktor-locations:$ktorVersion",
         "org.jacoco:org.jacoco.core:0.8.5",
+        "org.apache.bcel:bcel:6.3.1",
         "org.junit.jupiter:junit-jupiter:5.5.2"
     ).map(dependencies.constraints::create)
 

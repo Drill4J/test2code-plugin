@@ -4,6 +4,7 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
@@ -77,10 +78,15 @@ class PluginInstanceState(
                 is ClassData -> data
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-                    val groupedMethods = buildInfo?.javaMethods ?: emptyMap()
-                    val methods = groupedMethods.flatMap { it.value }
                     val probeIds: Map<String, Long> = classesBytes.mapValues { CRC64.classId(it.value) }
                     val bundleCoverage = classesBytes.bundle(probeIds)
+                    val classCounters = bundleCoverage.packages.flatMap { it.classes }
+                    val groupedMethods = classCounters.associate { classCounter ->
+                        val name = classCounter.fullName
+                        val bytes = classesBytes.getValue(name)
+                        name to classCounter.parseMethods(bytes)
+                    }
+                    val methods = groupedMethods.flatMap { it.value }
                     val packages = bundleCoverage.toPackages(groupedMethods)
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },
