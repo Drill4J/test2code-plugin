@@ -80,7 +80,9 @@ class PluginInstanceState(
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
                     val probeIds: Map<String, Long> = classesBytes.mapValues { CRC64.classId(it.value) }
                     val bundleCoverage = classesBytes.bundle(probeIds)
-                    val classCounters = bundleCoverage.packages.flatMap { it.classes }
+                    val classCounters = bundleCoverage.packages.asSequence().flatMap {
+                        it.classes.asSequence()
+                    }.filter { it.methods.any() }
                     val groupedMethods = classCounters.associate { classCounter ->
                         val name = classCounter.fullName
                         val bytes = classesBytes.getValue(name)

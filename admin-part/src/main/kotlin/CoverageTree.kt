@@ -46,16 +46,17 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
 
 internal fun BundleCounter.toPackages(
     parsedClasses: Map<String, Methods>
-): List<JavaPackageCoverage> = packages.map { packageCoverage ->
-    val classes = packageCoverage.classes.classTree(parsedClasses)
-    JavaPackageCoverage(
-        id = packageCoverage.coverageKey().id,
-        name = packageCoverage.name,
-        totalClassesCount = classes.count(),
-        totalMethodsCount = classes.sumBy { it.totalMethodsCount },
-        totalCount = packageCoverage.count.total,
-        classes = classes
-    )
+): List<JavaPackageCoverage> = packages.mapNotNull { packageCoverage ->
+    packageCoverage.classes.classTree(parsedClasses).takeIf { it.any() }?.let { classes ->
+        JavaPackageCoverage(
+            id = packageCoverage.coverageKey().id,
+            name = packageCoverage.name,
+            totalClassesCount = classes.count(),
+            totalMethodsCount = classes.sumBy { it.totalMethodsCount },
+            totalCount = packageCoverage.count.total,
+            classes = classes
+        )
+    }
 }.toList()
 
 
@@ -79,21 +80,22 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
 
 private fun Collection<ClassCounter>.classTree(
     parsedClasses: Map<String, Methods>
-): List<JavaClassCoverage> = map { classCoverage ->
-    val classKey = classCoverage.coverageKey()
-    val parsedMethods = parsedClasses[classCoverage.fullName] ?: emptyList()
-    val methods = classCoverage.toMethodCoverage { methodCov ->
-        parsedMethods.any { it.name == methodCov.name && it.desc == methodCov.desc }
+): List<JavaClassCoverage> = mapNotNull { classCoverage ->
+    parsedClasses[classCoverage.fullName]?.let { parsedMethods ->
+        val classKey = classCoverage.coverageKey()
+        val methods = classCoverage.toMethodCoverage { methodCov ->
+            parsedMethods.any { it.name == methodCov.name && it.desc == methodCov.desc }
+        }
+        JavaClassCoverage(
+            id = classKey.id,
+            name = classCoverage.name.toShortClassName(),
+            path = classCoverage.name,
+            totalMethodsCount = methods.count(),
+            totalCount = methods.sumBy { it.count },
+            methods = methods,
+            probes = emptyList()
+        )
     }
-    JavaClassCoverage(
-        id = classKey.id,
-        name = classCoverage.name.toShortClassName(),
-        path = classCoverage.name,
-        totalMethodsCount = methods.count(),
-        totalCount = methods.sumBy { it.count },
-        methods = methods,
-        probes = emptyList()
-    )
 }.toList()
 
 private fun List<JavaClassCoverage>.classCoverage(
