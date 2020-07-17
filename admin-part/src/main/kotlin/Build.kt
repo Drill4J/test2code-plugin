@@ -11,12 +11,12 @@ data class CachedBuildCoverage(
     @Id val id: AgentBuildId,
     val count: Count,
     val arrow: String?,
-    val riskCount: Count
+    val risks: Int
 )
 
 internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<String> = sequenceOf(
     "Run recommended tests to cover modified methods".takeIf { testsToRun.any() },
-    "Update your tests to cover risks".takeIf { riskCount.covered < riskCount.total }
+    "Update your tests to cover risks".takeIf { risks > 0 }
 ).filterNotNullTo(mutableSetOf())
 
 internal fun ClassData.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(

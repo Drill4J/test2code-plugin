@@ -94,7 +94,7 @@ class Test2CodeAdminPart(
         is Initialized -> {
             pluginInstanceState.initialized()
             classDataOrNull()?.let {
-                send(buildVersion, Routes.Data().let(Routes.Data::Build) , it.toBuildStatsDto())
+                send(buildVersion, Routes.Data().let(Routes.Data::Build), it.toBuildStatsDto())
             }
             initGateSettings()
             initActiveScope()
@@ -247,7 +247,8 @@ class Test2CodeAdminPart(
                     covered = newMethods.coveredCount + allModifiedMethods.coveredCount,
                     total = newMethods.totalCount + allModifiedMethods.totalCount
                 )
-            }
+            },
+            risks = buildMethods.toRiskSummaryDto()
         )
         val cachedCoverage = pluginInstanceState.updateBuildCoverage(
             buildVersion,

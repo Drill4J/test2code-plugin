@@ -23,6 +23,7 @@ internal fun ScopeSummary.calculateCoverage(
             count = coverageCount,
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
             riskCount = zeroCount,
+            risks = RiskSummaryDto(),
             byTestType = sessions.coveragesByTestType(
                 sessions.bundlesByTests(context),
                 context
@@ -60,6 +61,7 @@ internal fun Sequence<Session>.calculateCoverageData(
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
+                risks = RiskSummaryDto(),
                 byTestType = coverageByType,
                 diff = otherCoverage?.let {
                     (coverageCount - it).run { first percentOf second }
@@ -74,6 +76,7 @@ internal fun Sequence<Session>.calculateCoverageData(
             count = coverageCount,
             methodCount = methodCount,
             riskCount = zeroCount,
+            risks = RiskSummaryDto(),
             byTestType = coverageByType
         )
     }
