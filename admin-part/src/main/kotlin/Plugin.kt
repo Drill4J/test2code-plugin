@@ -68,9 +68,6 @@ class Test2CodeAdminPart(
         }
     }
 
-    //TODO remove this after the data API has been redesigned
-    override suspend fun getPluginData(params: Map<String, String>) = Unit
-
     override suspend fun processData(dm: DrillMessage): Any = dm.content!!.let { content ->
         val message = CoverMessage.serializer() parse content
         processData(message)
