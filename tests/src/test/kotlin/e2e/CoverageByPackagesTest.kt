@@ -56,7 +56,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
                         name shouldBe "com/epam/test"
-                        coverage shouldBeGreaterThan  46.6
+                        coverage shouldBeGreaterThan 46.6
                         totalClassesCount shouldBe 1
                         classes shouldBe emptyList()
                         assocTestsCount shouldBe 1
@@ -65,13 +65,15 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         testName shouldBe "xxxx"
                         newMethods.size shouldBe 0
                         modifiedMethods.size shouldBe 0
-                        unaffectedMethods.size shouldBe 2
+                        unaffectedMethods.size shouldBe 0
+                        allMethods.size shouldBe 2
                     }
                     methodsCoveredByTestType()!!.first().apply {
                         testType shouldBe "MANUAL"
                         newMethods.size shouldBe 0
                         modifiedMethods.size shouldBe 0
-                        unaffectedMethods.size shouldBe 2
+                        unaffectedMethods.size shouldBe 0
+                        allMethods.size shouldBe 2
                     }
                 }
                 val switchScope = SwitchActiveScope(
@@ -86,7 +88,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
                     name shouldBe "com/epam/test"
-                    coverage shouldBeGreaterThan  46.6
+                    coverage shouldBeGreaterThan 46.6
                     totalClassesCount shouldBe 1
                     assocTestsCount shouldBe 1
                 }
@@ -99,13 +101,15 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     testName shouldBe "xxxx"
                     newMethods.size shouldBe 0
                     modifiedMethods.size shouldBe 0
-                    unaffectedMethods.size shouldBe 2
+                    unaffectedMethods.size shouldBe 0
+                    allMethods.size shouldBe 2
                 }
                 methodsCoveredByTestType.first().apply {
                     testType shouldBe "MANUAL"
                     newMethods.size shouldBe 0
                     modifiedMethods.size shouldBe 0
-                    unaffectedMethods.size shouldBe 2
+                    unaffectedMethods.size shouldBe 0
+                    allMethods.size shouldBe 2
                 }
 
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -128,7 +132,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
                         name shouldBe "com/epam/test"
-                        coverage shouldBeGreaterThan  46.6
+                        coverage shouldBeGreaterThan 46.6
                         totalClassesCount shouldBe 1
                         assocTestsCount shouldBe 1
                     }
@@ -145,7 +149,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
                     name shouldBe "com/epam/test"
-                    coverage shouldBeGreaterThan  46.6
+                    coverage shouldBeGreaterThan 46.6
                     totalClassesCount shouldBe 1
                     assocTestsCount shouldBe 1
                 }

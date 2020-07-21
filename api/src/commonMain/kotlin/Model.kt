@@ -188,6 +188,7 @@ data class MethodsCoveredByTest(
     val id: String,
     val testName: String,
     val testType: String,
+    val allMethods: List<CoverMethod>,
     val newMethods: List<CoverMethod>,
     val modifiedMethods: List<CoverMethod>,
     val unaffectedMethods: List<CoverMethod>
@@ -197,6 +198,7 @@ data class MethodsCoveredByTest(
 data class MethodsCoveredByTestType(
     val testType: String,
     val testsCount: Int,
+    val allMethods: List<CoverMethod>,
     val newMethods: List<CoverMethod>,
     val modifiedMethods: List<CoverMethod>,
     val unaffectedMethods: List<CoverMethod>
