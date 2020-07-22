@@ -7,11 +7,11 @@ import mu.*
 
 private val logger = KotlinLogging.logger {}
 
-internal fun Test2CodeAdminPart.initActiveScope() {
+internal fun Plugin.initActiveScope() {
     val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
     if (realtimeEnabled) {
         activeScope.subscribeOnChanges { sessions ->
-            val context = pluginInstanceState.coverContext()
+            val context = state.coverContext()
             updateSummary { it.calculateCoverage(sessions, context) }
             sendScopeMessages()
             val coverageInfoSet = sessions.calculateCoverageData(context)
@@ -20,17 +20,17 @@ internal fun Test2CodeAdminPart.initActiveScope() {
     }
 }
 
-internal suspend fun Test2CodeAdminPart.changeActiveScope(
+internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload
-): Any = if (pluginInstanceState.scopeByName(scopeChange.scopeName) == null) {
-    val prevScope = pluginInstanceState.changeActiveScope(scopeChange.scopeName.trim())
-    pluginInstanceState.storeScopeCounter()
+): Any = if (state.scopeByName(scopeChange.scopeName) == null) {
+    val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
+    state.storeScopeCounter()
     sendActiveSessions()
     sendActiveScope()
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
             val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
-            pluginInstanceState.scopeManager.store(finishedScope)
+            state.scopeManager.store(finishedScope)
             logger.info { "$finishedScope has been saved." }
         } else logger.info { "$prevScope is empty, it won't be added to the build." }
     }
@@ -46,9 +46,9 @@ internal suspend fun Test2CodeAdminPart.changeActiveScope(
     "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
 )
 
-internal suspend fun Test2CodeAdminPart.scopeInitialized(prevId: String) {
+internal suspend fun Plugin.scopeInitialized(prevId: String) {
     initActiveScope()
-    val prevScope = pluginInstanceState.scopeManager.byId(prevId)
+    val prevScope = state.scopeManager.byId(prevId)
     prevScope?.apply {
         sendScopeSummary(summary)
     } ?: cleanTopics(prevId)
@@ -60,12 +60,12 @@ internal suspend fun Test2CodeAdminPart.scopeInitialized(prevId: String) {
     logger.info { "Current active scope - $activeScope" }
 }
 
-internal suspend fun Test2CodeAdminPart.renameScope(
+internal suspend fun Plugin.renameScope(
     payload: RenameScopePayload
-): StatusMessage = pluginInstanceState.scopeById(payload.scopeId)?.let { scope ->
+): StatusMessage = state.scopeById(payload.scopeId)?.let { scope ->
     val scopeName = payload.scopeName
-    if (scope.summary.name != scopeName && pluginInstanceState.scopeByName(scopeName) == null) {
-        pluginInstanceState.renameScope(payload.scopeId, scopeName)
+    if (scope.summary.name != scopeName && state.scopeByName(scopeName) == null) {
+        state.renameScope(payload.scopeId, scopeName)
         sendScopeMessages(scope.buildVersion)
         sendScopeSummary(scope.summary, scope.buildVersion)
         StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> $scopeName")
@@ -78,9 +78,9 @@ internal suspend fun Test2CodeAdminPart.renameScope(
     "Failed to rename scope with id ${payload.scopeId}: scope not found"
 )
 
-internal suspend fun Test2CodeAdminPart.toggleScope(scopeId: String): StatusMessage {
-    pluginInstanceState.toggleScope(scopeId)
-    return pluginInstanceState.scopeManager.byId(scopeId)?.let { scope ->
+internal suspend fun Plugin.toggleScope(scopeId: String): StatusMessage {
+    state.toggleScope(scopeId)
+    return state.scopeManager.byId(scopeId)?.let { scope ->
         sendScopes(scope.buildVersion)
         sendScopeSummary(scope.summary, scope.buildVersion)
         calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
@@ -94,8 +94,8 @@ internal suspend fun Test2CodeAdminPart.toggleScope(scopeId: String): StatusMess
     )
 }
 
-internal suspend fun Test2CodeAdminPart.dropScope(scopeId: String): StatusMessage {
-    return pluginInstanceState.scopeManager.deleteById(scopeId)?.let { scope ->
+internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
+    return state.scopeManager.deleteById(scopeId)?.let { scope ->
         cleanTopics(scope.id)
         sendScopes(scope.buildVersion)
         sendScopeSummary(scope.summary, scope.buildVersion)

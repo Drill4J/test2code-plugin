@@ -12,8 +12,8 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import mu.*
 
-@Suppress("unused", "MemberVisibilityCanBePrivate")
-class Test2CodeAdminPart(
+@Suppress("unused")
+class Plugin(
     adminData: AdminData,
     sender: Sender,
     val storeClient: StoreClient,
@@ -23,27 +23,27 @@ class Test2CodeAdminPart(
 
     override val serDe: SerDe<Action> = apiSerDe
 
-    lateinit var pluginInstanceState: PluginInstanceState
+    lateinit var state: AgentState
 
     val buildVersion = agentInfo.buildVersion
 
     val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
-    val activeScope get() = pluginInstanceState.activeScope
+    val activeScope get() = state.activeScope
 
     val agentId = agentInfo.id
 
     private val logger = KotlinLogging.logger("Plugin $id")
 
     override suspend fun initialize() {
-        pluginInstanceState = pluginInstanceState()
-        pluginInstanceState.readScopeCounter()?.let { processData(Initialized("")) }
+        state = agentState()
+        state.readScopeCounter()?.let { processData(Initialized("")) }
     }
 
     override suspend fun applyPackagesChanges() {
-        pluginInstanceState.scopeManager.deleteByVersion(buildVersion)
+        state.scopeManager.deleteByVersion(buildVersion)
         storeClient.deleteById<ClassData>(buildVersion)
-        pluginInstanceState = pluginInstanceState()
+        state = agentState()
     }
 
     override suspend fun doAction(action: Action): Any {
@@ -72,19 +72,19 @@ class Test2CodeAdminPart(
     internal suspend fun processData(message: CoverMessage) = when (message) {
         is InitInfo -> {
             if (message.init) {
-                pluginInstanceState.init()
+                state.init()
             }
             logger.info { message.message } //log init message
             logger.info { "${message.classesCount} classes to load" }
         }
         is InitDataPart -> {
-            (pluginInstanceState.data as? DataBuilder)?.also {
+            (state.data as? DataBuilder)?.also {
                 logger.info { message }
                 it += message.astEntities
             }
         }
         is Initialized -> {
-            pluginInstanceState.initialized()
+            state.initialized()
             classDataOrNull()?.let {
                 send(buildVersion, Routes.Data().let(Routes.Data::Build), it.toBuildStatsDto())
             }
@@ -127,7 +127,7 @@ class Test2CodeAdminPart(
         }
         is SessionFinished -> {
             val sessionId = message.sessionId
-            val context = pluginInstanceState.coverContext()
+            val context = state.coverContext()
             activeScope.finishSession(sessionId) {
                 activeScope.updateSummary { it.calculateCoverage(this, context) }
             }?.also {
@@ -144,7 +144,7 @@ class Test2CodeAdminPart(
     }
 
     private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
-        val finishedScopes = pluginInstanceState.scopeManager.byVersion(
+        val finishedScopes = state.scopeManager.byVersion(
             buildVersion, withData = true
         )
         finishedScopes.enabled().calculateAndSendBuildCoverage(buildVersion)
@@ -181,7 +181,7 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        val scopes = pluginInstanceState.scopeManager.byVersion(buildVersion)
+        val scopes = state.scopeManager.byVersion(buildVersion)
         sendScopes(buildVersion, scopes)
     }
 
@@ -209,7 +209,7 @@ class Test2CodeAdminPart(
     }
 
     internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
-        val scopes = pluginInstanceState.scopeManager.run {
+        val scopes = state.scopeManager.run {
             byVersion(buildVersion, true).enabled()
         }
         scopes.calculateAndSendBuildCoverage(buildVersion)
@@ -218,20 +218,20 @@ class Test2CodeAdminPart(
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(buildVersion: String) {
         val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
         val prevCoverage = parentVersion?.let {
-            pluginInstanceState.coverages[pluginInstanceState.buildId(parentVersion)]?.count ?: zeroCount
+            state.coverages[state.buildId(parentVersion)]?.count ?: zeroCount
         }
-        val context = pluginInstanceState.coverContext(buildVersion)
+        val context = state.coverContext(buildVersion)
         val sessions = flatten()
         val coverageInfoSet = sessions.calculateCoverageData(
             context, count(), prevCoverage
         )
-        pluginInstanceState.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
+        state.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
         val buildMethods = coverageInfoSet.buildMethods
-        val testsToRun = pluginInstanceState.testsToRun(
+        val testsToRun = state.testsToRun(
             buildVersion,
             buildMethods.allModifiedMethods.methods
         )
-        val cachedTests = pluginInstanceState.updateTestsToRun(buildVersion, testsToRun)
+        val cachedTests = state.updateTestsToRun(buildVersion, testsToRun)
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             riskCount = buildMethods.run {
@@ -242,7 +242,7 @@ class Test2CodeAdminPart(
             },
             risks = buildMethods.toRiskSummaryDto()
         )
-        val cachedCoverage = pluginInstanceState.updateBuildCoverage(
+        val cachedCoverage = state.updateBuildCoverage(
             buildVersion,
             buildCoverage
         )
@@ -258,7 +258,7 @@ class Test2CodeAdminPart(
                 send(buildVersion, Routes.Data.TestsToRun(it), summaryDto.testsToRun)
             }
             send(summaryDto)
-            pluginInstanceState.storeBuildCoverage(buildVersion)
+            state.storeBuildCoverage(buildVersion)
         }
     }
 
@@ -297,7 +297,7 @@ class Test2CodeAdminPart(
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), TestsToRun(testsToRun))
     }
 
-    private suspend fun Test2CodeAdminPart.send(
+    private suspend fun Plugin.send(
         summaryDto: SummaryDto
     ) {
         val serviceGroup = agentInfo.serviceGroup
@@ -344,7 +344,7 @@ class Test2CodeAdminPart(
         scope: Scope = activeScope,
         buildVersion: String = this.buildVersion
     ) {
-        val context = pluginInstanceState.coverContext(buildVersion)
+        val context = state.coverContext(buildVersion)
         val coverageInfoSet = scope.calculateCoverageData(context)
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }
@@ -424,9 +424,9 @@ class Test2CodeAdminPart(
             }
         }
         val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-        pluginInstanceState = pluginInstanceState()
+        state = agentState()
         processData(InitInfo(classesBytes.keys.count(), ""))
-        pluginInstanceState.initialized()
+        state.initialized()
         processData(Initialized())
     }
 
@@ -434,9 +434,9 @@ class Test2CodeAdminPart(
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 
-    private fun classDataOrNull() = pluginInstanceState.data as? ClassData
+    private fun classDataOrNull() = state.data as? ClassData
 
-    private fun pluginInstanceState() = PluginInstanceState(
+    private fun agentState() = AgentState(
         storeClient = storeClient,
         agentInfo = agentInfo,
         buildManager = adminData.buildManager

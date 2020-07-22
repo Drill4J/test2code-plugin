@@ -26,7 +26,7 @@ class JsCoverageTest {
     @Test
     fun `coverageData for active scope with custom js probes`() = runBlocking {
         val buildManager = buildManager()
-        val state = PluginInstanceState(
+        val state = AgentState(
             storeClient, jsAgentInfo, buildManager
         )
         state.init()

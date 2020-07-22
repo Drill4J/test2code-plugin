@@ -1,7 +1,7 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.Method
 
 internal fun Iterable<Method>.diff(other: Iterable<Method>): DiffMethods = run {
     //TODO get rid of common Method usages

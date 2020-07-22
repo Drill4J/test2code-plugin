@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.Method
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
@@ -21,7 +22,7 @@ import org.jacoco.core.internal.data.*
 
 internal const val DEFAULT_SCOPE_NAME = "New Scope"
 
-class PluginInstanceState(
+class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
     val buildManager: BuildManager
@@ -241,7 +242,7 @@ class PluginInstanceState(
     )
 }
 
-internal suspend fun PluginInstanceState.coverContext(
+internal suspend fun AgentState.coverContext(
     buildVersion: String = agentInfo.buildVersion
 ): CoverContext = classData(buildVersion)!!.let { classData ->
     val buildInfo = buildManager[buildVersion]

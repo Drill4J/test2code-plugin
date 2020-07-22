@@ -35,8 +35,8 @@ private object QualityGateData {
     }
 }
 
-internal suspend fun Test2CodeAdminPart.initGateSettings() {
-    val settings = pluginInstanceState.qualityGateSettings
+internal suspend fun Plugin.initGateSettings() {
+    val settings = state.qualityGateSettings
     QualityGateData.defaults.forEach { (key, value) ->
         settings[key] = ConditionSetting(false, value)
     }
@@ -46,15 +46,15 @@ internal suspend fun Test2CodeAdminPart.initGateSettings() {
     sendSettings()
 }
 
-internal suspend fun Test2CodeAdminPart.updateGateConditions(
+internal suspend fun Plugin.updateGateConditions(
     conditionSettings: List<ConditionSetting>
 ): StatusMessage = run {
-    val settings = pluginInstanceState.qualityGateSettings
+    val settings = state.qualityGateSettings
     val unknownMeasures = conditionSettings.filter { it.condition.measure !in settings.map }
     if (unknownMeasures.none()) {
         conditionSettings.forEach { settings[it.condition.measure] = it }
         sendSettings()
-        pluginInstanceState.toStatsDto(buildVersion)?.let { stats ->
+        state.toStatsDto(buildVersion)?.let { stats ->
             val qualityGate = checkQualityGate(stats)
             send(buildVersion, Routes.Data().let(Routes.Data::QualityGate), qualityGate)
         }
@@ -69,8 +69,8 @@ internal suspend fun Test2CodeAdminPart.updateGateConditions(
     } else StatusMessage(400, "Unknown quality gate measures: '$unknownMeasures'")
 }
 
-internal fun Test2CodeAdminPart.checkQualityGate(stats: StatsDto): QualityGate = run {
-    val conditions = pluginInstanceState.qualityGateSettings.values
+internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
+    val conditions = state.qualityGateSettings.values
         .filter { it.enabled }
         .map { it.condition }
     val checkResults = conditions.associate { it.measure to stats.check(it) }
@@ -84,7 +84,7 @@ internal fun Test2CodeAdminPart.checkQualityGate(stats: StatsDto): QualityGate =
     )
 }
 
-private fun PluginInstanceState.toStatsDto(
+private fun AgentState.toStatsDto(
     buildVersion: String
 ): StatsDto? = buildId(buildVersion).let { buildId ->
     coverages[buildId]?.toSummaryDto(buildTests[buildId] ?: BuildTests())?.toStatsDto()
@@ -96,9 +96,9 @@ internal fun SummaryDto.toStatsDto() = StatsDto(
     tests = testsToRun.count
 )
 
-private suspend fun Test2CodeAdminPart.sendSettings() {
+private suspend fun Plugin.sendSettings() {
     val dataRoute = Routes.Data()
-    val settings = pluginInstanceState.qualityGateSettings.values.toList()
+    val settings = state.qualityGateSettings.values.toList()
     send(buildVersion, dataRoute.let(Routes.Data::QualityGateSettings), settings)
 }
 

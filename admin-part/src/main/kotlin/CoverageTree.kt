@@ -1,8 +1,8 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.common.api.Method
 import com.epam.drill.plugins.test2code.coverage.*
 
 internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
@@ -45,7 +45,7 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
 }
 
 internal fun BundleCounter.toPackages(
-    parsedClasses: Map<String, Methods>
+    parsedClasses: Map<String, List<Method>>
 ): List<JavaPackageCoverage> = packages.mapNotNull { packageCoverage ->
     packageCoverage.classes.classTree(parsedClasses).takeIf { it.any() }?.let { classes ->
         JavaPackageCoverage(
@@ -79,7 +79,7 @@ internal fun Iterable<JavaPackageCoverage>.treeCoverage(
 }
 
 private fun Collection<ClassCounter>.classTree(
-    parsedClasses: Map<String, Methods>
+    parsedClasses: Map<String, List<Method>>
 ): List<JavaClassCoverage> = mapNotNull { classCoverage ->
     parsedClasses[classCoverage.fullName]?.let { parsedMethods ->
         val classKey = classCoverage.coverageKey()

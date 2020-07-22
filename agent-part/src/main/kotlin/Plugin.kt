@@ -7,16 +7,17 @@ import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
-class CoverageAgentPart @JvmOverloads constructor(
+class Plugin(
     override val id: String,
-    agentContext: AgentContext,
-    private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
+    agentContext: AgentContext
 ) : AgentPart<CoverConfig, Action>(id, agentContext), Instrumenter {
     private val logger = agentContext.logging.logger("Plugin $id")
 
     override val confSerializer = CoverConfig.serializer()
 
     override val serDe: SerDe<Action> = commonSerDe
+
+    private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
 
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
 

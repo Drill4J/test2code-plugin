@@ -2,11 +2,12 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.bundle
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.coverage.bundle
+import com.epam.drill.plugins.test2code.jvm.*
 import mu.*
-
-typealias ClassesBytes = Map<String, ByteArray>
 
 private val logger = KotlinLogging.logger {}
 

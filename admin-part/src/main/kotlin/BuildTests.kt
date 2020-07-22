@@ -21,7 +21,7 @@ data class StoredBuildTests(
     override fun hashCode() = id.hashCode()
 }
 
-suspend fun PluginInstanceState.testsToRun(
+suspend fun AgentState.testsToRun(
     buildVersion: String,
     coverMethods: List<CoverMethod>
 ): GroupedTests = buildManager[buildVersion]?.parentVersion?.takeIf { it.any() }?.let { parentVersion ->

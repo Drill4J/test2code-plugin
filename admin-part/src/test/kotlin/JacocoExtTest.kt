@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.jvm.*
 import org.jacoco.core.analysis.*
 import kotlin.test.*
 

@@ -1,6 +1,6 @@
 package com.epam.drill.plugins.test2code.jvm
 
-import com.epam.drill.common.Method
+import com.epam.drill.plugins.test2code.common.api.Method
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.coverage.*
 import org.apache.bcel.classfile.*
