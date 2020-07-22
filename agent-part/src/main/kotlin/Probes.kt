@@ -4,10 +4,6 @@ import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
-import java.util.concurrent.*
-import kotlin.coroutines.*
 
 /**
  * Provides boolean array for the probe.
@@ -15,8 +11,10 @@ import kotlin.coroutines.*
  */
 typealias ProbeArrayProvider = (Long, String, Int) -> BooleanArray
 
+typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
+
 interface SessionProbeArrayProvider : ProbeArrayProvider {
-    fun start(sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit = {})
+    fun start(sessionId: String, realtimeHandler: RealtimeHandler? = null)
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun cancel(sessionId: String)
     fun cancelAll(): List<String>
@@ -40,31 +38,15 @@ fun ExecDatum.toExecClassData() = ExecClassData(
 
 typealias ExecData = PersistentMap<Long, ExecDatum>
 
-internal val emptyExecData: ExecData = persistentHashMapOf()
-
-
-object ProbesWorker : CoroutineScope {
-    override val coroutineContext: CoroutineContext =
-        Executors.newFixedThreadPool(4).asCoroutineDispatcher() + SupervisorJob()
-
-    operator fun invoke(block: suspend () -> Unit) = launch { block() }
-
-}
-
 /**
  * A container for session runtime data and optionally runtime data of tests
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    private val dataStream: TimeSpanEventBus<ExecDatum>?,
-    callback: (Sequence<ExecDatum>) -> Unit
+    realtimeHandler: RealtimeHandler?
 ) : (Long, String, Int, String) -> BooleanArray {
 
-    private val callbackJob = dataStream?.let { stream ->
-        ProbesWorker.launch {
-            stream.collect { dataSeq -> callback(dataSeq) }
-        }
-    }
+    private val realtime = realtimeHandler?.let(::Realtime)
 
     private val _execData = atomic(persistentHashMapOf<String, ExecData>())
 
@@ -74,7 +56,7 @@ class ExecRuntime(
         probeCount: Int,
         testName: String
     ): BooleanArray = _execData.updateAndGet { tests ->
-        (tests[testName] ?: emptyExecData).let { execData ->
+        (tests[testName] ?: persistentHashMapOf()).let { execData ->
             if (id !in execData) {
                 val mutatedData = execData.put(
                     id, ExecDatum(
@@ -93,13 +75,12 @@ class ExecRuntime(
         _execData.value.values.iterator()
     }.flatMap { it.values.asSequence() }
 
-    fun close() {
-        callbackJob?.cancel()
-        dataStream?.close()
+    private fun offer(datum: ExecDatum) {
+        realtime?.offer(datum)
     }
 
-    private fun offer(datum: ExecDatum) {
-        dataStream?.offer(datum)
+    fun close() {
+        realtime?.close()
     }
 }
 
@@ -109,11 +90,7 @@ class ExecRuntime(
  * The provider must be a Kotlin singleton object, otherwise the instrumented probe calls will fail.
  */
 open class SimpleSessionProbeArrayProvider(
-    private val instrContext: IDrillContex = DrillContext,
-    private val probeStreamPrv: () -> TimeSpanEventBus<ExecDatum>? = {
-        val realTimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
-        if (realTimeEnabled) TimeSpanEventBusImpl(delayMillis = 1500) else null
-    }
+    private val instrContext: IDrillContex = DrillContext
 ) : SessionProbeArrayProvider {
 
     private val sessionRuntimes get() = _runtimes.value
@@ -132,10 +109,11 @@ open class SimpleSessionProbeArrayProvider(
     } ?: BooleanArray(probeCount)
 
     override fun start(
-        sessionId: String, testType: String, eventCallback: (Sequence<ExecDatum>) -> Unit
+        sessionId: String,
+        realtimeHandler: RealtimeHandler?
     ) = _runtimes.update {
         if (sessionId !in it) {
-            it.put(sessionId, ExecRuntime(probeStreamPrv(), eventCallback))
+            it.put(sessionId, ExecRuntime(realtimeHandler))
         } else it
     }
 

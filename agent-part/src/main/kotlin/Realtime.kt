@@ -3,15 +3,40 @@ package com.epam.drill.plugins.test2code
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
+import java.util.concurrent.*
+import kotlin.coroutines.*
 
-interface TimeSpanEventBus<T> : Channel<T>, Flow<Sequence<T>>
+internal class Realtime<T>(handler: (Sequence<T>) -> Unit) {
 
-class TimeSpanEventBusImpl<T>(
+    private val stream = TimeSpanEventBus<T>(delayMillis = 1500L)
+    private val job = RealtimeWorker.launch {
+        stream.collect { seq -> handler(seq) }
+    }
+
+    fun offer(value: T) {
+        stream.offer(value)
+    }
+
+    fun close() {
+        job.cancel()
+        stream.close()
+
+    }
+}
+
+internal object RealtimeWorker : CoroutineScope {
+    override val coroutineContext: CoroutineContext =
+        Executors.newFixedThreadPool(4).asCoroutineDispatcher() + SupervisorJob()
+
+    operator fun invoke(block: suspend () -> Unit) = launch { block() }
+}
+
+internal class TimeSpanEventBus<T>(
     delayMillis: Long,
     private val coroutineScope: CoroutineScope = GlobalScope,
     private val mainChannel: Channel<T> = Channel(),
     private val ticker: ReceiveChannel<Unit> = ticker(delayMillis, 150L)
-) : TimeSpanEventBus<T>, Channel<T> by mainChannel, Flow<Sequence<T>> {
+) : Channel<T> by mainChannel, Flow<Sequence<T>> {
 
     override fun close(cause: Throwable?): Boolean = run {
         ticker.cancel()
