@@ -3,7 +3,6 @@ package com.epam.drill.plugins.test2code
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
-import java.util.concurrent.*
 import kotlin.coroutines.*
 
 internal class Realtime<T>(handler: (Sequence<T>) -> Unit) {
@@ -25,8 +24,9 @@ internal class Realtime<T>(handler: (Sequence<T>) -> Unit) {
 }
 
 internal object RealtimeWorker : CoroutineScope {
-    override val coroutineContext: CoroutineContext =
-        Executors.newFixedThreadPool(4).asCoroutineDispatcher() + SupervisorJob()
+    override val coroutineContext: CoroutineContext = run {
+        java.util.concurrent.Executors.newFixedThreadPool(4).asCoroutineDispatcher() + SupervisorJob()
+    }
 
     operator fun invoke(block: suspend () -> Unit) = launch { block() }
 }
