@@ -86,13 +86,12 @@ class CoverageAgentPart @JvmOverloads constructor(
                     )
                 )
             }
-            is StartSession -> {
-                val sessionId = action.payload.sessionId
-                val testType = action.payload.startPayload.testType
-                val isRealtime = action.payload.startPayload.isRealtime
+            is StartSession -> action.payload.run {
+                val isRealtime = startPayload.isRealtime
                 logger.info { "Start recording for session $sessionId" }
-                instrContext.start(sessionId, testType, probeSender(sessionId))
-                sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
+                val realtimeHandler = if (startPayload.isRealtime) probeSender(sessionId) else null
+                instrContext.start(sessionId, realtimeHandler)
+                sendMessage(SessionStarted(sessionId, startPayload.testType, isRealtime, currentTimeMillis()))
             }
             is StopSession -> {
                 val sessionId = action.payload.sessionId
@@ -114,8 +113,7 @@ class CoverageAgentPart @JvmOverloads constructor(
     }
 }
 
-//extracted for agent emulator compatibility
-fun AgentPart<*, *>.probeSender(sessionId: String): (Sequence<ExecDatum>) -> Unit = { execData ->
+fun AgentPart<*, *>.probeSender(sessionId: String): RealtimeHandler = { execData ->
     execData.map(ExecDatum::toExecClassData)
         .chunked(128)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
