@@ -46,11 +46,6 @@ class Test2CodeAdminPart(
         pluginInstanceState = pluginInstanceState()
     }
 
-    override suspend fun updateDataOnBuildConfigChange(buildVersion: String) {
-        //TODO figure out why this is needed
-        calculateAndSendChildrenCoverage(buildVersion)
-    }
-
     override suspend fun doAction(action: Action): Any {
         return when (action) {
             is SwitchActiveScope -> changeActiveScope(action.payload)
