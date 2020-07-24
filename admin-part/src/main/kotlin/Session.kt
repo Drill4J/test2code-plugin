@@ -2,6 +2,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
@@ -61,18 +62,4 @@ data class FinishedSession(
     override fun equals(other: Any?): Boolean = other is FinishedSession && id == other.id
 
     override fun hashCode(): Int = id.hashCode()
-}
-
-internal fun TypedTest.id() = "$name:$type"
-
-private fun ExecClassData.id(): Long = id.takeIf { it != 0L } ?: className.crc64()
-
-internal fun ExecClassData.merge(other: ExecClassData): ExecClassData = copy(
-    probes = probes.merge(other.probes)
-)
-
-internal fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
-    if (i < other.size) {
-        b || other[i]
-    } else b
 }

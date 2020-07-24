@@ -5,7 +5,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.Method
 
-class CoverContext(
+internal class CoverContext(
     val agentType: AgentType,
     val packageTree: PackageTree,
     val methods: List<Method>,
@@ -13,7 +13,7 @@ class CoverContext(
     val probeIds: Map<String, Long> = emptyMap(),
     val classBytes: Map<String, ByteArray> = emptyMap(),
     val parentVersion: String, //TODO remove from the context
-    val tests: BuildTests? = null
+    val build: CachedBuild? = null
 )
 
 data class CoverageKey(

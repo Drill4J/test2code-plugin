@@ -147,7 +147,10 @@ class Plugin(
         val finishedScopes = state.scopeManager.byVersion(
             buildVersion, withData = true
         )
-        finishedScopes.enabled().calculateAndSendBuildCoverage(buildVersion)
+        finishedScopes.enabled().let {
+            state.mergeProbes(buildVersion, it)
+            it.calculateAndSendBuildCoverage(buildVersion)
+        }
         finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
     }
 
@@ -212,13 +215,14 @@ class Plugin(
         val scopes = state.scopeManager.run {
             byVersion(buildVersion, true).enabled()
         }
+        state.mergeProbes(buildVersion, scopes)
         scopes.calculateAndSendBuildCoverage(buildVersion)
     }
 
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(buildVersion: String) {
         val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
         val prevCoverage = parentVersion?.let {
-            state.coverages[state.buildId(parentVersion)]?.count ?: zeroCount
+            state.builds[parentVersion]?.coverage?.count ?: zeroCount
         }
         val context = state.coverContext(buildVersion)
         val sessions = flatten()
@@ -231,7 +235,7 @@ class Plugin(
             buildVersion,
             buildMethods.allModifiedMethods.methods
         )
-        val cachedTests = state.updateTestsToRun(buildVersion, testsToRun)
+        val cachedTests = state.updateTestsToRun(buildVersion, testsToRun).tests
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             riskCount = buildMethods.run {
@@ -245,7 +249,7 @@ class Plugin(
         val cachedCoverage = state.updateBuildCoverage(
             buildVersion,
             buildCoverage
-        )
+        ).coverage
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
             val summaryDto = cachedCoverage.toSummaryDto(cachedTests)
@@ -258,7 +262,7 @@ class Plugin(
                 send(buildVersion, Routes.Data.TestsToRun(it), summaryDto.testsToRun)
             }
             send(summaryDto)
-            state.storeBuildCoverage(buildVersion)
+            state.storeBuild(buildVersion)
         }
     }
 

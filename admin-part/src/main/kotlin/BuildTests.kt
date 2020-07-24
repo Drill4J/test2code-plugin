@@ -3,30 +3,31 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
+import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
 @Serializable
 data class BuildTests(
-    val assocTests: Set<AssociatedTests> = emptySet(),
+    val assocTests: Set<AssociatedTests> = persistentSetOf(),
     val testsToRun: GroupedTests = emptyMap()
 )
 
 @Serializable
 data class StoredBuildTests(
-    @Id val id: AgentBuildId,
+    @Id val version: String,
     val data: ByteArray
 ) {
-    override fun equals(other: Any?) = (other as? StoredBuildTests)?.id == id
+    override fun equals(other: Any?) = (other as? StoredBuildTests)?.version == version
 
-    override fun hashCode() = id.hashCode()
+    override fun hashCode() = version.hashCode()
 }
 
 suspend fun AgentState.testsToRun(
     buildVersion: String,
     coverMethods: List<CoverMethod>
 ): GroupedTests = buildManager[buildVersion]?.parentVersion?.takeIf { it.any() }?.let { parentVersion ->
-    val assocTests = buildTests[buildId(parentVersion)]?.let {
-        coverMethods.associatedTests(it.assocTests)
+    val assocTests = builds[parentVersion]?.let {
+        coverMethods.associatedTests(it.tests.assocTests)
     }
     assocTests?.let { assocTestsSeq ->
         val curBuildTests: Set<TypedTest> = scopeManager.byVersion(
@@ -43,11 +44,6 @@ suspend fun AgentState.testsToRun(
 
     }
 } ?: emptyMap()
-
-fun GroupedTests.testsToRunDto() = TestsToRunDto(
-    groupedTests = this,
-    count = totalCount()
-)
 
 fun MethodsInfo.testCount(
     tests: Set<AssociatedTests>

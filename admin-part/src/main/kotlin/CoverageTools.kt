@@ -39,7 +39,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) 
     )
 }.sortedBy { it.methodName }
 
-fun CoverContext.calculateBundleMethods(
+internal fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,
     onlyCovered: Boolean = false
 ): BuildMethods = methods.toCoverMap(bundleCoverage, onlyCovered).let { covered ->
@@ -54,7 +54,7 @@ fun CoverContext.calculateBundleMethods(
     )
 }
 
-fun Map<TypedTest, BundleCounter>.coveredMethods(
+internal fun Map<TypedTest, BundleCounter>.coveredMethods(
     context: CoverContext,
     bundlesByType: Map<String, BundleCounter>
 ): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {

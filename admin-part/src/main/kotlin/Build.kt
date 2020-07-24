@@ -3,16 +3,41 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.kodux.*
+import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
+import kotlinx.serialization.protobuf.*
+
+internal data class CachedBuild(
+    val version: String,
+    val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
+    val coverage: CachedBuildCoverage = CachedBuildCoverage(version),
+    val tests: BuildTests = BuildTests()
+)
 
 @Serializable
-data class CachedBuildCoverage(
-    @Id val id: AgentBuildId,
-    val count: Count,
-    val arrow: String?,
-    val risks: Int
+internal data class CachedBuildCoverage(
+    @Id val version: String,
+    val count: Count = zeroCount,
+    val arrow: String? = null,
+    val risks: Int = 0
 )
+
+internal fun BuildCoverage.toCachedBuildCoverage(version: String) = CachedBuildCoverage(
+    version = version,
+    count = count,
+    arrow = arrow?.name,
+    risks = risks.total
+)
+
+internal suspend fun CachedBuild.store(storage: StoreClient) {
+    storage.executeInAsyncTransaction {
+        val testData = ProtoBuf.dump(BuildTests.serializer(), tests)
+        store(coverage)
+        store(StoredBuildTests(version, testData))
+    }
+}
 
 internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<String> = sequenceOf(
     "Run recommended tests to cover modified methods".takeIf { testsToRun.any() },
