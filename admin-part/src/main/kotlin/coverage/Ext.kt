@@ -2,13 +2,15 @@ package com.epam.drill.plugins.test2code.coverage
 
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.Method
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.jvm.*
 import kotlin.math.*
 
 val CoverageKey.isMethod get() = methodName.any()
 
-fun List<Boolean>.toCount() = Count(count { it }, size)
+internal fun ExecClassData.id(): Long = id.takeIf { it != 0L } ?: className.crc64()
+
+internal fun List<Boolean>.toCount() = Count(count { it }, size)
 
 internal fun <T> List<T>.slice(probeRange: ProbeRange): List<T> = slice(probeRange.first..probeRange.last)
 
@@ -16,10 +18,7 @@ internal fun Count.percentage(): Double = covered percentOf total
 
 internal fun Count.arrowType(other: Count): ArrowType? = (this - other).first.sign.toArrowType()
 
-internal fun Iterable<Count>.sum() = Count(
-    covered = sumBy(Count::covered),
-    total = sumBy(Count::total)
-).takeIf { it != zeroCount } ?: zeroCount
+internal fun Count.toDto() = CoverDto(percentage = percentage(), count = this)
 
 internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
     total.gcd(other.total).let { gcd ->
@@ -67,7 +66,7 @@ internal fun Iterable<Method>.toCoverMap(
         c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
     }.toMap()
     mapNotNull { m ->
-        val covered = m.toCovered(map[m.ownerClass to m.sign])
+        val covered = m.toCovered(map[m.ownerClass to m.signature()])
         covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { m to it }
     }.toMap()
 }
@@ -76,12 +75,6 @@ internal fun MethodCounter.coverageRate() = when (count.covered) {
     0 -> CoverageRate.MISSED
     in 1 until count.total -> CoverageRate.PARTLY
     else -> CoverageRate.FULL
-}
-
-private fun Int.toArrowType(): ArrowType? = when (this) {
-    in Int.MIN_VALUE..-1 -> ArrowType.INCREASE
-    in 1..Int.MAX_VALUE -> ArrowType.DECREASE
-    else -> null
 }
 
 internal fun Method.toCovered(counter: MethodCounter? = null) = CoverMethod(
@@ -93,4 +86,12 @@ internal fun Method.toCovered(counter: MethodCounter? = null) = CoverMethod(
     coverageRate = counter?.coverageRate() ?: CoverageRate.MISSED
 )
 
-private val Method.sign get() = "$name$desc"
+internal fun TypedTest.id() = "$name:$type"
+
+private fun Int.toArrowType(): ArrowType? = when (this) {
+    in Int.MIN_VALUE..-1 -> ArrowType.INCREASE
+    in 1..Int.MAX_VALUE -> ArrowType.DECREASE
+    else -> null
+}
+
+private fun Method.signature() = "$name$desc"

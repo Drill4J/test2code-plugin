@@ -2,7 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.bundle
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.coverage.bundle
@@ -15,13 +14,15 @@ internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
     context: CoverContext
 ): ScopeSummary = run {
-    val bundle = sessions.flatten().bundle(context)
+    val probes = sessions.flatten()
+    val bundle = probes.bundle(context)
     val totalInstructions = context.packageTree.totalCount
     val coverageCount = Count(bundle.count.covered, totalInstructions)
     copy(
         coverage = ScopeCoverage(
             ratio = coverageCount.percentage(),
             count = coverageCount,
+            overlap = probes.overlappingBundle(context).count.copy(total = totalInstructions).toDto(),
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
@@ -43,7 +44,8 @@ internal fun Sequence<Session>.calculateCoverageData(
     val associatedTests = assocTestsMap.getAssociatedTests()
 
     val totalInstructions = context.packageTree.totalCount
-    val bundleCoverage = flatten().bundle(context)
+    val probes = flatten()
+    val bundleCoverage = probes.bundle(context)
     val coverageCount = Count(bundleCoverage.count.covered, totalInstructions)
     val totalCoveragePercent = coverageCount.percentage()
 
@@ -75,6 +77,7 @@ internal fun Sequence<Session>.calculateCoverageData(
         else -> ScopeCoverage(
             ratio = totalCoveragePercent,
             count = coverageCount,
+            overlap = probes.overlappingBundle(context).count.copy(total = totalInstructions).toDto(),
             methodCount = methodCount,
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
@@ -84,8 +87,8 @@ internal fun Sequence<Session>.calculateCoverageData(
     logger.info { coverageBlock }
 
     val buildMethods = context.calculateBundleMethods(bundleCoverage).run {
-        context.tests?.let {
-            copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.assocTests))
+        context.build?.let {
+            copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.tests.assocTests))
         } ?: this
     }
 
@@ -119,7 +122,7 @@ internal fun Sequence<Session>.calculateCoverageData(
     )
 }
 
-fun Sequence<Session>.coveragesByTestType(
+internal fun Sequence<Session>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     context: CoverContext
 ): Map<String, TestTypeSummary> = run {
@@ -153,6 +156,13 @@ private fun Sequence<Session>.bundlesByTestTypes(
 ): Map<String, BundleCounter> = groupBy(Session::testType).mapValues {
     it.value.asSequence().flatten().bundle(context)
 }
+
+@Suppress("SimpleRedundantLet")
+private fun Sequence<ExecClassData>.overlappingBundle(
+    context: CoverContext
+): BundleCounter = (context.build?.probes?.let {
+    it.intersect(this).values.asSequence()
+} ?: emptySequence()).bundle(context)
 
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext

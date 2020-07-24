@@ -86,8 +86,8 @@ internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
 
 private fun AgentState.toStatsDto(
     buildVersion: String
-): StatsDto? = buildId(buildVersion).let { buildId ->
-    coverages[buildId]?.toSummaryDto(buildTests[buildId] ?: BuildTests())?.toStatsDto()
+): StatsDto? = builds[buildVersion]?.run {
+    coverage.toSummaryDto(tests).toStatsDto()
 }
 
 internal fun SummaryDto.toStatsDto() = StatsDto(

@@ -34,9 +34,7 @@ class AgentState(
 
     val activeScope get() = _activeScope.value
 
-    val coverages = AtomicCache<AgentBuildId, CachedBuildCoverage>()
-
-    val buildTests = AtomicCache<AgentBuildId, BuildTests>()
+    internal val builds = AtomicCache<String, CachedBuild>()
 
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
 
@@ -125,14 +123,15 @@ class AgentState(
                 )
             }
             getAll<CachedBuildCoverage>().forEach { stored ->
-                coverages(stored.id) { stored }
+                builds(stored.version) { CachedBuild(version = stored.version, coverage = stored) }
             }
             getAll<StoredBuildTests>().forEach { stored ->
-                buildTests(stored.id) {
-                    ProtoBuf.load(BuildTests.serializer(), stored.data)
+                builds(stored.version) {
+                    it?.copy(tests = ProtoBuf.load(BuildTests.serializer(), stored.data))
                 }
             }
         }
+        builds(agentInfo.buildVersion) { it ?: CachedBuild(agentInfo.buildVersion) }
     }
 
     fun buildId(buildVersion: String) = when (buildVersion) {
@@ -140,45 +139,42 @@ class AgentState(
         else -> agentBuildId.copy(buildVersion = buildVersion)
     }
 
-    fun updateBuildTests(
+    internal fun mergeProbes(
+        buildVersion: String,
+        buildScopes: Sequence<FinishedScope>
+    ) {
+        builds(buildVersion) {
+            it?.copy(probes = it.probes.merge(buildScopes.flatten().flatten()))
+        }
+    }
+
+    internal fun updateBuildTests(
         buildVersion: String,
         tests: List<AssociatedTests>
-    ): BuildTests = buildTests(buildId(buildVersion)) {
+    ): CachedBuild = builds(buildVersion) {
         it?.copy(
-            assocTests = it.assocTests.toPersistentSet().addAll(tests)
-        ) ?: BuildTests(assocTests = tests.toPersistentSet())
+            tests = it.tests.run {
+                copy(assocTests = assocTests.toPersistentSet().addAll(tests))
+            }
+        )
     }!!
 
-    fun updateTestsToRun(
+    internal fun updateTestsToRun(
         buildVersion: String,
         testsToRun: GroupedTests
-    ): BuildTests = buildTests(buildId(buildVersion)) {
-        it?.copy(testsToRun = testsToRun) ?: BuildTests(testsToRun = testsToRun)
+    ): CachedBuild = builds(buildVersion) {
+        it?.copy(tests = it.tests.copy(testsToRun = testsToRun))
     }!!
 
-    fun updateBuildCoverage(
+    internal fun updateBuildCoverage(
         buildVersion: String,
         buildCoverage: BuildCoverage
-    ) = CachedBuildCoverage(
-        id = buildId(buildVersion),
-        count = buildCoverage.count,
-        arrow = buildCoverage.arrow?.name,
-        risks = buildCoverage.risks.total
-    ).also { coverages[it.id] = it }
+    ): CachedBuild = builds(buildVersion) {
+        it?.copy(coverage = buildCoverage.toCachedBuildCoverage(buildVersion))
+    }!!
 
-    suspend fun storeBuildCoverage(
-        buildVersion: String
-    ) {
-        val id = buildId(buildVersion)
-        val coverage = coverages[id]
-        val tests = buildTests[id]
-        storeClient.executeInAsyncTransaction {
-            coverage?.let { store(it) }
-            tests?.let { tests ->
-                val data = ProtoBuf.dump(BuildTests.serializer(), tests)
-                store(StoredBuildTests(id, data))
-            }
-        }
+    suspend fun storeBuild(buildVersion: String) {
+        builds[buildVersion]?.store(storeClient)
     }
 
     suspend fun renameScope(id: String, newName: String) {
@@ -254,7 +250,7 @@ internal suspend fun AgentState.coverContext(
         probeIds = classData.probeIds,
         classBytes = buildInfo?.classesBytes ?: emptyMap(),
         parentVersion = buildInfo?.parentVersion ?: "",
-        tests = buildTests[buildId(buildVersion)]
+        build = builds[buildVersion]
     )
 }
 
