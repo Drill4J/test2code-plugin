@@ -14,20 +14,16 @@ internal fun PersistentMap<Long, ExecClassData>.merge(
 } else this
 
 internal fun PersistentMap<Long, ExecClassData>.intersect(
-    data: Sequence<ExecClassData>
-): PersistentMap<Long, ExecClassData> = if (data.any()) {
-    mutate { map ->
-        data.forEach { datum ->
-            val id = datum.id()
-            map[id]?.run {
-                val intersection = probes.intersect(datum.probes)
-                if (intersection.any { it }) {
-                    map.put(id, datum.copy(probes = intersection))
-                } else map.remove(id)
-            }
+    other: Sequence<ExecClassData>
+): PersistentMap<Long, ExecClassData> = if (any() && other.any()) {
+    persistentMapOf<Long, ExecClassData>().merge(other).mutate { map ->
+        for ((id, datum) in map) {
+            this[id]?.probes?.intersect(datum.probes)?.takeIf { set ->
+                set.contains(true)
+            }?.let { map[id] = datum.copy(probes = it) } ?: map.remove(id)
         }
     }
-} else this
+} else persistentMapOf()
 
 internal fun ExecClassData.merge(other: ExecClassData): ExecClassData = copy(
     probes = probes.merge(other.probes)
