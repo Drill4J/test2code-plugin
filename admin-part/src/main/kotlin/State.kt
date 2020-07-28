@@ -144,7 +144,7 @@ class AgentState(
         buildScopes: Sequence<FinishedScope>
     ) {
         builds(buildVersion) {
-            it?.copy(probes = it.probes.merge(buildScopes.flatten().flatten()))
+            it?.copy(probes = buildScopes.flatten().flatten().merge())
         }
     }
 

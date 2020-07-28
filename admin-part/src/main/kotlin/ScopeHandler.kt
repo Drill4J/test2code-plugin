@@ -2,7 +2,9 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import mu.*
 
 private val logger = KotlinLogging.logger {}
@@ -53,10 +55,10 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
         sendScopeSummary(summary)
     } ?: cleanTopics(prevId)
     sendScopes()
-    calculateAndSendScopeCoverage()
     prevScope?.takeIf { it.enabled }.apply {
         calculateAndSendBuildAndChildrenCoverage()
     }
+    calculateAndSendScopeCoverage()
     logger.info { "Current active scope - $activeScope" }
 }
 
@@ -81,12 +83,7 @@ internal suspend fun Plugin.renameScope(
 internal suspend fun Plugin.toggleScope(scopeId: String): StatusMessage {
     state.toggleScope(scopeId)
     return state.scopeManager.byId(scopeId)?.let { scope ->
-        sendScopes(scope.buildVersion)
-        sendScopeSummary(scope.summary, scope.buildVersion)
-        if (scope.buildVersion == buildVersion) { //TODO replace with overlap recalculation
-            calculateAndSendScopeCoverage()
-        }
-        calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
+        handleChange(scope)
         StatusMessage(
             StatusCodes.OK,
             "Scope with id $scopeId toggled to 'enabled' value '${scope.enabled}'"
@@ -100,12 +97,7 @@ internal suspend fun Plugin.toggleScope(scopeId: String): StatusMessage {
 internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
     return state.scopeManager.deleteById(scopeId)?.let { scope ->
         cleanTopics(scope.id)
-        sendScopes(scope.buildVersion)
-        sendScopeSummary(scope.summary, scope.buildVersion)
-        if (scope.buildVersion == buildVersion) { //TODO replace with overlap recalculation
-            calculateAndSendScopeCoverage()
-        }
-        calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
+        handleChange(scope)
         StatusMessage(
             StatusCodes.OK,
             "Scope with id $scopeId was removed"
@@ -114,4 +106,23 @@ internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
         StatusCodes.CONFLICT,
         "Failed to drop scope with id $scopeId: scope not found"
     )
+}
+
+private suspend fun Plugin.handleChange(scope: FinishedScope) {
+    calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
+    if (scope.buildVersion == buildVersion) {
+        updateOverlap()
+        send(buildVersion, Routes.ActiveScope, activeScope.summary)
+        calculateAndSendScopeCoverage()
+    }
+    sendScopes(scope.buildVersion)
+    sendScopeSummary(scope.summary, scope.buildVersion)
+}
+
+private suspend fun Plugin.updateOverlap() {
+    val coverContext = state.coverContext(buildVersion)
+    val overlap = activeScope.flatten().overlappingBundle(coverContext).run {
+        count.copy(total = coverContext.packageTree.totalCount)
+    }.toDto()
+    activeScope.updateSummary { it.copy(coverage = it.coverage.copy(overlap = overlap)) }
 }

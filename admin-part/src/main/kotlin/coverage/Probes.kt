@@ -3,6 +3,10 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.collections.immutable.*
 
+internal fun Sequence<ExecClassData>.merge(): PersistentMap<Long, ExecClassData> = run {
+    persistentMapOf<Long, ExecClassData>().merge(this)
+}
+
 internal fun PersistentMap<Long, ExecClassData>.merge(
     probes: Sequence<ExecClassData>
 ): PersistentMap<Long, ExecClassData> = if (probes.any()) {
@@ -16,7 +20,7 @@ internal fun PersistentMap<Long, ExecClassData>.merge(
 internal fun PersistentMap<Long, ExecClassData>.intersect(
     other: Sequence<ExecClassData>
 ): PersistentMap<Long, ExecClassData> = if (any() && other.any()) {
-    persistentMapOf<Long, ExecClassData>().merge(other).let { merged ->
+    other.merge().let { merged ->
         merged.mutate { map ->
             for ((id, datum) in merged) {
                 this[id]?.probes?.run { intersect(datum.probes).takeIf { true in it } }?.let {

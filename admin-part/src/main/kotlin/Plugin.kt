@@ -206,8 +206,8 @@ class Plugin(
     }
 
     private suspend fun calculateAndSendChildrenCoverage(buildVersion: String) {
-        adminData.buildManager.childrenOf(buildVersion).map(BuildInfo::version).forEach { version ->
-            calculateAndSendBuildCoverage(version)
+        adminData.buildManager.builds.filter { it.parentVersion == buildVersion }.forEach { buildInfo ->
+            calculateAndSendBuildCoverage(buildInfo.version)
         }
     }
 

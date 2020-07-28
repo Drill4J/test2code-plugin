@@ -158,7 +158,7 @@ private fun Sequence<Session>.bundlesByTestTypes(
 }
 
 @Suppress("SimpleRedundantLet")
-private fun Sequence<ExecClassData>.overlappingBundle(
+internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext
 ): BundleCounter = (context.build?.probes?.let {
     it.intersect(this).values.asSequence()
