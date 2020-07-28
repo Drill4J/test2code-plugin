@@ -83,6 +83,9 @@ internal suspend fun Plugin.toggleScope(scopeId: String): StatusMessage {
     return state.scopeManager.byId(scopeId)?.let { scope ->
         sendScopes(scope.buildVersion)
         sendScopeSummary(scope.summary, scope.buildVersion)
+        if (scope.buildVersion == buildVersion) { //TODO replace with overlap recalculation
+            calculateAndSendScopeCoverage()
+        }
         calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
         StatusMessage(
             StatusCodes.OK,
@@ -99,6 +102,9 @@ internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
         cleanTopics(scope.id)
         sendScopes(scope.buildVersion)
         sendScopeSummary(scope.summary, scope.buildVersion)
+        if (scope.buildVersion == buildVersion) { //TODO replace with overlap recalculation
+            calculateAndSendScopeCoverage()
+        }
         calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
         StatusMessage(
             StatusCodes.OK,
