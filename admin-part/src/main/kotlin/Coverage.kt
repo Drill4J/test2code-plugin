@@ -4,7 +4,6 @@ import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.coverage.bundle
 import com.epam.drill.plugins.test2code.jvm.*
 import mu.*
 
@@ -22,7 +21,7 @@ internal fun ScopeSummary.calculateCoverage(
         coverage = ScopeCoverage(
             ratio = coverageCount.percentage(),
             count = coverageCount,
-            overlap = probes.overlappingBundle(context).count.copy(total = totalInstructions).toDto(),
+            overlap = probes.overlappingBundle(context).toCoverDto(context.packageTree),
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
@@ -77,7 +76,7 @@ internal fun Sequence<Session>.calculateCoverageData(
         else -> ScopeCoverage(
             ratio = totalCoveragePercent,
             count = coverageCount,
-            overlap = probes.overlappingBundle(context).count.copy(total = totalInstructions).toDto(),
+            overlap = probes.overlappingBundle(context).toCoverDto(context.packageTree),
             methodCount = methodCount,
             riskCount = zeroCount,
             risks = RiskSummaryDto(),

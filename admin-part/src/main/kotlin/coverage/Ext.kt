@@ -18,8 +18,6 @@ internal fun Count.percentage(): Double = covered percentOf total
 
 internal fun Count.arrowType(other: Count): ArrowType? = (this - other).first.sign.toArrowType()
 
-internal fun Count.toDto() = CoverDto(percentage = percentage(), count = this)
-
 internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
     total.gcd(other.total).let { gcd ->
         val (totalLong, otherTotalLong) = total.toLong() to other.total.toLong()
@@ -56,6 +54,16 @@ internal fun BundleCounter.coverageKeys(): Sequence<CoverageKey> = packages.asSe
             m.takeIf { it.count.covered > 0 }?.coverageKey(c)
         }
     }
+}
+
+internal fun BundleCounter.toCoverDto(
+    tree: PackageTree
+) = count.copy(total = tree.totalCount).let { count ->
+    CoverDto(
+        percentage = count.percentage(),
+        methodCount = methodCount.copy(total = tree.totalMethodCount),
+        count = count
+    )
 }
 
 internal fun Iterable<Method>.toCoverMap(
