@@ -285,7 +285,8 @@ class Plugin(
     ) = Routes.Build().let { buildRoute ->
         val coverageRoute = Routes.Build.Coverage(buildRoute)
         send(buildVersion, coverageRoute, buildCoverage)
-        send(buildVersion, Routes.Build.Methods(buildRoute), buildMethods.toSummaryDto())
+        val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = buildMethods.toRiskSummaryDto())
+        send(buildVersion, Routes.Build.Methods(buildRoute), methodSummaryDto)
         val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
         val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
@@ -300,6 +301,13 @@ class Plugin(
             send(buildVersion, Routes.Build.AssociatedTests(buildRoute), beautifiedAssociatedTests)
         }
         send(buildVersion, Routes.Build.TestsUsages(buildRoute), testsUsagesInfoByType)
+        Routes.Build.Summary.Tests(Routes.Build.Summary(buildRoute)).let {
+            send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
+            send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
+        }
+        Routes.Build.Summary(buildRoute).let {
+            send(buildVersion, Routes.Build.Summary.TestsToRun(it), testsToRun.toSummary())
+        }
         send(buildVersion, Routes.Build.MethodsCoveredByTest(buildRoute), methodsCoveredByTest)
         send(buildVersion, Routes.Build.MethodsCoveredByTestType(buildRoute), methodsCoveredByTestType)
         send(buildVersion, Routes.Build.Risks(buildRoute), risks)
@@ -373,6 +381,10 @@ class Plugin(
             send(buildVersion, Routes.Scope.AssociatedTests(scope), beautifiedAssociatedTests)
         }
         send(buildVersion, Routes.Scope.TestsUsages(scope), testsUsagesInfoByType)
+        Routes.Scope.Summary.Tests(Routes.Scope.Summary(scope)).let {
+            send(buildVersion, Routes.Scope.Summary.Tests.All(it), coverageByTests.all)
+            send(buildVersion, Routes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
+        }
         send(buildVersion, Routes.Scope.MethodsCoveredByTest(scope), methodsCoveredByTest)
         send(buildVersion, Routes.Scope.MethodsCoveredByTestType(scope), methodsCoveredByTestType)
     }

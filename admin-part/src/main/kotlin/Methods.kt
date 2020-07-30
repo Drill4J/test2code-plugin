@@ -74,8 +74,7 @@ fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     new = newMethods.run { Count(coveredCount, totalCount) },
     modified = allModifiedMethods.run { Count(coveredCount, totalCount) },
     unaffected = unaffectedMethods.run { Count(coveredCount, totalCount) },
-    deleted = Count(deletedCoveredMethodsCount, deletedMethods.totalCount),
-    risks = toRiskSummaryDto()
+    deleted = Count(deletedCoveredMethodsCount, deletedMethods.totalCount)
 )
 
 fun BuildMethods.toRiskSummaryDto() = RiskSummaryDto(

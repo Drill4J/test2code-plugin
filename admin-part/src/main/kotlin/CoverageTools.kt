@@ -11,6 +11,7 @@ data class CoverageInfoSet(
     val buildMethods: BuildMethods = BuildMethods(),
     val packageCoverage: List<JavaPackageCoverage> = emptyList(),
     val testsUsagesInfoByType: List<TestsUsagesInfoByType> = emptyList(),
+    val coverageByTests: CoverageByTests,
     val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList(),
     val methodsCoveredByTestType: List<MethodsCoveredByTestType> = emptyList()
 )
