@@ -41,6 +41,12 @@ data class RiskSummaryDto(
     val modified: Int = 0
 )
 
+@Serializable
+data class TestTypeSummary(
+    val type: String,
+    val summary: TestSummary
+)
+
 interface Coverage {
     val ratio: Double
     val percentage: Double
@@ -48,7 +54,7 @@ interface Coverage {
     val methodCount: Count
     val riskCount: Count
     val risks: RiskSummaryDto
-    val byTestType: Map<String, TestTypeSummary>
+    val byTestType: List<TestTypeSummary>
 }
 
 @Serializable
@@ -60,7 +66,7 @@ data class ScopeCoverage(
     override val methodCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
-    override val byTestType: Map<String, TestTypeSummary>
+    override val byTestType: List<TestTypeSummary>
 ) : Coverage
 
 
@@ -72,7 +78,7 @@ data class BuildCoverage(
     override val methodCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
-    override val byTestType: Map<String, TestTypeSummary>,
+    override val byTestType: List<TestTypeSummary>,
     val diff: Double = 0.0,
     val prevBuildVersion: String = "",
     val arrow: ArrowType? = null,
@@ -91,7 +97,7 @@ data class MethodsSummaryDto(
     val modified: Count,
     val unaffected: Count,
     val deleted: Count,
-    val risks: RiskSummaryDto
+    val risks: RiskSummaryDto = RiskSummaryDto()
 )
 
 @Serializable
@@ -250,18 +256,16 @@ data class ScopeSummary(
         methodCount = zeroCount,
         riskCount = zeroCount,
         risks = RiskSummaryDto(),
-        byTestType = emptyMap()
+        byTestType = emptyList()
     )
 )
 
 val zeroCount = Count(covered = 0, total = 0)
 
 @Serializable
-data class TestTypeSummary(
-    val testType: String,
-    val coverage: Double = 0.0,
-    val testCount: Int = 0,
-    val coveredMethodsCount: Int
+data class TestSummary(
+    val coverage: CoverDto,
+    val testCount: Int = 0
 )
 
 @Serializable
@@ -276,6 +280,12 @@ typealias GroupedTests = Map<String, List<String>>
 @Serializable
 data class TestsToRun(
     val testTypeToNames: GroupedTests
+)
+
+@Serializable
+data class TestTypeCount(
+    val type: String,
+    val count: Int
 )
 
 @Serializable

@@ -108,11 +108,10 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.activeScope()!!.apply {
                     activeScopeIdFirstBuild = id
                     coverage.percentage shouldBe 100.0
-                    coverage.byTestType.getValue("MANUAL").apply {
-                        testType shouldBe "MANUAL"
-                        coverage shouldBe 100.0
+                    coverage.byTestType.find { it.type == "MANUAL" }?.summary?.apply {
+                        coverage.percentage shouldBe 100.0
                         testCount shouldBe 1
-                        coveredMethodsCount shouldBe 4
+                        coverage.methodCount.covered shouldBe 4
                     }
                 }
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
@@ -142,7 +141,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.activeScope()!!.apply {
                     id shouldNotBe activeScopeIdFirstBuild
                     coverage.percentage shouldBe 0.0
-                    coverage.byTestType shouldBe emptyMap()
+                    coverage.byTestType shouldBe emptyList()
                 }
             }
         }

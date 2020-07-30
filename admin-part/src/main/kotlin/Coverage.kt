@@ -34,10 +34,7 @@ internal fun ScopeSummary.calculateCoverage(
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
-            byTestType = bundles.byTestType.coveragesByTestType(
-                bundles.byTest,
-                context
-            )
+            byTestType = bundles.byTestType.coveragesByTestType(bundles.byTest, context)
         )
     )
 }
@@ -58,11 +55,14 @@ internal fun BundleCounters.calculateCoverageData(
     val coverageCount = bundle.count.copy(total = totalCount)
     val totalCoveragePercent = coverageCount.percentage()
 
-    val coverageByType: Map<String, TestTypeSummary> = when (scope) {
-        null -> byTestType.coveragesByTestType(byTest, context)
-        else -> scope.summary.coverage.byTestType
-    }
-    logger.info { coverageByType }
+    val coverageByTests = CoverageByTests(
+        all = TestSummary(
+            coverage = bundle.toCoverDto(context.packageTree),
+            testCount = bundlesByTests.keys.count()
+        ),
+        byType = scope?.run { summary.coverage.byTestType } ?: byTestType.coveragesByTestType(byTest, context)
+    )
+    logger.info { coverageByTests.byType }
 
     val methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount)
     val coverageBlock: Coverage = when (scope) {
@@ -73,7 +73,7 @@ internal fun BundleCounters.calculateCoverageData(
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
-                byTestType = coverageByType
+                byTestType = coverageByTests.byType
             )
         }
         is FinishedScope -> scope.summary.coverage
@@ -83,7 +83,7 @@ internal fun BundleCounters.calculateCoverageData(
             count = coverageCount,
             methodCount = methodCount,
             riskCount = zeroCount,
-            byTestType = coverageByType
+            byTestType = coverageByTests.byType
         )
     }
     logger.info { coverageBlock }
@@ -101,15 +101,12 @@ internal fun BundleCounters.calculateCoverageData(
         bundlesByTestTypes
     )
 
-    val testsUsagesInfoByType = coverageByType.map {
+    val testsUsagesInfoByType = coverageByTests.byType.map { (testType, summary) ->
         TestsUsagesInfoByType(
-            it.value.testType,
-            it.value.coverage,
-            it.value.coveredMethodsCount,
-            bundlesByTests.testUsages(
-                totalCount,
-                it.value.testType
-            )
+            testType = testType,
+            coverage = summary.coverage.percentage,
+            methodsCount = summary.coverage.methodCount.covered,
+            tests = bundlesByTests.testUsages(totalCount, testType)
         )
     }.sortedBy { it.testType }
 
@@ -119,6 +116,7 @@ internal fun BundleCounters.calculateCoverageData(
         buildMethods,
         packageCoverage,
         testsUsagesInfoByType,
+        coverageByTests,
         coveredByTest,
         coveredByTestType
     )
@@ -127,16 +125,14 @@ internal fun BundleCounters.calculateCoverageData(
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     context: CoverContext
-): Map<String, TestTypeSummary> = run {
-    val totalInstructions = context.packageTree.totalCount
-    mapValues { (testType, bundle) ->
-        TestTypeSummary(
-            testType = testType,
-            coverage = bundle.count.copy(total = totalInstructions).percentage(),
-            testCount = bundleMap.keys.filter { it.type == testType }.distinct().count(),
-            coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
+): List<TestTypeSummary> = map { (testType, bundle) ->
+    TestTypeSummary(
+        type = testType,
+        summary = TestSummary(
+            coverage = bundle.toCoverDto(context.packageTree),
+            testCount = bundleMap.keys.filter { it.type == testType }.distinct().count()
         )
-    }
+    )
 }
 
 private fun Sequence<Session>.bundlesByTests(
@@ -181,12 +177,3 @@ private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, Li
         }.distinct()
         .groupBy({ it.first }) { it.second }
 }
-
-private fun Map<TypedTest, BundleCounter>.coveredMethodsByTestTypeCount(
-    testType: String
-): Int = entries.asSequence()
-    .filter { it.key.type == testType }
-    .flatMap { it.value.coverageKeys() }
-    .filter(CoverageKey::isMethod)
-    .distinct()
-    .count()

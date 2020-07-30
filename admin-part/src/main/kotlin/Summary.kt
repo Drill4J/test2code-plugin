@@ -74,3 +74,10 @@ operator fun TestsToRunDto.plus(other: TestsToRunDto): TestsToRunDto {
 }
 
 fun GroupedTests.totalCount(): Int = this.values.sumBy { it.count() }
+
+fun GroupedTests.toSummary(): List<TestTypeCount> = map { (testType, list) ->
+    TestTypeCount(
+        type = testType,
+        count = list.count()
+    )
+}

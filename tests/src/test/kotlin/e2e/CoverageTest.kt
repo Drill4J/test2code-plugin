@@ -19,7 +19,7 @@ class CoverageTest : E2EPluginTest() {
                     percentage shouldBe 0.0
                     diff shouldBe 0.0
                     prevBuildVersion shouldBe ""
-                    byTestType shouldBe emptyMap()
+                    byTestType shouldBe emptyList()
                     arrow shouldBe null
                 }
                 delay(100)
@@ -28,7 +28,7 @@ class CoverageTest : E2EPluginTest() {
                     percentage shouldBe 0.0
                     diff shouldBe 0.0
                     prevBuildVersion shouldBe "0.1.0"
-                    byTestType shouldBe emptyMap()
+                    byTestType shouldBe emptyList()
                     arrow shouldBe null
                 }
             }

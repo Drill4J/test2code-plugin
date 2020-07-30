@@ -49,6 +49,18 @@ class Routes {
             class Unaffected(val methods: Methods)
         }
 
+        @Location("/summary")
+        class Summary(val build: Scope) {
+            @Location("/tests")
+            class Tests(val parent: Summary) {
+                @Location("/all")
+                class All(val tests: Tests)
+
+                @Location("/by-type")
+                class ByType(val tests: Tests)
+            }
+        }
+
         @Location("/tests-usages")
         class TestsUsages(val scope: Scope)
 
@@ -89,6 +101,21 @@ class Routes {
 
             @Location("/unaffected")
             class Unaffected(val methods: Methods)
+        }
+
+        @Location("/summary")
+        class Summary(val build: Build) {
+            @Location("/tests")
+            class Tests(val parent: Summary) {
+                @Location("/all")
+                class All(val tests: Tests)
+
+                @Location("/by-type")
+                class ByType(val tests: Tests)
+            }
+
+            @Location("/tests-to-run/by-type")
+            class TestsToRun(val parent: Summary)
         }
 
         @Location("/tests-usages")
