@@ -238,7 +238,11 @@ data class ScopeSummary(
     val coverage: ScopeCoverage = ScopeCoverage(
         ratio = 0.0,
         count = zeroCount,
-        overlap = CoverDto(percentage = 0.0, count = zeroCount),
+        overlap = CoverDto(
+            percentage = 0.0,
+            methodCount = zeroCount,
+            count = zeroCount
+        ),
         methodCount = zeroCount,
         riskCount = zeroCount,
         risks = RiskSummaryDto(),
@@ -313,6 +317,7 @@ data class ServiceGroupSummaryDto(
 @Serializable
 data class CoverDto(
     val percentage: Double,
+    val methodCount: Count,
     val count: Count
 )
 
