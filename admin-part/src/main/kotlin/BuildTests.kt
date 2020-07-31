@@ -2,7 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.storage.*
-import com.epam.kodux.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
@@ -11,16 +10,6 @@ data class BuildTests(
     val assocTests: Set<AssociatedTests> = persistentSetOf(),
     val testsToRun: GroupedTests = emptyMap()
 )
-
-@Serializable
-data class StoredBuildTests(
-    @Id val version: String,
-    val data: ByteArray
-) {
-    override fun equals(other: Any?) = (other as? StoredBuildTests)?.version == version
-
-    override fun hashCode() = version.hashCode()
-}
 
 suspend fun AgentState.testsToRun(
     buildVersion: String,

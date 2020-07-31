@@ -2,6 +2,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
@@ -126,7 +127,8 @@ class ActiveScope(
 @Serializable
 data class ScopeData(
     val sessions: List<FinishedSession> = emptyList(),
-    val typedTests: Set<TypedTest> = emptySet()
+    val typedTests: Set<TypedTest> = emptySet(),
+    val bundleCounters: BundleCounters = BundleCounters.empty
 ) {
     companion object {
         val empty = ScopeData()

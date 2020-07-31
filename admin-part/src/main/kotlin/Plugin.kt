@@ -8,6 +8,7 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import mu.*
@@ -27,11 +28,11 @@ class Plugin(
 
     val buildVersion = agentInfo.buildVersion
 
-    val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
-
     val activeScope get() = state.activeScope
 
-    val agentId = agentInfo.id
+    private val agentId = agentInfo.id
+
+    private val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
     private val logger = KotlinLogging.logger("Plugin $id")
 
@@ -94,13 +95,12 @@ class Plugin(
             sendActiveScope()
             calculateAndSendScopeCoverage(activeScope)
             sendScopes(buildVersion)
-            calculateAndSendAllCoverage(buildVersion)
-            adminData.buildManager.otherVersions(buildVersion).map { it.version }.run {
-                forEach { version ->
-                    cleanActiveScope(version)
-                    sendScopes(version)
-                }
-                forEach { calculateAndSendAllCoverage(it) }
+            calculateAndSendCachedCoverage(buildVersion)
+            val otherBuilds = adminData.buildManager.builds.filter { it.version != buildVersion }
+            otherBuilds.map { it.version }.forEach { version ->
+                cleanActiveScope(version)
+                sendScopes(version)
+                calculateAndSendCachedCoverage(version)
             }
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
@@ -143,15 +143,18 @@ class Plugin(
         else -> logger.info { "Message is not supported! $message" }
     }
 
-    private suspend fun calculateAndSendAllCoverage(buildVersion: String) {
-        val finishedScopes = state.scopeManager.byVersion(
+    private suspend fun calculateAndSendCachedCoverage(
+        buildVersion: String
+    ) = state.builds[buildVersion]?.let { build ->
+        val coverContext = state.coverContext(build.version)
+        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
+        val scopes = state.scopeManager.byVersion(
             buildVersion, withData = true
         )
-        finishedScopes.enabled().let {
-            state.mergeProbes(buildVersion, it)
-            it.calculateAndSendBuildCoverage(buildVersion)
+        scopes.forEach { scope ->
+            val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
+            coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         }
-        finishedScopes.forEach { scope -> calculateAndSendScopeCoverage(scope, buildVersion) }
     }
 
     internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
@@ -200,44 +203,47 @@ class Plugin(
         message = scopes.summaries()
     )
 
-    internal suspend fun calculateAndSendBuildAndChildrenCoverage(buildVersion: String = this.buildVersion) {
-        calculateAndSendBuildCoverage(buildVersion)
-        calculateAndSendChildrenCoverage(buildVersion)
-    }
-
-    private suspend fun calculateAndSendChildrenCoverage(buildVersion: String) {
-        adminData.buildManager.builds.filter { it.parentVersion == buildVersion }.forEach { buildInfo ->
-            calculateAndSendBuildCoverage(buildInfo.version)
-        }
-    }
-
-    internal suspend fun calculateAndSendBuildCoverage(buildVersion: String = this.buildVersion) {
+    internal suspend fun calculateAndSendBuildCoverage() {
         val scopes = state.scopeManager.run {
-            byVersion(buildVersion, true).enabled()
+            byVersion(buildVersion, withData = true).enabled()
         }
-        state.mergeProbes(buildVersion, scopes)
-        scopes.calculateAndSendBuildCoverage(buildVersion)
+        scopes.calculateAndSendBuildCoverage(state.coverContext(), buildVersion)
     }
 
-    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(buildVersion: String) {
-        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
-        val prevCoverage = parentVersion?.let {
-            state.builds[parentVersion]?.coverage?.count ?: zeroCount
-        }
-        val context = state.coverContext(buildVersion)
-        val sessions = flatten()
-        val coverageInfoSet = sessions.calculateCoverageData(
-            context, count(), prevCoverage
-        )
-        state.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
+    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(
+        context: CoverContext,
+        buildVersion: String
+    ) {
+        state.updateProbes(buildVersion, this)
+        val bundleCounters = flatten().calcBundleCounters(context)
+        state.updateBundleCounters(buildVersion, bundleCounters)
+        bundleCounters.calculateAndSendBuildCoverage(context, buildVersion, scopeCount = count())
+    }
+
+    private suspend fun BundleCounters.calculateAndSendBuildCoverage(
+        context: CoverContext,
+        buildVersion: String,
+        scopeCount: Int
+    ) {
+        val coverageInfoSet = calculateCoverageData(context)
         val buildMethods = coverageInfoSet.buildMethods
         val testsToRun = state.testsToRun(
             buildVersion,
             buildMethods.allModifiedMethods.methods
         )
-        val cachedTests = state.updateTestsToRun(buildVersion, testsToRun).tests
+        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
+        val parentCoverageCount = parentVersion?.let {
+            state.builds[parentVersion]?.coverage?.count ?: zeroCount
+        }
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
+        val coverageCount = coverageInfoSet.coverage.count
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
+            finishedScopesCount = scopeCount,
+            prevBuildVersion = parentVersion ?: "",
+            arrow = parentCoverageCount?.arrowType(coverageCount),
+            diff = parentCoverageCount?.let {
+                (coverageCount - it).run { first percentOf second }
+            } ?: coverageCount.percentage(),
             riskCount = buildMethods.run {
                 Count(
                     covered = newMethods.coveredCount + allModifiedMethods.coveredCount,
@@ -246,12 +252,14 @@ class Plugin(
             },
             risks = buildMethods.toRiskSummaryDto()
         )
-        val cachedCoverage = state.updateBuildCoverage(
-            buildVersion,
-            buildCoverage
-        ).coverage
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
+            val cachedCoverage = state.updateBuildCoverage(
+                buildVersion,
+                buildCoverage
+            ).coverage
+            state.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
+            val cachedTests = state.updateTestsToRun(buildVersion, testsToRun).tests
             val summaryDto = cachedCoverage.toSummaryDto(cachedTests)
             val stats = summaryDto.toStatsDto()
             val qualityGate = checkQualityGate(stats)
@@ -337,19 +345,13 @@ class Plugin(
         }
     }
 
-
-    internal fun BuildMethods.risks(): Risks {
-        val newRisks = newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
-        val modifiedRisks = allModifiedMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
-        return Risks(newRisks, modifiedRisks)
-    }
-
     internal suspend fun calculateAndSendScopeCoverage(
         scope: Scope = activeScope,
         buildVersion: String = this.buildVersion
     ) {
         val context = state.coverContext(buildVersion)
-        val coverageInfoSet = scope.calculateCoverageData(context)
+        val bundleCounters = scope.calcBundleCounters(context)
+        val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }
 
