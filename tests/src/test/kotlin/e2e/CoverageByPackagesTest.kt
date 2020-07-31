@@ -48,10 +48,8 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 }.join()
                 delay(300)//todo move it to core library
 
-                plugUi.methodsCoveredByTest()
-                plugUi.methodsCoveredByTestType()
-
-                plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
+                val scopeId = plugUi.activeScope()!!.id
+                plugUi.subscribeOnScope(scopeId) {
                     coveragePackages()!!.first().apply {
                         id shouldBe "vsu9sbxes5bl"
                         coveredClassesCount shouldBe 1
@@ -61,19 +59,27 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         classes shouldBe emptyList()
                         assocTestsCount shouldBe 1
                     }
-                    methodsCoveredByTest()!!.first().apply {
-                        testName shouldBe "xxxx"
-                        newMethods.size shouldBe 0
-                        modifiedMethods.size shouldBe 0
-                        unaffectedMethods.size shouldBe 0
-                        allMethods.size shouldBe 2
+                    plugUi.subscribeOnTest(scopeId, "xxxx:MANUAL") {
+                        methodsCoveredByTest()!!.apply {
+                            testName shouldBe "xxxx"
+                            methodCounts.apply {
+                                new shouldBe 0
+                                modified shouldBe 0
+                                unaffected shouldBe 0
+                                all shouldBe 2
+                            }
+                        }
                     }
-                    methodsCoveredByTestType()!!.first().apply {
-                        testType shouldBe "MANUAL"
-                        newMethods.size shouldBe 0
-                        modifiedMethods.size shouldBe 0
-                        unaffectedMethods.size shouldBe 0
-                        allMethods.size shouldBe 2
+                    plugUi.subscribeOnTestType(scopeId, "MANUAL") {
+                        methodsCoveredByTestType()!!.apply {
+                            testType shouldBe "MANUAL"
+                            methodCounts.apply {
+                                new shouldBe 0
+                                modified shouldBe 0
+                                unaffected shouldBe 0
+                                all shouldBe 2
+                            }
+                        }
                     }
                 }
                 val switchScope = SwitchActiveScope(
@@ -91,25 +97,6 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     coverage shouldBeGreaterThan 46.6
                     totalClassesCount shouldBe 1
                     assocTestsCount shouldBe 1
-                }
-
-                val methodsCoveredByTest = plugUi.methodsCoveredByTest()!!
-                val methodsCoveredByTestType = plugUi.methodsCoveredByTestType()!!
-                methodsCoveredByTest.size shouldBe 1
-                methodsCoveredByTestType.size shouldBe 1
-                methodsCoveredByTest.first().apply {
-                    testName shouldBe "xxxx"
-                    newMethods.size shouldBe 0
-                    modifiedMethods.size shouldBe 0
-                    unaffectedMethods.size shouldBe 0
-                    allMethods.size shouldBe 2
-                }
-                methodsCoveredByTestType.first().apply {
-                    testType shouldBe "MANUAL"
-                    newMethods.size shouldBe 0
-                    modifiedMethods.size shouldBe 0
-                    unaffectedMethods.size shouldBe 0
-                    allMethods.size shouldBe 2
                 }
 
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()

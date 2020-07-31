@@ -86,3 +86,26 @@ fun BuildMethods.toRiskSummaryDto() = RiskSummaryDto(
 private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
     next()
 } else null
+
+fun MethodsCoveredByTest.toSummary() = TestedMethodsSummary(
+    id = id,
+    testName = testName,
+    testType = testType,
+    methodCounts = CoveredMethodCounts(
+        all = allMethods.count(),
+        modified = modifiedMethods.count(),
+        unaffected = unaffectedMethods.count(),
+        new = newMethods.count()
+    )
+)
+
+fun MethodsCoveredByType.toSummary() = TestedMethodsByTypeSummary(
+    testType = testType,
+    testsCount = testsCount,
+    methodCounts = CoveredMethodCounts(
+        all = allMethods.count(),
+        modified = modifiedMethods.count(),
+        unaffected = unaffectedMethods.count(),
+        new = newMethods.count()
+    )
+)

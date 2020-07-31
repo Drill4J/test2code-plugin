@@ -193,6 +193,7 @@ data class TypedTest(
     val type: String
 )
 
+//TODO remove this from the api and refactor after changes on the frontend
 @Serializable
 data class MethodsCoveredByTest(
     val id: String,
@@ -204,14 +205,38 @@ data class MethodsCoveredByTest(
     val unaffectedMethods: List<CoverMethod>
 )
 
+//TODO remove this from the api and refactor after changes on the frontend
 @Serializable
-data class MethodsCoveredByTestType(
+data class MethodsCoveredByType(
     val testType: String,
     val testsCount: Int,
     val allMethods: List<CoverMethod>,
     val newMethods: List<CoverMethod>,
     val modifiedMethods: List<CoverMethod>,
     val unaffectedMethods: List<CoverMethod>
+)
+
+@Serializable
+data class CoveredMethodCounts(
+    val all: Int,
+    val new: Int,
+    val modified: Int,
+    val unaffected: Int
+)
+
+@Serializable
+data class TestedMethodsSummary(
+    val id: String,
+    val testName: String,
+    val testType: String,
+    val methodCounts: CoveredMethodCounts
+)
+
+@Serializable
+data class TestedMethodsByTypeSummary(
+    val testType: String,
+    val testsCount: Int,
+    val methodCounts: CoveredMethodCounts
 )
 
 @Serializable
