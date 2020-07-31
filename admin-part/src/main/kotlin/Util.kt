@@ -9,6 +9,12 @@ fun genUuid() = "${UUID.randomUUID()}"
 
 tailrec fun Int.gcd(other: Int): Int = takeIf { other == 0 } ?: other.gcd(rem(other))
 
+fun String.methodName(name: String): String = when (name) {
+    "<init>" -> toShortClassName()
+    "<clinit>" -> "static ${toShortClassName()}"
+    else -> name
+}
+
 internal fun String.toShortClassName(): String = substringAfterLast('/')
 
 val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
@@ -19,3 +25,4 @@ infix fun Number.percentOf(other: Number): Double = when (val dOther = other.toD
     0.0 -> 0.0
     else -> toDouble() * 100.0 / dOther
 }
+

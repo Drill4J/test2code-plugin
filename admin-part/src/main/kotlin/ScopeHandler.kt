@@ -16,7 +16,8 @@ internal fun Plugin.initActiveScope() {
             val context = state.coverContext()
             updateSummary { it.calculateCoverage(sessions, context) }
             sendScopeMessages()
-            val coverageInfoSet = sessions.calculateCoverageData(context)
+            val bundleCounters = sessions.calcBundleCounters(context)
+            val coverageInfoSet = bundleCounters.calculateCoverageData(context, activeScope)
             coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
         }
     }
@@ -31,7 +32,10 @@ internal suspend fun Plugin.changeActiveScope(
     sendActiveScope()
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
-            val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
+            val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled).run {
+                val bundleCounters = calcBundleCounters(state.coverContext())
+                copy(data = data.copy(bundleCounters = bundleCounters))
+            }
             state.scopeManager.store(finishedScope)
             logger.info { "$finishedScope has been saved." }
         } else logger.info { "$prevScope is empty, it won't be added to the build." }
@@ -56,7 +60,7 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
     } ?: cleanTopics(prevId)
     sendScopes()
     prevScope?.takeIf { it.enabled }.apply {
-        calculateAndSendBuildAndChildrenCoverage()
+        calculateAndSendBuildCoverage()
     }
     calculateAndSendScopeCoverage()
     logger.info { "Current active scope - $activeScope" }
@@ -109,8 +113,8 @@ internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
 }
 
 private suspend fun Plugin.handleChange(scope: FinishedScope) {
-    calculateAndSendBuildAndChildrenCoverage(scope.buildVersion)
     if (scope.buildVersion == buildVersion) {
+        calculateAndSendBuildCoverage()
         updateOverlap()
         send(buildVersion, Routes.ActiveScope, activeScope.summary)
         calculateAndSendScopeCoverage()

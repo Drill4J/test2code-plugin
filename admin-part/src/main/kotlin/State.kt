@@ -122,14 +122,7 @@ class AgentState(
                     )
                 )
             }
-            getAll<CachedBuildCoverage>().forEach { stored ->
-                builds(stored.version) { CachedBuild(version = stored.version, coverage = stored) }
-            }
-            getAll<StoredBuildTests>().forEach { stored ->
-                builds(stored.version) {
-                    it?.copy(tests = ProtoBuf.load(BuildTests.serializer(), stored.data))
-                }
-            }
+            loadBuilds(builds)
         }
         builds(agentInfo.buildVersion) { it ?: CachedBuild(agentInfo.buildVersion) }
     }
@@ -139,13 +132,20 @@ class AgentState(
         else -> agentBuildId.copy(buildVersion = buildVersion)
     }
 
-    internal fun mergeProbes(
+    internal fun updateProbes(
         buildVersion: String,
         buildScopes: Sequence<FinishedScope>
     ) {
         builds(buildVersion) {
             it?.copy(probes = buildScopes.flatten().flatten().merge())
         }
+    }
+
+    internal fun updateBundleCounters(
+        buildVersion: String,
+        bundleCounters: BundleCounters
+    ) = builds(buildVersion) {
+        it?.copy(bundleCounters = bundleCounters)
     }
 
     internal fun updateBuildTests(
@@ -249,7 +249,6 @@ internal suspend fun AgentState.coverContext(
         methodChanges = classData.methodChanges,
         probeIds = classData.probeIds,
         classBytes = buildInfo?.classesBytes ?: emptyMap(),
-        parentVersion = buildInfo?.parentVersion ?: "",
         build = builds[buildVersion]
     )
 }

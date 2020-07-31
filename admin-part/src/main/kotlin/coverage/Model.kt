@@ -4,6 +4,7 @@ import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.Method
+import kotlinx.serialization.Serializable
 
 internal class CoverContext(
     val agentType: AgentType,
@@ -12,7 +13,6 @@ internal class CoverContext(
     val methodChanges: DiffMethods,
     val probeIds: Map<String, Long> = emptyMap(),
     val classBytes: Map<String, ByteArray> = emptyMap(),
-    val parentVersion: String, //TODO remove from the context
     val build: CachedBuild? = null
 )
 
@@ -28,11 +28,23 @@ data class CoverageKey(
     override fun hashCode() = id.hashCode()
 }
 
+@Serializable
+class BundleCounters(
+    val all: BundleCounter,
+    val byTestType: Map<String, BundleCounter> = emptyMap(),
+    val byTest: Map<TypedTest, BundleCounter> = emptyMap()
+) {
+    companion object {
+        val empty = BundleCounters(all = BundleCounter(""))
+    }
+}
+
 sealed class NamedCounter {
     abstract val name: String
     abstract val count: Count
 }
 
+@Serializable
 class BundleCounter(
     override val name: String,
     override val count: Count = zeroCount,
@@ -40,6 +52,7 @@ class BundleCounter(
     val packages: List<PackageCounter> = emptyList()
 ) : NamedCounter()
 
+@Serializable
 class PackageCounter(
     override val name: String,
     override val count: Count,
@@ -48,6 +61,7 @@ class PackageCounter(
     val classes: List<ClassCounter>
 ) : NamedCounter()
 
+@Serializable
 class ClassCounter(
     val path: String,
     override val name: String,
@@ -57,6 +71,7 @@ class ClassCounter(
     val fullName = if (path.any()) "$path/$name" else name
 }
 
+@Serializable
 class MethodCounter(
     override val name: String,
     val desc: String,

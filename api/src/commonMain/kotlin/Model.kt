@@ -54,10 +54,10 @@ interface Coverage {
 data class ScopeCoverage(
     override val ratio: Double,
     override val count: Count,
-    val overlap: CoverDto,
+    val overlap: CoverDto = CoverDto(),
     override val methodCount: Count,
-    override val riskCount: Count,
-    override val risks: RiskSummaryDto,
+    override val riskCount: Count = zeroCount,
+    override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val byTestType: Map<String, TestTypeSummary>
 ) : Coverage
 
@@ -67,13 +67,13 @@ data class BuildCoverage(
     override val ratio: Double,
     override val count: Count,
     override val methodCount: Count,
-    override val riskCount: Count,
-    override val risks: RiskSummaryDto,
+    override val riskCount: Count = zeroCount,
+    override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val byTestType: Map<String, TestTypeSummary>,
-    val diff: Double,
-    val prevBuildVersion: String,
-    val arrow: ArrowType?,
-    val finishedScopesCount: Int
+    val diff: Double = 0.0,
+    val prevBuildVersion: String = "",
+    val arrow: ArrowType? = null,
+    val finishedScopesCount: Int = 0
 ) : Coverage
 
 enum class ArrowType {
@@ -316,9 +316,9 @@ data class ServiceGroupSummaryDto(
 
 @Serializable
 data class CoverDto(
-    val percentage: Double,
-    val methodCount: Count,
-    val count: Count
+    val percentage: Double = 0.0,
+    val methodCount: Count = zeroCount,
+    val count: Count = zeroCount
 )
 
 @Serializable

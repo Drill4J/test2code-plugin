@@ -5,57 +5,65 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
+import kotlinx.serialization.Serializable
 import mu.*
 
 private val logger = KotlinLogging.logger {}
+
+internal fun Sequence<Session>.calcBundleCounters(context: CoverContext) = BundleCounters(
+    all = flatten().bundle(context),
+    byTestType = bundlesByTestTypes(context),
+    byTest = bundlesByTests(context)
+)
 
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
     context: CoverContext
 ): ScopeSummary = run {
     val probes = sessions.flatten()
-    val bundle = probes.bundle(context)
-    val totalInstructions = context.packageTree.totalCount
-    val coverageCount = Count(bundle.count.covered, totalInstructions)
+    val bundles = sessions.calcBundleCounters(context)
+    val bundle = bundles.all
+    val overlappingBundle = probes.overlappingBundle(context)
+    val coverageCount = bundle.count.copy(total = context.packageTree.totalCount)
     copy(
         coverage = ScopeCoverage(
             ratio = coverageCount.percentage(),
             count = coverageCount,
-            overlap = probes.overlappingBundle(context).toCoverDto(context.packageTree),
+            overlap = overlappingBundle.toCoverDto(context.packageTree),
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
-            byTestType = sessions.coveragesByTestType(
-                sessions.bundlesByTests(context),
+            byTestType = bundles.byTestType.coveragesByTestType(
+                bundles.byTest,
                 context
             )
         )
     )
 }
 
-internal fun Sequence<Session>.calculateCoverageData(
+internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
-    scopeCount: Int = 0,
-    otherCoverage: Count? = null
+    scope: Scope? = null
+
 ): CoverageInfoSet {
-    val bundlesByTests = bundlesByTests(context)
+    val bundle = all
+    val bundlesByTestTypes = byTestType
+    val bundlesByTests = byTest
+
     val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
-    val totalInstructions = context.packageTree.totalCount
-    val probes = flatten()
-    val bundleCoverage = probes.bundle(context)
-    val coverageCount = Count(bundleCoverage.count.covered, totalInstructions)
+    val totalCount = context.packageTree.totalCount
+    val coverageCount = bundle.count.copy(total = totalCount)
     val totalCoveragePercent = coverageCount.percentage()
 
-    val scope = this as? Scope
     val coverageByType: Map<String, TestTypeSummary> = when (scope) {
-        null -> coveragesByTestType(bundlesByTests, context)
+        null -> byTestType.coveragesByTestType(byTest, context)
         else -> scope.summary.coverage.byTestType
     }
     logger.info { coverageByType }
 
-    val methodCount = bundleCoverage.methodCount.copy(total = context.packageTree.totalMethodCount)
+    val methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount)
     val coverageBlock: Coverage = when (scope) {
         null -> {
             BuildCoverage(
@@ -63,39 +71,31 @@ internal fun Sequence<Session>.calculateCoverageData(
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
-                risks = RiskSummaryDto(),
-                byTestType = coverageByType,
-                diff = otherCoverage?.let {
-                    (coverageCount - it).run { first percentOf second }
-                } ?: coverageCount.percentage(),
-                prevBuildVersion = context.parentVersion,
-                arrow = otherCoverage?.run { arrowType(coverageCount) },
-                finishedScopesCount = scopeCount
+                byTestType = coverageByType
             )
         }
+        is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
             ratio = totalCoveragePercent,
             count = coverageCount,
-            overlap = probes.overlappingBundle(context).toCoverDto(context.packageTree),
             methodCount = methodCount,
             riskCount = zeroCount,
-            risks = RiskSummaryDto(),
             byTestType = coverageByType
         )
     }
     logger.info { coverageBlock }
 
-    val buildMethods = context.calculateBundleMethods(bundleCoverage).run {
+    val buildMethods = context.calculateBundleMethods(bundle).run {
         context.build?.let {
             copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.tests.assocTests))
         } ?: this
     }
 
-    val packageCoverage = context.packageTree.packages.treeCoverage(bundleCoverage, assocTestsMap)
+    val packageCoverage = context.packageTree.packages.treeCoverage(bundle, assocTestsMap)
 
     val (coveredByTest, coveredByTestType) = bundlesByTests.coveredMethods(
         context,
-        bundlesByTestTypes(context)
+        bundlesByTestTypes
     )
 
     val testsUsagesInfoByType = coverageByType.map {
@@ -104,7 +104,7 @@ internal fun Sequence<Session>.calculateCoverageData(
             it.value.coverage,
             it.value.coveredMethodsCount,
             bundlesByTests.testUsages(
-                totalInstructions,
+                totalCount,
                 it.value.testType
             )
         )
@@ -121,20 +121,18 @@ internal fun Sequence<Session>.calculateCoverageData(
     )
 }
 
-internal fun Sequence<Session>.coveragesByTestType(
+internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     context: CoverContext
 ): Map<String, TestTypeSummary> = run {
     val totalInstructions = context.packageTree.totalCount
-    groupBy(Session::testType).mapValues { (testType, sessions) ->
-        sessions.asSequence().run {
-            TestTypeSummary(
-                testType = testType,
-                coverage = flatten().bundle(context).count.copy(total = totalInstructions).percentage(),
-                testCount = flatMap { it.tests.asSequence() }.distinct().count(),
-                coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
-            )
-        }
+    mapValues { (testType, bundle) ->
+        TestTypeSummary(
+            testType = testType,
+            coverage = bundle.count.copy(total = totalInstructions).percentage(),
+            testCount = bundleMap.keys.filter { it.type == testType }.distinct().count(),
+            coveredMethodsCount = bundleMap.coveredMethodsByTestTypeCount(testType)
+        )
     }
 }
 

@@ -85,12 +85,6 @@ internal fun Map<TypedTest, BundleCounter>.coveredMethods(
     return coveredByTest to coveredByType
 }
 
-fun String.methodName(name: String): String = when (name) {
-    "<init>" -> toShortClassName()
-    "<clinit>" -> "static ${toShortClassName()}"
-    else -> name
-}
-
 private fun Iterable<Method>.toInfo(
     covered: Map<Method, CoverMethod>
 ) = MethodsInfo(
