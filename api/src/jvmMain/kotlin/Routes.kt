@@ -64,11 +64,49 @@ class Routes {
         @Location("/tests-usages")
         class TestsUsages(val scope: Scope)
 
+        //TODO remove after changes on the frontend
         @Location("/tests/covered-methods")
-        class MethodsCoveredByTest(val scope: Scope)
+        class CoveredMethodsByTest(val scope: Scope)
 
+        //TODO remove after changes on the frontend
         @Location("/test-types/covered-methods")
-        class MethodsCoveredByTestType(val scope: Scope)
+        class CoveredMethodsByType(val scope: Scope)
+
+        @Location("/tests/{testId}/methods")
+        class MethodsCoveredByTest(val testId: String, val scope: Scope) {
+            @Location("/summary")
+            class Summary(val test: MethodsCoveredByTest)
+
+            @Location("/all")
+            class All(val test: MethodsCoveredByTest)
+
+            @Location("/new")
+            class New(val test: MethodsCoveredByTest)
+
+            @Location("/modified")
+            class Modified(val test: MethodsCoveredByTest)
+
+            @Location("/unaffected")
+            class Unaffected(val test: MethodsCoveredByTest)
+        }
+
+        @Location("/test-types/{testType}/methods")
+        class MethodsCoveredByTestType(val testType: String, val scope: Scope) {
+            @Location("/summary")
+            class Summary(val type: MethodsCoveredByTestType)
+
+            @Location("/all")
+            class All(val type: MethodsCoveredByTestType)
+
+            @Location("/new")
+            class New(val type: MethodsCoveredByTestType)
+
+            @Location("/modified")
+            class Modified(val type: MethodsCoveredByTestType)
+
+            @Location("/unaffected")
+            class Unaffected(val type: MethodsCoveredByTestType)
+        }
     }
 
     @Location("/build")
@@ -127,11 +165,49 @@ class Routes {
         @Location("/tests-to-run")
         class TestsToRun(val build: Build)
 
+        //TODO remove after changes on the frontend
         @Location("/tests/covered-methods")
-        class MethodsCoveredByTest(val build: Build)
+        class CoveredMethodsByTest(val build: Build)
 
+        //TODO remove after changes on the frontend
         @Location("/test-types/covered-methods")
-        class MethodsCoveredByTestType(val build: Build)
+        class CoveredMethodsByType(val build: Build)
+
+        @Location("/tests/{testId}/methods")
+        class MethodsCoveredByTest(val testId: String, val build: Build) {
+            @Location("/summary")
+            class Summary(val test: MethodsCoveredByTest)
+
+            @Location("/all")
+            class All(val test: MethodsCoveredByTest)
+
+            @Location("/new")
+            class New(val test: MethodsCoveredByTest)
+
+            @Location("/modified")
+            class Modified(val test: MethodsCoveredByTest)
+
+            @Location("/unaffected")
+            class Unaffected(val test: MethodsCoveredByTest)
+        }
+
+        @Location("/test-types/{testType}/methods")
+        class MethodsCoveredByTestType(val testType: String, val build: Build) {
+            @Location("/summary")
+            class Summary(val type: MethodsCoveredByTestType)
+
+            @Location("/all")
+            class All(val type: MethodsCoveredByTestType)
+
+            @Location("/new")
+            class New(val type: MethodsCoveredByTestType)
+
+            @Location("/modified")
+            class Modified(val type: MethodsCoveredByTestType)
+
+            @Location("/unaffected")
+            class Unaffected(val type: MethodsCoveredByTestType)
+        }
     }
 
     @Location("/data")

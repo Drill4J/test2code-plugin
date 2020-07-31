@@ -13,7 +13,7 @@ data class CoverageInfoSet(
     val testsUsagesInfoByType: List<TestsUsagesInfoByType> = emptyList(),
     val coverageByTests: CoverageByTests,
     val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList(),
-    val methodsCoveredByTestType: List<MethodsCoveredByTestType> = emptyList()
+    val methodsCoveredByType: List<MethodsCoveredByType> = emptyList()
 )
 
 fun Map<TypedTest, BundleCounter>.testUsages(
@@ -54,35 +54,36 @@ internal fun CoverContext.calculateBundleMethods(
     )
 }
 
-internal fun Map<TypedTest, BundleCounter>.coveredMethods(
+internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
+    context: CoverContext
+): List<MethodsCoveredByTest> = map { (typedTest, bundle) ->
+    val changes = context.calculateBundleMethods(bundle, true)
+    MethodsCoveredByTest(
+        id = typedTest.id(),
+        testName = typedTest.name,
+        testType = typedTest.type,
+        allMethods = changes.totalMethods.methods,
+        newMethods = changes.newMethods.methods,
+        modifiedMethods = changes.allModifiedMethods.methods,
+        unaffectedMethods = changes.unaffectedMethods.methods
+    )
+}
+
+internal fun Map<String, BundleCounter>.methodsCoveredByType(
     context: CoverContext,
-    bundlesByType: Map<String, BundleCounter>
-): Pair<List<MethodsCoveredByTest>, List<MethodsCoveredByTestType>> {
-    val coveredByTest = map { (typedTest, bundle) ->
-        val changes = context.calculateBundleMethods(bundle, true)
-        MethodsCoveredByTest(
-            id = typedTest.id(),
-            testName = typedTest.name,
-            testType = typedTest.type,
-            allMethods = changes.totalMethods.methods,
-            newMethods = changes.newMethods.methods,
-            modifiedMethods = changes.allModifiedMethods.methods,
-            unaffectedMethods = changes.unaffectedMethods.methods
-        )
-    }
-    val typesCounts = keys.groupBy { it.type }.mapValues { it.value.count() }
-    val coveredByType = bundlesByType.map { (type, bundle) ->
-        val changes = context.calculateBundleMethods(bundle, true)
-        MethodsCoveredByTestType(
-            testType = type,
-            testsCount = typesCounts[type] ?: 0,
-            allMethods = changes.totalMethods.methods,
-            newMethods = changes.newMethods.methods,
-            modifiedMethods = changes.allModifiedMethods.methods,
-            unaffectedMethods = changes.unaffectedMethods.methods
-        )
-    }
-    return coveredByTest to coveredByType
+    bundlesByTests: Map<TypedTest, BundleCounter>
+): List<MethodsCoveredByType> = map { (type, bundle) ->
+    val typesCounts = bundlesByTests.keys.groupBy { it.type }.mapValues { it.value.count() }
+    val changes = context.calculateBundleMethods(bundle, true)
+    MethodsCoveredByType(
+        testType = type,
+        testsCount = typesCounts[type] ?: 0,
+        allMethods = changes.totalMethods.methods,
+        newMethods = changes.newMethods.methods,
+        modifiedMethods = changes.allModifiedMethods.methods,
+        unaffectedMethods = changes.unaffectedMethods.methods
+    )
+
 }
 
 private fun Iterable<Method>.toInfo(

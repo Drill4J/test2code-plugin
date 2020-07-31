@@ -309,8 +309,28 @@ class Plugin(
         Routes.Build.Summary(buildRoute).let {
             send(buildVersion, Routes.Build.Summary.TestsToRun(it), testsToRun.toSummary())
         }
-        send(buildVersion, Routes.Build.MethodsCoveredByTest(buildRoute), methodsCoveredByTest)
-        send(buildVersion, Routes.Build.MethodsCoveredByTestType(buildRoute), methodsCoveredByTestType)
+        //TODO remove after changes on the frontend
+        send(buildVersion, Routes.Build.CoveredMethodsByTest(buildRoute), methodsCoveredByTest)
+        send(buildVersion, Routes.Build.CoveredMethodsByType(buildRoute), methodsCoveredByType)
+
+        methodsCoveredByTest.forEach {
+            Routes.Build.MethodsCoveredByTest(it.id, buildRoute).let { test ->
+                send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), it.toSummary())
+                send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), it.allMethods)
+                send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
+                send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
+                send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), it.newMethods)
+            }
+        }
+        methodsCoveredByType.forEach {
+            Routes.Build.MethodsCoveredByTestType(it.testType, buildRoute).let { testType ->
+                send(buildVersion, Routes.Build.MethodsCoveredByTestType.Summary(testType), it.toSummary())
+                send(buildVersion, Routes.Build.MethodsCoveredByTestType.All(testType), it.allMethods)
+                send(buildVersion, Routes.Build.MethodsCoveredByTestType.Modified(testType), it.modifiedMethods)
+                send(buildVersion, Routes.Build.MethodsCoveredByTestType.Unaffected(testType), it.unaffectedMethods)
+                send(buildVersion, Routes.Build.MethodsCoveredByTestType.New(testType), it.newMethods)
+            }
+        }
         send(buildVersion, Routes.Build.Risks(buildRoute), risks)
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), TestsToRun(testsToRun))
     }
@@ -386,8 +406,28 @@ class Plugin(
             send(buildVersion, Routes.Scope.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
         }
-        send(buildVersion, Routes.Scope.MethodsCoveredByTest(scope), methodsCoveredByTest)
-        send(buildVersion, Routes.Scope.MethodsCoveredByTestType(scope), methodsCoveredByTestType)
+        //TODO remove after changes on the frontend
+        send(buildVersion, Routes.Scope.CoveredMethodsByTest(scope), methodsCoveredByTest)
+        send(buildVersion, Routes.Scope.CoveredMethodsByType(scope), methodsCoveredByType)
+
+        methodsCoveredByTest.forEach {
+            Routes.Scope.MethodsCoveredByTest(it.id, scope).let { test ->
+                send(buildVersion, Routes.Scope.MethodsCoveredByTest.Summary(test), it.toSummary())
+                send(buildVersion, Routes.Scope.MethodsCoveredByTest.All(test), it.allMethods)
+                send(buildVersion, Routes.Scope.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
+                send(buildVersion, Routes.Scope.MethodsCoveredByTest.New(test), it.newMethods)
+                send(buildVersion, Routes.Scope.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
+            }
+        }
+        methodsCoveredByType.forEach {
+            Routes.Scope.MethodsCoveredByTestType(it.testType, scope).let { testType ->
+                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.Summary(testType), it.toSummary())
+                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.All(testType), it.allMethods)
+                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.Modified(testType), it.modifiedMethods)
+                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.New(testType), it.newMethods)
+                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.Unaffected(testType), it.unaffectedMethods)
+            }
+        }
     }
 
     internal suspend fun cleanTopics(id: String) = Routes.Scope(id).let { scope ->
