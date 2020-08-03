@@ -7,6 +7,12 @@ import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
 
 @Serializable
+internal class StoredClassData(
+    @Id val version: String,
+    val data: ByteArray
+)
+
+@Serializable
 internal class StoredBundles(
     @Id val version: String,
     val data: ByteArray
@@ -18,20 +24,33 @@ class StoredBuildTests(
     val data: ByteArray
 )
 
-internal fun KoduxTransaction.loadBuilds(builds: AtomicCache<String, CachedBuild>) {
-    getAll<CachedBuildCoverage>().forEach { stored ->
-        builds(stored.version) { CachedBuild(version = stored.version, coverage = stored) }
-    }
-    getAll<StoredBundles>().forEach { stored ->
-        builds(stored.version) {
-            it?.copy(bundleCounters = ProtoBuf.load(BundleCounters.serializer(), stored.data))
-        }
-    }
-    getAll<StoredBuildTests>().forEach { stored ->
-        builds(stored.version) {
-            it?.copy(tests = ProtoBuf.load(BuildTests.serializer(), stored.data))
-        }
-    }
+internal suspend fun StoreClient.loadClassData(
+    version: String
+): ClassData? = findById<StoredClassData>(version)?.run {
+    ProtoBuf.load(ClassData.serializer(), data)
+}
+
+internal suspend fun ClassData.store(storage: StoreClient) {
+    val stored = ProtoBuf.dump(ClassData.serializer(), this)
+    storage.store(StoredClassData(buildVersion, stored))
+}
+
+internal suspend fun StoreClient.loadBuilds(
+    versions: Set<String>
+): List<CachedBuild> = executeInAsyncTransaction { loadBuilds(versions) }
+
+internal fun KoduxTransaction.loadBuilds(
+    versions: Set<String>
+): List<CachedBuild> = getAll<CachedBuildCoverage>().filter { it.version in versions }.map {
+    CachedBuild(version = it.version, coverage = it)
+}.map { build ->
+    findById<StoredBundles>(build.version)?.run {
+        ProtoBuf.load(BundleCounters.serializer(), data)
+    }?.let { build.copy(bundleCounters = it) } ?: build
+}.map { build ->
+    findById<StoredBuildTests>(build.version)?.run {
+        ProtoBuf.load(BuildTests.serializer(), data)
+    }?.let { build.copy(tests = it) } ?: build
 }
 
 internal suspend fun CachedBuild.store(storage: StoreClient) {

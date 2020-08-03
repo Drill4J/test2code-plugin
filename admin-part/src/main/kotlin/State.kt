@@ -3,14 +3,13 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.Method
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
-import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
 
 /**
@@ -21,6 +20,16 @@ import org.jacoco.core.internal.data.*
  */
 
 internal const val DEFAULT_SCOPE_NAME = "New Scope"
+
+internal typealias AgentBuildCache = AtomicCache<String, AtomicCache<String, CachedBuild>>
+
+private val agentClassData = AtomicCache<AgentBuildId, ClassData>()
+
+private val agentBuilds = AgentBuildCache()
+
+internal fun AgentBuildCache.versionsOf(agentId: String): Set<String> = get(agentId)?.run {
+    values.mapTo(mutableSetOf()) { it.version }
+} ?: emptySet()
 
 class AgentState(
     val storeClient: StoreClient,
@@ -34,15 +43,14 @@ class AgentState(
 
     val activeScope get() = _activeScope.value
 
-    internal val builds = AtomicCache<String, CachedBuild>()
-
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
+
+    internal val builds: AtomicCache<String, CachedBuild>
+        get() = agentBuilds(agentInfo.id) { it ?: AtomicCache() }!!
 
     private val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
 
     private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
-
-    private val agentBuildData = AtomicCache<AgentBuildId, ClassData>()
 
     private val _data = atomic<AgentData>(NoData)
 
@@ -50,7 +58,8 @@ class AgentState(
 
     fun init() = _data.update { DataBuilder() }
 
-    suspend fun initialized() {
+    suspend fun initialized(): Set<String> {
+        val cachedVersions = agentBuilds.versionsOf(agentInfo.id)
         val parentClassData = buildInfo?.parentVersion?.run {
             takeIf(String::any)?.let { classData(it) }
         }
@@ -69,7 +78,7 @@ class AgentState(
                         totalCount = sumBy { it.second.count },
                         totalMethodCount = count(),
                         packages = data.toPackages()
-                    ).toClassesData(
+                    ).toClassData(
                         methods = methods,
                         otherMethods = parentClassData?.methods
                     )
@@ -93,7 +102,7 @@ class AgentState(
                         totalCount = packages.sumBy { it.totalCount },
                         totalMethodCount = groupedMethods.values.sumBy { it.count() },
                         packages = packages
-                    ).toClassesData(
+                    ).toClassData(
                         methods = methods,
                         otherMethods = parentClassData?.methods,
                         probeIds = probeIds
@@ -101,35 +110,19 @@ class AgentState(
                 }
             }
         } as ClassData
-        agentBuildData[agentBuildId] = classData
+        agentClassData[agentBuildId] = classData
         readScopeCounter()?.run {
             _activeScope.update { ActiveScope(nth = count.inc(), buildVersion = agentInfo.buildVersion) }
         }
-        storeScopeCounter()
-        storeClient.executeInAsyncTransaction {
-            store(classData.copy(packageTree = PackageTree(), probeIds = emptyMap()))
-            store(
-                PackageTreeBytes(
-                    buildVersion = classData.buildVersion,
-                    bytes = ProtoBuf.dump(PackageTree.serializer(), classData.packageTree)
-                )
-            )
-            if (classData.probeIds.any()) {
-                store(
-                    ProbeIdBytes(
-                        buildVersion = classData.buildVersion,
-                        bytes = ProtoBuf.dump(ProbeIdData.serializer(), ProbeIdData(classData.probeIds))
-                    )
-                )
-            }
-            loadBuilds(builds)
+        builds[agentInfo.buildVersion] = CachedBuild(agentInfo.buildVersion)
+        val allVersions = buildManager.builds.mapTo(mutableSetOf()) { it.version }
+        val loadedVersions = allVersions - cachedVersions - agentInfo.buildVersion
+        storeClient.loadBuilds(loadedVersions + agentInfo.buildVersion).forEach {
+            builds[it.version] = it
         }
-        builds(agentInfo.buildVersion) { it ?: CachedBuild(agentInfo.buildVersion) }
-    }
-
-    fun buildId(buildVersion: String) = when (buildVersion) {
-        agentInfo.buildVersion -> agentBuildId
-        else -> agentBuildId.copy(buildVersion = buildVersion)
+        storeScopeCounter()
+        classData.store(storeClient)
+        return loadedVersions
     }
 
     internal fun updateProbes(
@@ -205,8 +198,8 @@ class AgentState(
     internal suspend fun classData(
         buildVersion: String = agentInfo.buildVersion
     ): ClassData? = buildId(buildVersion).let { buildId ->
-        agentBuildData[buildId] ?: storeClient.classData(buildVersion)?.also {
-            agentBuildData[buildId] = it
+        agentClassData[buildId] ?: storeClient.loadClassData(buildVersion)?.also {
+            agentClassData[buildId] = it
         }
     }
 
@@ -225,7 +218,7 @@ class AgentState(
         else -> trimmed
     }
 
-    private fun PackageTree.toClassesData(
+    private fun PackageTree.toClassData(
         methods: List<Method>,
         otherMethods: List<Method>?,
         probeIds: Map<String, Long> = emptyMap()
@@ -236,6 +229,11 @@ class AgentState(
         methodChanges = otherMethods?.let(methods::diff) ?: DiffMethods(),
         probeIds = probeIds
     )
+
+    private fun buildId(buildVersion: String) = when (buildVersion) {
+        agentInfo.buildVersion -> agentBuildId
+        else -> agentBuildId.copy(buildVersion = buildVersion)
+    }
 }
 
 internal suspend fun AgentState.coverContext(
@@ -251,18 +249,4 @@ internal suspend fun AgentState.coverContext(
         classBytes = buildInfo?.classesBytes ?: emptyMap(),
         build = builds[buildVersion]
     )
-}
-
-internal suspend fun StoreClient.classData(buildVersion: String): ClassData? = executeInAsyncTransaction {
-    findById<ClassData>(buildVersion)?.run {
-        val foundPackageTree = findById<PackageTreeBytes>(buildVersion)?.run {
-            ProtoBuf.load(PackageTree.serializer(), bytes)
-        }
-        val foundProbeIds = findById<ProbeIdBytes>(buildVersion)?.run {
-            ProtoBuf.load(ProbeIdData.serializer(), bytes).map
-        }
-        val treeMutator: (ClassData) -> ClassData = { foundPackageTree?.run { it.copy(packageTree = this) } ?: it }
-        val probeIdsMutator: (ClassData) -> ClassData = { foundProbeIds?.run { it.copy(probeIds = this) } ?: it }
-        let(treeMutator).let(probeIdsMutator)
-    }
 }

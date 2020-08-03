@@ -85,7 +85,7 @@ class Plugin(
             }
         }
         is Initialized -> {
-            state.initialized()
+            val otherVersions = state.initialized()
             classDataOrNull()?.let {
                 send(buildVersion, Routes.Data().let(Routes.Data::Build), it.toBuildStatsDto())
             }
@@ -96,8 +96,7 @@ class Plugin(
             calculateAndSendScopeCoverage(activeScope)
             sendScopes(buildVersion)
             calculateAndSendCachedCoverage(buildVersion)
-            val otherBuilds = adminData.buildManager.builds.filter { it.version != buildVersion }
-            otherBuilds.map { it.version }.forEach { version ->
+            otherVersions.forEach { version ->
                 cleanActiveScope(version)
                 sendScopes(version)
                 calculateAndSendCachedCoverage(version)
