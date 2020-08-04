@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.common.api.Method
 import kotlin.test.*
 
 class MethodsTest {
@@ -39,16 +38,16 @@ class MethodsTest {
                 hash = "1"
             ),
             deleted
-        )
+        ).sorted()
         val current = listOf(
             new,
             unaffected,
             modified
-        )
+        ).sorted()
         val diff = current.diff(old)
-        assertEquals(setOf(new), diff.new)
-        assertEquals(setOf(modified), diff.modified)
-        assertEquals(setOf(unaffected), diff.unaffected)
-        assertEquals(setOf(deleted), diff.deleted)
+        assertEquals(listOf(new), diff.new)
+        assertEquals(listOf(modified), diff.modified)
+        assertEquals(listOf(deleted), diff.deleted)
+        assertEquals(listOf(unaffected), diff.unaffected)
     }
 }

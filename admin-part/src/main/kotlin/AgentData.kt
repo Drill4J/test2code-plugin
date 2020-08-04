@@ -2,17 +2,16 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.common.api.Method
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
-sealed class AgentData
+internal sealed class AgentData
 
-object NoData : AgentData()
+internal object NoData : AgentData()
 
-class DataBuilder : AgentData(), Iterable<AstEntity> {
+internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 
     private val _data = atomic(persistentListOf<AstEntity>())
 
@@ -22,7 +21,7 @@ class DataBuilder : AgentData(), Iterable<AstEntity> {
 }
 
 @Serializable
-data class ClassData(
+internal data class ClassData(
     @Id val buildVersion: String,
     val packageTree: PackageTree,
     val methods: List<Method>,
@@ -35,24 +34,9 @@ data class ClassData(
 }
 
 @Serializable
-class DiffMethods(
-    val new: Set<Method> = emptySet(),
-    val modified: Set<Method> = emptySet(),
-    val deleted: Set<Method> = emptySet(),
-    val unaffected: Set<Method> = emptySet()
+internal class DiffMethods(
+    val new: List<Method> = emptyList(),
+    val modified: List<Method> = emptyList(),
+    val deleted: List<Method> = emptyList(),
+    val unaffected: List<Method> = emptyList()
 )
-
-@Serializable
-class PackageTreeBytes(
-    @Id val buildVersion: String,
-    val bytes: ByteArray
-)
-
-@Serializable
-class ProbeIdBytes(
-    @Id val buildVersion: String,
-    val bytes: ByteArray
-)
-
-@Serializable
-internal class ProbeIdData(val map: Map<String, Long>)

@@ -26,7 +26,7 @@ class Plugin(
 
     internal val runtimeConfig = RuntimeConfig(id)
 
-    lateinit var state: AgentState
+    internal lateinit var state: AgentState
 
     val buildVersion = agentInfo.buildVersion
 
@@ -72,7 +72,7 @@ class Plugin(
             .let { "" } //TODO eliminate magic empty strings from API
     }
 
-    internal suspend fun processData(message: CoverMessage) = when (message) {
+    private suspend fun processData(message: CoverMessage) = when (message) {
         is InitInfo -> {
             if (message.init) {
                 state.init()
@@ -181,7 +181,7 @@ class Plugin(
         sendScopeSummary(summary)
     }
 
-    internal suspend fun cleanActiveScope(buildVersion: String) {
+    private suspend fun cleanActiveScope(buildVersion: String) {
         send(buildVersion, Routes.ActiveScope, "")
     }
 
@@ -398,33 +398,6 @@ class Plugin(
     }
 
     override suspend fun dropData() {
-        adminData.buildManager.builds.map(BuildInfo::version).forEach { buildVersion ->
-            send(buildVersion, Routes.Scopes, "")
-            Routes.Build().let { buildRoute ->
-                send(buildVersion, Routes.Build.AssociatedTests(buildRoute), "")
-                Routes.Build.Methods(buildRoute).let { methodsRoute ->
-                    send(buildVersion, methodsRoute, "")
-                    send(buildVersion, Routes.Build.Methods.All(methodsRoute), "")
-                    send(buildVersion, Routes.Build.Methods.New(methodsRoute), "")
-                    send(buildVersion, Routes.Build.Methods.Modified(methodsRoute), "")
-                    send(buildVersion, Routes.Build.Methods.Deleted(methodsRoute), "")
-                }
-                val coverageRoute = Routes.Build.Coverage(buildRoute)
-                send(buildVersion, coverageRoute, "")
-                classDataOrNull()?.let { classData ->
-                    val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
-                    classData.packageTree.packages.forEach {
-                        send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), "")
-                    }
-                }
-                send(buildVersion, Routes.Build.TestsUsages(buildRoute), "")
-            }
-        }
-        val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-        state = agentState()
-        processData(InitInfo(classesBytes.keys.count(), ""))
-        state.initialized()
-        processData(Initialized())
     }
 
     internal suspend fun send(buildVersion: String, destination: Any, message: Any) {

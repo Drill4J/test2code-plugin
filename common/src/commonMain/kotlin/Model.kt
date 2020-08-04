@@ -25,14 +25,6 @@ data class AstMethod(
 )
 
 @Serializable
-data class Method(
-    val ownerClass: String,
-    val name: String,
-    val desc: String,
-    val hash: String
-)
-
-@Serializable
 data class InitScopePayload(
     val id: String,
     val name: String,

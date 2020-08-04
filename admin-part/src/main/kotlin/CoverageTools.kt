@@ -1,7 +1,6 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.Method
 import com.epam.drill.plugins.test2code.coverage.*
 
 //TODO Rewrite all of this, remove the file

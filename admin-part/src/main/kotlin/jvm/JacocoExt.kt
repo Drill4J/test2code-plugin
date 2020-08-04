@@ -7,7 +7,7 @@ import com.epam.drill.plugins.test2code.coverage.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
-typealias ClassBytes = Map<String, ByteArray>
+internal typealias ClassBytes = Map<String, ByteArray>
 
 internal fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
@@ -20,11 +20,11 @@ internal fun Sequence<ExecClassData>.bundle(
     }
 }.toCounter()
 
-internal fun ClassBytes.bundle(
-    probeIds: Map<String, Long>,
-    data: Sequence<ExecClassData> = emptySequence()
-): BundleCounter = data.bundle(probeIds) { analyzer ->
-    forEach { (name, bytes) -> analyzer.analyzeClass(bytes, name) }
+internal fun List<String>.bundle(
+    classBytes: Map<String, ByteArray>,
+    probeIds: Map<String, Long>
+): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->
+    forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
 }.toCounter()
 
 private fun Sequence<ExecClassData>.bundle(

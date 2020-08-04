@@ -11,7 +11,7 @@ data class BuildTests(
     val testsToRun: GroupedTests = emptyMap()
 )
 
-suspend fun AgentState.testsToRun(
+internal suspend fun AgentState.testsToRun(
     buildVersion: String,
     coverMethods: List<CoverMethod>
 ): GroupedTests = buildManager[buildVersion]?.parentVersion?.takeIf { it.any() }?.let { parentVersion ->

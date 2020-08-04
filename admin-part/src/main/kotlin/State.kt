@@ -31,7 +31,7 @@ internal fun AgentBuildCache.versionsOf(agentId: String): Set<String> = get(agen
     values.mapTo(mutableSetOf()) { it.version }
 } ?: emptySet()
 
-class AgentState(
+internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
     val buildManager: BuildManager
@@ -86,15 +86,16 @@ class AgentState(
                 is ClassData -> data
                 is NoData -> {
                     val classesBytes = buildInfo?.classesBytes ?: emptyMap()
+                    val sortedNames = classesBytes.keys.sorted()
                     val probeIds: Map<String, Long> = classesBytes.mapValues { CRC64.classId(it.value) }
-                    val bundleCoverage = classesBytes.bundle(probeIds)
+                    val bundleCoverage = sortedNames.bundle(classesBytes, probeIds)
                     val classCounters = bundleCoverage.packages.asSequence().flatMap {
                         it.classes.asSequence()
                     }.filter { it.methods.any() }
                     val groupedMethods = classCounters.associate { classCounter ->
                         val name = classCounter.fullName
                         val bytes = classesBytes.getValue(name)
-                        name to classCounter.parseMethods(bytes)
+                        name to classCounter.parseMethods(bytes).sorted()
                     }
                     val methods = groupedMethods.flatMap { it.value }
                     val packages = bundleCoverage.toPackages(groupedMethods)
@@ -225,7 +226,7 @@ class AgentState(
     ) = ClassData(
         buildVersion = agentInfo.buildVersion,
         packageTree = this,
-        methods = methods.sortedBy(Method::name),
+        methods = methods,
         methodChanges = otherMethods?.let(methods::diff) ?: DiffMethods(),
         probeIds = probeIds
     )
