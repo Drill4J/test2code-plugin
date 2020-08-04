@@ -10,8 +10,7 @@ import mu.*
 private val logger = KotlinLogging.logger {}
 
 internal fun Plugin.initActiveScope() {
-    val realtimeEnabled = System.getProperty("plugin.feature.drealtime")?.toBoolean() ?: true
-    if (realtimeEnabled) {
+    if (runtimeConfig.realtime) {
         activeScope.subscribeOnChanges { sessions ->
             val context = state.coverContext()
             updateSummary { it.calculateCoverage(sessions, context) }

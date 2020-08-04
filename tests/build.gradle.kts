@@ -90,7 +90,7 @@ tasks {
         dependsOn(prepareDist)
         useJUnitPlatform()
         systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
-        systemProperty("plugin.feature.drealtime", false)
+        systemProperty("drill.plugins.test2code.features.realtime", false)
         mustRunAfter(test)
     }
 

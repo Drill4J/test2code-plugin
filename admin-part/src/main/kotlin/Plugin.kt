@@ -24,6 +24,8 @@ class Plugin(
 
     override val serDe: SerDe<Action> = apiSerDe
 
+    internal val runtimeConfig = RuntimeConfig(id)
+
     lateinit var state: AgentState
 
     val buildVersion = agentInfo.buildVersion
@@ -282,16 +284,10 @@ class Plugin(
         val coverageRoute = Routes.Build.Coverage(buildRoute)
         send(buildVersion, coverageRoute, buildCoverage)
         send(buildVersion, Routes.Build.Methods(buildRoute), buildMethods.toSummaryDto())
-        Routes.Build.Methods(buildRoute).let {
-            send(buildVersion, Routes.Build.Methods.All(it), buildMethods.totalMethods)
-            send(buildVersion, Routes.Build.Methods.New(it), buildMethods.newMethods)
-            send(buildVersion, Routes.Build.Methods.Modified(it), buildMethods.allModifiedMethods)
-            send(buildVersion, Routes.Build.Methods.Deleted(it), buildMethods.deletedMethods)
-            send(buildVersion, Routes.Build.Methods.Unaffected(it), buildMethods.unaffectedMethods)
-        }
         val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
-        send(buildVersion, pkgsRoute, packageCoverage.map { it.copy(classes = emptyList()) })
-        packageCoverage.forEach {
+        val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
+        send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
+        packages.forEach {
             send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
         if (associatedTests.isNotEmpty()) {
@@ -361,16 +357,10 @@ class Plugin(
         val coverageRoute = Routes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
         send(buildVersion, Routes.Scope.Methods(scope), buildMethods.toSummaryDto())
-        Routes.Scope.Methods(scope).let { methods ->
-            send(buildVersion, Routes.Scope.Methods.All(methods), buildMethods.totalMethods)
-            send(buildVersion, Routes.Scope.Methods.New(methods), buildMethods.newMethods)
-            send(buildVersion, Routes.Scope.Methods.Modified(methods), buildMethods.allModifiedMethods)
-            send(buildVersion, Routes.Scope.Methods.Deleted(methods), buildMethods.deletedMethods)
-            send(buildVersion, Routes.Scope.Methods.Unaffected(methods), buildMethods.unaffectedMethods)
-        }
         val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
-        send(buildVersion, pkgsRoute, packageCoverage.map { it.copy(classes = emptyList()) })
-        packageCoverage.forEach {
+        val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
+        send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
+        packages.forEach {
             send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
         if (associatedTests.isNotEmpty()) {
