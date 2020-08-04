@@ -98,8 +98,10 @@ class Plugin(
             calculateAndSendScopeCoverage(activeScope)
             sendScopes(buildVersion)
             calculateAndSendCachedCoverage(buildVersion)
+            adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
+                cleanActiveScope(it.version)
+            }
             otherVersions.forEach { version ->
-                cleanActiveScope(version)
                 sendScopes(version)
                 calculateAndSendCachedCoverage(version)
             }
