@@ -5,7 +5,6 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
-import kotlinx.serialization.Serializable
 import mu.*
 
 private val logger = KotlinLogging.logger {}
@@ -25,9 +24,11 @@ internal fun ScopeSummary.calculateCoverage(
     val bundle = bundles.all
     val overlappingBundle = probes.overlappingBundle(context)
     val coverageCount = bundle.count.copy(total = context.packageTree.totalCount)
+    val coveragePercent = coverageCount.percentage()
     copy(
         coverage = ScopeCoverage(
-            ratio = coverageCount.percentage(),
+            ratio = coveragePercent,
+            percentage = coveragePercent,
             count = coverageCount,
             overlap = overlappingBundle.toCoverDto(context.packageTree),
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
@@ -68,6 +69,7 @@ internal fun BundleCounters.calculateCoverageData(
         null -> {
             BuildCoverage(
                 ratio = totalCoveragePercent,
+                percentage = totalCoveragePercent,
                 count = coverageCount,
                 methodCount = methodCount,
                 riskCount = zeroCount,
@@ -77,6 +79,7 @@ internal fun BundleCounters.calculateCoverageData(
         is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
             ratio = totalCoveragePercent,
+            percentage = totalCoveragePercent,
             count = coverageCount,
             methodCount = methodCount,
             riskCount = zeroCount,

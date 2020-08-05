@@ -43,6 +43,7 @@ data class RiskSummaryDto(
 
 interface Coverage {
     val ratio: Double
+    val percentage: Double
     val count: Count
     val methodCount: Count
     val riskCount: Count
@@ -53,6 +54,7 @@ interface Coverage {
 @Serializable
 data class ScopeCoverage(
     override val ratio: Double,
+    override val percentage: Double,
     override val count: Count,
     val overlap: CoverDto = CoverDto(),
     override val methodCount: Count,
@@ -65,6 +67,7 @@ data class ScopeCoverage(
 @Serializable
 data class BuildCoverage(
     override val ratio: Double,
+    override val percentage: Double,
     override val count: Count,
     override val methodCount: Count,
     override val riskCount: Count = zeroCount,
@@ -237,6 +240,7 @@ data class ScopeSummary(
     val active: Boolean = true,
     val coverage: ScopeCoverage = ScopeCoverage(
         ratio = 0.0,
+        percentage = 0.0,
         count = zeroCount,
         overlap = CoverDto(
             percentage = 0.0,

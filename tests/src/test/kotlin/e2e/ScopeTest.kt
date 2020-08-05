@@ -24,7 +24,7 @@ class ScopeTest : E2EPluginTest() {
                     name shouldBe "New Scope 1"
                     started shouldNotBe 0L
                     finished shouldBe 0L
-                    coverage.ratio shouldBe 0.0
+                    coverage.percentage shouldBe 0.0
                     enabled shouldBe true
                     active shouldBe true
                 }
@@ -36,7 +36,7 @@ class ScopeTest : E2EPluginTest() {
                     name shouldBe "New Scope 1"
                     started shouldNotBe 0L
                     finished shouldBe 0L
-                    coverage.ratio shouldBe 0.0
+                    coverage.percentage shouldBe 0.0
                     enabled shouldBe true
                     active shouldBe true
                 }
@@ -64,13 +64,13 @@ class ScopeTest : E2EPluginTest() {
         lateinit var droppedScopeId: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                plugUi.buildCoverage()!!.ratio shouldBe 0.0
+                plugUi.buildCoverage()!!.percentage shouldBe 0.0
                 plugUi.activeSessions()!!.run {
                     count shouldBe 0
                     testTypes shouldBe emptySet()
                 }
                 plugUi.activeScope()!!.apply {
-                    coverage.ratio shouldBe 0.0
+                    coverage.percentage shouldBe 0.0
                     droppedScopeId = id
                 }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -87,7 +87,7 @@ class ScopeTest : E2EPluginTest() {
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage.ratio shouldBe 100.0
+                plugUi.activeScope()!!.coverage.percentage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -96,9 +96,9 @@ class ScopeTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope).join()
-                plugUi.buildCoverage()!!.ratio shouldBe 100.0
+                plugUi.buildCoverage()!!.percentage shouldBe 100.0
                 pluginAction(DropScope(ScopePayload(droppedScopeId)).stringify()).join()
-                plugUi.buildCoverage()!!.ratio shouldBe 0.0
+                plugUi.buildCoverage()!!.percentage shouldBe 0.0
                 plugUi.activeScope()!!.id shouldNotBe droppedScopeId
                 plugUi.scopes() shouldBe null
             }
@@ -114,7 +114,7 @@ class ScopeTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
                 val ignoredScopeId = plugUi.activeScope()!!.apply {
-                    coverage.ratio shouldBe 0.0
+                    coverage.percentage shouldBe 0.0
                 }.id
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
@@ -130,7 +130,7 @@ class ScopeTest : E2EPluginTest() {
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage.ratio shouldBe 100.0
+                plugUi.activeScope()!!.coverage.percentage shouldBe 100.0
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -139,9 +139,9 @@ class ScopeTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope).join()
-                plugUi.buildCoverage()!!.ratio shouldBe 0.0
+                plugUi.buildCoverage()!!.percentage shouldBe 0.0
                 pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify()).join()
-                plugUi.buildCoverage()!!.ratio shouldBe 100.0
+                plugUi.buildCoverage()!!.percentage shouldBe 100.0
             }
         }
     }
