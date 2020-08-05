@@ -20,7 +20,7 @@ class RisksTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 
-                plugUi.activeScope()!!.coverage.ratio shouldBe 0.0
+                plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
 
                 plugUi.risks()!!.apply {
                     newMethods shouldBe emptyList()
