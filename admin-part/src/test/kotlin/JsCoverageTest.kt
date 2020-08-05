@@ -25,9 +25,12 @@ class JsCoverageTest {
 
     @Test
     fun `coverageData for active scope with custom js probes`() = runBlocking {
-        val buildManager = buildManager()
+        val adminData = object : AdminData {
+            override val buildManager = buildManager()
+            override val classBytes = emptyMap<String, ByteArray>()
+        }
         val state = AgentState(
-            storeClient, jsAgentInfo, buildManager
+            storeClient, jsAgentInfo, adminData
         )
         state.init()
         (state.data as DataBuilder) += ast

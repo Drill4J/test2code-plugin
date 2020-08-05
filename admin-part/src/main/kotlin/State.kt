@@ -34,8 +34,10 @@ internal fun AgentBuildCache.versionsOf(agentId: String): Set<String> = get(agen
 internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
-    val buildManager: BuildManager
+    val adminData: AdminData
 ) {
+
+    val buildManager: BuildManager = adminData.buildManager
 
     val data get() = _data.value
 
@@ -85,16 +87,16 @@ internal class AgentState(
                 }
                 is ClassData -> data
                 is NoData -> {
-                    val classesBytes = buildInfo?.classesBytes ?: emptyMap()
-                    val sortedNames = classesBytes.keys.sorted()
-                    val probeIds: Map<String, Long> = classesBytes.mapValues { CRC64.classId(it.value) }
-                    val bundleCoverage = sortedNames.bundle(classesBytes, probeIds)
+                    val classBytes = adminData.classBytes
+                    val sortedNames = classBytes.keys.sorted()
+                    val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
+                    val bundleCoverage = sortedNames.bundle(classBytes, probeIds)
                     val classCounters = bundleCoverage.packages.asSequence().flatMap {
                         it.classes.asSequence()
                     }.filter { it.methods.any() }
                     val groupedMethods = classCounters.associate { classCounter ->
                         val name = classCounter.fullName
-                        val bytes = classesBytes.getValue(name)
+                        val bytes = classBytes.getValue(name)
                         name to classCounter.parseMethods(bytes).sorted()
                     }
                     val methods = groupedMethods.flatMap { it.value }
@@ -240,14 +242,13 @@ internal class AgentState(
 internal suspend fun AgentState.coverContext(
     buildVersion: String = agentInfo.buildVersion
 ): CoverContext = classData(buildVersion)!!.let { classData ->
-    val buildInfo = buildManager[buildVersion]
     CoverContext(
         agentType = agentInfo.agentType,
         packageTree = classData.packageTree,
         methods = classData.methods,
         methodChanges = classData.methodChanges,
         probeIds = classData.probeIds,
-        classBytes = buildInfo?.classesBytes ?: emptyMap(),
+        classBytes = adminData.classBytes,
         build = builds[buildVersion]
     )
 }

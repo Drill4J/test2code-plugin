@@ -409,6 +409,6 @@ class Plugin(
     private fun agentState() = AgentState(
         storeClient = storeClient,
         agentInfo = agentInfo,
-        buildManager = adminData.buildManager
+        adminData = adminData
     )
 }
