@@ -46,6 +46,7 @@ class Plugin(
     override suspend fun applyPackagesChanges() {
         state.scopeManager.deleteByVersion(buildVersion)
         storeClient.deleteById<ClassData>(buildVersion)
+        state.applyPackagesChanges()
         state = agentState()
     }
 

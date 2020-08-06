@@ -3,7 +3,6 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
@@ -59,6 +58,10 @@ internal class AgentState(
     private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
 
     fun init() = _data.update { DataBuilder() }
+
+    fun applyPackagesChanges() {
+        agentClassData.remove(agentBuildId)
+    }
 
     suspend fun initialized(): Set<String> {
         val cachedVersions = agentBuilds.versionsOf(agentInfo.id)
