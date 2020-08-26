@@ -24,11 +24,9 @@ internal fun ScopeSummary.calculateCoverage(
     val bundle = bundles.all
     val overlappingBundle = probes.overlappingBundle(context)
     val coverageCount = bundle.count.copy(total = context.packageTree.totalCount)
-    val coveragePercent = coverageCount.percentage()
     copy(
         coverage = ScopeCoverage(
-            ratio = coveragePercent,
-            percentage = coveragePercent,
+            percentage = coverageCount.percentage(),
             count = coverageCount,
             overlap = overlappingBundle.toCoverDto(context.packageTree),
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
@@ -72,7 +70,6 @@ internal fun BundleCounters.calculateCoverageData(
     val coverageBlock: Coverage = when (scope) {
         null -> {
             BuildCoverage(
-                ratio = totalCoveragePercent,
                 percentage = totalCoveragePercent,
                 count = coverageCount,
                 methodCount = methodCount,
@@ -83,7 +80,6 @@ internal fun BundleCounters.calculateCoverageData(
         }
         is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
-            ratio = totalCoveragePercent,
             percentage = totalCoveragePercent,
             count = coverageCount,
             methodCount = methodCount,

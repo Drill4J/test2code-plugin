@@ -48,7 +48,6 @@ data class TestTypeSummary(
 )
 
 interface Coverage {
-    val ratio: Double
     val percentage: Double
     val count: Count
     val methodCount: Count
@@ -61,7 +60,6 @@ interface Coverage {
 
 @Serializable
 data class ScopeCoverage(
-    override val ratio: Double,
     override val percentage: Double,
     override val count: Count,
     val overlap: CoverDto = CoverDto(),
@@ -76,7 +74,6 @@ data class ScopeCoverage(
 
 @Serializable
 data class BuildCoverage(
-    override val ratio: Double,
     override val percentage: Double,
     override val count: Count,
     override val methodCount: Count,
@@ -277,7 +274,6 @@ data class ScopeSummary(
     var enabled: Boolean = true,
     val active: Boolean = true,
     val coverage: ScopeCoverage = ScopeCoverage(
-        ratio = 0.0,
         percentage = 0.0,
         count = zeroCount,
         overlap = CoverDto(
