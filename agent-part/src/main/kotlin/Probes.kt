@@ -97,6 +97,8 @@ open class SimpleSessionProbeArrayProvider(
 
     private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
 
+    private val _stubArray = atomic(BooleanArray(1024))
+
     override fun invoke(
         id: Long,
         name: String,
@@ -106,7 +108,7 @@ open class SimpleSessionProbeArrayProvider(
             val testName = instrContext[DRIlL_TEST_NAME] ?: "default"
             sessionRuntime(id, name, probeCount, testName)
         }
-    } ?: BooleanArray(probeCount)
+    } ?: stubArray(probeCount)
 
     override fun start(
         sessionId: String,
@@ -126,6 +128,16 @@ open class SimpleSessionProbeArrayProvider(
     }.map { (id, runtime) ->
         runtime.close()
         id
+    }
+
+    private fun stubArray(probeCount: Int) = _stubArray.updateAndGet {
+        if (probeCount > it.size) {
+            var size = it.size shl 1
+            while (size <= probeCount) {
+                size = size shl 1
+            }
+            BooleanArray(size)
+        } else it
     }
 
     private fun remove(sessionId: String): ExecRuntime? = _runtimes.getAndUpdate {
