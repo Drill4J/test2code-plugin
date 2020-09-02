@@ -21,15 +21,13 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
                         totalMethodsCount = methods.count(),
                         totalCount = methods.sumBy { it.count },
                         methods = methods.fold(listOf()) { acc, astMethod ->
+                            val desc = astMethod.toDesc()
                             acc + JavaMethodCoverage(
                                 id = "$path.${ast.name}.${astMethod.name}".crc64,
                                 name = astMethod.name,
-                                desc = "",
+                                desc = desc,
                                 count = astMethod.probes.size,
-                                decl = astMethod.params.joinToString(
-                                    prefix = "(",
-                                    postfix = "):${astMethod.returnType}"
-                                ),
+                                decl = desc,
                                 probeRange = (acc.lastOrNull()?.probeRange?.last?.inc() ?: 0).let {
                                     ProbeRange(it, it + astMethod.probes.lastIndex)
                                 }
@@ -131,5 +129,9 @@ internal fun ClassCounter.toMethodCoverage(
         )
     }.toList()
 }
+
+internal fun AstMethod.toDesc(): String = params.joinToString(
+    prefix = "(", postfix = "):$returnType"
+)
 
 private fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }

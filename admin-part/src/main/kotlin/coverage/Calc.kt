@@ -22,33 +22,41 @@ internal fun Sequence<ExecClassData>.bundle(
         "${it.path}/${it.name}" to it.methods
     }
     val covered = probesByClasses.values.sumBy { probes -> probes.count { it } }
-    val packages = probesByClasses.keys.groupBy { it.substringBeforeLast("/") }
-    BundleCounter(
-        name = "",
-        methodCount = zeroCount,
-        count = Count(covered, tree.totalCount),
-        packages = packages.map { (pkgName, classNames) ->
-            PackageCounter(
-                name = pkgName,
-                count = classNames.flatMap { probesByClasses[it] ?: emptyList() }.toCount(),
-                classCount = Count(
-                    classNames.count { name -> probesByClasses.getValue(name).any { it } },
-                    classNames.size
-                ),
-                methodCount = Count(0, classNames.sumBy { classMethods.getValue(it).count() }),
-                classes = classNames.map { className ->
-                    val probes = probesByClasses.getValue(className)
-                    ClassCounter(
-                        path = pkgName,
-                        name = className.toShortClassName(),
-                        count = probes.toCount(),
-                        methods = classMethods.getValue(className).map {
-                            val methodProbes = probes.slice(it.probeRange)
-                            MethodCounter(it.name, it.desc, it.decl, methodProbes.toCount())
-                        }
-                    )
+    val packages = probesByClasses.keys.groupBy {
+        it.substringBeforeLast("/")
+    }.map { (pkgName, classNames) ->
+        val classes = classNames.map { className ->
+            val probes = probesByClasses.getValue(className)
+            ClassCounter(
+                path = pkgName,
+                name = className.toShortClassName(),
+                count = probes.toCount(),
+                methods = classMethods.getValue(className).map {
+                    val methodProbes = probes.slice(it.probeRange)
+                    MethodCounter(it.name, it.desc, it.decl, methodProbes.toCount())
                 }
             )
         }
+        PackageCounter(
+            name = pkgName,
+            count = classNames.flatMap { probesByClasses[it] ?: emptyList() }.toCount(),
+            classCount = Count(
+                classNames.count { name -> probesByClasses.getValue(name).any { it } },
+                classNames.size
+            ),
+            methodCount = Count(
+                classes.sumBy { c ->  c.methods.count { it.count.covered > 0 } },
+                classes.sumBy { it.methods.count() }
+            ),
+            classes = classes
+        )
+    }
+    BundleCounter(
+        name = "",
+        methodCount = packages.run {
+            Count(sumBy { it.methodCount.covered }, sumBy { it.methodCount.total })
+        },
+        count = Count(covered, tree.totalCount),
+        packages = packages
     )
 }

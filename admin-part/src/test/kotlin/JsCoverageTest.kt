@@ -51,6 +51,10 @@ class JsCoverageTest {
         coverageData.run {
             assertEquals(Count(3, 5), coverage.count)
             assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
+            assertEquals(1, packageCoverage[0].coveredClassesCount)
+            assertEquals(1, packageCoverage[0].totalClassesCount)
+            assertEquals(2, packageCoverage[0].coveredMethodsCount)
+            assertEquals(3, packageCoverage[0].totalMethodsCount)
             packageCoverage[0].classes.run {
                 assertEquals(listOf("foo/bar"), map { it.path })
                 assertEquals(listOf("baz.js"), map { it.name })
@@ -60,6 +64,11 @@ class JsCoverageTest {
                 setOf(TypedTest("default", "MANUAL"), TypedTest("default", "AUTO")),
                 associatedTests.flatMap { it.tests }.toSet()
             )
+            buildMethods.run {
+                assertEquals(2, totalMethods.coveredCount)
+                assertEquals(3, totalMethods.totalCount)
+            }
+
         }
     }
 

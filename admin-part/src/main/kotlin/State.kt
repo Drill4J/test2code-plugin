@@ -75,7 +75,7 @@ internal class AgentState(
                         Method(
                             ownerClass = "${e.path}/${e.name}",
                             name = m.name,
-                            desc = "(${m.params.joinToString(",")}):${m.returnType}",
+                            desc = m.toDesc(),
                             hash = m.checksum
                         )
                     }
