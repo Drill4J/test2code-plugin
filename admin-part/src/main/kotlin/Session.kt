@@ -27,12 +27,14 @@ class ActiveSession(
     )
 
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.forEach { probe ->
-        val typedTest = TypedTest(probe.testName, testType)
-        _probes.update { map ->
-            val testData = map[typedTest] ?: persistentHashMapOf()
-            val probeId = probe.id()
-            val merged = testData[probeId]?.merge(probe) ?: probe
-            map.put(typedTest, testData.put(probeId, merged))
+        if (true in probe.probes) {
+            val typedTest = TypedTest(probe.testName, testType)
+            _probes.update { map ->
+                val testData = map[typedTest] ?: persistentHashMapOf()
+                val probeId = probe.id()
+                val merged = testData[probeId]?.merge(probe) ?: probe
+                map.put(typedTest, testData.put(probeId, merged))
+            }
         }
     }
 
