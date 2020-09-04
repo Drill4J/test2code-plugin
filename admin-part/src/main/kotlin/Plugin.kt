@@ -89,9 +89,7 @@ class Plugin(
         }
         is Initialized -> {
             val otherVersions = state.initialized()
-            classDataOrNull()?.let {
-                send(buildVersion, Routes.Data().let(Routes.Data::Build), it.toBuildStatsDto())
-            }
+            classDataOrNull()?.sendBuildStats()
             initGateSettings()
             initActiveScope()
             sendActiveSessions()
@@ -104,6 +102,7 @@ class Plugin(
             }
             otherVersions.forEach { version ->
                 sendScopes(version)
+                state.classData(version)?.sendBuildStats()
                 calculateAndSendCachedCoverage(version)
             }
         }
@@ -145,6 +144,10 @@ class Plugin(
             } ?: logger.info { "No active session with id $sessionId." }
         }
         else -> logger.info { "Message is not supported! $message" }
+    }
+
+    private suspend fun ClassData.sendBuildStats() {
+        send(buildVersion, Routes.Data().let(Routes.Data::Build), toBuildStatsDto())
     }
 
     private suspend fun calculateAndSendCachedCoverage(
