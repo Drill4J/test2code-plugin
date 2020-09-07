@@ -52,6 +52,8 @@ interface Coverage {
     val percentage: Double
     val count: Count
     val methodCount: Count
+    val classCount: Count
+    val packageCount: Count
     val riskCount: Count
     val risks: RiskSummaryDto
     val byTestType: List<TestTypeSummary>
@@ -64,6 +66,8 @@ data class ScopeCoverage(
     override val count: Count,
     val overlap: CoverDto = CoverDto(),
     override val methodCount: Count,
+    override val classCount: Count,
+    override val packageCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val byTestType: List<TestTypeSummary>
@@ -76,6 +80,8 @@ data class BuildCoverage(
     override val percentage: Double,
     override val count: Count,
     override val methodCount: Count,
+    override val classCount: Count,
+    override val packageCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val byTestType: List<TestTypeSummary>,
@@ -125,6 +131,7 @@ data class MethodsInfo(
 data class PackageTree(
     val totalCount: Int = 0,
     val totalMethodCount: Int = 0,
+    val totalClassCount: Int = 0,
     val packages: List<JavaPackageCoverage> = emptyList()
 )
 
@@ -279,6 +286,8 @@ data class ScopeSummary(
             count = zeroCount
         ),
         methodCount = zeroCount,
+        classCount = zeroCount,
+        packageCount = zeroCount,
         riskCount = zeroCount,
         risks = RiskSummaryDto(),
         byTestType = emptyList()

@@ -48,6 +48,8 @@ internal fun IBundleCoverage.toCounter() = BundleCounter(
     name = "",
     count = instructionCounter.toCount(),
     methodCount = methodCounter.toCount(),
+    classCount = classCounter.toCount(),
+    packageCount = packages.run { Count(count { it.classCounter.coveredCount > 0 }, count()) },
     packages = packages.map { p ->
         PackageCounter(
             name = p.name,
