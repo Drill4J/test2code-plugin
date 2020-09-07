@@ -79,10 +79,12 @@ internal class AgentState(
                             hash = m.checksum
                         )
                     }
+                    val packages = data.toPackages()
                     PackageTree(
                         totalCount = sumBy { it.second.count },
                         totalMethodCount = count(),
-                        packages = data.toPackages()
+                        totalClassCount = packages.sumBy { it.totalClassesCount },
+                        packages = packages
                     ).toClassData(
                         methods = methods,
                         otherMethods = parentClassData?.methods
@@ -107,6 +109,7 @@ internal class AgentState(
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },
                         totalMethodCount = groupedMethods.values.sumBy { it.count() },
+                        totalClassCount = packages.sumBy { it.totalClassesCount },
                         packages = packages
                     ).toClassData(
                         methods = methods,

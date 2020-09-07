@@ -48,6 +48,8 @@ class BundleCounter(
     override val name: String,
     override val count: Count = zeroCount,
     val methodCount: Count = zeroCount,
+    val classCount: Count = zeroCount,
+    val packageCount: Count = zeroCount,
     val packages: List<PackageCounter> = emptyList()
 ) : NamedCounter()
 

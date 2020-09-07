@@ -32,6 +32,8 @@ internal fun ScopeSummary.calculateCoverage(
             count = coverageCount,
             overlap = overlappingBundle.toCoverDto(context.packageTree),
             methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
+            classCount = bundle.classCount.copy(total = context.packageTree.totalClassCount),
+            packageCount = bundle.packageCount.copy(total = context.packageTree.packages.count()),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
             byTestType = bundles.byTestType.coveragesByTestType(bundles.byTest, context)
@@ -65,6 +67,8 @@ internal fun BundleCounters.calculateCoverageData(
     logger.info { coverageByTests.byType }
 
     val methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount)
+    val classCount = bundle.classCount.copy(total = context.packageTree.totalClassCount)
+    val packageCount = bundle.packageCount.copy(total = context.packageTree.packages.count())
     val coverageBlock: Coverage = when (scope) {
         null -> {
             BuildCoverage(
@@ -72,7 +76,8 @@ internal fun BundleCounters.calculateCoverageData(
                 percentage = totalCoveragePercent,
                 count = coverageCount,
                 methodCount = methodCount,
-                riskCount = zeroCount,
+                classCount = classCount,
+                packageCount = packageCount,
                 byTestType = coverageByTests.byType
             )
         }
@@ -82,6 +87,8 @@ internal fun BundleCounters.calculateCoverageData(
             percentage = totalCoveragePercent,
             count = coverageCount,
             methodCount = methodCount,
+            classCount = classCount,
+            packageCount = packageCount,
             riskCount = zeroCount,
             byTestType = coverageByTests.byType
         )

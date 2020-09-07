@@ -53,10 +53,16 @@ internal fun Sequence<ExecClassData>.bundle(
     }
     BundleCounter(
         name = "",
+        count = Count(covered, tree.totalCount),
         methodCount = packages.run {
             Count(sumBy { it.methodCount.covered }, sumBy { it.methodCount.total })
         },
-        count = Count(covered, tree.totalCount),
+        classCount = packages.run {
+            Count(sumBy { it.classCount.covered }, sumBy { it.classCount.total })
+        },
+        packageCount = packages.run {
+            Count(count { it.classCount.covered > 0 }, count())
+        },
         packages = packages
     )
 }
