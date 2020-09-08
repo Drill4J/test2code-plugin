@@ -248,8 +248,8 @@ class Plugin(
             finishedScopesCount = scopeCount,
             prevBuildVersion = parentVersion ?: "",
             arrow = parentCoverageCount?.arrowType(coverageCount),
-            diff = parentCoverageCount?.let {
-                (coverageCount - it).run { first percentOf second }
+            diff = parentCoverageCount?.percentage()?.let {
+                coverageCount.percentage() - it
             } ?: coverageCount.percentage(),
             riskCount = buildMethods.run {
                 Count(
