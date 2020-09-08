@@ -81,7 +81,7 @@ class SessionTest : E2EPluginTest() {
                     pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage.percentage shouldBe 73.33333333333333
+                plugUi.activeScope()!!.coverage.percentage shouldBe 73.3
 
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
                 pluginAction(startNewSession2) { status, content ->
@@ -106,7 +106,7 @@ class SessionTest : E2EPluginTest() {
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
-                plugUi.buildCoverage()!!.percentage shouldBe 73.33333333333333
+                plugUi.buildCoverage()!!.percentage shouldBe 73.3
             }
         }
     }
