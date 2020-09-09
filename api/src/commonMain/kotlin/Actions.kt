@@ -1,11 +1,21 @@
 package com.epam.drill.plugins.test2code.api
 
-import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.serialization.*
+
+@Serializable
+sealed class Action
 
 @SerialName("START")
 @Serializable
 data class StartNewSession(val payload: StartPayload) : Action()
+
+@SerialName("CANCEL")
+@Serializable
+data class CancelSession(val payload: SessionPayload) : Action()
+
+@SerialName("STOP")
+@Serializable
+data class StopSession(val payload: SessionPayload) : Action()
 
 @SerialName("SWITCH_ACTIVE_SCOPE")
 @Serializable

@@ -22,7 +22,7 @@ class Plugin(
     id: String
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
 
-    override val serDe: SerDe<Action> = apiSerDe
+    override val serDe: SerDe<Action> = SerDe(Action.serializer())
 
     internal val runtimeConfig = RuntimeConfig(id)
 
@@ -57,13 +57,22 @@ class Plugin(
             is ToggleScope -> toggleScope(action.payload.scopeId)
             is DropScope -> dropScope(action.payload.scopeId)
             is UpdateSettings -> updateSettings(action.payload)
-            is StartNewSession -> StartSession(
-                payload = StartSessionPayload(
-                    sessionId = action.payload.sessionId.ifEmpty(::genUuid),
-                    startPayload = action.payload
-                )
+            is StartNewSession -> StartAgentSession(
+                payload = action.payload.run {
+                    StartSessionPayload(
+                        sessionId = sessionId.ifEmpty(::genUuid),
+                        testType = testType,
+                        isRealtime = isRealtime
+                    )
+                }
             )
-            else -> logger.info { "Action '$action' is not supported!" }
+            is CancelSession -> CancelAgentSession(
+                payload = AgentSessionPayload(action.payload.sessionId)
+            )
+            is StopSession -> StopAgentSession(
+                payload = AgentSessionPayload(action.payload.sessionId)
+            )
+            else -> logger.error { "Action '$action' is not supported!" }
         }
     }
 

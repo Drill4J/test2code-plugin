@@ -76,7 +76,7 @@ class ScopeTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -84,7 +84,7 @@ class ScopeTest : E2EPluginTest() {
                         gt.test2()
                         gt.test3()
                     }
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage.percentage shouldBe 100.0
@@ -119,7 +119,7 @@ class ScopeTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -127,7 +127,7 @@ class ScopeTest : E2EPluginTest() {
                         gt.test2()
                         gt.test3()
                     }
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage.percentage shouldBe 100.0

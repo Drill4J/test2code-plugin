@@ -3,6 +3,16 @@ package com.epam.drill.plugins.test2code.api
 import kotlinx.serialization.*
 
 @Serializable
+data class StartPayload(
+    val testType: String = "MANUAL",
+    val sessionId: String = "",
+    val isRealtime: Boolean = false
+)
+
+@Serializable
+data class SessionPayload(val sessionId: String)
+
+@Serializable
 data class ActiveScopeChangePayload(
     val scopeName: String,
     val savePrevScope: Boolean = false,

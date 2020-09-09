@@ -29,7 +29,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
@@ -40,7 +40,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         gt.test3()
                     }
 
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
 
                 plugUi.activeSessions()!!.count shouldBe 0
@@ -91,7 +91,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
@@ -101,7 +101,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         gt.test2()
                         gt.test3()
                     }
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
 
@@ -117,7 +117,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
                 pluginAction(startNewSession2) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession2 = content!!.parseJsonData<StartSession>()
+                    val startSession2 = content!!.parseJsonData<StartAgentSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
@@ -160,7 +160,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
@@ -171,7 +171,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                         gt.test3()
                     }
 
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()).join()
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
                 val switchScope = SwitchActiveScope(
