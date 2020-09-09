@@ -2,9 +2,8 @@ package com.epam.drill.plugins.test2code.common.api
 
 import kotlinx.serialization.*
 
-@Polymorphic
 @Serializable
-abstract class CoverMessage
+sealed class CoverMessage
 
 @SerialName("INIT")
 @Serializable

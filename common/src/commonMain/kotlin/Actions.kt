@@ -2,22 +2,21 @@ package com.epam.drill.plugins.test2code.common.api
 
 import kotlinx.serialization.*
 
-@Polymorphic
 @Serializable
-abstract class Action
+sealed class AgentAction
 
 @Serializable
 @SerialName("INIT_ACTIVE_SCOPE")
-data class InitActiveScope(val payload: InitScopePayload) : Action()
+data class InitActiveScope(val payload: InitScopePayload) : AgentAction()
 
 @Serializable
 @SerialName("START_AGENT_SESSION")
-data class StartSession(val payload: StartSessionPayload) : Action()
+data class StartAgentSession(val payload: StartSessionPayload) : AgentAction()
 
 @SerialName("STOP")
 @Serializable
-data class StopSession(val payload: SessionPayload) : Action()
+data class StopAgentSession(val payload: AgentSessionPayload) : AgentAction()
 
 @SerialName("CANCEL")
 @Serializable
-data class CancelSession(val payload: SessionPayload) : Action()
+data class CancelAgentSession(val payload: AgentSessionPayload) : AgentAction()

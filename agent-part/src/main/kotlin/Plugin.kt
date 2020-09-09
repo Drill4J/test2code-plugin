@@ -10,12 +10,12 @@ import org.jacoco.core.internal.data.*
 class Plugin(
     override val id: String,
     agentContext: AgentContext
-) : AgentPart<CoverConfig, Action>(id, agentContext), Instrumenter {
+) : AgentPart<CoverConfig, AgentAction>(id, agentContext), Instrumenter {
     private val logger = agentContext.logging.logger("Plugin $id")
 
     override val confSerializer = CoverConfig.serializer()
 
-    override val serDe: SerDe<Action> = commonSerDe
+    override val serDe: SerDe<AgentAction> = SerDe(AgentAction.serializer())
 
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
 
@@ -73,7 +73,7 @@ class Plugin(
         _retransformed.value = true
     }
 
-    override suspend fun doAction(action: Action) {
+    override suspend fun doAction(action: AgentAction) {
         when (action) {
             is InitActiveScope -> action.payload.apply {
                 logger.info { "Initializing scope $id, $name, prevId=$prevId" }
@@ -87,14 +87,13 @@ class Plugin(
                     )
                 )
             }
-            is StartSession -> action.payload.run {
-                val isRealtime = startPayload.isRealtime
+            is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId" }
-                val realtimeHandler = if (startPayload.isRealtime) probeSender(sessionId) else null
+                val realtimeHandler = if (isRealtime) probeSender(sessionId) else null
                 instrContext.start(sessionId, realtimeHandler)
-                sendMessage(SessionStarted(sessionId, startPayload.testType, isRealtime, currentTimeMillis()))
+                sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
-            is StopSession -> {
+            is StopAgentSession -> {
                 val sessionId = action.payload.sessionId
                 logger.info { "End of recording for session $sessionId" }
                 val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
@@ -103,7 +102,7 @@ class Plugin(
                 } else logger.info { "No data for session $sessionId" }
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
-            is CancelSession -> {
+            is CancelAgentSession -> {
                 val sessionId = action.payload.sessionId
                 logger.info { "Cancellation of recording for session $sessionId" }
                 instrContext.cancel(sessionId)

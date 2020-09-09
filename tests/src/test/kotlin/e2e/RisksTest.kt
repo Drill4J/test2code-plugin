@@ -29,7 +29,7 @@ class RisksTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
 
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -37,7 +37,7 @@ class RisksTest : E2EPluginTest() {
                         gt.test2()
                         gt.test3()
                     }
-                    pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify())
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify())
                 }.join()
                 plugUi.activeScope()!!.coverage shouldNotBe 0.0
 
@@ -69,7 +69,7 @@ class RisksTest : E2EPluginTest() {
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartSession>()
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
 
                     runWithSession(startSession.payload.sessionId) {
                         val gt = build.entryPoint()
@@ -78,7 +78,7 @@ class RisksTest : E2EPluginTest() {
                         gt.test3()
                     }
 
-                    val stopSession = StopSession(SessionPayload(startSession.payload.sessionId)).stringify()
+                    val stopSession = StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()
                     pluginAction(stopSession) { status1, _ -> status1 shouldBe HttpStatusCode.OK }
                 }.join()
                 delay(300)//todo move it to core library

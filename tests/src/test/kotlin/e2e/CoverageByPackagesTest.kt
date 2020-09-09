@@ -35,7 +35,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     status shouldBe HttpStatusCode.OK
                     cont = content!!
                 }.join()
-                val startSession = cont.parseJsonData<StartSession>()
+                val startSession = cont.parseJsonData<StartAgentSession>()
                 println(startSession)
                 runWithSession(startSession.payload.sessionId) {
                     val gt = build.entryPoint()
@@ -43,7 +43,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 }
 
 
-                pluginAction(StopSession(SessionPayload(startSession.payload.sessionId)).stringify()) { status, _ ->
+                pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()) { status, _ ->
                     status shouldBe HttpStatusCode.OK
                 }.join()
                 delay(300)//todo move it to core library
@@ -102,13 +102,13 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession2) { status, content ->
                     status shouldBe HttpStatusCode.OK
-                    val startSession2 = content!!.parseJsonData<StartSession>()
+                    val startSession2 = content!!.parseJsonData<StartAgentSession>()
                     runWithSession(startSession2.payload.sessionId) {
                         val gt = build.entryPoint()
                         gt.test1()
                     }
 
-                    pluginAction(StopSession(SessionPayload(startSession2.payload.sessionId)).stringify()) { st, _ ->
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession2.payload.sessionId)).stringify()) { st, _ ->
                         st shouldBe HttpStatusCode.OK
                     }
                 }.join()
