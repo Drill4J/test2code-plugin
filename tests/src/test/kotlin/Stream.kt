@@ -165,13 +165,6 @@ class CoverageSocketStreams : PluginStreams() {
                                                     MethodsSummaryDto.serializer() parse content
                                                 )
                                         }
-                                        is Routes.Scope.Methods.All,
-                                        is Routes.Scope.Methods.New,
-                                        is Routes.Scope.Methods.Modified,
-                                        is Routes.Scope.Methods.Deleted,
-                                        is Routes.Scope.Methods.Unaffected -> {
-                                            //ignore
-                                        }
 
                                         is Routes.Scope.TestsUsages -> {
                                             delay(100)
@@ -203,14 +196,6 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
-                                        is Routes.Scope.MethodsCoveredByTest,
-                                        is Routes.Scope.MethodsCoveredByTest.All,
-                                        is Routes.Scope.MethodsCoveredByTest.Modified,
-                                        is Routes.Scope.MethodsCoveredByTest.Unaffected,
-                                        is Routes.Scope.MethodsCoveredByTest.New -> {
-                                            //ignore
-                                        }
-
                                         is Routes.Scope.MethodsCoveredByTest.Summary -> {
                                             delay(100)
                                             val methodsCoveredByTest = testSubscriptions
@@ -223,14 +208,6 @@ class CoverageSocketStreams : PluginStreams() {
                                                 methodsCoveredByTest.send(
                                                     TestedMethodsSummary.serializer() parse content
                                                 )
-                                        }
-
-                                        is Routes.Scope.MethodsCoveredByTestType,
-                                        is Routes.Scope.MethodsCoveredByTestType.All,
-                                        is Routes.Scope.MethodsCoveredByTestType.Modified,
-                                        is Routes.Scope.MethodsCoveredByTestType.Unaffected,
-                                        is Routes.Scope.MethodsCoveredByTestType.New -> {
-                                            //ignore
                                         }
 
                                         is Routes.Scope.MethodsCoveredByTestType.Summary -> {
@@ -255,15 +232,6 @@ class CoverageSocketStreams : PluginStreams() {
                                                 coverage.send(null)
                                             } else
                                                 coverage.send(ScopeCoverage.serializer() parse content)
-                                        }
-
-                                        is Routes.Build,
-                                        is Routes.Build.Methods.All,
-                                        is Routes.Build.Methods.New,
-                                        is Routes.Build.Methods.Modified,
-                                        is Routes.Build.Methods.Deleted,
-                                        is Routes.Build.Methods.Unaffected -> {
-                                            //ignore
                                         }
 
                                         is Routes.Build.AssociatedTests -> {
@@ -299,24 +267,6 @@ class CoverageSocketStreams : PluginStreams() {
                                             }
                                         }
 
-                                        is Routes.Build.MethodsCoveredByTest,
-                                        is Routes.Build.MethodsCoveredByTest.Summary,
-                                        is Routes.Build.MethodsCoveredByTest.All,
-                                        is Routes.Build.MethodsCoveredByTest.Modified,
-                                        is Routes.Build.MethodsCoveredByTest.Unaffected,
-                                        is Routes.Build.MethodsCoveredByTest.New -> {
-                                            //ignore
-                                        }
-
-                                        is Routes.Build.MethodsCoveredByTestType,
-                                        is Routes.Build.MethodsCoveredByTestType.Summary,
-                                        is Routes.Build.MethodsCoveredByTestType.All,
-                                        is Routes.Build.MethodsCoveredByTestType.Unaffected,
-                                        is Routes.Build.MethodsCoveredByTestType.New,
-                                        is Routes.Build.MethodsCoveredByTestType.Modified -> {
-                                            //ignore
-                                        }
-
                                         is Routes.Build.Coverage -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 buildCoverage.send(null)
@@ -338,28 +288,12 @@ class CoverageSocketStreams : PluginStreams() {
                                                 risks.send(Risks.serializer() parse content)
                                         }
 
-                                        is Routes.Data,
-                                        is Routes.Data.Build,
-                                        is Routes.Data.Stats,
-                                        is Routes.Data.QualityGateSettings,
-                                        is Routes.Data.QualityGate,
-                                        is Routes.Data.TestsToRun,
-                                        is Routes.Data.Recommendations -> {
-                                            //ignore
-                                        }
-
-                                        is Routes.ServiceGroup,
-                                        is Routes.ServiceGroup.Data,
-                                        is Routes.ServiceGroup.Data.Recommendations,
-                                        is Routes.ServiceGroup.Data.TestsToRun -> {
-                                            //ignore
-                                        }
                                         is Routes.ServiceGroup.Summary -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 summary.send(null)
                                             } else summary.send(SummaryDto.serializer() parse content)
                                         }
-                                        else -> TODO("$url not implemented yet")
+                                        else -> println("!!!$url ignored")
                                     }
                                 }
                             else -> TODO("not implemented yet")
