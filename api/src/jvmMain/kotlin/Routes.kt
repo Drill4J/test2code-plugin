@@ -2,10 +2,10 @@ package com.epam.drill.plugins.test2code.api.routes
 
 import io.ktor.locations.*
 
+@OptIn(KtorExperimentalLocationsAPI::class)
 @Suppress("unused")
 class Routes {
 
-    @OptIn(KtorExperimentalLocationsAPI::class)
     @Location("/active-scope")
     object ActiveScope
 

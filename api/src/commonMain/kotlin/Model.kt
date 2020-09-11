@@ -6,7 +6,9 @@ import kotlinx.serialization.*
 data class StartPayload(
     val testType: String = "MANUAL",
     val sessionId: String = "",
-    val isRealtime: Boolean = false
+    val testName: String? = null,
+    val isRealtime: Boolean = false,
+    val isGlobal: Boolean = false
 )
 
 @Serializable

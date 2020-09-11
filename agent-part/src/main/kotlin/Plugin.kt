@@ -49,6 +49,7 @@ class Plugin(
      * Retransforming does not require an agent part instance.
      * This method is used in integration tests.
      */
+    @Suppress("MemberVisibilityCanBePrivate")
     fun retransform() {
         try {
             Native.RetransformClassesByPackagePrefixes(byteArrayOf())
@@ -88,9 +89,13 @@ class Plugin(
                 )
             }
             is StartAgentSession -> action.payload.run {
-                logger.info { "Start recording for session $sessionId" }
+                logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
                 val realtimeHandler = if (isRealtime) probeSender(sessionId) else null
-                instrContext.start(sessionId, realtimeHandler)
+                val cancelled = instrContext.start(sessionId, isGlobal, testName, realtimeHandler)
+                if (cancelled.any()) {
+                    logger.info { "Cancelled sessions: $cancelled." }
+                    sendMessage(AllSessionsCancelled(cancelled, currentTimeMillis()))
+                }
                 sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
             is StopAgentSession -> {

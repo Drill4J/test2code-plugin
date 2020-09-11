@@ -17,7 +17,6 @@ kotlin {
     jvm {
         val main by compilations
         main.defaultSourceSet {
-            languageSettings.useExperimentalAnnotation("io.ktor.locations.KtorExperimentalLocationsAPI")
             dependencies {
                 //provided by drill runtime or clients
                 compileOnly("io.ktor:ktor-locations") { isTransitive = false }

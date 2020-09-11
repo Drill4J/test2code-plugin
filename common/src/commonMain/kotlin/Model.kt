@@ -35,7 +35,9 @@ data class InitScopePayload(
 data class StartSessionPayload(
     val sessionId: String,
     val testType: String,
-    val isRealtime: Boolean
+    val testName: String?,
+    val isRealtime: Boolean,
+    val isGlobal: Boolean
 )
 
 @Serializable

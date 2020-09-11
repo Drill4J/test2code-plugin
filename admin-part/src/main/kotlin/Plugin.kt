@@ -62,6 +62,8 @@ class Plugin(
                     StartSessionPayload(
                         sessionId = sessionId.ifEmpty(::genUuid),
                         testType = testType,
+                        testName = testName,
+                        isGlobal = isGlobal,
                         isRealtime = isRealtime
                     )
                 }
