@@ -15,6 +15,35 @@ data class StartPayload(
 data class SessionPayload(val sessionId: String)
 
 @Serializable
+data class StopSessionPayload(
+    val sessionId: String,
+    val testRun: TestRun? = null
+)
+
+@Serializable
+data class TestRun(
+    val name: String = "",
+    val startedAt: Long,
+    val finishedAt: Long,
+    val tests: List<TestInfo>
+)
+
+@Serializable
+data class TestInfo(
+    val name: String,
+    val result: TestResult,
+    val startedAt: Long,
+    val finishedAt: Long
+)
+
+enum class TestResult {
+    PASSED,
+    FAILED,
+    ERROR,
+    SKIPPED
+}
+
+@Serializable
 data class ActiveScopeChangePayload(
     val scopeName: String,
     val savePrevScope: Boolean = false,

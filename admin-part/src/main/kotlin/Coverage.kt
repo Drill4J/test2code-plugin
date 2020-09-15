@@ -139,10 +139,13 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Sequence<Session>.bundlesByTests(
     context: CoverContext
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
+    val map = flatMap { it.tests.asSequence() }.associateWithTo(mutableMapOf()) {
+        BundleCounter("")
+    }
     groupBy(Session::testType).map { (testType, sessions) ->
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
-            .mapValuesTo(mutableMapOf()) { it.value.asSequence().bundle(context) }
+            .mapValuesTo(map) { it.value.asSequence().bundle(context) }
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
     }

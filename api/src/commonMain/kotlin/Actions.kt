@@ -15,7 +15,7 @@ data class CancelSession(val payload: SessionPayload) : Action()
 
 @SerialName("STOP")
 @Serializable
-data class StopSession(val payload: SessionPayload) : Action()
+data class StopSession(val payload: StopSessionPayload) : Action()
 
 @SerialName("SWITCH_ACTIVE_SCOPE")
 @Serializable

@@ -26,6 +26,8 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
+    private val _testRun = atomic<TestRun?>(null)
+
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.forEach { probe ->
         if (true in probe.probes) {
             val typedTest = TypedTest(probe.testName, testType)
@@ -38,6 +40,10 @@ class ActiveSession(
         }
     }
 
+    fun setTestRun(testRun: TestRun) {
+        _testRun.value = testRun
+    }
+
     override fun iterator(): Iterator<ExecClassData> = Sequence {
         _probes.value.values.asSequence().flatMap { it.values.asSequence() }.iterator()
     }.iterator()
@@ -46,7 +52,9 @@ class ActiveSession(
         FinishedSession(
             id = id,
             testType = testType,
-            tests = keys,
+            tests = _testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
+                keys + tests.map { TypedTest(type = testType, name = it.name) }
+            } ?: keys,
             probes = values.flatMap { it.values }
         )
     }

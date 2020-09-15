@@ -71,9 +71,12 @@ class Plugin(
             is CancelSession -> CancelAgentSession(
                 payload = AgentSessionPayload(action.payload.sessionId)
             )
-            is StopSession -> StopAgentSession(
-                payload = AgentSessionPayload(action.payload.sessionId)
-            )
+            is StopSession -> action.payload.run {
+                testRun?.let { activeScope.activeSessions[sessionId]?.setTestRun(it) }
+                StopAgentSession(
+                    payload = AgentSessionPayload(action.payload.sessionId)
+                )
+            }
             else -> logger.error { "Action '$action' is not supported!" }
         }
     }
