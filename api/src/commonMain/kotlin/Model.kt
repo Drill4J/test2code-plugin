@@ -307,6 +307,13 @@ data class ActiveSessions(
 )
 
 @Serializable
+data class ActiveSessionDto(
+    val id: String,
+    val agentId: String,
+    val testType: String
+)
+
+@Serializable
 data class ScopeSummary(
     val name: String,
     val id: String,
