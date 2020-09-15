@@ -9,6 +9,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import mu.*
@@ -181,13 +182,27 @@ class Plugin(
     }
 
     internal suspend fun sendActiveSessions() {
-        val activeSessions = activeScope.activeSessions.run {
-            ActiveSessions(
-                count = count(),
-                testTypes = values.groupBy { it.testType }.keys
+        val sessions = activeScope.activeSessions.values.map {
+            ActiveSessionDto(
+                id = it.id,
+                agentId = agentId,
+                testType = it.testType
             )
         }
-        send(buildVersion, Routes.ActiveSessions, activeSessions)
+        val summary = ActiveSessions(
+            count = sessions.count(),
+            testTypes = sessions.groupBy { it.testType }.keys
+        )
+        send(buildVersion, Routes.ActiveSessionStats, summary)
+        send(buildVersion, Routes.ActiveSessions, sessions)
+        val serviceGroup = agentInfo.serviceGroup
+        if (serviceGroup.any()) {
+            val aggregatedSessions = sessionAggregator(serviceGroup, agentId, sessions) ?: sessions
+            sendToGroup(
+                destination = Routes.ServiceGroup.ActiveSessions(Routes.ServiceGroup()),
+                message = aggregatedSessions
+            )
+        }
     }
 
     internal suspend fun sendActiveScope() {

@@ -114,7 +114,7 @@ class CoverageSocketStreams : PluginStreams() {
                                                 activeScope.send(element)
                                             }
                                         }
-                                        is Routes.ActiveSessions -> {
+                                        is Routes.ActiveSessionStats -> {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 activeSessions.send(null)
                                             } else {

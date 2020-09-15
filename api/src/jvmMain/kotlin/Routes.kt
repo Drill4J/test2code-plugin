@@ -10,6 +10,9 @@ class Routes {
     object ActiveScope
 
     @Location("/active-sessions")
+    object ActiveSessionStats
+
+    @Location("/active/sessions")
     object ActiveSessions
 
     @Location("/scopes")
@@ -235,6 +238,9 @@ class Routes {
     class ServiceGroup {
         @Location("/summary")
         class Summary(val serviceGroup: ServiceGroup)
+
+        @Location("/active/sessions")
+        class ActiveSessions(val serviceGroup: ServiceGroup)
 
         @Location("/data")
         class Data(val serviceGroup: ServiceGroup) {
