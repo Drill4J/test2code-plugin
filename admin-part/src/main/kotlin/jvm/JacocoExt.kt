@@ -54,32 +54,33 @@ internal fun IBundleCoverage.toCounter() = BundleCounter(
     classCount = classCounter.toCount(),
     packageCount = packages.run { Count(count { it.classCounter.coveredCount > 0 }, count()) },
     packages = packages.mapNotNull { p ->
-        val classes = p.classes.filter { it.methods.any() }
-        if (classes.any()) {
+        val classesWithMethods = p.classes.filter { c ->
+            c.methods.any().also {
+                if (!it) {
+                    logger.warn { "Class without methods - ${c.name}." }
+                }
+            }
+        }
+        if (classesWithMethods.any()) {
             PackageCounter(
                 name = p.name,
                 count = p.instructionCounter.toCount(),
                 classCount = p.classCounter.toCount(),
                 methodCount = p.methodCounter.toCount(),
-                classes = p.classes.mapNotNull { c ->
-                    if (c.methods.any()) {
-                        ClassCounter(
-                            path = p.name,
-                            name = c.name.toShortClassName(),
-                            count = c.instructionCounter.toCount(),
-                            methods = c.methods.map { m ->
-                                MethodCounter(
-                                    name = m.name,
-                                    desc = m.desc,
-                                    decl = declaration(m.desc),
-                                    count = m.instructionCounter.toCount()
-                                )
-                            }
-                        )
-                    } else {
-                        logger.warn { "Class without methods - ${c.name}." }
-                        null
-                    }
+                classes = classesWithMethods.map { c ->
+                    ClassCounter(
+                        path = p.name,
+                        name = c.name.toShortClassName(),
+                        count = c.instructionCounter.toCount(),
+                        methods = c.methods.map { m ->
+                            MethodCounter(
+                                name = m.name,
+                                desc = m.desc,
+                                decl = declaration(m.desc),
+                                count = m.instructionCounter.toCount()
+                            )
+                        }
+                    )
                 }
             )
         } else null
