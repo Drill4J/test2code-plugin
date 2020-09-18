@@ -276,10 +276,13 @@ class Plugin(
         val coverageCount = coverageInfoSet.coverage.count
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
+            //TODO remove all parent build data from coverage
             prevBuildVersion = parentVersion ?: "",
             arrow = parentCoverageCount?.arrowType(coverageCount),
-            diff = parentCoverageCount?.let {
-                (coverageCount - it).run { first percentOf second }
+            diff = parentCoverageCount?.percentage()?.let { parentPercentage ->
+                sequenceOf(coverageCount.percentage(), -parentPercentage).map {
+                    kotlin.math.round(it * 10.0) / 10.0
+                }.sum()
             } ?: coverageCount.percentage(),
             riskCount = buildMethods.run {
                 Count(
