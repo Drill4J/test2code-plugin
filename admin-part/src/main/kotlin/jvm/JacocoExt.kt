@@ -4,8 +4,11 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
+import mu.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
+
+private val logger = KotlinLogging.logger {}
 
 internal typealias ClassBytes = Map<String, ByteArray>
 
@@ -50,28 +53,36 @@ internal fun IBundleCoverage.toCounter() = BundleCounter(
     methodCount = methodCounter.toCount(),
     classCount = classCounter.toCount(),
     packageCount = packages.run { Count(count { it.classCounter.coveredCount > 0 }, count()) },
-    packages = packages.map { p ->
-        PackageCounter(
-            name = p.name,
-            count = p.instructionCounter.toCount(),
-            classCount = p.classCounter.toCount(),
-            methodCount = p.methodCounter.toCount(),
-            classes = p.classes.map { c ->
-                ClassCounter(
-                    path = p.name,
-                    name = c.name.toShortClassName(),
-                    count = c.instructionCounter.toCount(),
-                    methods = c.methods.map { m ->
-                        MethodCounter(
-                            name = m.name,
-                            desc = m.desc,
-                            decl = declaration(m.desc),
-                            count = m.instructionCounter.toCount()
+    packages = packages.mapNotNull { p ->
+        val classes = p.classes.filter { it.methods.any() }
+        if (classes.any()) {
+            PackageCounter(
+                name = p.name,
+                count = p.instructionCounter.toCount(),
+                classCount = p.classCounter.toCount(),
+                methodCount = p.methodCounter.toCount(),
+                classes = p.classes.mapNotNull { c ->
+                    if (c.methods.any()) {
+                        ClassCounter(
+                            path = p.name,
+                            name = c.name.toShortClassName(),
+                            count = c.instructionCounter.toCount(),
+                            methods = c.methods.map { m ->
+                                MethodCounter(
+                                    name = m.name,
+                                    desc = m.desc,
+                                    decl = declaration(m.desc),
+                                    count = m.instructionCounter.toCount()
+                                )
+                            }
                         )
+                    } else {
+                        logger.warn { "Class without methods - ${c.name}." }
+                        null
                     }
-                )
-            }
-        )
+                }
+            )
+        } else null
     }
 )
 
