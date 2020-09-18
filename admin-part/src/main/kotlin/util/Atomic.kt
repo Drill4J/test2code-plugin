@@ -12,7 +12,6 @@ class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
     override fun invoke(key: K, mutator: (V?) -> V?) = _map.updateAndGet {
         val oldVal = it[key]
         when (val newVal = mutator(oldVal)) {
-            oldVal -> it
             null -> it.remove(key)
             else -> it.put(key, newVal)
         }

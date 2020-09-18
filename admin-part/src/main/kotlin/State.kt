@@ -157,7 +157,7 @@ internal class AgentState(
     ): CachedBuild = builds(buildVersion) {
         it?.copy(
             tests = it.tests.run {
-                copy(assocTests = assocTests.toPersistentSet().addAll(tests))
+                copy(assocTests = tests.toPersistentSet() + assocTests)
             }
         )
     }!!
