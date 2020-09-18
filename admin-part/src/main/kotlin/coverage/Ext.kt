@@ -4,9 +4,8 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.jvm.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlin.math.*
-
-val CoverageKey.isMethod get() = methodName.any()
 
 internal fun ExecClassData.id(): Long = id.takeIf { it != 0L } ?: className.crc64()
 

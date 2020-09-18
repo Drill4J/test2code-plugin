@@ -6,16 +6,6 @@ import kotlin.test.*
 
 class CoverageTest {
     @Test
-    fun `percentOf - cases with zero`() {
-        assertEquals(0.0, 1 percentOf 0)
-        assertEquals(0.0, 1 percentOf 0)
-        assertEquals(0.0, 1L percentOf 0L)
-        assertEquals(0.0, 1 percentOf 0.0f)
-        assertEquals(0.0, 1.0 percentOf 0.0)
-        assertEquals(0.0, 0 percentOf 10)
-    }
-
-    @Test
     fun `count - operation minus`() {
         assertEquals(0L to 0L, zeroCount - zeroCount)
         assertEquals(1L to 2L, Count(1, 2) - zeroCount)

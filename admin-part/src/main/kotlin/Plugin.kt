@@ -11,6 +11,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import mu.*
 
@@ -371,7 +372,7 @@ class Plugin(
         summaryDto: SummaryDto
     ) {
         val serviceGroup = agentInfo.serviceGroup
-        if (serviceGroup.isNotEmpty()) {
+        if (serviceGroup.any()) {
             val agentSummary = AgentSummaryDto(
                 id = agentId,
                 buildVersion = buildVersion,

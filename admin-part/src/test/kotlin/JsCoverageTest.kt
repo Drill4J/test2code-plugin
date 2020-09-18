@@ -4,6 +4,7 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.test.js.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*

@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.jvm.*
+import com.epam.drill.plugins.test2code.util.*
 import org.jacoco.core.analysis.*
 import kotlin.test.*
 
@@ -37,6 +38,7 @@ class JacocoExtTest {
         val convertedDesc = parseDescTypes(asmDesc).first()
         assertEquals("Integer[]", convertedDesc)
     }
+
     @Test
     fun `should covert ASM declaration of method to Java declaration`() {
         CoverageNodeImpl(ICoverageNode.ElementType.METHOD, "test")

@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 
 internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
     groupBy(AstEntity::path).entries.map { (path, astEntities) ->

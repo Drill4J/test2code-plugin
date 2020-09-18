@@ -1,5 +1,7 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.group
 
+import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.CachedBuildCoverage
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import kotlinx.atomicfu.*

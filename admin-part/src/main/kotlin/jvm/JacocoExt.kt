@@ -1,9 +1,9 @@
 package com.epam.drill.plugins.test2code.jvm
 
-import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 

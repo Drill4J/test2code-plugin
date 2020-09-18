@@ -3,6 +3,8 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.group.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 import kotlin.reflect.*

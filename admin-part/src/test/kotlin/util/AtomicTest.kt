@@ -1,7 +1,6 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.util
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class AtomicTest {
     @Test

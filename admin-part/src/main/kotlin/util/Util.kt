@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.util
 
 import org.jacoco.core.internal.data.*
 import java.util.*
@@ -25,4 +25,3 @@ infix fun Number.percentOf(other: Number): Double = when (val dOther = other.toD
     0.0 -> 0.0
     else -> toDouble() * 100.0 / dOther
 }
-

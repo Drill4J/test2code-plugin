@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.test2code
+package com.epam.drill.plugins.test2code.util
 
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
