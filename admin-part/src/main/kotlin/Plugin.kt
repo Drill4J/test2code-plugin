@@ -169,11 +169,14 @@ class Plugin(
     private suspend fun calculateAndSendCachedCoverage(
         buildVersion: String
     ) = state.builds[buildVersion]?.let { build ->
-        val coverContext = state.coverContext(build.version)
-        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
         val scopes = state.scopeManager.byVersion(
             buildVersion, withData = true
         )
+        if (buildVersion == this.buildVersion) {
+            state.updateProbes(buildVersion, scopes)
+        }
+        val coverContext = state.coverContext(build.version)
+        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
         scopes.forEach { scope ->
             val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
