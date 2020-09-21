@@ -9,7 +9,6 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
 import org.jacoco.core.internal.data.*
 
 /**
@@ -156,9 +155,7 @@ internal class AgentState(
         tests: List<AssociatedTests>
     ): CachedBuild = builds(buildVersion) {
         it?.copy(
-            tests = it.tests.run {
-                copy(assocTests = assocTests.toPersistentSet().addAll(tests))
-            }
+            tests = it.tests.copy(assocTests = tests.toSet())
         )
     }!!
 

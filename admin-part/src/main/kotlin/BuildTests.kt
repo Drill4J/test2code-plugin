@@ -2,12 +2,11 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.storage.*
-import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
 @Serializable
 data class BuildTests(
-    val assocTests: Set<AssociatedTests> = persistentSetOf(),
+    val assocTests: Set<AssociatedTests> = emptySet(),
     val testsToRun: GroupedTests = emptyMap()
 )
 
