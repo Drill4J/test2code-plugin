@@ -228,7 +228,7 @@ data class AssociatedTests(
     val methodName: String = "",
     val tests: List<TypedTest> = emptyList()
 ) {
-    override fun equals(other: Any?) = other is AssociatedTests && id == other.id
+    override fun equals(other: Any?) = other is AssociatedTests && id == other.id && tests.containsAll(other.tests)
     override fun hashCode() = id.hashCode()
 }
 
