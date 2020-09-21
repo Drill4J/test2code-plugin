@@ -289,7 +289,14 @@ data class TestUsagesInfo(
     val id: String,
     val testName: String,
     val methodCalls: Int,
-    val coverage: Double
+    val coverage: Double,
+    val stats: TestStats? = null
+)
+
+@Serializable
+data class TestStats(
+    val duration: Long,
+    val result: TestResult
 )
 
 @Serializable

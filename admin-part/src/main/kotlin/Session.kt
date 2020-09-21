@@ -12,6 +12,7 @@ sealed class Session : Sequence<ExecClassData> {
     abstract val id: String
     abstract val testType: String
     abstract val tests: Set<TypedTest>
+    abstract val testStats: Map<TypedTest, TestStats>
 }
 
 class ActiveSession(
@@ -21,6 +22,8 @@ class ActiveSession(
 
     override val tests: Set<TypedTest>
         get() = _probes.value.keys
+
+    override val testStats: Map<TypedTest, TestStats> = emptyMap()
 
     private val _probes = atomic(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
@@ -55,6 +58,12 @@ class ActiveSession(
             tests = _testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
                 keys + tests.map { TypedTest(type = testType, name = it.name) }
             } ?: keys,
+            testStats = _testRun.value?.tests?.associate {
+                TypedTest(type = testType, name = it.name) to TestStats(
+                    duration = it.finishedAt - it.startedAt,
+                    result = it.result
+                )
+            } ?: emptyMap(),
             probes = values.flatMap { it.values }
         )
     }
@@ -65,6 +74,7 @@ data class FinishedSession(
     override val id: String,
     override val testType: String,
     override val tests: Set<TypedTest>,
+    override val testStats: Map<TypedTest, TestStats> = emptyMap(),
     val probes: List<ExecClassData>
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()

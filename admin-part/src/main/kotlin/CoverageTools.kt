@@ -17,16 +17,17 @@ data class CoverageInfoSet(
     val methodsCoveredByType: List<MethodsCoveredByType> = emptyList()
 )
 
-fun Map<TypedTest, BundleCounter>.testUsages(
+fun BundleCounters.testUsages(
     totalCoverageCount: Int,
     testType: String
-): List<TestUsagesInfo> = filter { it.key.type == testType }
+): List<TestUsagesInfo> = byTest.filter { it.key.type == testType }
     .map { (test, bundle) ->
         TestUsagesInfo(
             id = test.id(),
             testName = test.name,
             methodCalls = bundle.methodCount.covered,
-            coverage = bundle.count.copy(total = totalCoverageCount).percentage()
+            coverage = bundle.count.copy(total = totalCoverageCount).percentage(),
+            stats = statsByTest[test]
         )
     }.sortedBy { it.testName }
 

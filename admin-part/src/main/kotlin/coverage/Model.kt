@@ -31,7 +31,8 @@ data class CoverageKey(
 class BundleCounters(
     val all: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
-    val byTest: Map<TypedTest, BundleCounter> = emptyMap()
+    val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
+    val statsByTest: Map<TypedTest, TestStats> = emptyMap()
 ) {
     companion object {
         val empty = BundleCounters(all = BundleCounter(""))

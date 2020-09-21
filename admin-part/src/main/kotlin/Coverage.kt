@@ -12,7 +12,15 @@ private val logger = KotlinLogging.logger {}
 internal fun Sequence<Session>.calcBundleCounters(context: CoverContext) = BundleCounters(
     all = flatten().bundle(context),
     byTestType = bundlesByTestTypes(context),
-    byTest = bundlesByTests(context)
+    byTest = bundlesByTests(context),
+    statsByTest = fold(mutableMapOf()) { map, session ->
+        session.testStats.forEach { (test, stats) ->
+            map[test] = map[test]?.run {
+                copy(duration = duration + stats.duration, result = stats.result)
+            } ?: stats
+        }
+        map
+    }
 )
 
 internal fun ScopeSummary.calculateCoverage(
@@ -107,7 +115,7 @@ internal fun BundleCounters.calculateCoverageData(
             testType = testType,
             coverage = summary.coverage.percentage,
             methodsCount = summary.coverage.methodCount.covered,
-            tests = bundlesByTests.testUsages(totalCount, testType)
+            tests = testUsages(totalCount, testType)
         )
     }.sortedBy { it.testType }
 
