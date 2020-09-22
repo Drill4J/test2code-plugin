@@ -20,7 +20,7 @@ class BuildMethodsTests : E2EPluginTest() {
                     deleted.covered shouldBe 0
                     deleted.total shouldBe 0
                 }
-                delay(100)
+                delay(300)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.methods()!!.apply {
                     all.total shouldBe 5

@@ -13,6 +13,9 @@ import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
+import kotlinx.coroutines.*
 import mu.*
 
 @Suppress("unused")
@@ -38,6 +41,8 @@ class Plugin(
 
     private val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
+    private val _expected = atomic(persistentHashSetOf<String>())
+
     private val logger = KotlinLogging.logger("Plugin $id")
 
     override suspend fun initialize() {
@@ -54,7 +59,9 @@ class Plugin(
 
     override suspend fun doAction(action: Action): Any {
         return when (action) {
-            is SwitchActiveScope -> changeActiveScope(action.payload)
+            is SwitchActiveScope -> changeActiveScope(action.payload).also {
+                (it as? InitActiveScope)?.run { expect(payload.id) }
+            }
             is RenameScope -> renameScope(action.payload)
             is ToggleScope -> toggleScope(action.payload.scopeId)
             is DropScope -> dropScope(action.payload.scopeId)
@@ -69,16 +76,16 @@ class Plugin(
                         isRealtime = isRealtime
                     )
                 }
-            )
+            ).also { expect(it.payload.sessionId) }
             is CancelSession -> CancelAgentSession(
                 payload = AgentSessionPayload(action.payload.sessionId)
-            )
+            ).also { expect(action.payload.sessionId) }
             is StopSession -> action.payload.run {
                 testRun?.let { activeScope.activeSessions[sessionId]?.setTestRun(it) }
                 StopAgentSession(
                     payload = AgentSessionPayload(action.payload.sessionId)
                 )
-            }
+            }.also { expect(action.payload.sessionId) }
             else -> logger.error { "Action '$action' is not supported!" }
         }
     }
@@ -122,13 +129,13 @@ class Plugin(
                 calculateAndSendCachedCoverage(version)
             }
         }
-        is ScopeInitialized -> scopeInitialized(message.prevId)
-        is SessionStarted -> {
+        is ScopeInitialized -> message.processIfExpected { scopeInitialized(message.prevId) }
+        is SessionStarted -> message.processIfExpected {
             activeScope.startSession(message.sessionId, message.testType)
             logger.info { "Session ${message.sessionId} started." }
             sendActiveSessions()
         }
-        is SessionCancelled -> {
+        is SessionCancelled -> message.processIfExpected {
             activeScope.cancelSession(message)
             logger.info { "Session ${message.sessionId} cancelled." }
             sendActiveSessions()
@@ -144,7 +151,8 @@ class Plugin(
         is SessionChanged -> {
             activeScope.sessionChanged()
         }
-        is SessionFinished -> {
+        is SessionFinished -> message.processIfExpected {
+            delay(500L) //TODO remove after multi-instance core is implemented
             val sessionId = message.sessionId
             val context = state.coverContext()
             activeScope.finishSession(sessionId) {
@@ -160,6 +168,17 @@ class Plugin(
             } ?: logger.info { "No active session with id $sessionId." }
         }
         else -> logger.info { "Message is not supported! $message" }
+    }
+
+    private fun expect(id: String) = _expected.update { it + id }
+
+    private suspend fun CoverMessage.processIfExpected(
+        block: suspend () -> Any?
+    ): Any? = id().let { id ->
+        val expected = _expected.getAndUpdate { it - id }
+        if (id in expected) {
+            block()
+        } else logger.debug { "Ignored unexpected message: $this" }
     }
 
     private suspend fun ClassData.sendBuildStats() {
@@ -503,4 +522,12 @@ class Plugin(
         agentInfo = agentInfo,
         adminData = adminData
     )
+}
+
+private fun CoverMessage.id(): String = when (this) {
+    is SessionStarted -> sessionId
+    is SessionCancelled -> sessionId
+    is SessionFinished -> sessionId
+    is ScopeInitialized -> id
+    else -> this::class.simpleName ?: ""
 }
