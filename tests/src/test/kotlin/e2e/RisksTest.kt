@@ -55,7 +55,7 @@ class RisksTest : E2EPluginTest() {
                     newMethods.size shouldBe 0
                     modifiedMethods shouldBe emptyList()
                 }
-                delay(100)
+                delay(300)
             }.reconnect<Build2> { plugUi, build ->
                 plugUi.risks()!!.apply {
                     newMethods.count() shouldBe 1
@@ -78,8 +78,11 @@ class RisksTest : E2EPluginTest() {
                         gt.test3()
                     }
 
+                    delay(300)//todo move it to core library
                     val stopSession = StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()
-                    pluginAction(stopSession) { status1, _ -> status1 shouldBe HttpStatusCode.OK }
+                    pluginAction(stopSession) { status1, _ ->
+                        status1 shouldBe HttpStatusCode.OK
+                    }.join()
                 }.join()
                 delay(300)//todo move it to core library
                 plugUi.activeSessions()!!.count shouldBe 0
@@ -94,8 +97,8 @@ class RisksTest : E2EPluginTest() {
                 pluginAction(switchScope)
 
                 plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 0
-                    modifiedMethods.count() shouldBe 0
+                    newMethods shouldBe emptyList()
+                    modifiedMethods shouldBe emptyList()
                 }
             }
         }
