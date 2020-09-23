@@ -112,6 +112,7 @@ class Plugin(
         }
         is Initialized -> {
             val otherVersions = state.initialized()
+            sendParentBuild()
             classDataOrNull()?.sendBuildStats()
             initGateSettings()
             initActiveScope()
@@ -180,6 +181,12 @@ class Plugin(
             block()
         } else logger.debug { "Ignored unexpected message: $this" }
     }
+
+    private suspend fun sendParentBuild() = send(
+        buildVersion,
+        destination = Routes.Data().let(Routes.Data::Parent),
+        message = buildInfo?.parentVersion?.takeIf(String::any)?.let(::ParentBuildDto) ?: ""
+    )
 
     private suspend fun ClassData.sendBuildStats() {
         send(buildVersion, Routes.Data().let(Routes.Data::Build), toBuildStatsDto())

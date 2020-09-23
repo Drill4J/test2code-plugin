@@ -215,6 +215,9 @@ class Routes {
 
     @Location("/data")
     class Data {
+        @Location("/parent")
+        class Parent(val parent: Data)
+
         @Location("/build")
         class Build(val parent: Data)
 

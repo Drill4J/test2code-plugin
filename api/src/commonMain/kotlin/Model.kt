@@ -60,6 +60,11 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "")
 
 @Serializable
+data class ParentBuildDto(
+    val version: String
+)
+
+@Serializable
 data class CoverMethod(
     val ownerClass: String,
     val name: String,
