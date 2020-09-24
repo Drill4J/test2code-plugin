@@ -47,7 +47,7 @@ data class AgentSessionPayload(
 
 @Serializable
 data class ExecClassData(
-    val id: Long = 0L,
+    val id: Long? = null,
     val className: String,
     val probes: List<Boolean>,
     val testName: String = ""

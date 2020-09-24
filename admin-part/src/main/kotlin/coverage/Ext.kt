@@ -7,7 +7,7 @@ import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlin.math.*
 
-internal fun ExecClassData.id(): Long = id.takeIf { it != 0L } ?: className.crc64()
+internal fun ExecClassData.id(): Long = id ?: className.crc64()
 
 internal fun List<Boolean>.toCount() = Count(count { it }, size)
 

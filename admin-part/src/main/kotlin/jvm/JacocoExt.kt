@@ -42,10 +42,17 @@ private fun Sequence<ExecClassData>.bundle(
 
 internal fun Sequence<ExecClassData>.execDataStore(
     probeIds: Map<String, Long>
-): ExecutionDataStore = mapNotNull { it.toExecutionData(probeIds) }
-    .fold(ExecutionDataStore()) { store, execData ->
-        store.apply { put(execData) }
+): ExecutionDataStore = mapNotNull {
+    it.toExecutionData(probeIds)
+}.fold(ExecutionDataStore()) { store, execData ->
+    store.apply {
+        runCatching { put(execData) }.onFailure { e ->
+            logger.error(e) {
+                "Error adding ${execData}, probes=(${execData.probes?.size})${execData.probes?.contentToString()}"
+            }
+        }
     }
+}
 
 internal fun IBundleCoverage.toCounter() = BundleCounter(
     name = "",

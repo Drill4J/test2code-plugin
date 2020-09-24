@@ -12,7 +12,7 @@ class ProbesTest {
             className = "foo/Bar",
             probes = listOf(true, true, false)
         )
-        val map = persistentMapOf(data.id to data)
+        val map = persistentMapOf(data.id() to data)
         val emptyMap = persistentHashMapOf<Long, ExecClassData>()
         assertEquals(map, map.intersect(map.values.asSequence()))
         assertEquals(emptyMap, map.intersect(emptySequence()))
@@ -35,9 +35,9 @@ class ProbesTest {
         val map = listOf(
             data,
             data2
-        ).associateBy(ExecClassData::id).toPersistentMap()
+        ).associateBy { it.id() }.toPersistentMap()
         val expected = data.run {
-            persistentMapOf(id to copy(probes = listOf(false, true, false)))
+            persistentMapOf(id() to copy(probes = listOf(false, true, false)))
         }
         val intersection = map.intersect(
             sequenceOf(
