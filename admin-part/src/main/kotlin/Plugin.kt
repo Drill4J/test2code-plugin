@@ -177,9 +177,11 @@ class Plugin(
         block: suspend () -> Any?
     ): Any? = id().let { id ->
         val expected = _expected.getAndUpdate { it - id }
-        if (id in expected) {
-            block()
-        } else logger.debug { "Ignored unexpected message: $this" }
+        when {
+            id in expected -> block()
+            agentInfo.agentType == AgentType.NODEJS -> block() //TODO remove after js agent is fixed
+            else -> logger.debug { "Ignored unexpected message: $this" }
+        }
     }
 
     private suspend fun sendParentBuild() = send(
