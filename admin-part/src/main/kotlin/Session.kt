@@ -31,7 +31,9 @@ class ActiveSession(
 
     private val _testRun = atomic<TestRun?>(null)
 
-    fun addAll(dataPart: Collection<ExecClassData>) = dataPart.forEach { probe ->
+    fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
+        probe.id?.let { probe } ?: probe.copy(id = probe.id())
+    }.forEach { probe ->
         if (true in probe.probes) {
             val typedTest = TypedTest(probe.testName, testType)
             _probes.update { map ->
