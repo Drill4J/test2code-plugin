@@ -21,12 +21,12 @@ interface Scope : Sequence<FinishedSession> {
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
 class ActiveScope(
+    override val id: String = genUuid(),
+    override val buildVersion: String,
     val nth: Int = 1,
     name: String = "$DEFAULT_SCOPE_NAME $nth",
-    override val buildVersion: String
+    sessions: List<FinishedSession> = emptyList()
 ) : Scope {
-
-    override val id = genUuid()
 
     override val summary get() = _summary.value
 
@@ -34,7 +34,7 @@ class ActiveScope(
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
-    private val _sessions = atomic(persistentListOf<FinishedSession>())
+    private val _sessions = atomic(sessions.toPersistentList())
 
     //TODO remove summary for this class
     private val _summary = atomic(
@@ -151,15 +151,17 @@ data class FinishedScope(
 }
 
 @Serializable
-data class ScopeCounter(
-    @Id val id: AgentBuildId,
-    val count: Int = 1
-)
-
-@Serializable
 data class AgentBuildId(
     val agentId: String,
     val buildVersion: String
 )
 
-fun ScopeCounter.inc() = copy(count = count.inc())
+@Serializable
+internal data class ActiveScopeInfo(
+    @Id val buildVersion: String,
+    val id: String = genUuid(),
+    val count: Int = 1,
+    val name: String = ""
+)
+
+internal fun ActiveScopeInfo.inc() = copy(count = count.inc())

@@ -64,9 +64,9 @@ class ScopeManager(private val storage: StoreClient) {
         } ?: findById(scopeId)
     }
 
-    suspend fun counter(agentBuildId: AgentBuildId): ScopeCounter? = storage.findById(agentBuildId)
+    internal suspend fun counter(buildVersion: String): ActiveScopeInfo? = storage.findById(buildVersion)
 
-    suspend fun storeCounter(scopeCounter: ScopeCounter) = storage.store(scopeCounter)
+    internal suspend fun storeCounter(activeScopeInfo: ActiveScopeInfo) = storage.store(activeScopeInfo)
 
     private fun FinishedScope.withProbes(data: ScopeDataBytes?) = data?.let {
         copy(data = ProtoBuf.load(ScopeData.serializer(), it.bytes))

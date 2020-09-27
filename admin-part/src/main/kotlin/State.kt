@@ -120,16 +120,24 @@ internal class AgentState(
             }
         } as ClassData
         agentClassData[agentBuildId] = classData
-        readScopeCounter()?.run {
-            _activeScope.update { ActiveScope(nth = count.inc(), buildVersion = agentInfo.buildVersion) }
-        }
+        readActiveScopeInfo()?.run {
+            val sessions = storeClient.loadSessions(id)
+            _activeScope.update {
+                ActiveScope(
+                    id = id,
+                    nth = count.inc(),
+                    buildVersion = agentInfo.buildVersion,
+                    name = name,
+                    sessions = sessions
+                )
+            }
+        } ?: storeActiveScopeInfo()
         builds[agentInfo.buildVersion] = CachedBuild(agentInfo.buildVersion)
         val allVersions = buildManager.builds.mapTo(mutableSetOf()) { it.version }
         val loadedVersions = allVersions - cachedVersions - agentInfo.buildVersion
         storeClient.loadBuilds(loadedVersions + agentInfo.buildVersion).forEach {
             builds[it.version] = it
         }
-        storeScopeCounter()
         classData.store(storeClient)
         return loadedVersions
     }
@@ -211,13 +219,20 @@ internal class AgentState(
     }
 
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
-        ActiveScope(it.nth.inc(), scopeName(name), agentInfo.buildVersion)
+        ActiveScope(nth = it.nth.inc(), name = scopeName(name), buildVersion = agentInfo.buildVersion)
     }.apply { close() }
 
-    suspend fun readScopeCounter(): ScopeCounter? = scopeManager.counter(agentBuildId)
+    suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentInfo.buildVersion)
 
-    suspend fun storeScopeCounter() = scopeManager.storeCounter(
-        ScopeCounter(agentBuildId, activeScope.nth)
+    suspend fun storeActiveScopeInfo() = scopeManager.storeCounter(
+        activeScope.run {
+            ActiveScopeInfo(
+                buildVersion = buildVersion,
+                id = id,
+                count = nth,
+                name = name
+            )
+        }
     )
 
     private fun scopeName(name: String) = when (val trimmed = name.trim()) {

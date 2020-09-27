@@ -5,6 +5,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.storage.*
 import mu.*
 
 private val logger = KotlinLogging.logger {}
@@ -26,7 +27,8 @@ internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload
 ): Any = if (state.scopeByName(scopeChange.scopeName) == null) {
     val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
-    state.storeScopeCounter()
+    state.storeActiveScopeInfo()
+    storeClient.deleteSessions(prevScope.id)
     sendActiveSessions()
     sendActiveScope()
     if (scopeChange.savePrevScope) {
