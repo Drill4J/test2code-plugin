@@ -47,7 +47,7 @@ class Plugin(
 
     override suspend fun initialize() {
         state = agentState()
-        state.readScopeCounter()?.let { processData(Initialized("")) }
+        state.readActiveScopeInfo()?.let { processData(Initialized("")) }
     }
 
     override suspend fun applyPackagesChanges() {
@@ -117,6 +117,10 @@ class Plugin(
             initGateSettings()
             initActiveScope()
             sendActiveSessions()
+            val context = state.coverContext(buildVersion)
+            activeScope.updateSummary {
+                it.calculateCoverage(activeScope, context)
+            }
             sendActiveScope()
             calculateAndSendScopeCoverage(activeScope)
             sendScopes(buildVersion)
@@ -161,6 +165,7 @@ class Plugin(
             }?.also {
                 sendActiveSessions()
                 if (it.any()) {
+                    storeClient.storeSession(activeScope.id, it)
                     sendActiveScope()
                     sendScopes(buildVersion)
                     calculateAndSendScopeCoverage(activeScope)
