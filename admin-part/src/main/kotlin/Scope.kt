@@ -73,8 +73,8 @@ class ActiveScope(
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
-    fun startSession(sessionId: String, testType: String) {
-        activeSessions(sessionId) { ActiveSession(sessionId, testType) }
+    fun startSession(sessionId: String, testType: String, isRealtime: Boolean = false) {
+        activeSessions(sessionId) { ActiveSession(sessionId, testType, isRealtime) }
     }
 
     fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {

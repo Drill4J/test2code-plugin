@@ -77,6 +77,23 @@ class Plugin(
                     )
                 }
             ).also { expect(it.payload.sessionId) }
+            is AddCoverage -> action.payload.run {
+                activeScope.activeSessions[sessionId]?.let { session ->
+                    session.addAll(
+                        data.map {
+                            ExecClassData(
+                                className = it.name,
+                                testName = it.test,
+                                probes = it.probes
+                            )
+                        }
+                    )
+                    if (session.isRealtime) {
+                        activeScope.sessionChanged()
+                    }
+                    StatusMessage(200, "")
+                } ?: StatusMessage(404, "Active session $sessionId not found.")
+            }
             is CancelSession -> CancelAgentSession(
                 payload = AgentSessionPayload(action.payload.sessionId)
             ).also { expect(action.payload.sessionId) }
@@ -136,7 +153,7 @@ class Plugin(
         }
         is ScopeInitialized -> message.processIfExpected { scopeInitialized(message.prevId) }
         is SessionStarted -> message.processIfExpected {
-            activeScope.startSession(message.sessionId, message.testType)
+            activeScope.startSession(message.sessionId, message.testType, message.isRealtime)
             logger.info { "Session ${message.sessionId} started." }
             sendActiveSessions()
         }

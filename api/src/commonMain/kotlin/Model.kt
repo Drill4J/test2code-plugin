@@ -15,6 +15,19 @@ data class StartPayload(
 data class SessionPayload(val sessionId: String)
 
 @Serializable
+data class CoverPayload(
+    val sessionId: String,
+    val data: List<EntityProbes>
+)
+
+@Serializable
+class EntityProbes(
+    val name: String,
+    val test: String = "",
+    val probes: List<Boolean>
+)
+
+@Serializable
 data class StopSessionPayload(
     val sessionId: String,
     val testRun: TestRun? = null

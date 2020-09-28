@@ -17,7 +17,8 @@ sealed class Session : Sequence<ExecClassData> {
 
 class ActiveSession(
     override val id: String,
-    override val testType: String
+    override val testType: String,
+    val isRealtime: Boolean = false
 ) : Session() {
 
     override val tests: Set<TypedTest>
