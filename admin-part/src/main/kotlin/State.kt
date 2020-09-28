@@ -125,7 +125,7 @@ internal class AgentState(
             _activeScope.update {
                 ActiveScope(
                     id = id,
-                    nth = count.inc(),
+                    nth = count,
                     buildVersion = agentInfo.buildVersion,
                     name = name,
                     sessions = sessions
