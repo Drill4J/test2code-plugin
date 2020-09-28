@@ -120,18 +120,7 @@ internal class AgentState(
             }
         } as ClassData
         agentClassData[agentBuildId] = classData
-        readActiveScopeInfo()?.run {
-            val sessions = storeClient.loadSessions(id)
-            _activeScope.update {
-                ActiveScope(
-                    id = id,
-                    nth = count.inc(),
-                    buildVersion = agentInfo.buildVersion,
-                    name = name,
-                    sessions = sessions
-                )
-            }
-        } ?: storeActiveScopeInfo()
+        initActiveScope()
         builds[agentInfo.buildVersion] = CachedBuild(agentInfo.buildVersion)
         val allVersions = buildManager.builds.mapTo(mutableSetOf()) { it.version }
         val loadedVersions = allVersions - cachedVersions - agentInfo.buildVersion
@@ -218,6 +207,25 @@ internal class AgentState(
         }
     }
 
+    private suspend fun initActiveScope() {
+        readActiveScopeInfo()?.run {
+            val sessions = storeClient.loadSessions(id)
+            _activeScope.update {
+                ActiveScope(
+                    id = id,
+                    nth = nth,
+                    buildVersion = agentInfo.buildVersion,
+                    name = name,
+                    sessions = sessions
+                ).apply {
+                    updateSummary {
+                        it.copy(started = startedAt)
+                    }
+                }
+            }
+        } ?: storeActiveScopeInfo()
+    }
+
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
         ActiveScope(nth = it.nth.inc(), name = scopeName(name), buildVersion = agentInfo.buildVersion)
     }.apply { close() }
@@ -229,8 +237,9 @@ internal class AgentState(
             ActiveScopeInfo(
                 buildVersion = buildVersion,
                 id = id,
-                count = nth,
-                name = name
+                nth = nth,
+                name = name,
+                startedAt = summary.started
             )
         }
     )

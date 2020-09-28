@@ -160,8 +160,9 @@ data class AgentBuildId(
 internal data class ActiveScopeInfo(
     @Id val buildVersion: String,
     val id: String = genUuid(),
-    val count: Int = 1,
-    val name: String = ""
+    val nth: Int = 1,
+    val name: String = "",
+    val startedAt: Long = 0L
 )
 
-internal fun ActiveScopeInfo.inc() = copy(count = count.inc())
+internal fun ActiveScopeInfo.inc() = copy(nth = nth.inc())
