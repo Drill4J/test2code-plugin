@@ -46,6 +46,9 @@ data class AgentSessionPayload(
 )
 
 @Serializable
+data class AgentSessionDataPayload(val sessionId: String, val data: String)
+
+@Serializable
 data class ExecClassData(
     val id: Long? = null,
     val className: String,

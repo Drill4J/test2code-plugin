@@ -98,6 +98,9 @@ class Plugin(
                 }
                 sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
+            is AddAgentSessionData -> {
+                //ignored
+            }
             is StopAgentSession -> {
                 val sessionId = action.payload.sessionId
                 logger.info { "End of recording for session $sessionId" }

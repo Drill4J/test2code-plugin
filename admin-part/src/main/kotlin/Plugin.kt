@@ -77,6 +77,11 @@ class Plugin(
                     )
                 }
             ).also { expect(it.payload.sessionId) }
+            is AddSessionData -> action.payload.run {
+                AddAgentSessionData(
+                    payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
+                )
+            }
             is AddCoverage -> action.payload.run {
                 activeScope.activeSessions[sessionId]?.let { session ->
                     session.addAll(

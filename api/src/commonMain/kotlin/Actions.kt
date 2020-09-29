@@ -9,6 +9,10 @@ sealed class Action
 @Serializable
 data class StartNewSession(val payload: StartPayload) : Action()
 
+@SerialName("ADD_SESSION_DATA")
+@Serializable
+data class AddSessionData(val payload: SessionDataPayload) : Action()
+
 @SerialName("ADD_COVERAGE")
 @Serializable
 data class AddCoverage(val payload: CoverPayload) : Action()
