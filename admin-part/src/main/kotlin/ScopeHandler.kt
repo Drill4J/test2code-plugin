@@ -17,7 +17,7 @@ internal fun Plugin.initActiveScope() {
             updateSummary { it.calculateCoverage(sessions, context) }
             sendScopeMessages()
             val bundleCounters = sessions.calcBundleCounters(context)
-            val coverageInfoSet = bundleCounters.calculateCoverageData(context, activeScope)
+            val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
             coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
         }
     }
