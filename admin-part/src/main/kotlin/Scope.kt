@@ -120,7 +120,9 @@ class ActiveScope(
         }
     }
 
-    fun close() = changes?.close()
+    fun close() = cancelAllSessions().also {
+        changes?.close()
+    }
 
     override fun toString() = "act-scope($id, $name)"
 }
