@@ -31,6 +31,7 @@ internal fun ScopeSummary.calculateCoverage(
     val bundles = sessions.calcBundleCounters(context)
     val bundle = bundles.all
     val overlappingBundle = probes.overlappingBundle(context)
+    val testTypeOverlap = sessions.testTypeOverlap(context)
     val coverageCount = bundle.count.copy(total = context.packageTree.totalCount)
     copy(
         coverage = ScopeCoverage(
@@ -42,6 +43,7 @@ internal fun ScopeSummary.calculateCoverage(
             packageCount = bundle.packageCount.copy(total = context.packageTree.packages.count()),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
+            testTypeOverlap = testTypeOverlap.toCoverDto(context.packageTree),
             byTestType = bundles.byTestType.coveragesByTestType(bundles.byTest, context)
         )
     )
@@ -94,6 +96,7 @@ internal fun BundleCounters.calculateCoverageData(
             classCount = classCount,
             packageCount = packageCount,
             riskCount = zeroCount,
+            testTypeOverlap = scope.testTypeOverlap(context).toCoverDto(context.packageTree),
             byTestType = coverageByTests.byType
         )
     }
@@ -171,6 +174,15 @@ internal fun Sequence<ExecClassData>.overlappingBundle(
 ): BundleCounter = (context.build?.probes?.let {
     it.intersect(this).values.asSequence()
 } ?: emptySequence()).bundle(context)
+
+internal fun Sequence<Session>.testTypeOverlap(
+    context: CoverContext
+) = groupBy(Session::testType).mapValues { it.value.asSequence().flatten() }.let { probesByType ->
+    probesByType.entries.fold(setOf<ExecClassData>()) { acc, (type, probes) ->
+        val otherProbes = probesByType.filterNot { it.key == type }.values.asSequence().flatten()
+         acc + probes.merge().intersect(otherProbes).values.toSet()
+    }.asSequence()
+}.bundle(context)
 
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext

@@ -117,6 +117,7 @@ interface Coverage {
     val packageCount: Count
     val riskCount: Count
     val risks: RiskSummaryDto
+    val testTypeOverlap: CoverDto
     val byTestType: List<TestTypeSummary>
 }
 
@@ -130,6 +131,7 @@ data class ScopeCoverage(
     override val packageCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
+    override val testTypeOverlap: CoverDto = CoverDto(),
     override val byTestType: List<TestTypeSummary> = emptyList()
 ) : Coverage
 
@@ -143,6 +145,7 @@ data class BuildCoverage(
     override val packageCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
+    override val testTypeOverlap: CoverDto = CoverDto(),
     override val byTestType: List<TestTypeSummary> = emptyList(),
     val finishedScopesCount: Int = 0
 ) : Coverage

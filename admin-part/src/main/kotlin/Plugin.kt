@@ -321,6 +321,9 @@ class Plugin(
             state.builds[parentVersion]?.coverage?.count ?: zeroCount
         }
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
+        val testTypeOverlap = state.scopeManager.byVersion(
+            buildVersion, withData = true
+        ).enabled().flatten().testTypeOverlap(context)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
             riskCount = buildMethods.run {
@@ -329,7 +332,8 @@ class Plugin(
                     total = newMethods.totalCount + allModifiedMethods.totalCount
                 )
             },
-            risks = buildMethods.toRiskSummaryDto()
+            risks = buildMethods.toRiskSummaryDto(),
+            testTypeOverlap = testTypeOverlap.toCoverDto(context.packageTree)
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
