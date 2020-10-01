@@ -139,6 +139,7 @@ class Plugin(
             initGateSettings()
             initActiveScope()
             sendActiveSessions()
+            calculateAndSendCachedCoverage(buildVersion)
             val context = state.coverContext(buildVersion)
             activeScope.updateSummary {
                 it.calculateCoverage(activeScope, context)
@@ -146,7 +147,6 @@ class Plugin(
             sendActiveScope()
             calculateAndSendScopeCoverage(activeScope)
             sendScopes(buildVersion)
-            calculateAndSendCachedCoverage(buildVersion)
             adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
                 cleanActiveScope(it.version)
             }
