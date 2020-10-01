@@ -366,7 +366,7 @@ class CoverageSocketStreams : PluginStreams() {
             iut.send(
                 Subscribe(
                     destination = app.toLocation(it),
-                    message = AgentSubscription.serializer() stringify AgentSubscription(
+                    message = Subscription.serializer() stringify AgentSubscription(
                         agentId = agentId,
                         buildVersion = buildVersion
                     )
@@ -393,7 +393,7 @@ class CoverageSocketStreams : PluginStreams() {
             iut.send(
                 Subscribe(
                     destination = app.toLocation(it),
-                    message = AgentSubscription.serializer() stringify AgentSubscription(
+                    message = Subscription.serializer() stringify AgentSubscription(
                         agentId = agentId,
                         buildVersion = buildVersion
                     )
@@ -419,7 +419,7 @@ class CoverageSocketStreams : PluginStreams() {
             iut.send(
                 Subscribe(
                     destination = app.toLocation(it),
-                    message = AgentSubscription.serializer() stringify AgentSubscription(
+                    message = Subscription.serializer() stringify AgentSubscription(
                         agentId = agentId,
                         buildVersion = buildVersion
                     )
