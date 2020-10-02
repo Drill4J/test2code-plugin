@@ -63,10 +63,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {
-                    prevBuildVersion shouldBe Build1.version
                     count.covered shouldBe 0
-                    diff shouldNotBe 0.0
-                    arrow shouldBe ArrowType.DECREASE
                 }
                 plugUi.testsToRun()!!.apply {
                     testTypeToNames shouldNotBe emptyMap<Any, Any>()
@@ -134,10 +131,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.testsToRun()!!.apply {
                     testTypeToNames shouldBe emptyMap()
                 }
-                plugUi.buildCoverage()!!.apply {
-                    arrow shouldBe null
-                    diff shouldBe 0.0
-                }
                 plugUi.activeScope()!!.apply {
                     id shouldNotBe activeScopeIdFirstBuild
                     coverage.percentage shouldBe 0.0
@@ -193,9 +186,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }
                 plugUi.buildCoverage()!!.apply {
                     percentage shouldBe 100.0
-                    arrow shouldBe null
-                    diff shouldNotBe 0.0
-                    prevBuildVersion shouldBe ""
                 }
                 plugUi.activeScope()!!.name shouldBe "new2"
             }
