@@ -33,11 +33,12 @@ class Aggregator : (String, AgentSummaryDto) -> SummaryDto? {
 }
 
 internal fun CachedBuildCoverage.toSummaryDto(
-    buildTests: BuildTests
+    buildTests: BuildTests,
+    parentCoverageCount: Count? = null
 ): SummaryDto = SummaryDto(
     coverage = count.percentage(),
     coverageCount = count,
-    arrow = arrow?.let { ArrowType.valueOf(it) },
+    arrow = parentCoverageCount?.arrowType(count),
     risks = risks,
     testsToRun = buildTests.run {
         TestsToRunDto(

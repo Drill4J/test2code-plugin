@@ -20,7 +20,6 @@ internal data class CachedBuildCoverage(
     @Id val version: String,
     val count: Count = zeroCount,
     val scopeCount: Int = 0,
-    val arrow: String? = null,
     val risks: Int = 0
 )
 
@@ -28,7 +27,6 @@ internal fun BuildCoverage.toCachedBuildCoverage(version: String) = CachedBuildC
     version = version,
     count = count,
     scopeCount = finishedScopesCount,
-    arrow = arrow?.name,
     risks = risks.total
 )
 

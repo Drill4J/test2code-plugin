@@ -331,17 +331,8 @@ class Plugin(
             state.builds[parentVersion]?.coverage?.count ?: zeroCount
         }
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
-        val coverageCount = coverageInfoSet.coverage.count
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            //TODO remove all parent build data from coverage
-            prevBuildVersion = parentVersion ?: "",
-            arrow = parentCoverageCount?.arrowType(coverageCount),
-            diff = parentCoverageCount?.percentage()?.let { parentPercentage ->
-                sequenceOf(coverageCount.percentage(), -parentPercentage).map {
-                    kotlin.math.round(it * 10.0) / 10.0
-                }.sum()
-            } ?: coverageCount.percentage(),
             riskCount = buildMethods.run {
                 Count(
                     covered = newMethods.coveredCount + allModifiedMethods.coveredCount,
@@ -358,7 +349,7 @@ class Plugin(
             ).coverage
             state.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
             val cachedTests = state.updateTestsToRun(buildVersion, testsToRun).tests
-            val summaryDto = cachedCoverage.toSummaryDto(cachedTests)
+            val summaryDto = cachedCoverage.toSummaryDto(cachedTests, parentCoverageCount)
             val stats = summaryDto.toStatsDto()
             val qualityGate = checkQualityGate(stats)
             Routes.Data().let {

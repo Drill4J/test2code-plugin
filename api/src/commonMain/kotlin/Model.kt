@@ -144,9 +144,6 @@ data class BuildCoverage(
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val byTestType: List<TestTypeSummary>,
-    val diff: Double = 0.0,
-    val prevBuildVersion: String = "",
-    val arrow: ArrowType? = null,
     val finishedScopesCount: Int = 0
 ) : Coverage
 
