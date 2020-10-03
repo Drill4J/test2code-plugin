@@ -23,7 +23,7 @@ internal fun Sequence<ExecClassData>.bundle(
     }
 }.toCounter()
 
-internal fun List<String>.bundle(
+internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,
     probeIds: Map<String, Long>
 ): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->

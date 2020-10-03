@@ -45,7 +45,7 @@ sealed class NamedCounter {
 }
 
 @Serializable
-class BundleCounter(
+data class BundleCounter(
     override val name: String,
     override val count: Count = zeroCount,
     val methodCount: Count = zeroCount,
@@ -55,7 +55,7 @@ class BundleCounter(
 ) : NamedCounter()
 
 @Serializable
-class PackageCounter(
+data class PackageCounter(
     override val name: String,
     override val count: Count,
     val classCount: Count,
@@ -64,7 +64,7 @@ class PackageCounter(
 ) : NamedCounter()
 
 @Serializable
-class ClassCounter(
+data class ClassCounter(
     val path: String,
     override val name: String,
     override val count: Count,
@@ -74,7 +74,7 @@ class ClassCounter(
 }
 
 @Serializable
-class MethodCounter(
+data class MethodCounter(
     override val name: String,
     val desc: String,
     val decl: String,

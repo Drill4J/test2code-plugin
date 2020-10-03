@@ -42,9 +42,9 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
     }
 }
 
-internal fun BundleCounter.toPackages(
+internal fun Iterable<PackageCounter>.toPackages(
     parsedClasses: Map<String, List<Method>>
-): List<JavaPackageCoverage> = packages.mapNotNull { packageCoverage ->
+): List<JavaPackageCoverage> = mapNotNull { packageCoverage ->
     packageCoverage.classes.classTree(parsedClasses).takeIf { it.any() }?.let { classes ->
         JavaPackageCoverage(
             id = packageCoverage.coverageKey().id,

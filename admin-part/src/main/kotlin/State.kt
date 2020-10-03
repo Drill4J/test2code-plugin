@@ -78,7 +78,7 @@ internal class AgentState(
                             desc = m.toDesc(),
                             hash = m.checksum
                         )
-                    }
+                    }.sorted()
                     val packages = data.toPackages()
                     PackageTree(
                         totalCount = sumBy { it.second.count },
@@ -93,19 +93,26 @@ internal class AgentState(
                 is ClassData -> data
                 is NoData -> {
                     val classBytes = adminData.classBytes
-                    val sortedNames = classBytes.keys.sorted()
                     val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
-                    val bundleCoverage = sortedNames.bundle(classBytes, probeIds)
-                    val classCounters = bundleCoverage.packages.asSequence().flatMap {
+                    val bundleCoverage = classBytes.keys.bundle(classBytes, probeIds)
+                    val sortedPackages = bundleCoverage.packages.asSequence().run {
+                        mapNotNull { pc ->
+                            val classes = pc.classes.filter { it.methods.any() }
+                            if (classes.any()) {
+                                pc.copy(classes = classes.sortedBy(ClassCounter::name))
+                            } else null
+                        }.sortedBy(PackageCounter::name)
+                    }.toList()
+                    val classCounters = sortedPackages.asSequence().flatMap {
                         it.classes.asSequence()
-                    }.filter { it.methods.any() }
+                    }
                     val groupedMethods = classCounters.associate { classCounter ->
                         val name = classCounter.fullName
                         val bytes = classBytes.getValue(name)
                         name to classCounter.parseMethods(bytes).sorted()
                     }
                     val methods = groupedMethods.flatMap { it.value }
-                    val packages = bundleCoverage.toPackages(groupedMethods)
+                    val packages = sortedPackages.toPackages(groupedMethods)
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },
                         totalMethodCount = groupedMethods.values.sumBy { it.count() },
