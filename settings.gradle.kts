@@ -3,8 +3,8 @@ rootProject.name = "$drillPluginId-plugin"
 
 apply(from = "plugins.settings.gradle.kts")
 
-include(":common")
 include(":api")
+include(":agent-api")
 include(":admin-part")
 include(":agent-part")
 include(":tests")
