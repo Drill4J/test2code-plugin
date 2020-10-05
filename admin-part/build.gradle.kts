@@ -21,6 +21,7 @@ dependencies {
 
     //plugin dependencies
     jarDeps(project(":api"))
+    jarDeps(project(":common"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.apache.bcel:bcel")
 

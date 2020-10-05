@@ -517,13 +517,6 @@ class Plugin(
 
     internal suspend fun cleanTopics(id: String) = Routes.Scope(id).let { scope ->
         send(buildVersion, Routes.Scope.AssociatedTests(scope), "")
-        Routes.Scope.Methods(scope).let {
-            send(buildVersion, it, "")
-            send(buildVersion, Routes.Scope.Methods.All(it), "")
-            send(buildVersion, Routes.Scope.Methods.New(it), "")
-            send(buildVersion, Routes.Scope.Methods.Modified(it), "")
-            send(buildVersion, Routes.Scope.Methods.Deleted(it), "")
-        }
         val coverageRoute = Routes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, "")
         classDataOrNull()?.let { classData ->

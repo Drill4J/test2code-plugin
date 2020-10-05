@@ -35,22 +35,7 @@ class Routes {
         class AssociatedTests(val scope: Scope)
 
         @Location("/methods")
-        class Methods(val scope: Scope) {
-            @Location("/all")
-            class All(val methods: Methods)
-
-            @Location("/new")
-            class New(val methods: Methods)
-
-            @Location("/modified")
-            class Modified(val methods: Methods)
-
-            @Location("/deleted")
-            class Deleted(val methods: Methods)
-
-            @Location("/unaffected")
-            class Unaffected(val methods: Methods)
-        }
+        class Methods(val scope: Scope)
 
         @Location("/summary")
         class Summary(val build: Scope) {

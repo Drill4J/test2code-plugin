@@ -28,6 +28,7 @@ val ktorSwaggerVersion: String by rootProject
 
 dependencies {
     testCompileOnly(project(":api"))
+    testCompileOnly(project(":common"))
     testImplementation(project(":admin-part"))
     testCompileOnly(project(":agent-part"))
 

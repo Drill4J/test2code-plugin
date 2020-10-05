@@ -7,8 +7,6 @@ plugins {
 kotlin {
     sourceSets.commonMain {
         dependencies {
-            api(project(":common"))
-
             //provided by drill runtime or clients
             compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common")
         }
