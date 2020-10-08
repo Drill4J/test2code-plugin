@@ -25,6 +25,7 @@ configurations {
 val drillAdminVersion: String by rootProject
 val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
+val aircompressorVersion: String by rootProject
 
 dependencies {
     testCompileOnly(project(":api"))
@@ -57,6 +58,7 @@ dependencies {
 
     testImplementation("com.epam.drill:kodux-jvm")
     testImplementation("org.jetbrains.xodus:xodus-entity-store")
+    testImplementation("io.airlift:aircompressor:$aircompressorVersion")
 
     testImplementation("org.jacoco:org.jacoco.core")
     testImplementation("org.apache.bcel:bcel:6.3.1")
