@@ -17,7 +17,7 @@ enum class GateStatus {
 @Serializable
 data class QualityGate(
     val status: GateStatus,
-    val results: Map<String, Boolean>
+    val results: Map<String, Boolean> = emptyMap()
 )
 
 enum class ConditionOp { LT, LTE, GT, GTE }

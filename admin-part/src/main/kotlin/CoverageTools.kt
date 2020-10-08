@@ -27,7 +27,7 @@ fun BundleCounters.testUsages(
             testName = test.name,
             methodCalls = bundle.methodCount.covered,
             coverage = bundle.count.copy(total = totalCoverageCount).percentage(),
-            stats = statsByTest[test]
+            stats = statsByTest[test] ?: TestStats(duration = 0, result = TestResult.PASSED)
         )
     }.sortedBy { it.testName }
 

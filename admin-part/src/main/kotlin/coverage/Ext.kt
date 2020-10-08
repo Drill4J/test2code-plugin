@@ -15,7 +15,9 @@ internal fun <T> List<T>.slice(probeRange: ProbeRange): List<T> = slice(probeRan
 
 internal fun Count.percentage(): Double = covered percentOf total
 
-internal fun Count.arrowType(other: Count): ArrowType? = (this - other).first.sign.toArrowType()
+internal fun Count?.arrowType(other: Count): ArrowType = this?.run {
+    (this - other).first.sign.toArrowType()
+} ?: ArrowType.UNCHANGED
 
 internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
     total.gcd(other.total).let { gcd ->

@@ -38,7 +38,7 @@ internal fun CachedBuildCoverage.toSummaryDto(
 ): SummaryDto = SummaryDto(
     coverage = count.percentage(),
     coverageCount = count,
-    arrow = parentCoverageCount?.arrowType(count),
+    arrow = parentCoverageCount.arrowType(count),
     risks = risks,
     testsToRun = buildTests.run {
         TestsToRunDto(
@@ -54,7 +54,7 @@ operator fun SummaryDto.plus(other: SummaryDto): SummaryDto {
     return copy(
         coverage = coverageCount.percentage(),
         coverageCount = coverageCount,
-        arrow = null,
+        arrow = ArrowType.UNCHANGED,
         risks = risks + other.risks,
         testsToRun = testsToRun + other.testsToRun,
         recommendations = recommendations.union(other.recommendations)
