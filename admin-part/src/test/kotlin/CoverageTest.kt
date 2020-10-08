@@ -18,12 +18,12 @@ class CoverageTest {
 
     @Test
     fun `arrowType - zero to zero`() {
-        assertNull(zeroCount.arrowType(zeroCount))
+        assertEquals(ArrowType.UNCHANGED, zeroCount.arrowType(zeroCount))
     }
 
     @Test
     fun `arrowType zero to non-zero`() {
-        assertNull(zeroCount.arrowType(Count(1, 2)))
+        assertEquals(ArrowType.UNCHANGED, zeroCount.arrowType(Count(1, 2)))
     }
 
     @Test
@@ -32,14 +32,14 @@ class CoverageTest {
         val count2 = Count(1, 2)
         assertEquals(ArrowType.INCREASE, count1.arrowType(count2))
         assertEquals(ArrowType.DECREASE, count2.arrowType(count1))
-        assertNull(count1.arrowType(count1))
+        assertEquals(ArrowType.UNCHANGED, count1.arrowType(count1))
     }
 
     @Test
     fun `arrowType same ratio`() {
         val count1 = Count(1, 2)
         val count2 = Count(2, 4)
-        assertNull(count1.arrowType(count2))
-        assertNull(count2.arrowType(count1))
+        assertEquals(ArrowType.UNCHANGED, count1.arrowType(count2))
+        assertEquals(ArrowType.UNCHANGED, count2.arrowType(count1))
     }
 }

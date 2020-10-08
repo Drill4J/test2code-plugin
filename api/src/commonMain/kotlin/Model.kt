@@ -41,7 +41,7 @@ data class TestRun(
     val name: String = "",
     val startedAt: Long,
     val finishedAt: Long,
-    val tests: List<TestInfo>
+    val tests: List<TestInfo> = emptyList()
 )
 
 @Serializable
@@ -85,7 +85,7 @@ data class CoverMethod(
     val ownerClass: String,
     val name: String,
     val desc: String,
-    val hash: String?,
+    val hash: String = "",
     val count: Count,
     val coverageRate: CoverageRate = CoverageRate.MISSED
 )
@@ -130,7 +130,7 @@ data class ScopeCoverage(
     override val packageCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
-    override val byTestType: List<TestTypeSummary>
+    override val byTestType: List<TestTypeSummary> = emptyList()
 ) : Coverage
 
 
@@ -143,13 +143,14 @@ data class BuildCoverage(
     override val packageCount: Count,
     override val riskCount: Count = zeroCount,
     override val risks: RiskSummaryDto = RiskSummaryDto(),
-    override val byTestType: List<TestTypeSummary>,
+    override val byTestType: List<TestTypeSummary> = emptyList(),
     val finishedScopesCount: Int = 0
 ) : Coverage
 
 enum class ArrowType {
     INCREASE,
-    DECREASE
+    DECREASE,
+    UNCHANGED
 }
 
 @Serializable
@@ -202,7 +203,7 @@ data class JavaPackageCoverage(
     val coveredClassesCount: Int = 0,
     val coveredMethodsCount: Int = 0,
     val assocTestsCount: Int = 0,
-    val classes: List<JavaClassCoverage>
+    val classes: List<JavaClassCoverage> = emptyList()
 )
 
 @Serializable
@@ -215,7 +216,7 @@ data class JavaClassCoverage(
     val coverage: Double = 0.0,
     val coveredMethodsCount: Int = 0,
     val assocTestsCount: Int = 0,
-    val methods: List<JavaMethodCoverage>,
+    val methods: List<JavaMethodCoverage> = emptyList(),
     val probes: List<Int> = emptyList()
 )
 
@@ -262,10 +263,10 @@ data class MethodsCoveredByTest(
     val id: String,
     val testName: String,
     val testType: String,
-    val allMethods: List<CoverMethod>,
-    val newMethods: List<CoverMethod>,
-    val modifiedMethods: List<CoverMethod>,
-    val unaffectedMethods: List<CoverMethod>
+    val allMethods: List<CoverMethod> = emptyList(),
+    val newMethods: List<CoverMethod> = emptyList(),
+    val modifiedMethods: List<CoverMethod> = emptyList(),
+    val unaffectedMethods: List<CoverMethod> = emptyList()
 )
 
 //TODO remove this from the api and refactor after changes on the frontend
@@ -273,10 +274,10 @@ data class MethodsCoveredByTest(
 data class MethodsCoveredByType(
     val testType: String,
     val testsCount: Int,
-    val allMethods: List<CoverMethod>,
-    val newMethods: List<CoverMethod>,
-    val modifiedMethods: List<CoverMethod>,
-    val unaffectedMethods: List<CoverMethod>
+    val allMethods: List<CoverMethod> = emptyList(),
+    val newMethods: List<CoverMethod> = emptyList(),
+    val modifiedMethods: List<CoverMethod> = emptyList(),
+    val unaffectedMethods: List<CoverMethod> = emptyList()
 )
 
 @Serializable
@@ -308,7 +309,7 @@ data class TestUsagesInfo(
     val testName: String,
     val methodCalls: Int,
     val coverage: Double,
-    val stats: TestStats? = null
+    val stats: TestStats
 )
 
 @Serializable
@@ -322,13 +323,13 @@ data class TestsUsagesInfoByType(
     val testType: String,
     val coverage: Double,
     val methodsCount: Int,
-    val tests: List<TestUsagesInfo>
+    val tests: List<TestUsagesInfo> = emptyList()
 )
 
 @Serializable
 data class ActiveSessions(
     val count: Int,
-    val testTypes: Set<String>
+    val testTypes: Set<String> = emptySet()
 )
 
 @Serializable
@@ -373,8 +374,8 @@ data class TestSummary(
 
 @Serializable
 data class Risks(
-    val newMethods: List<CoverMethod>,
-    val modifiedMethods: List<CoverMethod>
+    val newMethods: List<CoverMethod> = emptyList(),
+    val modifiedMethods: List<CoverMethod> = emptyList()
 )
 
 typealias GroupedTests = Map<String, List<String>>
@@ -382,7 +383,7 @@ typealias GroupedTests = Map<String, List<String>>
 //TODO get rid of this unnecessary wrapping
 @Serializable
 data class TestsToRun(
-    val testTypeToNames: GroupedTests
+    val testTypeToNames: GroupedTests = emptyMap()
 )
 
 @Serializable
@@ -393,7 +394,7 @@ data class TestTypeCount(
 
 @Serializable
 data class TestsToRunDto(
-    val groupedTests: GroupedTests,
+    val groupedTests: GroupedTests = emptyMap(),
     val count: Int
 )
 
@@ -410,10 +411,10 @@ data class BuildStatsDto(
 data class SummaryDto(
     val coverage: Double,
     val coverageCount: Count,
-    val arrow: ArrowType?,
+    val arrow: ArrowType,
     val risks: Int,
     val testsToRun: TestsToRunDto,
-    val recommendations: Set<String>
+    val recommendations: Set<String> = emptySet()
 )
 
 @Serializable
@@ -428,7 +429,7 @@ data class AgentSummaryDto(
 data class ServiceGroupSummaryDto(
     val name: String,
     val aggregated: SummaryDto,
-    val summaries: List<AgentSummaryDto>
+    val summaries: List<AgentSummaryDto> = emptyList()
 )
 
 @Serializable
