@@ -20,16 +20,6 @@ import org.jacoco.core.internal.data.*
 
 internal const val DEFAULT_SCOPE_NAME = "New Scope"
 
-internal typealias AgentBuildCache = AtomicCache<String, AtomicCache<String, CachedBuild>>
-
-private val agentClassData = AtomicCache<AgentBuildId, ClassData>()
-
-private val agentBuilds = AgentBuildCache()
-
-internal fun AgentBuildCache.versionsOf(agentId: String): Set<String> = get(agentId)?.run {
-    values.mapTo(mutableSetOf()) { it.version }
-} ?: emptySet()
-
 internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
@@ -46,12 +36,9 @@ internal class AgentState(
 
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
 
-    internal val builds: AtomicCache<String, CachedBuild>
-        get() = agentBuilds(agentInfo.id) { it ?: AtomicCache() }!!
+    internal val builds: AtomicCache<String, CachedBuild> = AtomicCache()
 
     private val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
-
-    private val agentBuildId = AgentBuildId(agentId = agentInfo.id, buildVersion = agentInfo.buildVersion)
 
     private val _data = atomic<AgentData>(NoData)
 
@@ -59,13 +46,9 @@ internal class AgentState(
 
     fun init() = _data.update { DataBuilder() }
 
-    fun applyPackagesChanges() {
-        agentClassData.remove(agentBuildId)
-    }
-
-    suspend fun initialized(): Set<String> {
-        val cachedVersions = agentBuilds.versionsOf(agentInfo.id)
-        val parentClassData = buildInfo?.parentVersion?.run {
+    suspend fun initialized() {
+        val parentVersion = buildInfo?.parentVersion
+        val parentClassData = parentVersion?.run {
             takeIf(String::any)?.let { classData(it) }
         }
         val classData = _data.updateAndGet { data ->
@@ -126,16 +109,13 @@ internal class AgentState(
                 }
             }
         } as ClassData
-        agentClassData[agentBuildId] = classData
         initActiveScope()
-        builds[agentInfo.buildVersion] = CachedBuild(agentInfo.buildVersion)
-        val allVersions = buildManager.builds.mapTo(mutableSetOf()) { it.version }
-        val loadedVersions = allVersions - cachedVersions - agentInfo.buildVersion
-        storeClient.loadBuilds(loadedVersions + agentInfo.buildVersion).forEach {
-            builds[it.version] = it
-        }
+        val buildVersion = agentInfo.buildVersion
+        builds[buildVersion] = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
+        parentVersion?.let {
+            storeClient.loadBuild(it)
+        }?.also { builds[it.version] = it }
         classData.store(storeClient)
-        return loadedVersions
     }
 
     internal fun updateProbes(
@@ -208,10 +188,9 @@ internal class AgentState(
 
     internal suspend fun classData(
         buildVersion: String = agentInfo.buildVersion
-    ): ClassData? = buildId(buildVersion).let { buildId ->
-        agentClassData[buildId] ?: storeClient.loadClassData(buildVersion)?.also {
-            agentClassData[buildId] = it
-        }
+    ): ClassData? = when (buildVersion) {
+        agentInfo.buildVersion -> _data.value as? ClassData
+        else -> storeClient.loadClassData(buildVersion)
     }
 
     private suspend fun initActiveScope() {
@@ -267,11 +246,6 @@ internal class AgentState(
         methodChanges = otherMethods?.let(methods::diff) ?: DiffMethods(),
         probeIds = probeIds
     )
-
-    private fun buildId(buildVersion: String) = when (buildVersion) {
-        agentInfo.buildVersion -> agentBuildId
-        else -> agentBuildId.copy(buildVersion = buildVersion)
-    }
 }
 
 internal suspend fun AgentState.coverContext(

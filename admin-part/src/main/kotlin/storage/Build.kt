@@ -35,22 +35,19 @@ internal suspend fun ClassData.store(storage: StoreClient) {
     storage.store(StoredClassData(buildVersion, stored))
 }
 
-internal suspend fun StoreClient.loadBuilds(
-    versions: Set<String>
-): List<CachedBuild> = executeInAsyncTransaction { loadBuilds(versions) }
-
-internal fun KoduxTransaction.loadBuilds(
-    versions: Set<String>
-): List<CachedBuild> = getAll<CachedBuildCoverage>().filter { it.version in versions }.map {
-    CachedBuild(version = it.version, coverage = it)
-}.map { build ->
-    findById<StoredBundles>(build.version)?.run {
-        ProtoBuf.load(BundleCounters.serializer(), data)
-    }?.let { build.copy(bundleCounters = it) } ?: build
-}.map { build ->
-    findById<StoredBuildTests>(build.version)?.run {
-        ProtoBuf.load(BuildTests.serializer(), data)
-    }?.let { build.copy(tests = it) } ?: build
+internal suspend fun StoreClient.loadBuild(
+    version: String
+): CachedBuild? = findById<CachedBuildCoverage>(version)?.let { coverage ->
+    CachedBuild(
+        version = version,
+        coverage = coverage,
+        bundleCounters = findById<StoredBundles>(version)?.run {
+            ProtoBuf.load(BundleCounters.serializer(), data)
+        } ?: BundleCounters.empty,
+        tests = findById<StoredBuildTests>(version)?.run {
+            ProtoBuf.load(BuildTests.serializer(), data)
+        } ?: BuildTests()
+    )
 }
 
 internal suspend fun CachedBuild.store(storage: StoreClient) {

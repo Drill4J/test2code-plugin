@@ -53,7 +53,6 @@ class Plugin(
     override suspend fun applyPackagesChanges() {
         state.scopeManager.deleteByVersion(buildVersion)
         storeClient.deleteById<ClassData>(buildVersion)
-        state.applyPackagesChanges()
         state = agentState()
     }
 
@@ -133,27 +132,22 @@ class Plugin(
             }
         }
         is Initialized -> {
-            val otherVersions = state.initialized()
+            state.initialized()
             sendParentBuild()
             classDataOrNull()?.sendBuildStats()
             initGateSettings()
             initActiveScope()
             sendActiveSessions()
-            calculateAndSendCachedCoverage(buildVersion)
-            val context = state.coverContext(buildVersion)
+            calculateAndSendCachedCoverage()
+            val context = state.coverContext()
             activeScope.updateSummary {
                 it.calculateCoverage(activeScope, context)
             }
             sendActiveScope()
-            calculateAndSendScopeCoverage(activeScope)
+            calculateAndSendScopeCoverage()
             sendScopes(buildVersion)
             adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
                 cleanActiveScope(it.version)
-            }
-            otherVersions.forEach { version ->
-                sendScopes(version)
-                state.classData(version)?.sendBuildStats()
-                calculateAndSendCachedCoverage(version)
             }
         }
         is ScopeInitialized -> message.processIfExpected { scopeInitialized(message.prevId) }
@@ -190,7 +184,7 @@ class Plugin(
                     storeClient.storeSession(activeScope.id, it)
                     sendActiveScope()
                     sendScopes(buildVersion)
-                    calculateAndSendScopeCoverage(activeScope)
+                    calculateAndSendScopeCoverage()
                     logger.info { "Session $sessionId finished." }
                 } else logger.info { "Session with id $sessionId is empty, it won't be added to the active scope." }
             } ?: logger.info { "No active session with id $sessionId." }
@@ -221,16 +215,12 @@ class Plugin(
         send(buildVersion, Routes.Data().let(Routes.Data::Build), toBuildStatsDto())
     }
 
-    private suspend fun calculateAndSendCachedCoverage(
-        buildVersion: String
-    ) = state.builds[buildVersion]?.let { build ->
+    private suspend fun calculateAndSendCachedCoverage() = state.builds[buildVersion]?.let { build ->
         val scopes = state.scopeManager.byVersion(
             buildVersion, withData = true
         )
-        if (buildVersion == this.buildVersion) {
-            state.updateProbes(buildVersion, scopes)
-        }
-        val coverContext = state.coverContext(build.version)
+        state.updateProbes(buildVersion, scopes)
+        val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
         scopes.forEach { scope ->
             val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
@@ -456,11 +446,8 @@ class Plugin(
         }
     }
 
-    internal suspend fun calculateAndSendScopeCoverage(
-        scope: Scope = activeScope,
-        buildVersion: String = this.buildVersion
-    ) {
-        val context = state.coverContext(buildVersion)
+    internal suspend fun calculateAndSendScopeCoverage() = activeScope.let { scope ->
+        val context = state.coverContext()
         val bundleCounters = scope.calcBundleCounters(context)
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)

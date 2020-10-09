@@ -125,7 +125,7 @@ private suspend fun Plugin.handleChange(scope: FinishedScope) {
 }
 
 private suspend fun Plugin.updateOverlap() {
-    val coverContext = state.coverContext(buildVersion)
+    val coverContext = state.coverContext()
     val overlap = activeScope.flatten().overlappingBundle(coverContext).toCoverDto(coverContext.packageTree)
     activeScope.updateSummary { it.copy(coverage = it.coverage.copy(overlap = overlap)) }
 }
