@@ -123,7 +123,7 @@ class Plugin(
 
 fun AgentPart<*, *>.probeSender(sessionId: String): RealtimeHandler = { execData ->
     execData.map(ExecDatum::toExecClassData)
-        .chunked(128)
+        .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
             sendMessage(message)
