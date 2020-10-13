@@ -90,8 +90,8 @@ class Plugin(
             }
             is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
-                val realtimeHandler = if (isRealtime) probeSender(sessionId) else null
-                val cancelled = instrContext.start(sessionId, isGlobal, testName, realtimeHandler)
+                val handler = probeSender(sessionId, isRealtime)
+                val cancelled = instrContext.start(sessionId, isGlobal, testName, handler)
                 if (cancelled.any()) {
                     logger.info { "Cancelled sessions: $cancelled." }
                     sendMessage(AllSessionsCancelled(cancelled, currentTimeMillis()))
@@ -121,14 +121,17 @@ class Plugin(
     }
 }
 
-fun AgentPart<*, *>.probeSender(sessionId: String): RealtimeHandler = { execData ->
+fun AgentPart<*, *>.probeSender(
+    sessionId: String,
+    sendChanged: Boolean = false
+): RealtimeHandler = { execData ->
     execData.map(ExecDatum::toExecClassData)
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
             sendMessage(message)
             message.data.count()
-        }.takeIf { it > 0 }?.let {
+        }.takeIf { sendChanged && it > 0 }?.let {
             sendMessage(SessionChanged(sessionId, it))
         }
 }

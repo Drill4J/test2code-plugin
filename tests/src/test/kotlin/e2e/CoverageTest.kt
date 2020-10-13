@@ -1,13 +1,11 @@
 package com.epam.drill.plugins.test2code.e2e
 
-
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.*
 import io.kotlintest.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.*
-
+import kotlin.test.*
 
 class CoverageTest : E2EPluginTest() {
 

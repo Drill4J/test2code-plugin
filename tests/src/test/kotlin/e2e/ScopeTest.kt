@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code.e2e
 
-
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
@@ -10,11 +9,9 @@ import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.*
-
+import kotlin.test.*
 
 class ScopeTest : E2EPluginTest() {
-
 
     @Test
     fun `e2e scope test`() {

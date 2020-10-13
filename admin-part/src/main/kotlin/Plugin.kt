@@ -72,7 +72,7 @@ class Plugin(
                         testType = testType,
                         testName = testName,
                         isGlobal = isGlobal,
-                        isRealtime = isRealtime
+                        isRealtime = runtimeConfig.realtime && isRealtime
                     )
                 }
             ).also { expect(it.payload.sessionId) }

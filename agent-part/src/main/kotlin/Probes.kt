@@ -4,6 +4,8 @@ import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import kotlinx.coroutines.*
+import kotlin.coroutines.*
 
 /**
  * Provides boolean array for the probe.
@@ -19,7 +21,7 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
         sessionId: String,
         isGlobal: Boolean,
         testName: String? = null,
-        realtimeHandler: RealtimeHandler? = null
+        realtimeHandler: RealtimeHandler = {}
     ): List<String>
 
     fun stop(sessionId: String): Sequence<ExecDatum>?
@@ -45,17 +47,28 @@ fun ExecDatum.toExecClassData() = ExecClassData(
 
 typealias ExecData = PersistentMap<Long, ExecDatum>
 
+internal object ProbeWorker : CoroutineScope {
+    override val coroutineContext: CoroutineContext = run {
+        java.util.concurrent.Executors.newFixedThreadPool(4).asCoroutineDispatcher() + SupervisorJob()
+    }
+}
+
 /**
  * A container for session runtime data and optionally runtime data of tests
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    realtimeHandler: RealtimeHandler?
+    realtimeHandler: RealtimeHandler
 ) : (Long, String, Int, String) -> BooleanArray {
 
-    private val realtime = realtimeHandler?.let(::Realtime)
-
     private val _execData = atomic(persistentHashMapOf<String, ExecData>())
+
+    private val job = ProbeWorker.launch {
+        while (true) {
+            delay(2000L)
+            realtimeHandler(collect())
+        }
+    }
 
     override fun invoke(
         id: Long,
@@ -76,18 +89,14 @@ class ExecRuntime(
                 tests.put(testName, mutatedData)
             } else tests
         }
-    }.getValue(testName).getValue(id).also(::offer).probes
+    }.getValue(testName).getValue(id).probes
 
-    fun collect(): Sequence<ExecDatum> = Sequence {
-        _execData.value.values.iterator()
-    }.flatMap { it.values.asSequence() }
-
-    private fun offer(datum: ExecDatum) {
-        realtime?.offer(datum)
+    fun collect(): Sequence<ExecDatum> = _execData.getAndUpdate { it.clear() }.values.asSequence().run {
+        flatMap { it.values.asSequence() }
     }
 
     fun close() {
-        realtime?.close()
+        job.cancel()
     }
 }
 
@@ -124,7 +133,7 @@ open class SimpleSessionProbeArrayProvider(
         sessionId: String,
         isGlobal: Boolean,
         testName: String?,
-        realtimeHandler: RealtimeHandler?
+        realtimeHandler: RealtimeHandler
     ): List<String> = if (isGlobal) {
         val cancelled = cancelAll()
         _context.value = GlobalContext(sessionId, testName)
@@ -164,7 +173,7 @@ open class SimpleSessionProbeArrayProvider(
         } else it
     }
 
-    private fun add(sessionId: String, realtimeHandler: RealtimeHandler?) {
+    private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         _runtimes.update {
             if (sessionId !in it) {
                 it.put(sessionId, ExecRuntime(realtimeHandler))

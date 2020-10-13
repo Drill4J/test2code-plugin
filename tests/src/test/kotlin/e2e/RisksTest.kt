@@ -10,7 +10,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.*
+import kotlin.test.*
 
 
 class RisksTest : E2EPluginTest() {
