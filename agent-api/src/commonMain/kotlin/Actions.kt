@@ -14,7 +14,7 @@ data class InitActiveScope(val payload: InitScopePayload) : AgentAction()
 data class StartAgentSession(val payload: StartSessionPayload) : AgentAction()
 
 @Serializable
-@SerialName("ADD_SESSION_dATA")
+@SerialName("ADD_SESSION_DATA")
 data class AddAgentSessionData(val payload: AgentSessionDataPayload) : AgentAction()
 
 @SerialName("STOP")
