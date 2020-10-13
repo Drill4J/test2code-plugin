@@ -10,12 +10,13 @@ import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.*
+import java.util.*
+import kotlin.test.*
 
 class SessionTest : E2EPluginTest() {
 
 
-    @RepeatedTest(2)
+    @Test
     fun `e2e test session test`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
@@ -39,7 +40,7 @@ class SessionTest : E2EPluginTest() {
                         gt.test3()
                     }
 
-                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
+                    pluginAction(StopSession(StopSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 delay(100)
             }.reconnect<Build2> { plugUi, _ ->
@@ -53,7 +54,7 @@ class SessionTest : E2EPluginTest() {
     }
 
     @Test
-    fun `Finish active scope without stopping session`() {
+    fun `finish active scope without stopping session`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 
@@ -62,57 +63,60 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
-                plugUi.buildCoverage()!!.percentage shouldBe 0.0
+                plugUi.activeScope()!!.coverage.count.covered shouldBe 0
+                plugUi.buildCoverage()!!.count.covered shouldBe 0
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
-                pluginAction(startNewSession) { status, content ->
-                    status shouldBe HttpStatusCode.OK
-                    val startSession = content!!.parseJsonData<StartAgentSession>()
+                "${UUID.randomUUID()}".let { sessionId ->
+                    val startNewSession = StartNewSession(StartPayload("MANUAL", sessionId)).stringify()
+                    pluginAction(startNewSession) { status, _ ->
+                        status shouldBe HttpStatusCode.OK
 
-                    plugUi.activeSessions()!!.run { count shouldBe 1 }
+                        plugUi.activeSessions()!!.run { count shouldBe 1 }
 
-                    runWithSession(startSession.payload.sessionId) {
-                        val gt = build.entryPoint()
-                        gt.test1()
-                        gt.test2()
-                    }
+                        runWithSession(sessionId) {
+                            val gt = build.entryPoint()
+                            gt.test1()
+                            gt.test2()
+                        }
+                    }.join()
 
-                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
-                }.join()
+                    val stopSession = StopSession(StopSessionPayload(sessionId)).stringify()
+                    pluginAction(stopSession).join()
+                    plugUi.activeSessions()!!.count shouldBe 0
+                    plugUi.activeScope()!!.coverage.count shouldBe Count(11, 15)
+                }
+
+                "${UUID.randomUUID()}".let { sessionId ->
+                    val startSession = StartNewSession(StartPayload("AUTO", sessionId)).stringify()
+                    pluginAction(startSession) { status, _ ->
+                        status shouldBe HttpStatusCode.OK
+
+                        plugUi.activeSessions()!!.run { count shouldBe 1 }
+
+                        runWithSession(sessionId) {
+                            val gt = build.entryPoint()
+                            gt.test3()
+                        }
+                    }.join()
+                }
+                val switchScope = SwitchActiveScope(
+                    ActiveScopeChangePayload(
+                        scopeName = "new scope 2",
+                        savePrevScope = true,
+                        prevScopeEnabled = true
+                    )
+                ).stringify()
+                pluginAction(switchScope).join()
+
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage.percentage shouldBe 73.33333333333333
-
-                val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
-                pluginAction(startNewSession2) { status, content ->
-                    status shouldBe HttpStatusCode.OK
-                    val startSession2 = content!!.parseJsonData<StartAgentSession>()
-
-                    plugUi.activeSessions()!!.run { count shouldBe 1 }
-
-                    runWithSession(startSession2.payload.sessionId) {
-                        val gt = build.entryPoint()
-                        gt.test3()
-                    }
-
-                    val switchScope = SwitchActiveScope(
-                        ActiveScopeChangePayload(
-                            scopeName = "new scope 2",
-                            savePrevScope = true,
-                            prevScopeEnabled = true
-                        )
-                    ).stringify()
-                    pluginAction(switchScope).join()
-                }.join()
-                plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
-                plugUi.buildCoverage()!!.percentage shouldBe 73.33333333333333
+                plugUi.activeScope()!!.coverage.count.covered shouldBe 0
+                plugUi.buildCoverage()!!.count shouldBe Count(11, 15)
             }
         }
     }
 
     @Test
-    fun `start and finish 2 session`() {
+    fun `start and finish 2 sessions`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.activeSessions()!!.run {
@@ -152,7 +156,7 @@ class SessionTest : E2EPluginTest() {
                             testTypes shouldBe setOf("AUTO")
                         }
 
-                        pluginAction(StopAgentSession(AgentSessionPayload(startSession2.payload.sessionId)).stringify()).join()
+                        pluginAction(StopSession(StopSessionPayload(startSession2.payload.sessionId)).stringify()).join()
                     }.join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0

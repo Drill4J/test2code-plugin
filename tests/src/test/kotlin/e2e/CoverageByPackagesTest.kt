@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code.e2e
 
-
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
@@ -11,8 +10,7 @@ import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.*
-
+import kotlin.test.*
 
 class CoverageByPackagesTest : E2EPluginTest() {
 

@@ -1,6 +1,8 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.logger.api.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
@@ -37,6 +39,8 @@ class InstrumentationTest {
 
     val originalClassId = CRC64.classId(originalBytes)
 
+    private val _runtimeData = atomic(persistentListOf<ExecDatum>())
+
     @Test
     fun `instrumented class should be larger the the original`() {
         val instrumented = instrument(targetClass.name, originalClassId, originalBytes)!!
@@ -47,12 +51,17 @@ class InstrumentationTest {
     fun `should provide coverage for run with the instrumented class`() {
         addInstrumentedClass()
         val instrumentedClass = memoryClassLoader.loadClass(targetClass.name)
-        TestProbeArrayProvider.start(sessionId, false)
+        TestProbeArrayProvider.start(sessionId, false) { dataSeq ->
+            _runtimeData.update { it + dataSeq }
+
+        }
         @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
-        val runtimeData = TestProbeArrayProvider.stop(sessionId)
+        val runtimeData = _runtimeData.updateAndGet {
+            it + (TestProbeArrayProvider.stop(sessionId) ?: emptySequence())
+        }
         val executionData = ExecutionDataStore()
-        runtimeData?.forEach { executionData.put(ExecutionData(it.id, it.name, it.probes)) }
+        runtimeData.forEach { executionData.put(ExecutionData(it.id, it.name, it.probes)) }
         val coverageBuilder = CoverageBuilder()
         val analyzer = Analyzer(executionData, coverageBuilder)
         analyzer.analyzeClass(originalBytes, targetClass.name)
