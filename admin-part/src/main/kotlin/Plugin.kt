@@ -221,9 +221,10 @@ class Plugin(
         )
         state.updateProbes(buildVersion, scopes)
         val coverContext = state.coverContext()
+        val parentContext = state.parentContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
         scopes.forEach { scope ->
-            val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
+            val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope, parentContext)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         }
     }
@@ -310,7 +311,8 @@ class Plugin(
         buildVersion: String,
         scopeCount: Int
     ) {
-        val coverageInfoSet = calculateCoverageData(context)
+        val parentContext = state.parentContext()
+        val coverageInfoSet = calculateCoverageData(context = context, parentContext = parentContext)
         val buildMethods = coverageInfoSet.buildMethods
         val testsToRun = state.testsToRun(
             buildVersion,
@@ -449,7 +451,8 @@ class Plugin(
     internal suspend fun calculateAndSendScopeCoverage() = activeScope.let { scope ->
         val context = state.coverContext()
         val bundleCounters = scope.calcBundleCounters(context)
-        val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
+        val parentContext = state.parentContext()
+        val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope, parentContext)
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }
 

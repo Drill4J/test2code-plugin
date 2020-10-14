@@ -261,3 +261,9 @@ internal suspend fun AgentState.coverContext(
         build = builds[buildVersion]
     )
 }
+
+internal suspend fun AgentState.parentContext(
+    buildVersion: String = agentInfo.buildVersion
+) = buildManager[buildVersion]?.parentVersion?.takeIf(String::any)?.let {
+    coverContext(it)
+}

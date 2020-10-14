@@ -10,14 +10,15 @@ import mu.*
 
 private val logger = KotlinLogging.logger {}
 
-internal fun Plugin.initActiveScope() {
+internal suspend fun Plugin.initActiveScope() {
+    val parentContext = state.parentContext()
     if (runtimeConfig.realtime) {
         activeScope.subscribeOnChanges { sessions ->
             val context = state.coverContext()
             updateSummary { it.calculateCoverage(sessions, context) }
             sendScopeMessages()
             val bundleCounters = sessions.calcBundleCounters(context)
-            val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
+            val coverageInfoSet = bundleCounters.calculateCoverageData(context, this, parentContext)
             coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
         }
     }

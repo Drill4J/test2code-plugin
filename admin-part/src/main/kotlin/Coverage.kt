@@ -67,7 +67,8 @@ internal fun ScopeSummary.calculateCoverage(
 
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
-    scope: Scope? = null
+    scope: Scope? = null,
+    parentContext: CoverContext? = null
 
 ): CoverageInfoSet {
     val bundle = all
@@ -119,7 +120,7 @@ internal fun BundleCounters.calculateCoverageData(
     logger.info { coverageBlock }
 
     val buildMethods = context.calculateBundleMethods(bundle).run {
-        context.build?.let {
+        parentContext?.build?.let {
             copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.tests.assocTests))
         } ?: this
     }
