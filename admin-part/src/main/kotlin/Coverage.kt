@@ -5,23 +5,40 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
+import kotlinx.collections.immutable.*
 import mu.*
 
 private val logger = KotlinLogging.logger {}
 
-internal fun Sequence<Session>.calcBundleCounters(context: CoverContext) = BundleCounters(
-    all = flatten().bundle(context),
-    byTestType = bundlesByTestTypes(context),
-    byTest = bundlesByTests(context),
-    statsByTest = fold(mutableMapOf()) { map, session ->
-        session.testStats.forEach { (test, stats) ->
-            map[test] = map[test]?.run {
-                copy(duration = duration + stats.duration, result = stats.result)
-            } ?: stats
+internal fun Sequence<Session>.calcBundleCounters(
+    context: CoverContext
+) = run {
+    val probesByTestType = groupBy(Session::testType)
+    val testTypeOverlap: Sequence<ExecClassData> = if (probesByTestType.size > 1) {
+        probesByTestType.values.asSequence().run {
+            val initial: PersistentMap<Long, ExecClassData> = first().asSequence().flatten().merge()
+            drop(1).fold(initial) { intersection, sessions ->
+                intersection.intersect(sessions.asSequence().flatten())
+            }
+        }.values.asSequence()
+    } else emptySequence()
+    BundleCounters(
+        all = flatten().bundle(context),
+        testTypeOverlap = testTypeOverlap.bundle(context),
+        byTestType = probesByTestType.mapValues {
+            it.value.asSequence().flatten().bundle(context)
+        },
+        byTest = bundlesByTests(context),
+        statsByTest = fold(mutableMapOf()) { map, session ->
+            session.testStats.forEach { (test, stats) ->
+                map[test] = map[test]?.run {
+                    copy(duration = duration + stats.duration, result = stats.result)
+                } ?: stats
+            }
+            map
         }
-        map
-    }
-)
+    )
+}
 
 internal fun ScopeSummary.calculateCoverage(
     sessions: Sequence<Session>,
@@ -42,6 +59,7 @@ internal fun ScopeSummary.calculateCoverage(
             packageCount = bundle.packageCount.copy(total = context.packageTree.packages.count()),
             riskCount = zeroCount,
             risks = RiskSummaryDto(),
+            testTypeOverlap = bundles.testTypeOverlap.toCoverDto(context.packageTree),
             byTestType = bundles.byTestType.coveragesByTestType(bundles.byTest, context)
         )
     )
@@ -83,6 +101,7 @@ internal fun BundleCounters.calculateCoverageData(
                 methodCount = methodCount,
                 classCount = classCount,
                 packageCount = packageCount,
+                testTypeOverlap = testTypeOverlap.toCoverDto(context.packageTree),
                 byTestType = coverageByTests.byType
             )
         }
@@ -93,7 +112,7 @@ internal fun BundleCounters.calculateCoverageData(
             methodCount = methodCount,
             classCount = classCount,
             packageCount = packageCount,
-            riskCount = zeroCount,
+            testTypeOverlap = testTypeOverlap.toCoverDto(context.packageTree),
             byTestType = coverageByTests.byType
         )
     }
@@ -158,12 +177,6 @@ private fun Sequence<Session>.bundlesByTests(
         m1.apply { putAll(m2) }
     }
 } ?: emptyMap()
-
-private fun Sequence<Session>.bundlesByTestTypes(
-    context: CoverContext
-): Map<String, BundleCounter> = groupBy(Session::testType).mapValues {
-    it.value.asSequence().flatten().bundle(context)
-}
 
 @Suppress("SimpleRedundantLet")
 internal fun Sequence<ExecClassData>.overlappingBundle(

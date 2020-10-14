@@ -124,8 +124,8 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
-                plugUi.buildCoverage()!!.percentage shouldBe 0.0
+                plugUi.activeScope()!!.coverage.count shouldBe Count(0, 15)
+                plugUi.buildCoverage()!!.count shouldBe Count(0, 15)
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
@@ -146,6 +146,7 @@ class SessionTest : E2EPluginTest() {
                         plugUi.activeSessions()!!.run { count shouldBe 2 }
                         runWithSession(startSession2.payload.sessionId) {
                             val gt = build.entryPoint()
+                            gt.test2()
                             gt.test3()
                         }
 
@@ -160,6 +161,11 @@ class SessionTest : E2EPluginTest() {
                     }.join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0
+                plugUi.activeScope()!!
+                plugUi.activeScope()!!.coverage.run {
+                    testTypeOverlap.count shouldBe Count(7, 15)
+                    byTestType.size shouldBe 2
+                }
             }
         }
     }

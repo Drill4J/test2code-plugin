@@ -3,7 +3,7 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 internal class CoverContext(
     val agentType: AgentType,
@@ -30,12 +30,15 @@ data class CoverageKey(
 @Serializable
 class BundleCounters(
     val all: BundleCounter,
+    val testTypeOverlap: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
     val statsByTest: Map<TypedTest, TestStats> = emptyMap()
 ) {
     companion object {
-        val empty = BundleCounters(all = BundleCounter(""))
+        val empty = BundleCounter("").let {
+            BundleCounters(all = it, testTypeOverlap = it)
+        }
     }
 }
 
