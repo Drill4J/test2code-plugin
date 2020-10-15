@@ -24,3 +24,7 @@ data class StopAgentSession(val payload: AgentSessionPayload) : AgentAction()
 @SerialName("CANCEL")
 @Serializable
 data class CancelAgentSession(val payload: AgentSessionPayload) : AgentAction()
+
+@Serializable
+@SerialName("CANCEL_ALL")
+object CancelAllAgentSessions : AgentAction()

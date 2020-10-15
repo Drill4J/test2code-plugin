@@ -44,3 +44,7 @@ data class DropScope(val payload: ScopePayload) : Action()
 @Serializable
 @SerialName("UPDATE_SETTINGS")
 data class UpdateSettings(val payload: List<Setting>) : Action()
+
+@Serializable
+@SerialName("CANCEL_ALL")
+object CancelAllSessions : Action()

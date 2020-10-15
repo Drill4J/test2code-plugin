@@ -107,6 +107,7 @@ class Plugin(
                     payload = AgentSessionPayload(action.payload.sessionId)
                 )
             }.also { expect(action.payload.sessionId) }
+            is CancelAllSessions -> CancelAllAgentSessions
             else -> logger.error { "Action '$action' is not supported!" }
         }
     }

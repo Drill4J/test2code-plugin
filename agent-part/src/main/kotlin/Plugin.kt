@@ -116,6 +116,11 @@ class Plugin(
                 instrContext.cancel(sessionId)
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
+            is CancelAllAgentSessions -> {
+                logger.info { "Cancellation of recording for all sessions" }
+                val cancelled = instrContext.cancelAll()
+                sendMessage(AllSessionsCancelled(cancelled, currentTimeMillis()))
+            }
             else -> Unit
         }
     }
