@@ -118,11 +118,7 @@ internal fun BundleCounters.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val buildMethods = context.calculateBundleMethods(bundle).run {
-        context.build?.let {
-            copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.tests.assocTests))
-        } ?: this
-    }
+    val buildMethods = context.calculateBundleMethods(bundle)
 
     val packageCoverage = context.packageTree.packages.treeCoverage(bundle, assocTestsMap)
 

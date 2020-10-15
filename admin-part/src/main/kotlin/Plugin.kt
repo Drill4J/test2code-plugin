@@ -310,16 +310,19 @@ class Plugin(
         buildVersion: String,
         scopeCount: Int
     ) {
-        val coverageInfoSet = calculateCoverageData(context)
-        val buildMethods = coverageInfoSet.buildMethods
+        val coverageInfoSet = calculateCoverageData(context = context)
+        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
+        val parentBuild = parentVersion?.let { state.builds[it] }
+        val parentCoverageCount = parentBuild?.coverage?.count ?: zeroCount
+        val buildMethods = coverageInfoSet.buildMethods.run {
+            parentBuild?.tests?.assocTests?.let {
+                copy(deletedCoveredMethodsCount = deletedMethods.testCount(it))
+            } ?: this
+        }
         val testsToRun = state.testsToRun(
             buildVersion,
             buildMethods.allModifiedMethods.methods
         )
-        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
-        val parentCoverageCount = parentVersion?.let {
-            state.builds[parentVersion]?.coverage?.count ?: zeroCount
-        }
         val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
@@ -331,7 +334,7 @@ class Plugin(
             },
             risks = buildMethods.toRiskSummaryDto()
         )
-        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, buildMethods, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
             val cachedCoverage = state.updateBuildCoverage(
                 buildVersion,
@@ -356,6 +359,7 @@ class Plugin(
     private suspend fun CoverageInfoSet.sendBuildCoverage(
         buildVersion: String,
         buildCoverage: BuildCoverage,
+        buildMethods: BuildMethods,
         risks: Risks,
         testsToRun: GroupedTests
     ) = Routes.Build().let { buildRoute ->
