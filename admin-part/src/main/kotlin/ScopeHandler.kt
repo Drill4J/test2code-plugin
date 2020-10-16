@@ -117,7 +117,7 @@ private suspend fun Plugin.handleChange(scope: FinishedScope) {
     if (scope.buildVersion == buildVersion) {
         calculateAndSendBuildCoverage()
         updateOverlap()
-        send(buildVersion, Routes.ActiveScope, activeScope.summary)
+        sendActiveScope()
         calculateAndSendScopeCoverage()
     }
     sendScopes(scope.buildVersion)
