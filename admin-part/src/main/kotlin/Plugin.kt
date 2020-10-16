@@ -219,7 +219,7 @@ class Plugin(
         val scopes = state.scopeManager.byVersion(
             buildVersion, withData = true
         )
-        state.updateProbes(buildVersion, scopes)
+        state.updateProbes(buildVersion, scopes.enabled())
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
         scopes.forEach { scope ->
