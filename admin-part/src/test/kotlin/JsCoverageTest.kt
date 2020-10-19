@@ -77,7 +77,7 @@ class JsCoverageTest {
         val sessionId = genUuid()
         startSession(sessionId, testType)
         block(sessionId)
-        finishSession(sessionId) {}
+        finishSession(sessionId)
     }
 
     private fun buildManager(): BuildManager {

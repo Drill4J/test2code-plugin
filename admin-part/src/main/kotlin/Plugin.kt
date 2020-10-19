@@ -26,6 +26,7 @@ class Plugin(
     agentInfo: AgentInfo,
     id: String
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
+    internal val logger = KotlinLogging.logger("Plugin $id")
 
     override val serDe: SerDe<Action> = SerDe(Action.serializer())
 
@@ -42,8 +43,6 @@ class Plugin(
     private val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
     private val _expected = atomic(persistentHashSetOf<String>())
-
-    private val logger = KotlinLogging.logger("Plugin $id")
 
     override suspend fun initialize() {
         state = agentState()
@@ -93,7 +92,7 @@ class Plugin(
                         }
                     )
                     if (session.isRealtime) {
-                        activeScope.sessionChanged()
+                        activeScope.probesChanged()
                     }
                     StatusMessage(200, "")
                 } ?: StatusMessage(404, "Active session $sessionId not found.")
@@ -133,19 +132,12 @@ class Plugin(
         }
         is Initialized -> {
             state.initialized()
-            sendParentBuild()
-            classDataOrNull()?.sendBuildStats()
             initGateSettings()
-            initActiveScope()
-            sendActiveSessions()
-            calculateAndSendCachedCoverage()
-            val context = state.coverContext()
-            activeScope.updateSummary {
-                it.calculateCoverage(activeScope, context)
-            }
-            sendActiveScope()
-            calculateAndSendScopeCoverage()
+            sendParentBuild()
+            state.classDataOrNull()?.sendBuildStats()
             sendScopes(buildVersion)
+            calculateAndSendCachedCoverage()
+            initActiveScope()
             adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
                 cleanActiveScope(it.version)
             }
@@ -154,7 +146,6 @@ class Plugin(
         is SessionStarted -> message.processIfExpected {
             activeScope.startSession(message.sessionId, message.testType, message.isRealtime)
             logger.info { "Session ${message.sessionId} started." }
-            sendActiveSessions()
         }
         is SessionCancelled -> message.processIfExpected {
             activeScope.cancelSession(message)
@@ -170,21 +161,13 @@ class Plugin(
             activeScope.addProbes(message.sessionId, message.data)
         }
         is SessionChanged -> {
-            activeScope.sessionChanged()
+            activeScope.probesChanged()
         }
         is SessionFinished -> message.processIfExpected {
             delay(500L) //TODO remove after multi-instance core is implemented
             val sessionId = message.sessionId
-            val context = state.coverContext()
-            activeScope.finishSession(sessionId) {
-                activeScope.updateSummary { it.calculateCoverage(this, context) }
-            }?.also {
-                sendActiveSessions()
+            activeScope.finishSession(sessionId) ?.also {
                 if (it.any()) {
-                    storeClient.storeSession(activeScope.id, it)
-                    sendActiveScope()
-                    sendScopes(buildVersion)
-                    calculateAndSendScopeCoverage()
                     logger.info { "Session $sessionId finished." }
                 } else logger.info { "Session with id $sessionId is empty, it won't be added to the active scope." }
             } ?: logger.info { "No active session with id $sessionId." }
@@ -450,6 +433,9 @@ class Plugin(
         val context = state.coverContext()
         val bundleCounters = scope.calcBundleCounters(context)
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
+        activeScope.updateSummary {
+            it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage)
+        }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
     }
 
@@ -502,27 +488,12 @@ class Plugin(
         }
     }
 
-    internal suspend fun cleanTopics(id: String) = Routes.Scope(id).let { scope ->
-        send(buildVersion, Routes.Scope.AssociatedTests(scope), "")
-        val coverageRoute = Routes.Scope.Coverage(scope)
-        send(buildVersion, coverageRoute, "")
-        classDataOrNull()?.let { classData ->
-            val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
-            classData.packageTree.packages.forEach {
-                send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
-            }
-        }
-        send(buildVersion, Routes.Scope.TestsUsages(scope), "")
-    }
-
     override suspend fun dropData() {
     }
 
     internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
-
-    private fun classDataOrNull() = state.data as? ClassData
 
     private fun agentState() = AgentState(
         storeClient = storeClient,

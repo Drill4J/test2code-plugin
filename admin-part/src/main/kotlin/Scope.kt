@@ -8,7 +8,6 @@ import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
 
 interface Scope : Sequence<FinishedSession> {
@@ -20,6 +19,9 @@ interface Scope : Sequence<FinishedSession> {
 
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
+
+typealias ActiveScopeHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) -> Unit
+
 class ActiveScope(
     override val id: String = genUuid(),
     override val buildVersion: String,
@@ -27,6 +29,12 @@ class ActiveScope(
     name: String = "$DEFAULT_SCOPE_NAME $nth",
     sessions: List<FinishedSession> = emptyList()
 ) : Scope {
+
+    private enum class Change(val sessions: Boolean, val probes: Boolean) {
+        ONLY_SESSIONS(true, false),
+        ONLY_PROBES(false, true),
+        ALL(true, true)
+    }
 
     override val summary get() = _summary.value
 
@@ -45,8 +53,28 @@ class ActiveScope(
         )
     )
 
-    private val changes get() = _changes.value
-    private val _changes = atomic<Channel<Unit>?>(null)
+    private val  _handler = atomic<ActiveScopeHandler?>(null)
+
+    private val _change = atomic<Change?>(null)
+
+    private val changeJob = GlobalScope.launch {
+        while (true) {
+            _change.getAndUpdate { null }?.let { change ->
+                _handler.value?.let { handler ->
+                    val probes: Sequence<Session>? = if (change.probes) {
+                        this@ActiveScope + activeSessions.values.asSequence()
+                    } else null
+                    handler(change.sessions, probes)
+                }
+            }
+            delay(1000L)
+        }
+    }
+
+    fun updateHandler(handler: ActiveScopeHandler) {
+        _handler.value = handler
+        _change.value = Change.ALL
+    }
 
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
@@ -75,56 +103,64 @@ class ActiveScope(
 
     fun startSession(sessionId: String, testType: String, isRealtime: Boolean = false) {
         activeSessions(sessionId) { ActiveSession(sessionId, testType, isRealtime) }
+        sessionsChanged()
     }
 
     fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {
         activeSessions[sessionId]?.apply { addAll(probes) }
     }
 
-    fun sessionChanged() = changes?.takeIf { !it.isClosedForSend }?.run {
-        offer(Unit)
+    fun probesChanged() = _change.update {
+        when(it) {
+            Change.ONLY_SESSIONS, Change.ALL -> Change.ALL
+            else -> Change.ONLY_PROBES
+        }
     }
 
-    fun cancelSession(msg: SessionCancelled) = activeSessions.remove(msg.sessionId)?.also {
-        sessionChanged()
-    }
-
-    fun cancelAllSessions() = activeSessions.clear().also {
+    fun cancelSession(
+        msg: SessionCancelled
+    ) = activeSessions.remove(msg.sessionId)?.also {
         if (it.any()) {
-            sessionChanged()
+            _change.value = Change.ALL
+        } else sessionsChanged()
+    }
+
+    fun cancelAllSessions() {
+        activeSessions.clear().also { map ->
+            if (map.values.any { it.any() } ) {
+                _change.value = Change.ALL
+            } else sessionsChanged()
         }
     }
 
     fun finishSession(
-        sessionId: String,
-        onSuccess: ActiveScope.(FinishedSession) -> Unit
+        sessionId: String
     ): FinishedSession? = activeSessions.remove(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
                 _sessions.update { it.add(finished) }
-                onSuccess(finished)
-            }
+                _change.value = Change.ALL
+            } else sessionsChanged()
         }
     }
 
-    fun subscribeOnChanges(
-        clb: suspend ActiveScope.(Sequence<Session>) -> Unit
-    ) = _changes.update {
-        it ?: Channel<Unit>().also {
-            GlobalScope.launch {
-                it.consumeEach {
-                    val actSessionSeq = activeSessions.values.asSequence()
-                    clb(this@ActiveScope + actSessionSeq)
-                }
-            }
-        }
-    }
 
-    fun close() = cancelAllSessions().also {
-        changes?.close()
+    fun close() {
+        _change.value = null
+        activeSessions.clear()
+        changeJob.cancel()
     }
 
     override fun toString() = "act-scope($id, $name)"
+
+    private fun sessionsChanged() {
+        _change.update {
+            when (it) {
+                Change.ONLY_PROBES, Change.ALL -> Change.ALL
+                else -> Change.ONLY_SESSIONS
+            }
+        }
+    }
 }
 
 @Serializable
@@ -151,12 +187,6 @@ data class FinishedScope(
 
     override fun toString() = "fin-scope($id, $name)"
 }
-
-@Serializable
-data class AgentBuildId(
-    val agentId: String,
-    val buildVersion: String
-)
 
 @Serializable
 internal data class ActiveScopeInfo(
