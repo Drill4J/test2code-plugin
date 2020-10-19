@@ -40,31 +40,6 @@ internal fun Sequence<Session>.calcBundleCounters(
     )
 }
 
-internal fun ScopeSummary.calculateCoverage(
-    sessions: Sequence<Session>,
-    context: CoverContext
-): ScopeSummary = run {
-    val probes = sessions.flatten()
-    val bundles = sessions.calcBundleCounters(context)
-    val bundle = bundles.all
-    val overlappingBundle = probes.overlappingBundle(context)
-    val coverageCount = bundle.count.copy(total = context.packageTree.totalCount)
-    copy(
-        coverage = ScopeCoverage(
-            percentage = coverageCount.percentage(),
-            count = coverageCount,
-            overlap = overlappingBundle.toCoverDto(context.packageTree),
-            methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount),
-            classCount = bundle.classCount.copy(total = context.packageTree.totalClassCount),
-            packageCount = bundle.packageCount.copy(total = context.packageTree.packages.count()),
-            riskCount = zeroCount,
-            risks = RiskSummaryDto(),
-            testTypeOverlap = bundles.testTypeOverlap.toCoverDto(context.packageTree),
-            byTestType = bundles.byTestType.coveragesByTestType(bundles.byTest, context)
-        )
-    )
-}
-
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null
@@ -86,7 +61,7 @@ internal fun BundleCounters.calculateCoverageData(
             coverage = bundle.toCoverDto(context.packageTree),
             testCount = bundlesByTests.keys.count()
         ),
-        byType = scope?.run { summary.coverage.byTestType } ?: byTestType.coveragesByTestType(byTest, context)
+        byType = byTestType.coveragesByTestType(byTest, context)
     )
     logger.info { coverageByTests.byType }
 

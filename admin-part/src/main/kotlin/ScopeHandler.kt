@@ -6,19 +6,19 @@ import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
-import mu.*
-
-private val logger = KotlinLogging.logger {}
 
 internal fun Plugin.initActiveScope() {
-    if (runtimeConfig.realtime) {
-        activeScope.subscribeOnChanges { sessions ->
+    activeScope.updateHandler { sendSessions, sessions ->
+        if (sendSessions) {
+            sendActiveSessions()
+        }
+        sessions?.let {
             val context = state.coverContext()
-            updateSummary { it.calculateCoverage(sessions, context) }
-            sendScopeMessages()
             val bundleCounters = sessions.calcBundleCounters(context)
             val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
-            coverageInfoSet.sendScopeCoverage(buildVersion, this.id)
+            updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
+            sendActiveScope()
+            coverageInfoSet.sendScopeCoverage(buildVersion, id)
         }
     }
 }
@@ -33,14 +33,24 @@ internal suspend fun Plugin.changeActiveScope(
     sendActiveScope()
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
+            val context = state.coverContext()
+            val counters = prevScope.calcBundleCounters(context)
+            val coverData = counters.calculateCoverageData(context, prevScope)
             val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled).run {
-                val bundleCounters = calcBundleCounters(state.coverContext())
-                copy(data = data.copy(bundleCounters = bundleCounters))
+                copy(
+                    data = data.copy(bundleCounters = counters),
+                    summary = summary.copy(coverage = coverData.coverage as ScopeCoverage)
+                )
             }
             state.scopeManager.store(finishedScope)
+            sendScopeSummary(finishedScope.summary)
+            coverData.sendScopeCoverage(buildVersion, finishedScope.id)
             logger.info { "$finishedScope has been saved." }
-        } else logger.info { "$prevScope is empty, it won't be added to the build." }
-    }
+        } else {
+            cleanTopics(prevScope.id)
+            logger.info { "$prevScope is empty, it won't be added to the build." }
+        }
+    } else cleanTopics(prevScope.id)
     InitActiveScope(
         payload = InitScopePayload(
             id = activeScope.id,
@@ -55,11 +65,8 @@ internal suspend fun Plugin.changeActiveScope(
 
 internal suspend fun Plugin.scopeInitialized(prevId: String) {
     initActiveScope()
-    val prevScope = state.scopeManager.byId(prevId)
-    prevScope?.apply {
-        sendScopeSummary(summary)
-    } ?: cleanTopics(prevId)
     sendScopes()
+    val prevScope = state.scopeManager.byId(prevId)
     prevScope?.takeIf { it.enabled }.apply {
         calculateAndSendBuildCoverage()
     }
@@ -113,12 +120,25 @@ internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
     )
 }
 
+private suspend fun Plugin.cleanTopics(scopeId: String) = Routes.Scope(scopeId).let { scope ->
+    send(buildVersion, Routes.Scope.AssociatedTests(scope), "")
+    val coverageRoute = Routes.Scope.Coverage(scope)
+    send(buildVersion, coverageRoute, "")
+    state.classDataOrNull()?.let { classData ->
+        val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
+        classData.packageTree.packages.forEach {
+            send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
+        }
+    }
+    send(buildVersion, Routes.Scope.TestsUsages(scope), "")
+}
+
+
 private suspend fun Plugin.handleChange(scope: FinishedScope) {
     if (scope.buildVersion == buildVersion) {
         calculateAndSendBuildCoverage()
         updateOverlap()
-        sendActiveScope()
-        calculateAndSendScopeCoverage()
+        activeScope.probesChanged()
     }
     sendScopes(scope.buildVersion)
     sendScopeSummary(scope.summary, scope.buildVersion)

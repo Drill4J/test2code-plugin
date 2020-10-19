@@ -186,6 +186,8 @@ internal class AgentState(
         else -> scopeManager.byId(id)
     }
 
+    internal fun classDataOrNull(): ClassData? = _data.value as? ClassData
+
     internal suspend fun classData(
         buildVersion: String = agentInfo.buildVersion
     ): ClassData? = when (buildVersion) {
