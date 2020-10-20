@@ -42,7 +42,7 @@ class Plugin(
         if (_retransformed.compareAndSet(expect = true, update = false)) {
             retransform()
         }
-        sendMessage(AllSessionsCancelled(cancelledCount, currentTimeMillis()))
+        sendMessage(SessionsCancelled(cancelledCount, currentTimeMillis()))
     }
 
     /**
@@ -94,7 +94,7 @@ class Plugin(
                 val cancelled = instrContext.start(sessionId, isGlobal, testName, handler)
                 if (cancelled.any()) {
                     logger.info { "Cancelled sessions: $cancelled." }
-                    sendMessage(AllSessionsCancelled(cancelled, currentTimeMillis()))
+                    sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
                 }
                 sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
@@ -110,11 +110,27 @@ class Plugin(
                 } else logger.info { "No data for session $sessionId" }
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
+            is StopAllAgentSessions -> {
+                val stopped = instrContext.stopAll()
+                logger.info { "End of recording for sessions $stopped" }
+                for ((sessionId, data) in stopped) {
+                    if (data.any()) {
+                        probeSender(sessionId)(data)
+                    }
+                }
+                val ids = stopped.map { it.first }
+                sendMessage(SessionsFinished(ids, currentTimeMillis()))
+            }
             is CancelAgentSession -> {
                 val sessionId = action.payload.sessionId
                 logger.info { "Cancellation of recording for session $sessionId" }
                 instrContext.cancel(sessionId)
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
+            }
+            is CancelAllAgentSessions -> {
+                val cancelled = instrContext.cancelAll()
+                logger.info { "Cancellation of recording for sessions $cancelled" }
+                sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
             }
             else -> Unit
         }

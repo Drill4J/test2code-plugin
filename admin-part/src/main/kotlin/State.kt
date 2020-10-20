@@ -9,6 +9,7 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
+import mu.*
 import org.jacoco.core.internal.data.*
 
 /**
@@ -25,6 +26,7 @@ internal class AgentState(
     val agentInfo: AgentInfo,
     val adminData: AdminData
 ) {
+    private val logger = KotlinLogging.logger("AgentState ${agentInfo.id}")
 
     val buildManager: BuildManager = adminData.buildManager
 
@@ -116,6 +118,15 @@ internal class AgentState(
             storeClient.loadBuild(it)
         }?.also { builds[it.version] = it }
         classData.store(storeClient)
+    }
+
+    internal suspend fun finishSession(
+        sessionId: String
+    ): FinishedSession? =  activeScope.finishSession(sessionId)?.also {
+        if (it.any()) {
+            storeClient.storeSession(activeScope.id, it)
+            logger.debug { "Session $sessionId finished." }
+        } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
     }
 
     internal fun updateProbes(

@@ -25,6 +25,7 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
     ): List<String>
 
     fun stop(sessionId: String): Sequence<ExecDatum>?
+    fun stopAll(): List<Pair<String, Sequence<ExecDatum>>>
     fun cancel(sessionId: String)
     fun cancelAll(): List<String>
 }
@@ -150,6 +151,14 @@ open class SimpleSessionProbeArrayProvider(
     }
 
     override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.collect()
+
+    override fun stopAll(): List<Pair<String, Sequence<ExecDatum>>> = _runtimes.getAndUpdate {
+        _context.value = null
+        it.clear()
+    }.map { (id, runtime) ->
+        runtime.close()
+        id to runtime.collect()
+    }
 
     override fun cancel(sessionId: String) {
         remove(sessionId)

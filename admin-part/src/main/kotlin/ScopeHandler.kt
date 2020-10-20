@@ -4,22 +4,19 @@ import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
 
-internal fun Plugin.initActiveScope() {
-    activeScope.updateHandler { sendSessions, sessions ->
-        if (sendSessions) {
-            sendActiveSessions()
-        }
-        sessions?.let {
-            val context = state.coverContext()
-            val bundleCounters = sessions.calcBundleCounters(context)
-            val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
-            updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
-            sendActiveScope()
-            coverageInfoSet.sendScopeCoverage(buildVersion, id)
-        }
+internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions, sessions ->
+    if (sendSessions) {
+        sendActiveSessions()
+    }
+    sessions?.let {
+        val context = state.coverContext()
+        val bundleCounters = sessions.calcBundleCounters(context)
+        val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
+        updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
+        sendActiveScope()
+        coverageInfoSet.sendScopeCoverage(buildVersion, id)
     }
 }
 
@@ -64,14 +61,15 @@ internal suspend fun Plugin.changeActiveScope(
 )
 
 internal suspend fun Plugin.scopeInitialized(prevId: String) {
-    initActiveScope()
-    sendScopes()
-    val prevScope = state.scopeManager.byId(prevId)
-    prevScope?.takeIf { it.enabled }.apply {
-        calculateAndSendBuildCoverage()
+    if (initActiveScope()) {
+        sendScopes()
+        val prevScope = state.scopeManager.byId(prevId)
+        prevScope?.takeIf { it.enabled }.apply {
+            calculateAndSendBuildCoverage()
+        }
+        calculateAndSendScopeCoverage()
+        logger.info { "Current active scope - $activeScope" }
     }
-    calculateAndSendScopeCoverage()
-    logger.info { "Current active scope - $activeScope" }
 }
 
 internal suspend fun Plugin.renameScope(

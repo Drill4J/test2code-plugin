@@ -53,28 +53,31 @@ class ActiveScope(
         )
     )
 
-    private val  _handler = atomic<ActiveScopeHandler?>(null)
+    private val _handler = atomic<ActiveScopeHandler?>(null)
 
     private val _change = atomic<Change?>(null)
 
     private val changeJob = GlobalScope.launch {
         while (true) {
-            _change.getAndUpdate { null }?.let { change ->
-                _handler.value?.let { handler ->
-                    val probes: Sequence<Session>? = if (change.probes) {
-                        this@ActiveScope + activeSessions.values.asSequence()
-                    } else null
-                    handler(change.sessions, probes)
+            delay(250)
+            _change.value?.let {
+                delay(250)
+                _change.getAndUpdate { null }?.let { change ->
+                    _handler.value?.let { handler ->
+                        val probes: Sequence<Session>? = if (change.probes) {
+                            this@ActiveScope + activeSessions.values.asSequence()
+                        } else null
+                        handler(change.sessions, probes)
+                        delay(500)
+                    }
                 }
             }
-            delay(1000L)
         }
     }
 
-    fun updateHandler(handler: ActiveScopeHandler) {
-        _handler.value = handler
-        _change.value = Change.ALL
-    }
+    fun init(handler: ActiveScopeHandler): Boolean = _handler.getAndUpdate {
+        it ?: handler.also { _change.value = Change.ALL }
+    } == null
 
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
@@ -111,15 +114,15 @@ class ActiveScope(
     }
 
     fun probesChanged() = _change.update {
-        when(it) {
+        when (it) {
             Change.ONLY_SESSIONS, Change.ALL -> Change.ALL
             else -> Change.ONLY_PROBES
         }
     }
 
     fun cancelSession(
-        msg: SessionCancelled
-    ) = activeSessions.remove(msg.sessionId)?.also {
+        sessionId: String
+    ) = activeSessions.remove(sessionId)?.also {
         if (it.any()) {
             _change.value = Change.ALL
         } else sessionsChanged()
@@ -127,7 +130,7 @@ class ActiveScope(
 
     fun cancelAllSessions() {
         activeSessions.clear().also { map ->
-            if (map.values.any { it.any() } ) {
+            if (map.values.any { it.any() }) {
                 _change.value = Change.ALL
             } else sessionsChanged()
         }

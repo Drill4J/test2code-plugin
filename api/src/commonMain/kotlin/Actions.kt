@@ -21,9 +21,17 @@ data class AddCoverage(val payload: CoverPayload) : Action()
 @Serializable
 data class CancelSession(val payload: SessionPayload) : Action()
 
+@SerialName("CANCEL_ALL")
+@Serializable
+object CancelAllSessions : Action()
+
 @SerialName("STOP")
 @Serializable
 data class StopSession(val payload: StopSessionPayload) : Action()
+
+@SerialName("STOP_ALL")
+@Serializable
+object StopAllSessions : Action()
 
 @SerialName("SWITCH_ACTIVE_SCOPE")
 @Serializable

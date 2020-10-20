@@ -13,8 +13,6 @@ import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
-import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import mu.*
 
@@ -42,8 +40,6 @@ class Plugin(
 
     private val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
-    private val _expected = atomic(persistentHashSetOf<String>())
-
     override suspend fun initialize() {
         state = agentState()
         state.readActiveScopeInfo()?.let { processData(Initialized("")) }
@@ -57,24 +53,29 @@ class Plugin(
 
     override suspend fun doAction(action: Action): Any {
         return when (action) {
-            is SwitchActiveScope -> changeActiveScope(action.payload).also {
-                (it as? InitActiveScope)?.run { expect(payload.id) }
-            }
+            is SwitchActiveScope -> changeActiveScope(action.payload)
             is RenameScope -> renameScope(action.payload)
             is ToggleScope -> toggleScope(action.payload.scopeId)
             is DropScope -> dropScope(action.payload.scopeId)
             is UpdateSettings -> updateSettings(action.payload)
-            is StartNewSession -> StartAgentSession(
-                payload = action.payload.run {
-                    StartSessionPayload(
-                        sessionId = sessionId.ifEmpty(::genUuid),
+            is StartNewSession -> action.payload.run {
+                val newSessionId = sessionId.ifEmpty(::genUuid)
+                activeScope.let {
+                    if (isGlobal) { //TODO cancel only the global session
+                        it.cancelAllSessions()
+                    }
+                    it.startSession(newSessionId, testType, isRealtime)
+                }
+                StartAgentSession(
+                    payload = StartSessionPayload(
+                        sessionId = newSessionId,
                         testType = testType,
                         testName = testName,
                         isGlobal = isGlobal,
                         isRealtime = runtimeConfig.realtime && isRealtime
                     )
-                }
-            ).also { expect(it.payload.sessionId) }
+                )
+            }
             is AddSessionData -> action.payload.run {
                 AddAgentSessionData(
                     payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
@@ -97,15 +98,21 @@ class Plugin(
                     StatusMessage(200, "")
                 } ?: StatusMessage(404, "Active session $sessionId not found.")
             }
-            is CancelSession -> CancelAgentSession(
-                payload = AgentSessionPayload(action.payload.sessionId)
-            ).also { expect(action.payload.sessionId) }
+            is CancelSession -> action.payload.run {
+                activeScope.cancelSession(sessionId)
+                CancelAgentSession(payload = AgentSessionPayload(sessionId))
+            }
+            is CancelAllSessions -> {
+                activeScope.cancelAllSessions()
+                CancelAllAgentSessions
+            }
             is StopSession -> action.payload.run {
                 testRun?.let { activeScope.activeSessions[sessionId]?.setTestRun(it) }
                 StopAgentSession(
                     payload = AgentSessionPayload(action.payload.sessionId)
                 )
-            }.also { expect(action.payload.sessionId) }
+            }
+            is StopAllSessions -> StopAllAgentSessions
             else -> logger.error { "Action '$action' is not supported!" }
         }
     }
@@ -142,50 +149,26 @@ class Plugin(
                 cleanActiveScope(it.version)
             }
         }
-        is ScopeInitialized -> message.processIfExpected { scopeInitialized(message.prevId) }
-        is SessionStarted -> message.processIfExpected {
-            activeScope.startSession(message.sessionId, message.testType, message.isRealtime)
-            logger.info { "Session ${message.sessionId} started." }
+        is ScopeInitialized -> scopeInitialized(message.prevId)
+        is SessionStarted -> logger.info { "Agent session ${message.sessionId} started." }
+        is SessionCancelled -> logger.info { "Agent session ${message.sessionId} cancelled." }
+        is SessionsCancelled -> message.run {
+            activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
+            logger.info { "Agent sessions cancelled: $ids." }
         }
-        is SessionCancelled -> message.processIfExpected {
-            activeScope.cancelSession(message)
-            logger.info { "Session ${message.sessionId} cancelled." }
-            sendActiveSessions()
-        }
-        is AllSessionsCancelled -> {
-            activeScope.cancelAllSessions()
-            logger.info { "All sessions cancelled, ids: ${message.ids}." }
-            sendActiveSessions()
-        }
-        is CoverDataPart -> {
-            activeScope.addProbes(message.sessionId, message.data)
-        }
-        is SessionChanged -> {
-            activeScope.probesChanged()
-        }
-        is SessionFinished -> message.processIfExpected {
+        is CoverDataPart -> activeScope.addProbes(message.sessionId, message.data)
+        is SessionChanged -> activeScope.probesChanged()
+        is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
-            val sessionId = message.sessionId
-            activeScope.finishSession(sessionId) ?.also {
-                if (it.any()) {
-                    logger.info { "Session $sessionId finished." }
-                } else logger.info { "Session with id $sessionId is empty, it won't be added to the active scope." }
-            } ?: logger.info { "No active session with id $sessionId." }
+            state.finishSession(message.sessionId) ?: logger.info {
+                "No active session with id ${message.sessionId}."
+            }
+        }
+        is SessionsFinished -> {
+            delay(500L) //TODO remove after multi-instance core is implemented
+            message.ids.forEach { state.finishSession(it) }
         }
         else -> logger.info { "Message is not supported! $message" }
-    }
-
-    private fun expect(id: String) = _expected.update { it + id }
-
-    private suspend fun CoverMessage.processIfExpected(
-        block: suspend () -> Any?
-    ): Any? = id().let { id ->
-        val expected = _expected.getAndUpdate { it - id }
-        when {
-            id in expected -> block()
-            agentInfo.agentType == AgentType.NODEJS -> block() //TODO remove after js agent is fixed
-            else -> logger.debug { "Ignored unexpected message: $this" }
-        }
     }
 
     private suspend fun sendParentBuild() = send(
@@ -500,12 +483,4 @@ class Plugin(
         agentInfo = agentInfo,
         adminData = adminData
     )
-}
-
-private fun CoverMessage.id(): String = when (this) {
-    is SessionStarted -> sessionId
-    is SessionCancelled -> sessionId
-    is SessionFinished -> sessionId
-    is ScopeInitialized -> id
-    else -> this::class.simpleName ?: ""
 }
