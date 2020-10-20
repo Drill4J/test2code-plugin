@@ -133,19 +133,11 @@ private suspend fun Plugin.cleanTopics(scopeId: String) = Routes.Scope(scopeId).
     send(buildVersion, Routes.Scope.TestsUsages(scope), "")
 }
 
-
 private suspend fun Plugin.handleChange(scope: FinishedScope) {
     if (scope.buildVersion == buildVersion) {
         calculateAndSendBuildCoverage()
-        updateOverlap()
         activeScope.probesChanged()
     }
     sendScopes(scope.buildVersion)
     sendScopeSummary(scope.summary, scope.buildVersion)
-}
-
-private suspend fun Plugin.updateOverlap() {
-    val coverContext = state.coverContext()
-    val overlap = activeScope.flatten().overlappingBundle(coverContext).toCoverDto(coverContext.packageTree)
-    activeScope.updateSummary { it.copy(coverage = it.coverage.copy(overlap = overlap)) }
 }

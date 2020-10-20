@@ -25,6 +25,7 @@ internal fun Sequence<Session>.calcBundleCounters(
     BundleCounters(
         all = flatten().bundle(context),
         testTypeOverlap = testTypeOverlap.bundle(context),
+        overlap = flatten().overlappingBundle(context),
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context)
         },
@@ -84,6 +85,7 @@ internal fun BundleCounters.calculateCoverageData(
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
             count = coverageCount,
+            overlap = overlap.toCoverDto(context.packageTree),
             methodCount = methodCount,
             classCount = classCount,
             packageCount = packageCount,
