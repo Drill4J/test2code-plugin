@@ -31,13 +31,14 @@ data class CoverageKey(
 class BundleCounters(
     val all: BundleCounter,
     val testTypeOverlap: BundleCounter,
+    val overlap: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
     val statsByTest: Map<TypedTest, TestStats> = emptyMap()
 ) {
     companion object {
         val empty = BundleCounter("").let {
-            BundleCounters(all = it, testTypeOverlap = it)
+            BundleCounters(all = it, testTypeOverlap = it, overlap = it)
         }
     }
 }
