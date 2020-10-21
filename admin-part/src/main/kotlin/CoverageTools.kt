@@ -14,8 +14,7 @@ internal data class BuildMethods(
     val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
     val allModifiedMethods: MethodsInfo = MethodsInfo(),
     val unaffectedMethods: MethodsInfo = MethodsInfo(),
-    val deletedMethods: MethodsInfo = MethodsInfo(),
-    val deletedCoveredMethodsCount: Int = 0
+    val deletedMethods: MethodsInfo = MethodsInfo()
 )
 
 internal data class CoverageInfoSet(
@@ -62,9 +61,7 @@ internal fun CoverContext.calculateBundleMethods(
         newMethods = methodChanges.new.toInfo(covered),
         allModifiedMethods = methodChanges.modified.toInfo(covered),
         unaffectedMethods = methodChanges.unaffected.toInfo(covered),
-        deletedMethods = methodChanges.deleted.map { it.toCovered() }.run {
-            MethodsInfo(totalCount = count(), methods = this)
-        }
+        deletedMethods = build?.deletedMethods ?: MethodsInfo()
     )
 }
 
@@ -100,7 +97,7 @@ internal fun Map<String, BundleCounter>.methodsCoveredByType(
 
 }
 
-private fun Iterable<Method>.toInfo(
+internal fun Iterable<Method>.toInfo(
     covered: Map<Method, CoverMethod>
 ) = MethodsInfo(
     totalCount = count(),

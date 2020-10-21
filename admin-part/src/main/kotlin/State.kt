@@ -112,17 +112,24 @@ internal class AgentState(
             }
         } as ClassData
         initActiveScope()
-        val buildVersion = agentInfo.buildVersion
-        builds[buildVersion] = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
-        parentVersion?.let {
+        val parentBuild = parentVersion?.let {
             storeClient.loadBuild(it)
         }?.also { builds[it.version] = it }
+        val deletedMethods = parentBuild?.bundleCounters?.let {
+            val deleted = classData.methodChanges.deleted
+            val coverMap = deleted.toCoverMap(it.all, false)
+            deleted.toInfo(coverMap)
+        } ?: MethodsInfo()
+        val buildVersion = agentInfo.buildVersion
+        (storeClient.loadBuild(buildVersion) ?: CachedBuild(version = buildVersion)).also {
+            builds[buildVersion] = it.copy(deletedMethods = deletedMethods)
+        }
         classData.store(storeClient)
     }
 
     internal suspend fun finishSession(
         sessionId: String
-    ): FinishedSession? =  activeScope.finishSession(sessionId)?.also {
+    ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
         if (it.any()) {
             storeClient.storeSession(activeScope.id, it)
             logger.debug { "Session $sessionId finished." }

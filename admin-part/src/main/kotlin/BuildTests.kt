@@ -32,10 +32,6 @@ internal suspend fun AgentState.testsToRun(
     }
 } ?: emptyMap()
 
-fun MethodsInfo.testCount(
-    tests: Set<AssociatedTests>
-): Int = methods.associatedTests(tests).count()
-
 fun Iterable<CoverMethod>.associatedTests(
     tests: Set<AssociatedTests>
 ): Sequence<AssociatedTests> = tests.filter { test ->

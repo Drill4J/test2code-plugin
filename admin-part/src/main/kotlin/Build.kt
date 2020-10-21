@@ -12,7 +12,8 @@ internal data class CachedBuild(
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
     val bundleCounters: BundleCounters = BundleCounters.empty,
     val coverage: CachedBuildCoverage = CachedBuildCoverage(version),
-    val tests: BuildTests = BuildTests()
+    val tests: BuildTests = BuildTests(),
+    val deletedMethods: MethodsInfo = MethodsInfo()
 )
 
 @Serializable
