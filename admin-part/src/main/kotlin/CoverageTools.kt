@@ -6,7 +6,19 @@ import com.epam.drill.plugins.test2code.util.*
 
 //TODO Rewrite all of this, remove the file
 
-data class CoverageInfoSet(
+internal data class BuildMethods(
+    val totalMethods: MethodsInfo = MethodsInfo(),
+    val newMethods: MethodsInfo = MethodsInfo(),
+    val modifiedNameMethods: MethodsInfo = MethodsInfo(),
+    val modifiedDescMethods: MethodsInfo = MethodsInfo(),
+    val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
+    val allModifiedMethods: MethodsInfo = MethodsInfo(),
+    val unaffectedMethods: MethodsInfo = MethodsInfo(),
+    val deletedMethods: MethodsInfo = MethodsInfo(),
+    val deletedCoveredMethodsCount: Int = 0
+)
+
+internal data class CoverageInfoSet(
     val associatedTests: List<AssociatedTests>,
     val coverage: Coverage,
     val buildMethods: BuildMethods = BuildMethods(),

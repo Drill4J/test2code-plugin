@@ -167,20 +167,6 @@ data class MethodsSummaryDto(
 )
 
 @Serializable
-data class BuildMethods(
-    val totalMethods: MethodsInfo = MethodsInfo(),
-    val newMethods: MethodsInfo = MethodsInfo(),
-    val modifiedNameMethods: MethodsInfo = MethodsInfo(),
-    val modifiedDescMethods: MethodsInfo = MethodsInfo(),
-    val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
-    val allModifiedMethods: MethodsInfo = MethodsInfo(),
-    val unaffectedMethods: MethodsInfo = MethodsInfo(),
-    val deletedMethods: MethodsInfo = MethodsInfo(),
-    val deletedCoveredMethodsCount: Int = 0
-)
-
-
-@Serializable
 data class MethodsInfo(
     val totalCount: Int = 0,
     val coveredCount: Int = 0,
@@ -356,6 +342,12 @@ data class ScopeSummary(
 val zeroCount = Count(covered = 0, total = 0)
 
 @Serializable
+data class TestCountDto(
+    val count: Int = 0,
+    val byType: Map<String, Int> = emptyMap()
+)
+
+@Serializable
 data class TestSummary(
     val coverage: CoverDto,
     val testCount: Int = 0
@@ -382,9 +374,9 @@ data class TestTypeCount(
 )
 
 @Serializable
-data class TestsToRunDto(
-    val groupedTests: GroupedTests = emptyMap(),
-    val count: Int
+data class GroupedTestsDto(
+    val byType: GroupedTests = emptyMap(),
+    val totalCount: Int = 0
 )
 
 @Serializable
@@ -398,11 +390,12 @@ data class BuildStatsDto(
 
 @Serializable
 data class SummaryDto(
-    val coverage: Double,
-    val coverageCount: Count,
-    val arrow: ArrowType,
-    val risks: Int,
-    val testsToRun: TestsToRunDto,
+    val coverage: Double = 0.0,
+    val coverageCount: Count = zeroCount,
+    val arrow: ArrowType = ArrowType.UNCHANGED,
+    val risks: Int = 0,
+    val tests: TestCountDto = TestCountDto(),
+    val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet()
 )
 

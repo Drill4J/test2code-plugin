@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
@@ -67,7 +68,7 @@ internal suspend fun Plugin.updateGateConditions(
                 store(QualityGateData.AgentSetting(id, setting))
             }
         }
-        StatusMessage(StatusCodes.OK, "")
+        StatusMessage(200, "")
     } else StatusMessage(400, "Unknown quality gate measures: '$unknownMeasures'")
 }
 
@@ -89,13 +90,13 @@ internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
 private fun AgentState.toStatsDto(
     buildVersion: String
 ): StatsDto? = builds[buildVersion]?.run {
-    coverage.toSummaryDto(tests).toStatsDto()
+    coverage.toSummary(agentInfo.name, tests).toStatsDto()
 }
 
-internal fun SummaryDto.toStatsDto() = StatsDto(
-    coverage = coverage,
+internal fun AgentSummary.toStatsDto() = StatsDto(
+    coverage = coverage.percentage(),
     risks = risks,
-    tests = testsToRun.count
+    tests = testsToRun.totalCount()
 )
 
 private suspend fun Plugin.sendSettings() {

@@ -44,7 +44,6 @@ internal fun Sequence<Session>.calcBundleCounters(
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null
-
 ): CoverageInfoSet {
     val bundle = all
     val bundlesByTestTypes = byTestType

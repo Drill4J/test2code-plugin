@@ -8,7 +8,7 @@ val sessionAggregator = SessionAggregator()
 
 class SessionAggregator : (String, String, List<ActiveSessionDto>) -> List<ActiveSessionDto>? {
     private val _groups = atomic(
-        persistentHashMapOf<String, Map<String, List<ActiveSessionDto>>>()
+        persistentHashMapOf<String, PersistentMap<String, List<ActiveSessionDto>>>()
     )
 
     override operator fun invoke(
@@ -18,7 +18,7 @@ class SessionAggregator : (String, String, List<ActiveSessionDto>) -> List<Activ
     ): List<ActiveSessionDto>? {
         val sessions = _groups.updateAndGet {
             val sessionGroups = it[serviceGroup] ?: persistentMapOf()
-            it.put(serviceGroup, sessionGroups + (agentId to activeSessions))
+            it.put(serviceGroup, sessionGroups.put(agentId, activeSessions))
         }
         return sessions[serviceGroup]?.values?.flatten()
     }

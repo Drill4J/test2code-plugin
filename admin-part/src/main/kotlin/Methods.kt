@@ -69,7 +69,7 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
     } else DiffMethods(new = this)
 } else DiffMethods(deleted = otherMethods)
 
-fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
+internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     all = totalMethods.run { Count(coveredCount, totalCount) },
     new = newMethods.run { Count(coveredCount, totalCount) },
     modified = allModifiedMethods.run { Count(coveredCount, totalCount) },
@@ -77,7 +77,7 @@ fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     deleted = Count(deletedCoveredMethodsCount, deletedMethods.totalCount)
 )
 
-fun BuildMethods.toRiskSummaryDto() = RiskSummaryDto(
+internal fun BuildMethods.toRiskSummaryDto() = RiskSummaryDto(
     total = newMethods.run { totalCount - coveredCount } + allModifiedMethods.run { totalCount - coveredCount },
     new = newMethods.run { totalCount - coveredCount },
     modified = allModifiedMethods.run { totalCount - coveredCount }

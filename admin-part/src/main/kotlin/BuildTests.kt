@@ -1,11 +1,11 @@
 package com.epam.drill.plugins.test2code
-
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import kotlinx.serialization.*
 
 @Serializable
 data class BuildTests(
+    val tests: GroupedTests = emptyMap(),
     val assocTests: Set<AssociatedTests> = emptySet(),
     val testsToRun: GroupedTests = emptyMap()
 )
@@ -29,7 +29,6 @@ internal suspend fun AgentState.testsToRun(
             .distinct()
             .filter { it in prevBuildTests && it !in curBuildTests }
             .groupBy({ it.type }, { it.name })
-
     }
 } ?: emptyMap()
 

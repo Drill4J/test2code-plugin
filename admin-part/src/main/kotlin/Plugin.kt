@@ -303,18 +303,24 @@ class Plugin(
                 buildVersion,
                 buildCoverage
             ).coverage
-            state.updateBuildTests(buildVersion, coverageInfoSet.associatedTests)
+            state.updateBuildTests(
+                buildVersion,
+                byTest.keys.groupBy(TypedTest::type, TypedTest::name),
+                coverageInfoSet.associatedTests
+            )
             val cachedTests = state.updateTestsToRun(buildVersion, testsToRun).tests
-            val summaryDto = cachedCoverage.toSummaryDto(cachedTests, parentCoverageCount)
-            val stats = summaryDto.toStatsDto()
+            val summary = cachedCoverage.toSummary(agentInfo.name, cachedTests, parentCoverageCount)
+            val stats = summary.toStatsDto()
             val qualityGate = checkQualityGate(stats)
+            send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
             Routes.Data().let {
                 send(buildVersion, Routes.Data.Stats(it), stats)
                 send(buildVersion, Routes.Data.QualityGate(it), qualityGate)
-                send(buildVersion, Routes.Data.Recommendations(it), summaryDto.recommendations)
-                send(buildVersion, Routes.Data.TestsToRun(it), summaryDto.testsToRun)
+                send(buildVersion, Routes.Data.Recommendations(it), summary.recommendations)
+                send(buildVersion, Routes.Data.Tests(it), summary.tests.toDto())
+                send(buildVersion, Routes.Data.TestsToRun(it), summary.testsToRun.toDto())
             }
-            send(summaryDto)
+            sendGroupSummary(summary)
             state.storeBuild(buildVersion)
         }
     }
@@ -376,36 +382,35 @@ class Plugin(
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), TestsToRun(testsToRun))
     }
 
-    private suspend fun Plugin.send(
-        summaryDto: SummaryDto
-    ) {
+    private suspend fun Plugin.sendGroupSummary(summary: AgentSummary) {
         val serviceGroup = agentInfo.serviceGroup
         if (serviceGroup.any()) {
-            val agentSummary = AgentSummaryDto(
-                id = agentId,
-                buildVersion = buildVersion,
-                name = agentInfo.name,
-                summary = summaryDto
-            )
-            val aggregatedMessage = aggregator(serviceGroup, agentSummary) ?: summaryDto
-            val summaries = aggregator.getSummaries(serviceGroup) ?: emptyList()
+            val aggregated = summaryAggregator(serviceGroup, agentId, summary)
+            val summaries = summaryAggregator.getSummaries(serviceGroup)
             Routes.ServiceGroup().let { groupParent ->
                 sendToGroup(
                     destination = Routes.ServiceGroup.Summary(groupParent),
                     message = ServiceGroupSummaryDto(
                         name = serviceGroup,
-                        aggregated = aggregatedMessage,
-                        summaries = summaries
+                        aggregated = aggregated.toDto(),
+                        summaries = summaries.map { (id, summary) ->
+                            summary.toDto(id)
+                        }
                     )
                 )
                 Routes.ServiceGroup.Data(groupParent).let {
                     sendToGroup(
+                        destination = Routes.ServiceGroup.Data.Tests(it),
+                        message = aggregated.tests.toDto()
+                    )
+
+                    sendToGroup(
                         destination = Routes.ServiceGroup.Data.TestsToRun(it),
-                        message = aggregatedMessage.testsToRun
+                        message = aggregated.testsToRun.toDto()
                     )
                     sendToGroup(
                         destination = Routes.ServiceGroup.Data.Recommendations(it),
-                        message = aggregatedMessage.recommendations
+                        message = aggregated.recommendations
                     )
                 }
             }

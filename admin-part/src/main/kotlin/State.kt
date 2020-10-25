@@ -147,10 +147,14 @@ internal class AgentState(
 
     internal fun updateBuildTests(
         buildVersion: String,
-        tests: List<AssociatedTests>
+        tests: GroupedTests,
+        assocTests: List<AssociatedTests>
     ): CachedBuild = builds(buildVersion) {
         it?.copy(
-            tests = it.tests.copy(assocTests = tests.toSet())
+            tests = it.tests.copy(
+                tests = tests,
+                assocTests = assocTests.toSet()
+            )
         )
     }!!
 

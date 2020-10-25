@@ -209,6 +209,9 @@ class Routes {
         @Location("/stats")
         class Stats(val parent: Data)
 
+        @Location("/tests")
+        class Tests(val parent: Data)
+
         @Location("/tests-to-run")
         class TestsToRun(val parent: Data)
 
@@ -232,6 +235,9 @@ class Routes {
 
         @Location("/data")
         class Data(val serviceGroup: ServiceGroup) {
+            @Location("/tests")
+            class Tests(val parent: Data)
+
             @Location("/tests-to-run")
             class TestsToRun(val parent: Data)
 
