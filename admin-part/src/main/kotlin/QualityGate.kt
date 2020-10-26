@@ -1,6 +1,6 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.coverage.*
@@ -51,7 +51,7 @@ internal suspend fun Plugin.initGateSettings() {
 
 internal suspend fun Plugin.updateGateConditions(
     conditionSettings: List<ConditionSetting>
-): StatusMessage = run {
+): ActionResult = run {
     val settings = state.qualityGateSettings
     val unknownMeasures = conditionSettings.filter { it.condition.measure !in settings.map }
     if (unknownMeasures.none()) {
@@ -68,8 +68,8 @@ internal suspend fun Plugin.updateGateConditions(
                 store(QualityGateData.AgentSetting(id, setting))
             }
         }
-        StatusMessage(200, "")
-    } else StatusMessage(400, "Unknown quality gate measures: '$unknownMeasures'")
+        ActionResult(StatusCodes.OK, "")
+    } else ActionResult(StatusCodes.BAD_REQUEST, "Unknown quality gate measures: '$unknownMeasures'")
 }
 
 internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {

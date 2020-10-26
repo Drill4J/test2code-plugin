@@ -51,69 +51,72 @@ class Plugin(
         state = agentState()
     }
 
-    override suspend fun doAction(action: Action): Any {
-        return when (action) {
-            is SwitchActiveScope -> changeActiveScope(action.payload)
-            is RenameScope -> renameScope(action.payload)
-            is ToggleScope -> toggleScope(action.payload.scopeId)
-            is DropScope -> dropScope(action.payload.scopeId)
-            is UpdateSettings -> updateSettings(action.payload)
-            is StartNewSession -> action.payload.run {
-                val newSessionId = sessionId.ifEmpty(::genUuid)
-                activeScope.let {
-                    if (isGlobal) { //TODO cancel only the global session
-                        it.cancelAllSessions()
-                    }
-                    it.startSession(newSessionId, testType, isRealtime)
+    override suspend fun doAction(
+        action: Action
+    ): ActionResult = when (action) {
+        is SwitchActiveScope -> changeActiveScope(action.payload)
+        is RenameScope -> renameScope(action.payload)
+        is ToggleScope -> toggleScope(action.payload.scopeId)
+        is DropScope -> dropScope(action.payload.scopeId)
+        is UpdateSettings -> updateSettings(action.payload)
+        is StartNewSession -> action.payload.run {
+            val newSessionId = sessionId.ifEmpty(::genUuid)
+            activeScope.let {
+                if (isGlobal) { //TODO cancel only the global session
+                    it.cancelAllSessions()
                 }
-                StartAgentSession(
-                    payload = StartSessionPayload(
-                        sessionId = newSessionId,
-                        testType = testType,
-                        testName = testName,
-                        isGlobal = isGlobal,
-                        isRealtime = runtimeConfig.realtime && isRealtime
-                    )
-                )
+                it.startSession(newSessionId, testType, isRealtime)
             }
-            is AddSessionData -> action.payload.run {
-                AddAgentSessionData(
-                    payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
+            StartAgentSession(
+                payload = StartSessionPayload(
+                    sessionId = newSessionId,
+                    testType = testType,
+                    testName = testName,
+                    isGlobal = isGlobal,
+                    isRealtime = runtimeConfig.realtime && isRealtime
                 )
-            }
-            is AddCoverage -> action.payload.run {
-                activeScope.activeSessions[sessionId]?.let { session ->
-                    session.addAll(
-                        data.map {
-                            ExecClassData(
-                                className = it.name,
-                                testName = it.test,
-                                probes = it.probes
-                            )
-                        }
-                    )
-                    if (session.isRealtime) {
-                        activeScope.probesChanged()
+            ).toActionResult()
+        }
+        is AddSessionData -> action.payload.run {
+            AddAgentSessionData(
+                payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
+            )
+        }.toActionResult()
+        is AddCoverage -> action.payload.run {
+            activeScope.activeSessions[sessionId]?.let { session ->
+                session.addAll(
+                    data.map {
+                        ExecClassData(
+                            className = it.name,
+                            testName = it.test,
+                            probes = it.probes
+                        )
                     }
-                    StatusMessage(200, "")
-                } ?: StatusMessage(404, "Active session $sessionId not found.")
-            }
-            is CancelSession -> action.payload.run {
-                activeScope.cancelSession(sessionId)
-                CancelAgentSession(payload = AgentSessionPayload(sessionId))
-            }
-            is CancelAllSessions -> {
-                activeScope.cancelAllSessions()
-                CancelAllAgentSessions
-            }
-            is StopSession -> action.payload.run {
-                testRun?.let { activeScope.activeSessions[sessionId]?.setTestRun(it) }
-                StopAgentSession(
-                    payload = AgentSessionPayload(action.payload.sessionId)
                 )
-            }
-            is StopAllSessions -> StopAllAgentSessions
-            else -> logger.error { "Action '$action' is not supported!" }
+                if (session.isRealtime) {
+                    activeScope.probesChanged()
+                }
+                ActionResult(StatusCodes.OK, "")
+            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session $sessionId not found.")
+        }
+        is CancelSession -> action.payload.run {
+            activeScope.cancelSession(sessionId)
+            CancelAgentSession(payload = AgentSessionPayload(sessionId))
+        }.toActionResult()
+        is CancelAllSessions -> {
+            activeScope.cancelAllSessions()
+            CancelAllAgentSessions.toActionResult()
+        }
+        is StopSession -> action.payload.run {
+            testRun?.let { activeScope.activeSessions[sessionId]?.setTestRun(it) }
+            StopAgentSession(
+                payload = AgentSessionPayload(action.payload.sessionId)
+            )
+        }.toActionResult()
+        is StopAllSessions -> StopAllAgentSessions.toActionResult()
+        else -> "Action '$action' is not supported!".let { message ->
+            logger.error { message }
+            ActionResult(StatusCodes.BAD_REQUEST, message)
         }
     }
 

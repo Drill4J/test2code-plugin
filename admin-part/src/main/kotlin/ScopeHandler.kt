@@ -1,6 +1,6 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugin.api.message.*
+import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -22,7 +22,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions
 
 internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload
-): Any = if (state.scopeByName(scopeChange.scopeName) == null) {
+): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
     val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
     state.storeActiveScopeInfo()
     storeClient.deleteSessions(prevScope.id)
@@ -54,10 +54,10 @@ internal suspend fun Plugin.changeActiveScope(
             name = activeScope.name,
             prevId = prevScope.id
         )
-    )
-} else StatusMessage(
-    StatusCodes.CONFLICT,
-    "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
+    ).toActionResult()
+} else ActionResult(
+    code = StatusCodes.CONFLICT,
+    data = "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
 )
 
 internal suspend fun Plugin.scopeInitialized(prevId: String) {
@@ -74,46 +74,46 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
 
 internal suspend fun Plugin.renameScope(
     payload: RenameScopePayload
-): StatusMessage = state.scopeById(payload.scopeId)?.let { scope ->
+): ActionResult = state.scopeById(payload.scopeId)?.let { scope ->
     val scopeName = payload.scopeName
     if (scope.summary.name != scopeName && state.scopeByName(scopeName) == null) {
         state.renameScope(payload.scopeId, scopeName)
         sendScopeMessages(scope.buildVersion)
         sendScopeSummary(scope.summary, scope.buildVersion)
-        StatusMessage(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> $scopeName")
-    } else StatusMessage(
+        ActionResult(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> $scopeName")
+    } else ActionResult(
         StatusCodes.CONFLICT,
         "Scope with such name already exists. Please choose a different name."
     )
-} ?: StatusMessage(
+} ?: ActionResult(
     StatusCodes.NOT_FOUND,
     "Failed to rename scope with id ${payload.scopeId}: scope not found"
 )
 
-internal suspend fun Plugin.toggleScope(scopeId: String): StatusMessage {
+internal suspend fun Plugin.toggleScope(scopeId: String): ActionResult {
     state.toggleScope(scopeId)
     return state.scopeManager.byId(scopeId)?.let { scope ->
         handleChange(scope)
-        StatusMessage(
+        ActionResult(
             StatusCodes.OK,
             "Scope with id $scopeId toggled to 'enabled' value '${scope.enabled}'"
         )
-    } ?: StatusMessage(
-        StatusCodes.CONFLICT,
+    } ?: ActionResult(
+        StatusCodes.NOT_FOUND,
         "Failed to toggle scope with id $scopeId: scope not found"
     )
 }
 
-internal suspend fun Plugin.dropScope(scopeId: String): StatusMessage {
+internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
     return state.scopeManager.deleteById(scopeId)?.let { scope ->
         cleanTopics(scope.id)
         handleChange(scope)
-        StatusMessage(
+        ActionResult(
             StatusCodes.OK,
             "Scope with id $scopeId was removed"
         )
-    } ?: StatusMessage(
-        StatusCodes.CONFLICT,
+    } ?: ActionResult(
+        StatusCodes.NOT_FOUND,
         "Failed to drop scope with id $scopeId: scope not found"
     )
 }

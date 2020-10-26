@@ -44,7 +44,7 @@ class ScopeTest : E2EPluginTest() {
 
                 val switchActiveScopeWrong = SwitchActiveScope(ActiveScopeChangePayload("integration")).stringify()
                 pluginAction(switchActiveScopeWrong) { status, _ ->
-                    status shouldBe HttpStatusCode.BadRequest
+                    status shouldBe HttpStatusCode.Conflict
                 }.join()
                 val switchActiveScope = SwitchActiveScope(ActiveScopeChangePayload("scope integration")).stringify()
                 pluginAction(switchActiveScope) { status, _ ->
