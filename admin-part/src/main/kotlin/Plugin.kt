@@ -82,7 +82,7 @@ class Plugin(
                         "Error! Only one active global session is allowed.",
                         "Please finish the active one in order to start new."
                     ).joinToString(" ")
-                } else "A session with the same id already started."
+                } else "Session with such ID already exists. Please choose a different ID."
             ).toActionResult(StatusCodes.CONFLICT)
         }
         is AddSessionData -> action.payload.run {
