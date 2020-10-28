@@ -78,7 +78,10 @@ class Plugin(
                 ).toActionResult()
             } ?: FieldErrorDto(
                 field = "sessionId", message = if (isGlobal && activeScope.hasActiveGlobalSession()) {
-                    "Global session already started."
+                    listOf(
+                        "Error! Only one active global session is allowed.",
+                        "Please finish the active one in order to start new."
+                    ).joinToString(" ")
                 } else "A session with the same id already started."
             ).toActionResult(StatusCodes.CONFLICT)
         }
