@@ -116,6 +116,8 @@ class ActiveScope(
         } === newSession
     }?.also { sessionsChanged() }
 
+    fun hasActiveSession(id: String): Boolean = getSession(id) != null
+
     fun hasActiveGlobalSession(): Boolean = "" in activeSessions
 
     fun addProbes(

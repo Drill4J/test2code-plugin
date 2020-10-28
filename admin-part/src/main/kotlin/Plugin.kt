@@ -86,10 +86,12 @@ class Plugin(
             ).toActionResult(StatusCodes.CONFLICT)
         }
         is AddSessionData -> action.payload.run {
-            AddAgentSessionData(
-                payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
-            )
-        }.toActionResult()
+            if (activeScope.hasActiveSession(sessionId)) {
+                AddAgentSessionData(
+                    payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
+                ).toActionResult()
+            } else ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
+        }
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 data.map { probes ->
