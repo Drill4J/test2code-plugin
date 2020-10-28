@@ -22,7 +22,7 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
         isGlobal: Boolean,
         testName: String? = null,
         realtimeHandler: RealtimeHandler = {}
-    ): List<String>
+    )
 
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun stopAll(): List<Pair<String, Sequence<ExecDatum>>>
@@ -114,6 +114,8 @@ open class SimpleSessionProbeArrayProvider(
 
     private val _context = atomic<IDrillContex?>(null)
 
+    private val _globalContext = atomic<IDrillContex?>(null)
+
     private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
 
     private val _stubArray = atomic(BooleanArray(1024))
@@ -122,38 +124,44 @@ open class SimpleSessionProbeArrayProvider(
         id: Long,
         name: String,
         probeCount: Int
-    ): BooleanArray = _context.value?.let { context ->
-        val sessionId = context()
+    ): BooleanArray = _context.value?.let {
+        it(id, name, probeCount)
+    } ?: _globalContext.value?.let {
+        it(id, name, probeCount)
+    } ?: stubArray(probeCount)
+
+    private operator fun IDrillContex.invoke(
+        id: Long,
+        name: String,
+        probeCount: Int
+    ): BooleanArray? = run {
+        val sessionId = this()
         runtimes[sessionId]?.let { sessionRuntime ->
-            val testName = context[DRIlL_TEST_NAME] ?: "default"
+            val testName = this[DRIlL_TEST_NAME] ?: "default"
             sessionRuntime(id, name, probeCount, testName)
         }
-    } ?: stubArray(probeCount)
+    }
 
     override fun start(
         sessionId: String,
         isGlobal: Boolean,
         testName: String?,
         realtimeHandler: RealtimeHandler
-    ): List<String> = if (isGlobal) {
-        val cancelled = cancelAll()
-        _context.value = GlobalContext(sessionId, testName)
-        add(sessionId, realtimeHandler)
-        cancelled
-    } else {
-        val oldContext = _context.value
-        val cancelled = if (oldContext != null && oldContext !== instrContext) {
-            cancelAll()
-        } else emptyList()
-        _context.value = instrContext
-        add(sessionId, realtimeHandler)
-        cancelled
+    ) {
+        if (isGlobal) {
+            _globalContext.value = GlobalContext(sessionId, testName)
+            add(sessionId, realtimeHandler)
+        } else {
+            _context.update { it ?: instrContext }
+            add(sessionId, realtimeHandler)
+        }
     }
 
     override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.collect()
 
     override fun stopAll(): List<Pair<String, Sequence<ExecDatum>>> = _runtimes.getAndUpdate {
         _context.value = null
+        _globalContext.value = null
         it.clear()
     }.map { (id, runtime) ->
         runtime.close()
@@ -166,6 +174,7 @@ open class SimpleSessionProbeArrayProvider(
 
     override fun cancelAll(): List<String> = _runtimes.getAndUpdate {
         _context.value = null
+        _globalContext.value = null
         it.clear()
     }.map { (id, runtime) ->
         runtime.close()
@@ -191,9 +200,18 @@ open class SimpleSessionProbeArrayProvider(
     }
 
     private fun remove(sessionId: String): ExecRuntime? = (_runtimes.getAndUpdate { runtimes ->
-        (runtimes - sessionId).also {
-            if (it.none()) {
+        (runtimes - sessionId).also { map ->
+            if (map.none()) {
                 _context.value = null
+                _globalContext.value = null
+            } else {
+                val globalSessionId = _globalContext.value?.invoke()
+                if (map.size == 1 && globalSessionId in map) {
+                    _context.value = null
+                }
+                if (globalSessionId == sessionId) {
+                    _globalContext.value = null
+                }
             }
         }
     }[sessionId])?.also(ExecRuntime::close)

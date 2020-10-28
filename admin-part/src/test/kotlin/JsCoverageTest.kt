@@ -38,12 +38,12 @@ class JsCoverageTest {
         state.initialized()
         val active = state.activeScope
         active.execSession("MANUAL") { sessionId ->
-            addProbes(sessionId, probes)
+            addProbes(sessionId) { probes }
         }
         active.execSession("AUTO") { sessionId ->
-            addProbes(sessionId, IncorrectProbes.underCount)
-            addProbes(sessionId, IncorrectProbes.overCount)
-            addProbes(sessionId, IncorrectProbes.notExisting)
+            addProbes(sessionId) { IncorrectProbes.underCount }
+            addProbes(sessionId) { IncorrectProbes.overCount }
+            addProbes(sessionId) { IncorrectProbes.notExisting }
         }
         val finished = active.finish(enabled = true)
         val context = state.coverContext()

@@ -91,11 +91,7 @@ class Plugin(
             is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
                 val handler = probeSender(sessionId, isRealtime)
-                val cancelled = instrContext.start(sessionId, isGlobal, testName, handler)
-                if (cancelled.any()) {
-                    logger.info { "Cancelled sessions: $cancelled." }
-                    sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
-                }
+                instrContext.start(sessionId, isGlobal, testName, handler)
                 sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
             is AddAgentSessionData -> {

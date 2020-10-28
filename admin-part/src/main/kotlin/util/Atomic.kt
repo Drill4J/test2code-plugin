@@ -21,6 +21,8 @@ class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
 
     operator fun get(key: K): V? = map[key]
 
+    operator fun contains(key: K): Boolean = key in map
+
     operator fun set(key: K, value: V): V? = this(key) { value }
 
     fun remove(key: K) = _map.getAndUpdate { it.remove(key) }[key]

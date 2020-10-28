@@ -104,14 +104,24 @@ class ActiveScope(
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
-    fun startSession(sessionId: String, testType: String, isRealtime: Boolean = false) {
-        activeSessions(sessionId) { ActiveSession(sessionId, testType, isRealtime) }
-        sessionsChanged()
-    }
+    fun startSession(
+        sessionId: String,
+        testType: String,
+        isGlobal: Boolean = false,
+        isRealtime: Boolean = false
+    ) = ActiveSession(sessionId, testType, isGlobal, isRealtime).takeIf { newSession ->
+        val key = if (isGlobal) "" else sessionId
+        activeSessions(key) { existing ->
+            existing ?: newSession.takeIf { it.id !in activeSessions }
+        } === newSession
+    }?.also { sessionsChanged() }
 
-    fun addProbes(sessionId: String, probes: Collection<ExecClassData>) {
-        activeSessions[sessionId]?.apply { addAll(probes) }
-    }
+    fun hasActiveGlobalSession(): Boolean = "" in activeSessions
+
+    fun addProbes(
+        sessionId: String,
+        probeProvider: () -> Collection<ExecClassData>
+    ): ActiveSession? = getSession(sessionId)?.apply { addAll(probeProvider()) }
 
     fun probesChanged() = _change.update {
         when (it) {
@@ -122,7 +132,7 @@ class ActiveScope(
 
     fun cancelSession(
         sessionId: String
-    ) = activeSessions.remove(sessionId)?.also {
+    ): ActiveSession? = removeSession(sessionId)?.also {
         if (it.any()) {
             _change.value = Change.ALL
         } else sessionsChanged()
@@ -138,7 +148,7 @@ class ActiveScope(
 
     fun finishSession(
         sessionId: String
-    ): FinishedSession? = activeSessions.remove(sessionId)?.run {
+    ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
                 _sessions.update { it.add(finished) }
@@ -163,6 +173,16 @@ class ActiveScope(
                 else -> Change.ONLY_SESSIONS
             }
         }
+    }
+
+    private fun getSession(id: String): ActiveSession? = activeSessions.run {
+        this[""]?.takeIf { it.id == id } ?: this[id]
+    }
+
+    private fun removeSession(id: String): ActiveSession? = activeSessions.run {
+        if (this[""]?.id == id) {
+            remove("")
+        } else remove(id)
     }
 }
 

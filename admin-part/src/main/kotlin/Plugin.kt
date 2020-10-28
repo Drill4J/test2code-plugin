@@ -34,7 +34,7 @@ class Plugin(
 
     val buildVersion = agentInfo.buildVersion
 
-    val activeScope get() = state.activeScope
+    val activeScope: ActiveScope get() = state.activeScope
 
     private val agentId = agentInfo.id
 
@@ -61,21 +61,26 @@ class Plugin(
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
-            activeScope.let {
-                if (isGlobal) { //TODO cancel only the global session
-                    it.cancelAllSessions()
-                }
-                it.startSession(newSessionId, testType, isRealtime)
-            }
-            StartAgentSession(
-                payload = StartSessionPayload(
-                    sessionId = newSessionId,
-                    testType = testType,
-                    testName = testName,
-                    isGlobal = isGlobal,
-                    isRealtime = runtimeConfig.realtime && isRealtime
-                )
-            ).toActionResult()
+            activeScope.startSession(
+                newSessionId,
+                testType,
+                isGlobal,
+                runtimeConfig.realtime && isRealtime
+            )?.run {
+                StartAgentSession(
+                    payload = StartSessionPayload(
+                        sessionId = id,
+                        testType = testType,
+                        testName = testName,
+                        isGlobal = isGlobal,
+                        isRealtime = isRealtime
+                    )
+                ).toActionResult()
+            } ?: FieldErrorDto(
+                field = "sessionId", message = if (isGlobal && activeScope.hasActiveGlobalSession()) {
+                    "Global session already started."
+                } else "A session with the same id already started."
+            ).toActionResult(StatusCodes.CONFLICT)
         }
         is AddSessionData -> action.payload.run {
             AddAgentSessionData(
@@ -83,26 +88,22 @@ class Plugin(
             )
         }.toActionResult()
         is AddCoverage -> action.payload.run {
-            activeScope.activeSessions[sessionId]?.let { session ->
-                session.addAll(
-                    data.map {
-                        ExecClassData(
-                            className = it.name,
-                            testName = it.test,
-                            probes = it.probes
-                        )
-                    }
-                )
-                if (session.isRealtime) {
+            activeScope.addProbes(sessionId) {
+                data.map { probes ->
+                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes)
+                }
+            }?.run {
+                if (isRealtime) {
                     activeScope.probesChanged()
                 }
                 ActionResult(StatusCodes.OK, "")
-            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session $sessionId not found.")
+            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is CancelSession -> action.payload.run {
-            activeScope.cancelSession(sessionId)
-            CancelAgentSession(payload = AgentSessionPayload(sessionId))
-        }.toActionResult()
+            activeScope.cancelSession(action.payload.sessionId)?.let { session ->
+                CancelAgentSession(payload = AgentSessionPayload(session.id)).toActionResult()
+            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
+        }
         is CancelAllSessions -> {
             activeScope.cancelAllSessions()
             CancelAllAgentSessions.toActionResult()
@@ -159,7 +160,7 @@ class Plugin(
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "Agent sessions cancelled: $ids." }
         }
-        is CoverDataPart -> activeScope.addProbes(message.sessionId, message.data)
+        is CoverDataPart -> activeScope.addProbes(message.sessionId) { message.data }
         is SessionChanged -> activeScope.probesChanged()
         is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented

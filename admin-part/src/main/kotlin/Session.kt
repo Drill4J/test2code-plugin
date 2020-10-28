@@ -18,6 +18,7 @@ sealed class Session : Sequence<ExecClassData> {
 class ActiveSession(
     override val id: String,
     override val testType: String,
+    val isGlobal: Boolean = false,
     val isRealtime: Boolean = false
 ) : Session() {
 
