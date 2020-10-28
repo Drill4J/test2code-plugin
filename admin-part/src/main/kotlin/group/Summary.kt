@@ -96,11 +96,6 @@ internal fun GroupedTests.toDto() = GroupedTestsDto(
     byType = this
 )
 
-private fun GroupedTests.toTestCountDto() = TestCountDto(
-    count = totalCount(),
-    byType = mapValues { it.value.count() }
-)
-
 fun GroupedTests.totalCount(): Int = this.values.sumBy { it.count() }
 
 fun GroupedTests.toSummary(): List<TestTypeCount> = map { (testType, list) ->
@@ -109,3 +104,15 @@ fun GroupedTests.toSummary(): List<TestTypeCount> = map { (testType, list) ->
         count = list.count()
     )
 }
+
+private fun GroupedTests.toTestCountDto() = TestCountDto(
+    count = totalCount(),
+    byType = mapValues { it.value.count() }
+)
+
+private operator fun GroupedTests.plus(other: GroupedTests): GroupedTests = sequenceOf(this, other)
+    .flatMap { it.asSequence() }
+    .groupBy({ it.key }, { it.value })
+    .mapValues { (_, values) ->
+        values.flatten().distinct()
+    }
