@@ -180,14 +180,8 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     first().coverage shouldBeGreaterThan 0.0
                 }
                 delay(100)
-            }.reconnect<Build1> { plugUi, _ ->
-                plugUi.testsToRun()!!.apply {
-                    testTypeToNames.isEmpty() shouldBe true
-                }
-                plugUi.buildCoverage()!!.apply {
-                    percentage shouldBe 100.0
-                }
-                plugUi.activeScope()!!.name shouldBe "new2"
+            }.reconnect<Build1> { _, _ ->
+                //same version - no messages were sent
             }
         }
     }

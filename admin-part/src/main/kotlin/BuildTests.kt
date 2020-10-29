@@ -11,12 +11,12 @@ data class BuildTests(
 )
 
 internal suspend fun AgentState.testsToRun(
-    buildVersion: String,
     coverMethods: List<CoverMethod>
-): GroupedTests = buildManager[buildVersion]?.parentVersion?.takeIf { it.any() }?.let { parentVersion ->
-    val assocTests = builds[parentVersion]?.let {
+): GroupedTests = buildManager[agentInfo.buildVersion]?.parentVersion?.takeIf { it.any() }?.let { parentVersion ->
+    val assocTests = coverContext().parentBuild?.let {
         coverMethods.associatedTests(it.tests.assocTests)
     }
+    val buildVersion = agentInfo.buildVersion
     assocTests?.let { assocTestsSeq ->
         val curBuildTests: Set<TypedTest> = scopeManager.byVersion(
             buildVersion, withData = true

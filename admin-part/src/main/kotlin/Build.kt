@@ -31,8 +31,8 @@ internal fun BuildCoverage.toCachedBuildCoverage(version: String) = CachedBuildC
 )
 
 internal fun BuildMethods.risks(): Risks {
-    val newRisks = newMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
-    val modifiedRisks = allModifiedMethods.methods.filter { it.coverageRate == CoverageRate.MISSED }
+    val newRisks = newMethods.methods.filter { it.count.covered == 0 }
+    val modifiedRisks = allModifiedMethods.methods.filter { it.count.covered == 0 }
     return Risks(newRisks, modifiedRisks)
 }
 
@@ -41,7 +41,7 @@ internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<
     "Update your tests to cover risks".takeIf { risks > 0 }
 ).filterNotNullTo(mutableSetOf())
 
-internal fun ClassData.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(
+internal fun CoverContext.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(
     total = methods.count(),
     new = methodChanges.new.count(),
     modified = methodChanges.modified.count(),

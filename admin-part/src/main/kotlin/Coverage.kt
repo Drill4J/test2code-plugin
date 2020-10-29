@@ -94,11 +94,7 @@ internal fun BundleCounters.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val buildMethods = context.calculateBundleMethods(bundle).run {
-        context.build?.let {
-            copy(deletedCoveredMethodsCount = deletedMethods.testCount(it.tests.assocTests))
-        } ?: this
-    }
+    val buildMethods = context.calculateBundleMethods(bundle)
 
     val packageCoverage = context.packageTree.packages.treeCoverage(bundle, assocTestsMap)
 
@@ -157,9 +153,9 @@ private fun Sequence<Session>.bundlesByTests(
 @Suppress("SimpleRedundantLet")
 internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext
-): BundleCounter = (context.build?.probes?.let {
+): BundleCounter = context.build.probes.let {
     it.intersect(this).values.asSequence()
-} ?: emptySequence()).bundle(context)
+}.bundle(context)
 
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext
