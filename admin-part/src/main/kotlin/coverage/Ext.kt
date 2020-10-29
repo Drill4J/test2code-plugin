@@ -29,6 +29,8 @@ internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { oth
     }
 } ?: covered.toLong() to total.toLong()
 
+internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
+
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
         id = "${parent?.name}.$name$desc".crc64,
@@ -80,20 +82,36 @@ internal fun Iterable<Method>.toCoverMap(
     }.toMap()
 }
 
-internal fun MethodCounter.coverageRate() = when (count.covered) {
-    0 -> CoverageRate.MISSED
-    in 1 until count.total -> CoverageRate.PARTLY
-    else -> CoverageRate.FULL
-}
+internal fun BundleCounter.coveredMethods(
+    methods: Iterable<Method>
+): Map<Method, Count> = packages.asSequence()
+    .filter(NamedCounter::hasCoverage)
+    .let { packageSeq ->
+        val methodMap = methods.groupBy(Method::ownerClass)
+        packageSeq.flatMap { it.classes.asSequence() }
+            .filter(NamedCounter::hasCoverage)
+            .mapNotNull { c ->
+                methodMap[c.fullName]?.run {
+                    val covered: Map<String, MethodCounter> = c.methods.asSequence()
+                        .filter(NamedCounter::hasCoverage)
+                        .associateBy(MethodCounter::sign)
+                    mapNotNull { m ->
+                        covered[m.signature()]?.let { m to it.count }
+                    }.asSequence()
+                }
+            }.flatten().toMap()
+    }
 
-internal fun Method.toCovered(counter: MethodCounter? = null) = CoverMethod(
+internal fun Method.toCovered(count: Count?) = CoverMethod(
     ownerClass = ownerClass,
     name = ownerClass.methodName(name),
     desc = desc.takeIf { "):" in it } ?: declaration(desc), //TODO js methods
     hash = hash,
-    count = counter?.count ?: zeroCount,
-    coverageRate = counter?.coverageRate() ?: CoverageRate.MISSED
+    count = count ?: zeroCount,
+    coverageRate = count?.coverageRate() ?: CoverageRate.MISSED
 )
+
+internal fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
 
 internal fun TypedTest.id() = "$name:$type"
 
@@ -104,3 +122,10 @@ private fun Int.toArrowType(): ArrowType? = when (this) {
 }
 
 private fun Method.signature() = "$name$desc"
+
+//TODO remove
+internal fun Count.coverageRate() = when (covered) {
+    0 -> CoverageRate.MISSED
+    in 1 until total -> CoverageRate.PARTLY
+    else -> CoverageRate.FULL
+}

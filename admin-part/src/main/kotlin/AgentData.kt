@@ -23,20 +23,15 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 @Serializable
 internal data class ClassData(
     @Id val buildVersion: String,
-    val packageTree: PackageTree,
-    val methods: List<Method>,
-    val methodChanges: DiffMethods,
+    val packageTree: PackageTree = emptyPackageTree,
+    val methods: List<Method> = emptyList(),
     val probeIds: Map<String, Long> = emptyMap()
 ) : AgentData() {
+    companion object {
+        private val emptyPackageTree = PackageTree()
+    }
+
     override fun equals(other: Any?) = other is ClassData && buildVersion == other.buildVersion
 
     override fun hashCode() = buildVersion.hashCode()
 }
-
-@Serializable
-internal class DiffMethods(
-    val new: List<Method> = emptyList(),
-    val modified: List<Method> = emptyList(),
-    val deleted: List<Method> = emptyList(),
-    val unaffected: List<Method> = emptyList()
-)

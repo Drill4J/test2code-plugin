@@ -5,15 +5,32 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import kotlinx.serialization.*
 
-internal class CoverContext(
+internal data class DiffMethods(
+    val new: List<Method> = emptyList(),
+    val modified: List<Method> = emptyList(),
+    val deleted: List<Method> = emptyList(),
+    val unaffected: List<Method> = emptyList(),
+    val deletedWithCoverage: Map<Method, Count> = emptyMap()
+) {
+    override fun equals(other: Any?): Boolean = super.equals(other)
+
+    override fun hashCode(): Int = super.hashCode()
+}
+
+internal data class CoverContext(
     val agentType: AgentType,
     val packageTree: PackageTree,
     val methods: List<Method>,
-    val methodChanges: DiffMethods,
+    val methodChanges: DiffMethods = DiffMethods(),
     val probeIds: Map<String, Long> = emptyMap(),
     val classBytes: Map<String, ByteArray> = emptyMap(),
-    val build: CachedBuild? = null
-)
+    val build: CachedBuild,
+    val parentBuild: CachedBuild? = null
+) {
+    override fun equals(other: Any?): Boolean = super.equals(other)
+
+    override fun hashCode(): Int = super.hashCode()
+}
 
 data class CoverageKey(
     val id: String,

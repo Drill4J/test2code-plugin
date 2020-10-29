@@ -38,23 +38,35 @@ internal class AgentState(
 
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
 
-    internal val builds: AtomicCache<String, CachedBuild> = AtomicCache()
-
     private val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
 
     private val _data = atomic<AgentData>(NoData)
 
+    private val _coverContext = atomic<CoverContext?>(null)
+
     private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
 
-    fun init() = _data.update { DataBuilder() }
-
-    suspend fun initialized() {
-        val parentVersion = buildInfo?.parentVersion
-        val parentClassData = parentVersion?.run {
-            takeIf(String::any)?.let { classData(it) }
+    suspend fun loadFromDb(block: suspend () -> Unit = {}) {
+        storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
+            _data.value = classData
+            initialized(classData)
+            block()
         }
-        val classData = _data.updateAndGet { data ->
-            when (data) {
+    }
+
+    fun init() = _data.update {
+        _coverContext.value = null
+        DataBuilder()
+    }
+
+    suspend fun initialized(block: suspend () -> Unit = {}) {
+        _data.getAndUpdate {
+            when (it) {
+                is ClassData -> it
+                else -> ClassData(agentInfo.buildVersion)
+            }
+        }.takeIf { it !is ClassData }?.also { data ->
+            val classData = when (data) {
                 is DataBuilder -> data.flatMap { e -> e.methods.map { e to it } }.run {
                     val methods = map { (e, m) ->
                         Method(
@@ -70,12 +82,8 @@ internal class AgentState(
                         totalMethodCount = count(),
                         totalClassCount = packages.sumBy { it.totalClassesCount },
                         packages = packages
-                    ).toClassData(
-                        methods = methods,
-                        otherMethods = parentClassData?.methods
-                    )
+                    ).toClassData(methods = methods)
                 }
-                is ClassData -> data
                 is NoData -> {
                     val classBytes = adminData.classBytes
                     val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
@@ -103,26 +111,47 @@ internal class AgentState(
                         totalMethodCount = groupedMethods.values.sumBy { it.count() },
                         totalClassCount = packages.sumBy { it.totalClassesCount },
                         packages = packages
-                    ).toClassData(
-                        methods = methods,
-                        otherMethods = parentClassData?.methods,
-                        probeIds = probeIds
-                    )
+                    ).toClassData(methods = methods, probeIds = probeIds)
                 }
-            }
-        } as ClassData
-        initActiveScope()
+                else -> data
+            } as ClassData
+            classData.store(storeClient)
+            initialized(classData)
+            block()
+        }
+    }
+
+    private suspend fun initialized(classData: ClassData) {
         val buildVersion = agentInfo.buildVersion
-        builds[buildVersion] = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
-        parentVersion?.let {
-            storeClient.loadBuild(it)
-        }?.also { builds[it.version] = it }
-        classData.store(storeClient)
+        val build: CachedBuild = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
+        val coverContext = CoverContext(
+            agentType = agentInfo.agentType,
+            packageTree = classData.packageTree,
+            methods = classData.methods,
+            probeIds = classData.probeIds,
+            classBytes = adminData.classBytes,
+            build = build
+        )
+        _coverContext.value = coverContext
+        buildInfo?.parentVersion?.run { takeIf(String::any) }?.let { parentVersion ->
+            storeClient.loadClassData(parentVersion)?.let { parentClassData ->
+                val methodChanges = classData.methods.diff(parentClassData.methods)
+                val parentBuild = storeClient.loadBuild(parentVersion)
+                val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
+                    bundleCounters.all.coveredMethods(methodChanges.deleted)
+                } ?: emptyMap()
+                _coverContext.value = coverContext.copy(
+                    methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
+                    parentBuild = parentBuild
+                )
+            }
+        }
+        initActiveScope()
     }
 
     internal suspend fun finishSession(
         sessionId: String
-    ): FinishedSession? =  activeScope.finishSession(sessionId)?.also {
+    ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
         if (it.any()) {
             storeClient.storeSession(activeScope.id, it)
             logger.debug { "Session $sessionId finished." }
@@ -130,50 +159,52 @@ internal class AgentState(
     }
 
     internal fun updateProbes(
-        buildVersion: String,
         buildScopes: Sequence<FinishedScope>
     ) {
-        builds(buildVersion) {
-            it?.copy(probes = buildScopes.flatten().flatten().merge())
+        _coverContext.update {
+            it?.copy(build = it.build.copy(probes = buildScopes.flatten().flatten().merge()))
         }
     }
 
     internal fun updateBundleCounters(
-        buildVersion: String,
         bundleCounters: BundleCounters
-    ) = builds(buildVersion) {
-        it?.copy(bundleCounters = bundleCounters)
+    ): CachedBuild = updateBuild {
+        copy(bundleCounters = bundleCounters)
     }
 
     internal fun updateBuildTests(
-        buildVersion: String,
         tests: GroupedTests,
         assocTests: List<AssociatedTests>
-    ): CachedBuild = builds(buildVersion) {
-        it?.copy(
-            tests = it.tests.copy(
+    ): CachedBuild = updateBuild {
+        copy(
+            tests = this.tests.copy(
                 tests = tests,
                 assocTests = assocTests.toSet()
             )
         )
-    }!!
+    }
 
     internal fun updateTestsToRun(
-        buildVersion: String,
         testsToRun: GroupedTests
-    ): CachedBuild = builds(buildVersion) {
-        it?.copy(tests = it.tests.copy(testsToRun = testsToRun))
-    }!!
+    ): CachedBuild = updateBuild {
+        copy(tests = tests.copy(testsToRun = testsToRun))
+    }
 
     internal fun updateBuildCoverage(
         buildVersion: String,
         buildCoverage: BuildCoverage
-    ): CachedBuild = builds(buildVersion) {
-        it?.copy(coverage = buildCoverage.toCachedBuildCoverage(buildVersion))
-    }!!
+    ): CachedBuild = updateBuild {
+        copy(coverage = buildCoverage.toCachedBuildCoverage(buildVersion))
+    }
 
-    suspend fun storeBuild(buildVersion: String) {
-        builds[buildVersion]?.store(storeClient)
+    private fun updateBuild(
+        updater: CachedBuild.() -> CachedBuild
+    ): CachedBuild = _coverContext.updateAndGet {
+        it?.copy(build = it.build.updater())
+    }!!.build
+
+    suspend fun storeBuild() {
+        _coverContext.value?.build?.store(storeClient)
     }
 
     suspend fun renameScope(id: String, newName: String) {
@@ -201,14 +232,9 @@ internal class AgentState(
         else -> scopeManager.byId(id)
     }
 
-    internal fun classDataOrNull(): ClassData? = _data.value as? ClassData
+    internal fun coverContext(): CoverContext = _coverContext.value!!
 
-    internal suspend fun classData(
-        buildVersion: String = agentInfo.buildVersion
-    ): ClassData? = when (buildVersion) {
-        agentInfo.buildVersion -> _data.value as? ClassData
-        else -> storeClient.loadClassData(buildVersion)
-    }
+    internal fun classDataOrNull(): ClassData? = _data.value as? ClassData
 
     private suspend fun initActiveScope() {
         readActiveScopeInfo()?.run {
@@ -233,7 +259,7 @@ internal class AgentState(
         ActiveScope(nth = it.nth.inc(), name = scopeName(name), buildVersion = agentInfo.buildVersion)
     }.apply { close() }
 
-    suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentInfo.buildVersion)
+    private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentInfo.buildVersion)
 
     suspend fun storeActiveScopeInfo() = scopeManager.storeCounter(
         activeScope.run {
@@ -254,27 +280,11 @@ internal class AgentState(
 
     private fun PackageTree.toClassData(
         methods: List<Method>,
-        otherMethods: List<Method>?,
         probeIds: Map<String, Long> = emptyMap()
     ) = ClassData(
         buildVersion = agentInfo.buildVersion,
         packageTree = this,
         methods = methods,
-        methodChanges = otherMethods?.let(methods::diff) ?: DiffMethods(),
         probeIds = probeIds
-    )
-}
-
-internal suspend fun AgentState.coverContext(
-    buildVersion: String = agentInfo.buildVersion
-): CoverContext = classData(buildVersion)!!.let { classData ->
-    CoverContext(
-        agentType = agentInfo.agentType,
-        packageTree = classData.packageTree,
-        methods = classData.methods,
-        methodChanges = classData.methodChanges,
-        probeIds = classData.probeIds,
-        classBytes = adminData.classBytes,
-        build = builds[buildVersion]
     )
 }
