@@ -116,14 +116,16 @@ class ActiveScope(
         } === newSession
     }?.also { sessionsChanged() }
 
-    fun hasActiveSession(id: String): Boolean = getSession(id) != null
+    fun getSessionOrNull(id: String): ActiveSession? = activeSessions.run {
+        this[""]?.takeIf { it.id == id } ?: this[id]
+    }
 
     fun hasActiveGlobalSession(): Boolean = "" in activeSessions
 
     fun addProbes(
         sessionId: String,
         probeProvider: () -> Collection<ExecClassData>
-    ): ActiveSession? = getSession(sessionId)?.apply { addAll(probeProvider()) }
+    ): ActiveSession? = getSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
 
     fun probesChanged() = _change.update {
         when (it) {
@@ -175,10 +177,6 @@ class ActiveScope(
                 else -> Change.ONLY_SESSIONS
             }
         }
-    }
-
-    private fun getSession(id: String): ActiveSession? = activeSessions.run {
-        this[""]?.takeIf { it.id == id } ?: this[id]
     }
 
     private fun removeSession(id: String): ActiveSession? = activeSessions.run {

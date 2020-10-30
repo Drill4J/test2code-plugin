@@ -88,11 +88,11 @@ class Plugin(
             ).toActionResult(StatusCodes.CONFLICT)
         }
         is AddSessionData -> action.payload.run {
-            if (activeScope.hasActiveSession(sessionId)) {
+            activeScope.getSessionOrNull(sessionId)?.let { session ->
                 AddAgentSessionData(
-                    payload = AgentSessionDataPayload(sessionId = sessionId, data = data)
+                    payload = AgentSessionDataPayload(sessionId = session.id, data = data)
                 ).toActionResult()
-            } else ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
+            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
@@ -116,11 +116,12 @@ class Plugin(
             CancelAllAgentSessions.toActionResult()
         }
         is StopSession -> action.payload.run {
-            testRun?.let { activeScope.activeSessions[sessionId]?.setTestRun(it) }
-            StopAgentSession(
-                payload = AgentSessionPayload(action.payload.sessionId)
-            )
-        }.toActionResult()
+            activeScope.getSessionOrNull(sessionId)?.let { session ->
+                StopAgentSession(
+                    payload = AgentSessionPayload(session.id)
+                ).toActionResult()
+            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
+        }
         is StopAllSessions -> StopAllAgentSessions.toActionResult()
         else -> "Action '$action' is not supported!".let { message ->
             logger.error { message }
