@@ -112,11 +112,11 @@ class ActiveScope(
     ) = ActiveSession(sessionId, testType, isGlobal, isRealtime).takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
-            existing ?: newSession.takeIf { it.id !in activeSessions }
+            existing ?: newSession.takeIf { activeSessionOrNull(it.id) == null }
         } === newSession
     }?.also { sessionsChanged() }
 
-    fun getSessionOrNull(id: String): ActiveSession? = activeSessions.run {
+    fun activeSessionOrNull(id: String): ActiveSession? = activeSessions.run {
         this[""]?.takeIf { it.id == id } ?: this[id]
     }
 
@@ -125,7 +125,7 @@ class ActiveScope(
     fun addProbes(
         sessionId: String,
         probeProvider: () -> Collection<ExecClassData>
-    ): ActiveSession? = getSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
+    ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
 
     fun probesChanged() = _change.update {
         when (it) {

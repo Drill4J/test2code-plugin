@@ -88,7 +88,7 @@ class Plugin(
             ).toActionResult(StatusCodes.CONFLICT)
         }
         is AddSessionData -> action.payload.run {
-            activeScope.getSessionOrNull(sessionId)?.let { session ->
+            activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 AddAgentSessionData(
                     payload = AgentSessionDataPayload(sessionId = session.id, data = data)
                 ).toActionResult()
@@ -116,7 +116,7 @@ class Plugin(
             CancelAllAgentSessions.toActionResult()
         }
         is StopSession -> action.payload.run {
-            activeScope.getSessionOrNull(sessionId)?.let { session ->
+            activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 StopAgentSession(
                     payload = AgentSessionPayload(session.id)
                 ).toActionResult()
