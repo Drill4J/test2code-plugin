@@ -65,9 +65,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.apply {
                     count.covered shouldBe 0
                 }
-                plugUi.testsToRun()!!.apply {
-                    testTypeToNames shouldNotBe emptyMap<Any, Any>()
-                }
             }
 
         }
@@ -128,9 +125,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.testsToRun()!!.apply {
-                    testTypeToNames shouldBe emptyMap()
-                }
                 plugUi.activeScope()!!.apply {
                     id shouldNotBe activeScopeIdFirstBuild
                     coverage.percentage shouldBe 0.0

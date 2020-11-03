@@ -294,9 +294,7 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val buildMethods = coverageInfoSet.buildMethods
-        val testsToRun = state.testsToRun(
-            buildMethods.allModifiedMethods.methods
-        )
+        val testsToRun = context.testsToRun
         val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
         val parentCoverageCount = parentVersion?.let {
             context.parentBuild?.coverage?.count ?: zeroCount
@@ -314,16 +312,12 @@ class Plugin(
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
-            val cachedCoverage = state.updateBuildCoverage(
-                buildVersion,
-                buildCoverage
-            ).coverage
-            state.updateBuildTests(
+            state.updateBuildCoverage(buildVersion, buildCoverage)
+            val cachedBuild = state.updateBuildTests(
                 byTest.keys.groupBy(TypedTest::type, TypedTest::name),
                 coverageInfoSet.associatedTests
             )
-            val cachedTests = state.updateTestsToRun(testsToRun).tests
-            val summary = cachedCoverage.toSummary(agentInfo.name, cachedTests, parentCoverageCount)
+            val summary = cachedBuild.toSummary(agentInfo.name, testsToRun, parentCoverageCount)
             val stats = summary.toStatsDto()
             val qualityGate = checkQualityGate(stats)
             send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
@@ -392,8 +386,9 @@ class Plugin(
                 send(buildVersion, Routes.Build.MethodsCoveredByTestType.New(testType), it.newMethods)
             }
         }
+        val testsToRunDto = state.coverContext().testsToRunDto()
         send(buildVersion, Routes.Build.Risks(buildRoute), risks)
-        send(buildVersion, Routes.Build.TestsToRun(buildRoute), TestsToRun(testsToRun))
+        send(buildVersion, Routes.Build.TestsToRun(buildRoute), testsToRunDto)
     }
 
     private suspend fun Plugin.sendGroupSummary(summary: AgentSummary) {

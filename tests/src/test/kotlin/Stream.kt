@@ -46,7 +46,6 @@ class CoverageSocketStreams : PluginStreams() {
         coveragePackages()
         methods()
         risks()
-        testsToRun()
         testsUsages()
         scopes()
     }
@@ -75,10 +74,6 @@ class CoverageSocketStreams : PluginStreams() {
 
     private val risks: Channel<Risks?> = Channel()
     suspend fun risks() = risks.receive()
-
-
-    private val testsToRun: Channel<TestsToRun?> = Channel()
-    suspend fun testsToRun() = testsToRun.receive()
 
     private val scopes: Channel<List<ScopeSummary>?> = Channel()
     suspend fun scopes() = scopes.receive()
@@ -272,13 +267,6 @@ class CoverageSocketStreams : PluginStreams() {
                                                 buildCoverage.send(null)
                                             } else
                                                 buildCoverage.send(BuildCoverage.serializer() parse content)
-                                        }
-
-                                        is Routes.Build.TestsToRun -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                testsToRun.send(null)
-                                            } else
-                                                testsToRun.send(TestsToRun.serializer() parse content)
                                         }
 
                                         is Routes.Build.Risks -> {

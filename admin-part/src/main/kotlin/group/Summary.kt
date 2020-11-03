@@ -43,20 +43,22 @@ internal class SummaryAggregator : (String, String, AgentSummary) -> AgentSummar
     fun getSummaries(serviceGroup: String): Map<String, AgentSummary> = _summaryCache.value[serviceGroup] ?: emptyMap()
 }
 
-internal fun CachedBuildCoverage.toSummary(
+internal fun CachedBuild.toSummary(
     agentName: String,
-    buildTests: BuildTests,
+    testsToRun: GroupedTests,
     parentCoverageCount: Count? = null
-): AgentSummary = AgentSummary(
-    name = agentName,
-    buildVersion = version,
-    coverage = count,
-    arrow = parentCoverageCount.arrowType(count),
-    risks = risks,
-    tests = buildTests.tests,
-    testsToRun = buildTests.testsToRun,
-    recommendations = recommendations(buildTests.testsToRun)
-)
+): AgentSummary = testsToRun.withoutCoverage(bundleCounters).let { toRun ->
+    AgentSummary(
+        name = agentName,
+        buildVersion = version,
+        coverage = coverage.count,
+        arrow = parentCoverageCount.arrowType(coverage.count),
+        risks = coverage.risks,
+        tests = tests.tests,
+        testsToRun = toRun,
+        recommendations = coverage.recommendations(toRun)
+    )
+}
 
 internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
     id = agentId,
