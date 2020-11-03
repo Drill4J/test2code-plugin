@@ -302,6 +302,16 @@ data class TestUsagesInfo(
 )
 
 @Serializable
+data class TestCoverageDto(
+    val id: String,
+    val type: String,
+    val name: String,
+    val toRun: Boolean = false,
+    val coverage: CoverDto = CoverDto(),
+    val stats: TestStats = TestStats(0, TestResult.PASSED)
+)
+
+@Serializable
 data class TestStats(
     val duration: Long,
     val result: TestResult

@@ -137,12 +137,16 @@ internal class AgentState(
             storeClient.loadClassData(parentVersion)?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
                 val parentBuild = storeClient.loadBuild(parentVersion)
+                val testsToRun = parentBuild?.run {
+                    bundleCounters.testsWith(methodChanges.modified)
+                } ?: emptyMap()
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
                     bundleCounters.all.coveredMethods(methodChanges.deleted)
                 } ?: emptyMap()
                 _coverContext.value = coverContext.copy(
                     methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
-                    parentBuild = parentBuild
+                    parentBuild = parentBuild,
+                    testsToRun = testsToRun
                 )
             }
         }
@@ -182,12 +186,6 @@ internal class AgentState(
                 assocTests = assocTests.toSet()
             )
         )
-    }
-
-    internal fun updateTestsToRun(
-        testsToRun: GroupedTests
-    ): CachedBuild = updateBuild {
-        copy(tests = tests.copy(testsToRun = testsToRun))
     }
 
     internal fun updateBuildCoverage(
