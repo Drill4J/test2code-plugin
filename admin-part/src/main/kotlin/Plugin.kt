@@ -117,6 +117,7 @@ class Plugin(
         }
         is StopSession -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
+                testRun?.let { session.setTestRun(it) }
                 StopAgentSession(
                     payload = AgentSessionPayload(session.id)
                 ).toActionResult()
