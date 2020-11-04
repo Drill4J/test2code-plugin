@@ -12,10 +12,18 @@ data class BuildTests(
 
 internal fun BundleCounters.testsWith(
     methods: Iterable<Method>
-): GroupedTests = byTest.associatedTests().filter { (coverageKey, _) ->
-    methods.any { it.ownerClass == coverageKey.className && it.name == coverageKey.methodName }
-}.values.flatten().distinct().groupBy({ it.type }, { it.name })
-
+): GroupedTests = byTest.asSequence().takeIf { it.any() }?.run {
+    val lazyMethodMap = lazy(LazyThreadSafetyMode.NONE) {
+        methods.groupBy(Method::ownerClass)
+    }
+    val lazyPackageSet = lazy(LazyThreadSafetyMode.NONE) { methods.toPackageSet() }
+    mapNotNull { (test, counter) ->
+        test.takeIf {
+            val packageSeq = counter.packages.asSequence()
+            packageSeq.toCoveredMethods(lazyMethodMap::value, lazyPackageSet::value).any()
+        }
+    }.distinct().groupBy(TypedTest::type, TypedTest::name)
+}.orEmpty()
 
 internal fun GroupedTests.filter(
     predicate: (String, String) -> Boolean
@@ -24,24 +32,24 @@ internal fun GroupedTests.filter(
     filtered.takeIf { it.any() }?.let { type to it }
 }.toMap()
 
-internal fun GroupedTests.withoutCoverage(bundleCounters: BundleCounters) = filter { name, type ->
+internal fun GroupedTests.withoutCoverage(
+    bundleCounters: BundleCounters
+): GroupedTests = filter { name, type ->
     TypedTest(name, type) !in bundleCounters.byTest
 }
 
 internal fun CoverContext.testsToRunDto(
     bundleCounters: BundleCounters = build.bundleCounters
-): List<TestCoverageDto> = testsToRun.flatMap { (type, list) ->
-    list.map { TypedTest(it, type) }
-}.distinct().map {
-    val coverMap = bundleCounters.byTest.mapValues { (_, bundle) ->
-        bundle.toCoverDto(packageTree)
+): List<TestCoverageDto> = testsToRun.flatMap { (type, tests) ->
+    tests.map { name ->
+        val typedTest = TypedTest(type = type, name = name)
+        TestCoverageDto(
+            id = typedTest.id(),
+            type = type,
+            name = name,
+            toRun = typedTest !in bundleCounters.byTest,
+            coverage = bundleCounters.byTest[typedTest]?.toCoverDto(packageTree) ?: CoverDto(),
+            stats = bundleCounters.statsByTest[typedTest] ?: TestStats(0, TestResult.PASSED)
+        )
     }
-    TestCoverageDto(
-        id = it.id(),
-        type = it.type,
-        name = it.name,
-        toRun = it !in coverMap,
-        coverage = coverMap[it] ?: CoverDto(),
-        stats = bundleCounters.statsByTest[it] ?: TestStats(0, TestResult.PASSED)
-    )
 }

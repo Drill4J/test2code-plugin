@@ -84,23 +84,42 @@ internal fun Iterable<Method>.toCoverMap(
 
 internal fun BundleCounter.coveredMethods(
     methods: Iterable<Method>
-): Map<Method, Count> = packages.asSequence()
-    .filter(NamedCounter::hasCoverage)
-    .let { packageSeq ->
-        val methodMap = methods.groupBy(Method::ownerClass)
-        packageSeq.flatMap { it.classes.asSequence() }
-            .filter(NamedCounter::hasCoverage)
-            .mapNotNull { c ->
-                methodMap[c.fullName]?.run {
-                    val covered: Map<String, MethodCounter> = c.methods.asSequence()
-                        .filter(NamedCounter::hasCoverage)
-                        .associateBy(MethodCounter::sign)
-                    mapNotNull { m ->
-                        covered[m.signature()]?.let { m to it.count }
-                    }.asSequence()
-                }
-            }.flatten().toMap()
+): Map<Method, Count> = packages.asSequence().takeIf { p ->
+    p.any { it.classes.any() }
+}?.run {
+    toCoveredMethods(
+        { methods.groupBy(Method::ownerClass) },
+        { methods.toPackageSet() }
+    ).toMap()
+}.orEmpty()
+
+internal fun Sequence<PackageCounter>.toCoveredMethods(
+    methodMapPrv: () -> Map<String, List<Method>>,
+    packageSetPrv: () -> Set<String>
+): Sequence<Pair<Method, Count>> = takeIf { it.any() }?.run {
+    val packageSet = packageSetPrv()
+    filter { it.name in packageSet && it.hasCoverage() }.run {
+        val methodMap = methodMapPrv()
+        flatMap {
+            it.classes.asSequence().filter(NamedCounter::hasCoverage)
+        }.mapNotNull { c ->
+            methodMap[c.fullName]?.run {
+                val covered: Map<String, MethodCounter> = c.methods.asSequence()
+                    .filter(NamedCounter::hasCoverage)
+                    .associateBy(MethodCounter::sign)
+                mapNotNull { m ->
+                    covered[m.signature()]?.let { m to it.count }
+                }.asSequence()
+            }
+        }.flatten()
     }
+}.orEmpty()
+
+internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?.run {
+    mapTo(mutableSetOf()) { method ->
+        method.ownerClass.takeIf { '/' in it }?.substringAfterLast('/').orEmpty()
+    }
+}.orEmpty()
 
 internal fun Method.toCovered(count: Count?) = CoverMethod(
     ownerClass = ownerClass,
