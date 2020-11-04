@@ -150,11 +150,10 @@ private fun Sequence<Session>.bundlesByTests(
     }
 } ?: emptyMap()
 
-@Suppress("SimpleRedundantLet")
 internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext
-): BundleCounter = context.build.probes.let {
-    it.intersect(this).values.asSequence()
+): BundleCounter = context.build.probes.intersect(this).run {
+    values.asSequence()
 }.bundle(context)
 
 internal fun Sequence<ExecClassData>.bundle(
@@ -167,7 +166,7 @@ internal fun Sequence<ExecClassData>.bundle(
     else -> bundle(context.packageTree)
 }
 
-internal fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, List<TypedTest>> = run {
+private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, List<TypedTest>> = run {
     entries.asSequence()
         .flatMap { (test, bundle) ->
             bundle.coverageKeys().map { it to test }

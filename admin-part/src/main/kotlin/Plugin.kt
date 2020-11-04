@@ -294,7 +294,6 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val buildMethods = coverageInfoSet.buildMethods
-        val testsToRun = context.testsToRun
         val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
         val parentCoverageCount = parentVersion?.let {
             context.parentBuild?.coverage?.count ?: zeroCount
@@ -310,14 +309,14 @@ class Plugin(
             },
             risks = buildMethods.toRiskSummaryDto()
         )
-        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, testsToRun)
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, context.testsToRun)
         if (buildVersion == agentInfo.buildVersion) {
             state.updateBuildCoverage(buildVersion, buildCoverage)
             val cachedBuild = state.updateBuildTests(
                 byTest.keys.groupBy(TypedTest::type, TypedTest::name),
                 coverageInfoSet.associatedTests
             )
-            val summary = cachedBuild.toSummary(agentInfo.name, testsToRun, parentCoverageCount)
+            val summary = cachedBuild.toSummary(agentInfo.name, context.testsToRun, parentCoverageCount)
             val stats = summary.toStatsDto()
             val qualityGate = checkQualityGate(stats)
             send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())

@@ -133,16 +133,16 @@ internal class AgentState(
             build = build
         )
         _coverContext.value = coverContext
-        buildInfo?.parentVersion?.run { takeIf(String::any) }?.let { parentVersion ->
+        buildInfo?.parentVersion?.takeIf(String::any)?.let { parentVersion ->
             storeClient.loadClassData(parentVersion)?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
                 val parentBuild = storeClient.loadBuild(parentVersion)
                 val testsToRun = parentBuild?.run {
                     bundleCounters.testsWith(methodChanges.modified)
-                } ?: emptyMap()
+                }.orEmpty()
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
                     bundleCounters.all.coveredMethods(methodChanges.deleted)
-                } ?: emptyMap()
+                }.orEmpty()
                 _coverContext.value = coverContext.copy(
                     methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
                     parentBuild = parentBuild,
