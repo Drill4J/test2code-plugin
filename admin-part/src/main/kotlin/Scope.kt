@@ -155,7 +155,8 @@ class ActiveScope(
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
-                _sessions.update { it.add(finished) }
+                val updatedSessions = _sessions.updateAndGet { it.add(finished) }
+                _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
                 _change.value = Change.ALL
             } else sessionsChanged()
         }

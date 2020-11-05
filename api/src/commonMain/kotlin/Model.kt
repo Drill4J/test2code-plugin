@@ -346,6 +346,7 @@ data class ScopeSummary(
     val finished: Long = 0L,
     var enabled: Boolean = true,
     val active: Boolean = true,
+    val sessionsFinished: Int = 0,
     val coverage: ScopeCoverage = ScopeCoverage()
 )
 
