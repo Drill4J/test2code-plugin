@@ -403,6 +403,7 @@ data class BuildStatsDto(
 data class SummaryDto(
     val coverage: Double = 0.0,
     val coverageCount: Count = zeroCount,
+    val scopeCount: Int = 0,
     val arrow: ArrowType = ArrowType.UNCHANGED,
     val risks: Int = 0,
     val tests: TestCountDto = TestCountDto(),
