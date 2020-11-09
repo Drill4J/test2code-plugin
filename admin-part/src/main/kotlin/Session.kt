@@ -37,12 +37,19 @@ class ActiveSession(
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
         if (true in probe.probes) {
-            val typedTest = TypedTest(probe.testName, testType)
+            val typedTest = probe.testName.typedTest(testType)
             _probes.update { map ->
-                val testData = map[typedTest] ?: persistentHashMapOf()
-                val probeId = probe.id()
-                val merged = testData[probeId]?.merge(probe) ?: probe
-                map.put(typedTest, testData.put(probeId, merged))
+                (map[typedTest] ?: persistentHashMapOf()).let { testData ->
+                    val probeId = probe.id()
+                    if (probeId in testData) {
+                        testData.getValue(probeId).run {
+                            val merged = probes.merge(probe.probes)
+                            merged.takeIf { it != probes }?.let {
+                                testData.put(probeId, copy(probes = merged))
+                            }
+                        }
+                    } else testData.put(probeId, probe.copy(testName = typedTest.name))
+                }?.let { map.put(typedTest, it) } ?: map
             }
         }
     }
@@ -60,7 +67,7 @@ class ActiveSession(
             id = id,
             testType = testType,
             tests = _testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
-                keys + tests.map { TypedTest(type = testType, name = it.name) }
+                keys + tests.map { it.name.typedTest(testType) }
             } ?: keys,
             testStats = _testRun.value?.tests?.associate {
                 TypedTest(type = testType, name = it.name) to TestStats(

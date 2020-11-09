@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code.util
 
 import org.jacoco.core.internal.data.*
+import java.net.*
 import java.util.*
 
 fun currentTimeMillis() = System.currentTimeMillis()
@@ -14,6 +15,10 @@ fun String.methodName(name: String): String = when (name) {
     "<clinit>" -> "static ${toShortClassName()}"
     else -> name
 }
+
+internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {
+    runCatching { URLDecoder.decode(this, "UTF-8") }.getOrNull()
+} ?: this
 
 internal fun String.toShortClassName(): String = substringAfterLast('/')
 

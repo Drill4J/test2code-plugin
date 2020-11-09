@@ -132,6 +132,11 @@ internal fun Method.toCovered(count: Count?) = CoverMethod(
 
 internal fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
 
+internal fun String.typedTest(type: String) = TypedTest(
+    type = type,
+    name = urlDecode()
+)
+
 internal fun TypedTest.id() = "$name:$type"
 
 private fun Int.toArrowType(): ArrowType? = when (this) {
