@@ -46,7 +46,6 @@ internal suspend fun Plugin.initGateSettings() {
     storeClient.getAll<QualityGateData.AgentSetting>().forEach {
         settings[it.id.conditionType] = it.setting
     }
-    sendSettings()
 }
 
 internal suspend fun Plugin.updateGateConditions(
@@ -56,7 +55,7 @@ internal suspend fun Plugin.updateGateConditions(
     val unknownMeasures = conditionSettings.filter { it.condition.measure !in settings.map }
     if (unknownMeasures.none()) {
         conditionSettings.forEach { settings[it.condition.measure] = it }
-        sendSettings()
+        sendGateSettings()
         state.toStatsDto()?.let { stats ->
             val qualityGate = checkQualityGate(stats)
             send(buildVersion, Routes.Data().let(Routes.Data::QualityGate), qualityGate)
@@ -70,6 +69,12 @@ internal suspend fun Plugin.updateGateConditions(
         }
         ActionResult(StatusCodes.OK, "")
     } else ActionResult(StatusCodes.BAD_REQUEST, "Unknown quality gate measures: '$unknownMeasures'")
+}
+
+internal suspend fun Plugin.sendGateSettings() {
+    val dataRoute = Routes.Data()
+    val settings = state.qualityGateSettings.values.toList()
+    send(buildVersion, dataRoute.let(Routes.Data::QualityGateSettings), settings)
 }
 
 internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
@@ -96,12 +101,6 @@ internal fun AgentSummary.toStatsDto() = StatsDto(
     risks = risks,
     tests = testsToRun.totalCount()
 )
-
-private suspend fun Plugin.sendSettings() {
-    val dataRoute = Routes.Data()
-    val settings = state.qualityGateSettings.values.toList()
-    send(buildVersion, dataRoute.let(Routes.Data::QualityGateSettings), settings)
-}
 
 private fun <T : Number> KProperty1<StatsDto, T>.toCondition(
     operator: ConditionOp,

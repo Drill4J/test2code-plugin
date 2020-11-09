@@ -177,13 +177,14 @@ class Plugin(
 
     private suspend fun Plugin.processInitialized(): Boolean {
         initGateSettings()
+        adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
+            cleanActiveScope(it.version)
+        }
+        sendGateSettings()
         sendParentBuild()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes(buildVersion)
         calculateAndSendCachedCoverage()
-        adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
-            cleanActiveScope(it.version)
-        }
         return initActiveScope()
     }
 
