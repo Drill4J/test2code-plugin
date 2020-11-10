@@ -78,13 +78,17 @@ class Plugin(
                         isRealtime = isRealtime
                     )
                 ).toActionResult()
-            } ?: FieldErrorDto(
-                field = "sessionId", message = if (isGlobal && activeScope.hasActiveGlobalSession()) {
-                    listOf(
+            } ?: if (isGlobal && activeScope.hasActiveGlobalSession()) {
+                ActionResult(
+                    code = StatusCodes.CONFLICT,
+                    data = listOf(
                         "Error! Only one active global session is allowed.",
                         "Please finish the active one in order to start new."
                     ).joinToString(" ")
-                } else "Session with such ID already exists. Please choose a different ID."
+                )
+            } else FieldErrorDto(
+                field = "sessionId",
+                message = "Session with such ID already exists. Please choose a different ID."
             ).toActionResult(StatusCodes.CONFLICT)
         }
         is AddSessionData -> action.payload.run {
