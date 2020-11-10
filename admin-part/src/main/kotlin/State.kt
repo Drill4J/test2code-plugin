@@ -146,7 +146,11 @@ internal class AgentState(
                 _coverContext.value = coverContext.copy(
                     methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
                     parentBuild = parentBuild,
-                    testsToRun = testsToRun
+                    testsToRun = testsToRun,
+                    risks = Risks(
+                        new = methodChanges.new,
+                        modified = methodChanges.modified
+                    )
                 )
             }
         }

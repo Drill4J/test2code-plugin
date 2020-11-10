@@ -6,16 +6,15 @@ import com.epam.drill.plugins.test2code.coverage.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 
-data class AgentSummary(
+internal data class AgentSummary(
     val name: String,
     val buildVersion: String,
     val coverage: Count,
     val scopeCount: Int,
     val arrow: ArrowType,
-    val risks: Int,
+    val risks: Risks,
     val tests: GroupedTests,
-    val testsToRun: GroupedTests,
-    val recommendations: Set<String>
+    val testsToRun: GroupedTests
 )
 
 internal typealias AgentSummaries = PersistentMap<String, AgentSummary>
@@ -47,20 +46,18 @@ internal class SummaryAggregator : (String, String, AgentSummary) -> AgentSummar
 internal fun CachedBuild.toSummary(
     agentName: String,
     testsToRun: GroupedTests,
+    risks: Risks,
     parentCoverageCount: Count? = null
-): AgentSummary = testsToRun.withoutCoverage(bundleCounters).let { toRun ->
-    AgentSummary(
-        name = agentName,
-        buildVersion = version,
-        coverage = coverage.count,
-        scopeCount = coverage.scopeCount,
-        arrow = parentCoverageCount.arrowType(coverage.count),
-        risks = coverage.risks,
-        tests = tests.tests,
-        testsToRun = toRun,
-        recommendations = coverage.recommendations(toRun)
-    )
-}
+): AgentSummary = AgentSummary(
+    name = agentName,
+    buildVersion = version,
+    coverage = coverage.count,
+    scopeCount = coverage.scopeCount,
+    arrow = parentCoverageCount.arrowType(coverage.count),
+    risks = risks.withoutCoverage(bundleCounters.all),
+    tests = tests.tests,
+    testsToRun = testsToRun.withoutCoverage(bundleCounters)
+)
 
 internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
     id = agentId,
@@ -74,22 +71,22 @@ internal fun AgentSummary.toDto() = SummaryDto(
     coverageCount = coverage,
     scopeCount = scopeCount,
     arrow = arrow,
-    risks = risks,
+    risks = risks.totalCount(), //TODO remove after changes on frontend
+    riskSummary = risks.toSummaryDto(),
     tests = tests.toTestCountDto(),
     testsToRun = testsToRun.toTestCountDto(),
-    recommendations = recommendations
+    recommendations = recommendations()
 )
 
 internal operator fun AgentSummary.plus(
     other: AgentSummary
 ): AgentSummary = copy(
-    coverage = (coverage + other.coverage),
+    coverage = coverage + other.coverage,
     scopeCount = scopeCount + other.scopeCount,
     arrow = ArrowType.UNCHANGED,
     risks = risks + other.risks,
     tests = tests + other.tests,
-    testsToRun = testsToRun + other.testsToRun,
-    recommendations = recommendations.union(other.recommendations)
+    testsToRun = testsToRun + other.testsToRun
 )
 
 operator fun Count.plus(other: Count): Count = copy(
@@ -111,6 +108,14 @@ fun GroupedTests.toSummary(): List<TestTypeCount> = map { (testType, list) ->
     )
 }
 
+internal fun Risks.totalCount() = new.count() + modified.count()
+
+internal fun Risks.toSummaryDto() = RiskSummaryDto(
+    total = totalCount(),
+    new = new.count(),
+    modified = modified.count()
+)
+
 private fun GroupedTests.toTestCountDto() = TestCountDto(
     count = totalCount(),
     byType = mapValues { it.value.count() }
@@ -122,3 +127,8 @@ private operator fun GroupedTests.plus(other: GroupedTests): GroupedTests = sequ
     .mapValues { (_, values) ->
         values.flatten().distinct()
     }
+
+private operator fun Risks.plus(other: Risks): Risks = Risks(
+    new = new + other.new,
+    modified = modified + other.modified
+)

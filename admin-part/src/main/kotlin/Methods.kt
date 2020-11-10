@@ -78,12 +78,6 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     deleted = deletedMethods.run { Count(coveredCount, totalCount) }
 )
 
-internal fun BuildMethods.toRiskSummaryDto() = RiskSummaryDto(
-    total = newMethods.run { totalCount - coveredCount } + allModifiedMethods.run { totalCount - coveredCount },
-    new = newMethods.run { totalCount - coveredCount },
-    modified = allModifiedMethods.run { totalCount - coveredCount }
-)
-
 private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
     next()
 } else null

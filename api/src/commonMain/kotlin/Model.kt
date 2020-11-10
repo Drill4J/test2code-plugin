@@ -367,7 +367,7 @@ data class TestSummary(
 )
 
 @Serializable
-data class Risks(
+data class RisksDto(
     val newMethods: List<CoverMethod> = emptyList(),
     val modifiedMethods: List<CoverMethod> = emptyList()
 )
@@ -407,7 +407,8 @@ data class SummaryDto(
     val coverageCount: Count = zeroCount,
     val scopeCount: Int = 0,
     val arrow: ArrowType = ArrowType.UNCHANGED,
-    val risks: Int = 0,
+    val risks: Int,//TODO remove after changes on frontend
+    val riskSummary: RiskSummaryDto = RiskSummaryDto(),
     val tests: TestCountDto = TestCountDto(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet()

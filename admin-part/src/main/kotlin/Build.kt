@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.group.*
 import com.epam.kodux.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
@@ -19,26 +20,49 @@ internal data class CachedBuild(
 internal data class CachedBuildCoverage(
     @Id val version: String,
     val count: Count = zeroCount,
-    val scopeCount: Int = 0,
-    val risks: Int = 0
+    val scopeCount: Int = 0
+)
+
+internal data class Risks(
+    val new: List<Method> = emptyList(),
+    val modified: List<Method> = emptyList()
 )
 
 internal fun BuildCoverage.toCachedBuildCoverage(version: String) = CachedBuildCoverage(
     version = version,
     count = count,
-    scopeCount = finishedScopesCount,
-    risks = risks.total
+    scopeCount = finishedScopesCount
 )
 
-internal fun BuildMethods.risks(): Risks {
-    val newRisks = newMethods.methods.filter { it.count.covered == 0 }
-    val modifiedRisks = allModifiedMethods.methods.filter { it.count.covered == 0 }
-    return Risks(newRisks, modifiedRisks)
+internal fun CoverContext.risksDto(
+    counter: BundleCounter = build.bundleCounters.all
+): RisksDto = risks.withoutCoverage(counter).run {
+    RisksDto(
+        newMethods = new.map { it.toCovered() },
+        modifiedMethods = modified.map { it.toCovered() }
+    )
 }
 
-internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<String> = sequenceOf(
+internal fun Risks.filter(predicate: (Method) -> Boolean): Risks = Risks(
+    new = new.filter(predicate),
+    modified = modified.filter(predicate)
+)
+
+internal fun Risks.withoutCoverage(
+    bundleCounter: BundleCounter
+): Risks = (new + modified).toCoverMap(bundleCounter, true).let { coverMap ->
+    filter { it !in coverMap }
+}
+
+internal fun Risks.withCoverage(
+    bundleCounter: BundleCounter
+): Risks = (new + modified).toCoverMap(bundleCounter, true).let { coverMap ->
+    filter { it in coverMap }
+}
+
+internal fun AgentSummary.recommendations(): Set<String> = sequenceOf(
     "Run recommended tests to cover modified methods".takeIf { testsToRun.any() },
-    "Update your tests to cover risks".takeIf { risks > 0 }
+    "Update your tests to cover risks".takeIf { risks.totalCount() > 0 }
 ).filterNotNullTo(mutableSetOf())
 
 internal fun CoverContext.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(

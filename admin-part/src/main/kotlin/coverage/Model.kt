@@ -26,7 +26,8 @@ internal data class CoverContext(
     val classBytes: Map<String, ByteArray> = emptyMap(),
     val build: CachedBuild,
     val parentBuild: CachedBuild? = null,
-    val testsToRun: GroupedTests = emptyMap()
+    val testsToRun: GroupedTests = emptyMap(),
+    val risks: Risks = Risks()
 ) {
     override fun equals(other: Any?): Boolean = super.equals(other)
 
