@@ -221,7 +221,9 @@ class Plugin(
             ActiveSessionDto(
                 id = it.id,
                 agentId = agentId,
-                testType = it.testType
+                testType = it.testType,
+                isGlobal = it.isGlobal,
+                isRealtime = it.isRealtime
             )
         }
         val summary = ActiveSessions(

@@ -335,7 +335,9 @@ data class ActiveSessions(
 data class ActiveSessionDto(
     val id: String,
     val agentId: String,
-    val testType: String
+    val testType: String,
+    val isGlobal: Boolean,
+    val isRealtime: Boolean
 )
 
 @Serializable
