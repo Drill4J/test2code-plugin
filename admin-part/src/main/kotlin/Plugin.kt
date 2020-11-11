@@ -208,7 +208,7 @@ class Plugin(
         )
         state.updateProbes(scopes.enabled())
         val coverContext = state.coverContext()
-        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, buildVersion, build.coverage.scopeCount)
+        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.coverage.scopeCount)
         scopes.forEach { scope ->
             val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
@@ -281,22 +281,18 @@ class Plugin(
         val scopes = state.scopeManager.run {
             byVersion(buildVersion, withData = true).enabled()
         }
-        scopes.calculateAndSendBuildCoverage(state.coverContext(), buildVersion)
+        scopes.calculateAndSendBuildCoverage(state.coverContext())
     }
 
-    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(
-        context: CoverContext,
-        buildVersion: String
-    ) {
+    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         val bundleCounters = flatten().calcBundleCounters(context)
         state.updateBundleCounters(bundleCounters)
-        bundleCounters.calculateAndSendBuildCoverage(context, buildVersion, scopeCount = count())
+        bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())
     }
 
     private suspend fun BundleCounters.calculateAndSendBuildCoverage(
         context: CoverContext,
-        buildVersion: String,
         scopeCount: Int
     ) {
         val coverageInfoSet = calculateCoverageData(context)
@@ -316,27 +312,26 @@ class Plugin(
             },
             risks = buildMethods.toRiskSummaryDto()
         )
-        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, context.testsToRun)
-        if (buildVersion == agentInfo.buildVersion) {
-            state.updateBuildCoverage(buildVersion, buildCoverage)
-            val cachedBuild = state.updateBuildTests(
-                byTest.keys.groupBy(TypedTest::type, TypedTest::name),
-                coverageInfoSet.associatedTests
-            )
-            val summary = cachedBuild.toSummary(agentInfo.name, context.testsToRun, parentCoverageCount)
-            val stats = summary.toStatsDto()
-            val qualityGate = checkQualityGate(stats)
-            send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
-            Routes.Data().let {
-                send(buildVersion, Routes.Data.Stats(it), stats)
-                send(buildVersion, Routes.Data.QualityGate(it), qualityGate)
-                send(buildVersion, Routes.Data.Recommendations(it), summary.recommendations)
-                send(buildVersion, Routes.Data.Tests(it), summary.tests.toDto())
-                send(buildVersion, Routes.Data.TestsToRun(it), summary.testsToRun.toDto())
-            }
-            sendGroupSummary(summary)
-            state.storeBuild()
+
+        state.updateBuildCoverage(buildVersion, buildCoverage)
+        val cachedBuild = state.updateBuildTests(
+            byTest.keys.groupBy(TypedTest::type, TypedTest::name),
+            coverageInfoSet.associatedTests
+        )
+        state.storeBuild()
+        val summary = cachedBuild.toSummary(agentInfo.name, context.testsToRun, parentCoverageCount)
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, summary.testsToRun)
+        val stats = summary.toStatsDto()
+        val qualityGate = checkQualityGate(stats)
+        send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
+        Routes.Data().let {
+            send(buildVersion, Routes.Data.Stats(it), stats)
+            send(buildVersion, Routes.Data.QualityGate(it), qualityGate)
+            send(buildVersion, Routes.Data.Recommendations(it), summary.recommendations)
+            send(buildVersion, Routes.Data.Tests(it), summary.tests.toDto())
+            send(buildVersion, Routes.Data.TestsToRun(it), summary.testsToRun.toDto())
         }
+        sendGroupSummary(summary)
     }
 
     private suspend fun CoverageInfoSet.sendBuildCoverage(
