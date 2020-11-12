@@ -64,6 +64,7 @@ class Plugin(
     override suspend fun doAction(
         action: Action
     ): ActionResult = when (action) {
+        is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
@@ -194,6 +195,7 @@ class Plugin(
         }
         sendGateSettings()
         sendParentBuild()
+        sendBaseline()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes(buildVersion)
         calculateAndSendCachedCoverage()
@@ -203,7 +205,13 @@ class Plugin(
     private suspend fun sendParentBuild() = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Parent),
-        message = buildInfo?.parentVersion?.takeIf(String::any)?.let(::ParentBuildDto) ?: ""
+        message = buildInfo?.parentVersion?.takeIf(String::any)?.let(::BuildVersionDto) ?: ""
+    )
+
+    internal suspend fun sendBaseline() = send(
+        buildVersion,
+        destination = Routes.Data().let(Routes.Data::Baseline),
+        message = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion?.let(::BuildVersionDto) ?: ""
     )
 
     private suspend fun ClassData.sendBuildStats() {
@@ -305,11 +313,8 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val buildMethods = coverageInfoSet.buildMethods
-        val parentVersion = adminData.buildManager[buildVersion]?.parentVersion?.takeIf(String::any)
-        val parentCoverageCount = parentVersion?.let {
-            context.parentBuild?.coverage?.count ?: zeroCount
-        }
-        val risks = parentVersion?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
+        val parentCoverageCount = context.parentBuild?.let { context.parentBuild.coverage.count } ?: zeroCount
+        val risks = context.parentBuild?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
             riskCount = buildMethods.run {

@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code.e2e
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
+import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -176,6 +177,35 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 delay(100)
             }.reconnect<Build1> { _, _ ->
                 //same version - no messages were sent
+            }
+        }
+    }
+
+    @Test
+    fun `toggle baseline for a second build`() {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
+            connectAgent<Build1> { _, _ ->
+            }.reconnect<Build2> { _, _ ->
+                val setBaseline = ToggleBaseline.stringify()
+                pluginAction(setBaseline) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                }
+                val unsetBaseline = ToggleBaseline.stringify()
+                pluginAction(unsetBaseline) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `should be Bad Request if it tries to change baseline for the first build`() {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
+            connectAgent<Build1> { _, _ ->
+                val updateBaseline = ToggleBaseline.stringify()
+                pluginAction(updateBaseline) { status, _ ->
+                    status shouldBe HttpStatusCode.BadRequest
+                }
             }
         }
     }

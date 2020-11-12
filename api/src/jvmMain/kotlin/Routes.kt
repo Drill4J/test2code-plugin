@@ -200,6 +200,9 @@ class Routes {
 
     @Location("/data")
     class Data {
+        @Location("/baseline")
+        class Baseline(val build: Data)
+
         @Location("/parent")
         class Parent(val parent: Data)
 

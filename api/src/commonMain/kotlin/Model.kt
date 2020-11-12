@@ -76,7 +76,7 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "")
 
 @Serializable
-data class ParentBuildDto(
+data class BuildVersionDto(
     val version: String
 )
 

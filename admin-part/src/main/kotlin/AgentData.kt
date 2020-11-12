@@ -7,6 +7,12 @@ import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
+@Serializable
+internal data class GlobalAgentData(
+    @Id val agentId: String,
+    val baselineVersion: String = ""
+)
+
 internal sealed class AgentData
 
 internal object NoData : AgentData()
