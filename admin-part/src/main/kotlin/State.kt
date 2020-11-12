@@ -2,6 +2,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
+import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
@@ -133,7 +134,10 @@ internal class AgentState(
             build = build
         )
         _coverContext.value = coverContext
-        buildInfo?.parentVersion?.takeIf(String::any)?.let { parentVersion ->
+        val agentId = agentInfo.id
+        val parentVersion = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion
+        if (!parentVersion.isNullOrEmpty()) {
+            logger.debug { "parentVersion=$parentVersion for agentId=$agentId" }
             storeClient.loadClassData(parentVersion)?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
                 val parentBuild = storeClient.loadBuild(parentVersion)
@@ -149,6 +153,9 @@ internal class AgentState(
                     testsToRun = testsToRun
                 )
             }
+        } else {
+            logger.debug { "init the first build as a baseline for agent(id=$agentId, buildVersion=$buildVersion)" }
+            storeClient.store(GlobalAgentData(agentId, buildVersion))
         }
         initActiveScope()
     }
@@ -285,4 +292,21 @@ internal class AgentState(
         methods = methods,
         probeIds = probeIds
     )
+
+    internal suspend fun toggleBaseline(): String? {
+        val parentBuild = coverContext().parentBuild
+        return parentBuild?.let {
+            val agentId = agentInfo.id
+            val buildVersion = agentInfo.buildVersion
+            val curBaseline = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion
+
+            logger.debug { "toggle baseline for Agent(id=$agentId, version $buildVersion) cur baseline=$curBaseline" }
+            val newBaseline = if (buildVersion == curBaseline) {
+                parentBuild.version
+            } else buildVersion
+            storeClient.store(GlobalAgentData(agentId, newBaseline))
+
+            newBaseline
+        }
+    }
 }
