@@ -14,10 +14,10 @@ val appJvmArgs = listOf(
     "-server",
     "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006",
     "-Djava.awt.headless=true",
-    "-Xms128m",
-    "-Xmx2g",
     "-XX:+UseG1GC",
-    "-XX:MaxGCPauseMillis=100"
+    "-XX:+UseStringDeduplication",
+    "-Xms128m",
+    "-Xmx2g"
 )
 
 application {

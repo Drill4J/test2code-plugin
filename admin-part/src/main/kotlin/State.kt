@@ -59,6 +59,10 @@ internal class AgentState(
         DataBuilder()
     }
 
+    fun close() {
+        activeScope.close()
+    }
+
     suspend fun initialized(block: suspend () -> Unit = {}) {
         _data.getAndUpdate {
             when (it) {

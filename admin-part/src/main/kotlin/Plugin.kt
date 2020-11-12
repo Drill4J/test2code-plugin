@@ -13,8 +13,10 @@ import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
+import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import mu.*
+import java.io.*
 
 @Suppress("unused")
 class Plugin(
@@ -23,14 +25,14 @@ class Plugin(
     val storeClient: StoreClient,
     agentInfo: AgentInfo,
     id: String
-) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id) {
+) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id), Closeable {
     internal val logger = KotlinLogging.logger("Plugin $id")
 
     override val serDe: SerDe<Action> = SerDe(Action.serializer())
 
     internal val runtimeConfig = RuntimeConfig(id)
 
-    internal lateinit var state: AgentState
+    internal val state: AgentState get() = _state.value!!
 
     val buildVersion = agentInfo.buildVersion
 
@@ -40,17 +42,23 @@ class Plugin(
 
     private val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
 
+    private val _state = atomic<AgentState?>(null)
+
     override suspend fun initialize() {
-        state = agentState()
+        changeState()
         state.loadFromDb {
             processInitialized()
         }
     }
 
+    override fun close() {
+        _state.getAndUpdate { null }?.close()
+    }
+
     override suspend fun applyPackagesChanges() {
         state.scopeManager.deleteByVersion(buildVersion)
         storeClient.deleteById<ClassData>(buildVersion)
-        state = agentState()
+        changeState()
     }
 
     override suspend fun doAction(
@@ -493,9 +501,13 @@ class Plugin(
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 
-    private fun agentState() = AgentState(
-        storeClient = storeClient,
-        agentInfo = agentInfo,
-        adminData = adminData
-    )
+    private fun changeState() {
+        _state.getAndUpdate {
+            AgentState(
+                storeClient = storeClient,
+                agentInfo = agentInfo,
+                adminData = adminData
+            )
+        }?.close()
+    }
 }
