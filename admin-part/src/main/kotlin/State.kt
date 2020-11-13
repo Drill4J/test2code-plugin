@@ -211,7 +211,7 @@ internal class AgentState(
 
     suspend fun renameScope(id: String, newName: String) {
         when (id) {
-            activeScope.id -> activeScope.rename(newName.trim())
+            activeScope.id -> activeScope.rename(newName.trim()).also { storeActiveScopeInfo() }
             else -> scopeManager.byId(id)?.apply {
                 scopeManager.store(copy(name = newName, summary = this.summary.copy(name = newName.trim())))
             }
