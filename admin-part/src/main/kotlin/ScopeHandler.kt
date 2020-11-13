@@ -76,10 +76,11 @@ internal suspend fun Plugin.renameScope(
     payload: RenameScopePayload
 ): ActionResult = state.scopeById(payload.scopeId)?.let { scope ->
     val scopeName = payload.scopeName
-    if (scope.summary.name != scopeName && state.scopeByName(scopeName) == null) {
-        state.renameScope(payload.scopeId, scopeName)
-        sendScopeMessages(scope.buildVersion)
-        sendScopeSummary(scope.summary, scope.buildVersion)
+    if (state.scopeByName(scopeName) == null) {
+        state.renameScope(payload.scopeId, scopeName)?.let { summary->
+            sendScopeMessages(scope.buildVersion)
+            sendScopeSummary(summary, scope.buildVersion)
+        }
         ActionResult(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> $scopeName")
     } else ActionResult(
         StatusCodes.CONFLICT,
