@@ -209,12 +209,12 @@ internal class AgentState(
         _coverContext.value?.build?.store(storeClient)
     }
 
-    suspend fun renameScope(id: String, newName: String) {
-        when (id) {
-            activeScope.id -> activeScope.rename(newName.trim()).also { storeActiveScopeInfo() }
-            else -> scopeManager.byId(id)?.apply {
-                scopeManager.store(copy(name = newName, summary = this.summary.copy(name = newName.trim())))
-            }
+    suspend fun renameScope(id: String, newName: String): ScopeSummary? = when (id) {
+        activeScope.id -> activeScope.rename(newName.trim()).also { storeActiveScopeInfo() }
+        else -> scopeManager.byId(id)?.let { scope ->
+            scope.copy(name = newName, summary = scope.summary.copy(name = newName.trim())).also {
+                scopeManager.store(it)
+            }.summary
         }
     }
 
