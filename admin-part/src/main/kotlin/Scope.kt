@@ -82,7 +82,7 @@ class ActiveScope(
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
 
-    fun rename(name: String): ScopeSummary = _summary.getAndUpdate { it.copy(name = name) }
+    fun rename(name: String): ScopeSummary = _summary.updateAndGet { it.copy(name = name) }
 
     fun finish(enabled: Boolean) = FinishedScope(
         id = id,
