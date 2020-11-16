@@ -65,7 +65,7 @@ class ActiveScope(
                 _change.getAndUpdate { null }?.let { change ->
                     _handler.value?.let { handler ->
                         val probes: Sequence<Session>? = if (change.probes) {
-                            this@ActiveScope + activeSessions.values.asSequence()
+                            this@ActiveScope + activeSessions.values.filter { it.isRealtime }
                         } else null
                         handler(change.sessions, probes)
                         delay(500)
