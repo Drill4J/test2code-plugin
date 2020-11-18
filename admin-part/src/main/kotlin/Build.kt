@@ -42,6 +42,7 @@ internal fun CachedBuildCoverage.recommendations(testsToRun: GroupedTests): Set<
 ).filterNotNullTo(mutableSetOf())
 
 internal fun CoverContext.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(
+    parentVersion = parentBuild?.version ?: "",
     total = methods.count(),
     new = methodChanges.new.count(),
     modified = methodChanges.modified.count(),
