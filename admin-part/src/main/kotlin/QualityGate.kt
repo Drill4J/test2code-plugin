@@ -93,12 +93,12 @@ internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
 }
 
 private fun AgentState.toStatsDto(): StatsDto? = coverContext().run {
-    build.toSummary(agentInfo.name, testsToRun).toStatsDto()
+    build.toSummary(agentInfo.name, testsToRun, methodChanges).toStatsDto()
 }
 
 internal fun AgentSummary.toStatsDto() = StatsDto(
     coverage = coverage.percentage(),
-    risks = risks,
+    risks = risks.total,
     tests = testsToRun.totalCount()
 )
 

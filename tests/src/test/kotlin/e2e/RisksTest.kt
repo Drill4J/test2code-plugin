@@ -22,10 +22,6 @@ class RisksTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
 
-                plugUi.risks()!!.apply {
-                    newMethods shouldBe emptyList()
-                    modifiedMethods shouldBe emptyList()
-                }
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
@@ -51,19 +47,18 @@ class RisksTest : E2EPluginTest() {
 
                 pluginAction(switchScope)
 
-                plugUi.risks()!!.apply {
-                    newMethods.size shouldBe 0
-                    modifiedMethods shouldBe emptyList()
-                }
                 delay(300)
             }.reconnect<Build2> { plugUi, build ->
                 plugUi.risks()!!.apply {
-                    newMethods.count() shouldBe 1
-                    modifiedMethods.size shouldBe 3
-                    newMethods.first().name shouldBe "firstMethod"
-                    newMethods.first().desc shouldBe "(): void"
-                    modifiedMethods.first().name shouldBe "test1"
-                    modifiedMethods.first().desc shouldBe "(): void"
+                    size shouldBe 4
+                    first { it.type == RiskType.NEW }.apply {
+                        name shouldBe "firstMethod"
+                        desc shouldBe "(): void"
+                    }
+                    first { it.type == RiskType.MODIFIED }.apply {
+                        name shouldBe "test1"
+                        desc shouldBe "(): void"
+                    }
                 }
 
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
@@ -95,11 +90,6 @@ class RisksTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope)
-
-                plugUi.risks()!!.apply {
-                    newMethods shouldBe emptyList()
-                    modifiedMethods shouldBe emptyList()
-                }
             }
         }
     }

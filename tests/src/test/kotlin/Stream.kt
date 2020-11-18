@@ -72,7 +72,7 @@ class CoverageSocketStreams : PluginStreams() {
     suspend fun testsUsages() = testsUsages.receive()
 
 
-    private val risks: Channel<Risks?> = Channel()
+    private val risks: Channel<List<RiskDto>?> = Channel()
     suspend fun risks() = risks.receive()
 
     private val scopes: Channel<List<ScopeSummary>?> = Channel()
@@ -273,7 +273,7 @@ class CoverageSocketStreams : PluginStreams() {
                                             if (content.isEmpty() || content == "[]" || content == "\"\"") {
                                                 risks.send(null)
                                             } else
-                                                risks.send(Risks.serializer() parse content)
+                                                risks.send(RiskDto.serializer().list parse content)
                                         }
 
                                         is Routes.ServiceGroup.Summary -> {
