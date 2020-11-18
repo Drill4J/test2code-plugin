@@ -394,6 +394,7 @@ data class GroupedTestsDto(
 
 @Serializable
 data class BuildStatsDto(
+    val parentVersion: String = "",
     val total: Int = 0,
     val new: Int = 0,
     val modified: Int = 0,
