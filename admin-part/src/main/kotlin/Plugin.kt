@@ -40,8 +40,6 @@ class Plugin(
 
     private val agentId = agentInfo.id
 
-    private val buildInfo: BuildInfo? get() = adminData.buildManager[buildVersion]
-
     private val _state = atomic<AgentState?>(null)
 
     override suspend fun initialize() {
@@ -205,7 +203,7 @@ class Plugin(
     private suspend fun sendParentBuild() = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Parent),
-        message = buildInfo?.parentVersion?.takeIf(String::any)?.let(::BuildVersionDto) ?: ""
+        message = state.coverContext().parentBuild?.version?.let(::BuildVersionDto) ?: ""
     )
 
     internal suspend fun sendBaseline() = send(

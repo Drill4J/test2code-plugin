@@ -29,8 +29,6 @@ internal class AgentState(
 ) {
     private val logger = KotlinLogging.logger("AgentState ${agentInfo.id}")
 
-    val buildManager: BuildManager = adminData.buildManager
-
     val data get() = _data.value
 
     val scopeManager = ScopeManager(storeClient)
@@ -38,8 +36,6 @@ internal class AgentState(
     val activeScope get() = _activeScope.value
 
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
-
-    private val buildInfo: BuildInfo? get() = buildManager[agentInfo.buildVersion]
 
     private val _data = atomic<AgentData>(NoData)
 
