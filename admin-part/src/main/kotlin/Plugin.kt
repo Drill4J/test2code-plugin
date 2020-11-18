@@ -310,18 +310,15 @@ class Plugin(
         scopeCount: Int
     ) {
         val coverageInfoSet = calculateCoverageData(context)
-        val buildMethods = coverageInfoSet.buildMethods
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.coverage.count } ?: zeroCount
-        val risks = context.parentBuild?.let { buildMethods.risks() } ?: Risks(emptyList(), emptyList())
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            riskCount = buildMethods.run {
+            riskCount = context.methodChanges.run { new + modified }.run {
                 Count(
-                    covered = newMethods.coveredCount + allModifiedMethods.coveredCount,
-                    total = newMethods.totalCount + allModifiedMethods.totalCount
+                    covered = filterByCoverage(all, withCoverage = true).count(),
+                    total = count()
                 )
-            },
-            risks = buildMethods.toRiskSummaryDto()
+            }
         )
 
         state.updateBuildCoverage(buildVersion, buildCoverage)
@@ -330,15 +327,20 @@ class Plugin(
             coverageInfoSet.associatedTests
         )
         state.storeBuild()
-        val summary = cachedBuild.toSummary(agentInfo.name, context.testsToRun, parentCoverageCount)
-        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, risks, summary.testsToRun)
+        val summary = cachedBuild.toSummary(
+            agentInfo.name,
+            context.testsToRun,
+            context.methodChanges,
+            parentCoverageCount
+        )
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary.risks, summary.testsToRun)
         val stats = summary.toStatsDto()
         val qualityGate = checkQualityGate(stats)
         send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
         Routes.Data().let {
             send(buildVersion, Routes.Data.Stats(it), stats)
             send(buildVersion, Routes.Data.QualityGate(it), qualityGate)
-            send(buildVersion, Routes.Data.Recommendations(it), summary.recommendations)
+            send(buildVersion, Routes.Data.Recommendations(it), summary.recommendations())
             send(buildVersion, Routes.Data.Tests(it), summary.tests.toDto())
             send(buildVersion, Routes.Data.TestsToRun(it), summary.testsToRun.toDto())
         }
@@ -348,12 +350,12 @@ class Plugin(
     private suspend fun CoverageInfoSet.sendBuildCoverage(
         buildVersion: String,
         buildCoverage: BuildCoverage,
-        risks: Risks,
+        risks: RiskCount,
         testsToRun: GroupedTests
     ) = Routes.Build().let { buildRoute ->
         val coverageRoute = Routes.Build.Coverage(buildRoute)
         send(buildVersion, coverageRoute, buildCoverage)
-        val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = buildMethods.toRiskSummaryDto())
+        val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = risks.toSummaryDto())
         send(buildVersion, Routes.Build.Methods(buildRoute), methodSummaryDto)
         val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
         val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
@@ -398,9 +400,9 @@ class Plugin(
                 send(buildVersion, Routes.Build.MethodsCoveredByTestType.New(testType), it.newMethods)
             }
         }
-        val testsToRunDto = state.coverContext().testsToRunDto()
-        send(buildVersion, Routes.Build.Risks(buildRoute), risks)
-        send(buildVersion, Routes.Build.TestsToRun(buildRoute), testsToRunDto)
+        val context = state.coverContext()
+        send(buildVersion, Routes.Build.Risks(buildRoute), context.toRiskDtos())
+        send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
     }
 
     private suspend fun Plugin.sendGroupSummary(summary: AgentSummary) {
@@ -431,7 +433,7 @@ class Plugin(
                     )
                     sendToGroup(
                         destination = Routes.ServiceGroup.Data.Recommendations(it),
-                        message = aggregated.recommendations
+                        message = aggregated.recommendations()
                     )
                 }
             }

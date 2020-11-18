@@ -12,11 +12,17 @@ data class AgentSummary(
     val coverage: Count,
     val scopeCount: Int,
     val arrow: ArrowType,
-    val risks: Int,
+    val risks: RiskCount,
     val tests: GroupedTests,
-    val testsToRun: GroupedTests,
-    val recommendations: Set<String>
+    val testsToRun: GroupedTests
 )
+
+data class RiskCount(
+    val new: Int,
+    val modified: Int
+) {
+    val total: Int = new + modified
+}
 
 internal typealias AgentSummaries = PersistentMap<String, AgentSummary>
 
@@ -47,20 +53,23 @@ internal class SummaryAggregator : (String, String, AgentSummary) -> AgentSummar
 internal fun CachedBuild.toSummary(
     agentName: String,
     testsToRun: GroupedTests,
+    methods: DiffMethods,
     parentCoverageCount: Count? = null
-): AgentSummary = testsToRun.withoutCoverage(bundleCounters).let { toRun ->
-    AgentSummary(
-        name = agentName,
-        buildVersion = version,
-        coverage = coverage.count,
-        scopeCount = coverage.scopeCount,
-        arrow = parentCoverageCount.arrowType(coverage.count),
-        risks = coverage.risks,
-        tests = tests.tests,
-        testsToRun = toRun,
-        recommendations = coverage.recommendations(toRun)
-    )
-}
+): AgentSummary = AgentSummary(
+    name = agentName,
+    buildVersion = version,
+    coverage = coverage.count,
+    scopeCount = coverage.scopeCount,
+    arrow = parentCoverageCount.arrowType(coverage.count),
+    risks = methods.run {
+        RiskCount(
+            new = new.filterByCoverage(bundleCounters.all).count(),
+            modified = modified.filterByCoverage(bundleCounters.all).count()
+        )
+    },
+    tests = tests.tests,
+    testsToRun = testsToRun.withoutCoverage(bundleCounters)
+)
 
 internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
     id = agentId,
@@ -74,22 +83,22 @@ internal fun AgentSummary.toDto() = SummaryDto(
     coverageCount = coverage,
     scopeCount = scopeCount,
     arrow = arrow,
-    risks = risks,
+    risks = risks.total, //TODO remove after changes on frontend
+    riskCounts = risks.toSummaryDto(),
     tests = tests.toTestCountDto(),
     testsToRun = testsToRun.toTestCountDto(),
-    recommendations = recommendations
+    recommendations = recommendations()
 )
 
 internal operator fun AgentSummary.plus(
     other: AgentSummary
 ): AgentSummary = copy(
-    coverage = (coverage + other.coverage),
+    coverage = coverage + other.coverage,
     scopeCount = scopeCount + other.scopeCount,
     arrow = ArrowType.UNCHANGED,
     risks = risks + other.risks,
     tests = tests + other.tests,
-    testsToRun = testsToRun + other.testsToRun,
-    recommendations = recommendations.union(other.recommendations)
+    testsToRun = testsToRun + other.testsToRun
 )
 
 operator fun Count.plus(other: Count): Count = copy(
@@ -111,6 +120,12 @@ fun GroupedTests.toSummary(): List<TestTypeCount> = map { (testType, list) ->
     )
 }
 
+internal fun RiskCount.toSummaryDto() = RiskSummaryDto(
+    total = total,
+    new = new,
+    modified = modified
+)
+
 private fun GroupedTests.toTestCountDto() = TestCountDto(
     count = totalCount(),
     byType = mapValues { it.value.count() }
@@ -122,3 +137,8 @@ private operator fun GroupedTests.plus(other: GroupedTests): GroupedTests = sequ
     .mapValues { (_, values) ->
         values.flatten().distinct()
     }
+
+private operator fun RiskCount.plus(other: RiskCount) = RiskCount(
+    new = new + other.new,
+    modified = modified + other.modified
+)

@@ -116,7 +116,6 @@ interface Coverage {
     val classCount: Count
     val packageCount: Count
     val riskCount: Count
-    val risks: RiskSummaryDto
     val testTypeOverlap: CoverDto
     val byTestType: List<TestTypeSummary>
 }
@@ -130,7 +129,6 @@ data class ScopeCoverage(
     override val classCount: Count = zeroCount,
     override val packageCount: Count = zeroCount,
     override val riskCount: Count = zeroCount,
-    override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val testTypeOverlap: CoverDto = CoverDto(),
     override val byTestType: List<TestTypeSummary> = emptyList()
 ) : Coverage
@@ -144,7 +142,6 @@ data class BuildCoverage(
     override val classCount: Count,
     override val packageCount: Count,
     override val riskCount: Count = zeroCount,
-    override val risks: RiskSummaryDto = RiskSummaryDto(),
     override val testTypeOverlap: CoverDto = CoverDto(),
     override val byTestType: List<TestTypeSummary> = emptyList(),
     val finishedScopesCount: Int = 0
@@ -367,10 +364,16 @@ data class TestSummary(
 )
 
 @Serializable
-data class Risks(
-    val newMethods: List<CoverMethod> = emptyList(),
-    val modifiedMethods: List<CoverMethod> = emptyList()
+data class RiskDto(
+    val ownerClass: String,
+    val name: String,
+    val desc: String,
+    val type: RiskType
 )
+
+enum class RiskType {
+    NEW, MODIFIED
+}
 
 typealias GroupedTests = Map<String, List<String>>
 
@@ -408,7 +411,8 @@ data class SummaryDto(
     val coverageCount: Count = zeroCount,
     val scopeCount: Int = 0,
     val arrow: ArrowType = ArrowType.UNCHANGED,
-    val risks: Int = 0,
+    val risks: Int = 0, //TODO remove after changes on frontend
+    val riskCounts: RiskSummaryDto = RiskSummaryDto(),
     val tests: TestCountDto = TestCountDto(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet()
