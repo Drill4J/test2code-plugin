@@ -33,6 +33,13 @@ jobs:
         uses: eskatos/gradle-command-action@v1
         with:
           arguments: -s distZip
+      - name: Publish to Maven Repo
+        uses: eskatos/gradle-command-action@v1
+        with:
+          arguments: -s publish
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -42,10 +49,3 @@ jobs:
           asset_path: ./build/distributions/test2code-plugin-${{ steps.to_version.outputs.result }}.zip
           asset_name: test2code-plugin-${{ steps.to_version.outputs.result }}.zip
           asset_content_type: application/zip
-      - name: Publish to Maven Repo
-        uses: eskatos/gradle-command-action@v1
-        with:
-          arguments: -s publish
-        env:
-          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
-          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
