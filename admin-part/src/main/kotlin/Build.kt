@@ -34,7 +34,7 @@ internal fun CoverContext.toRiskDtos(
 internal fun Method.toRiskDto(type: RiskType) = RiskDto(
     ownerClass = ownerClass,
     name = name,
-    desc = desc,
+    desc = desc.declaration(),
     type = type
 )
 

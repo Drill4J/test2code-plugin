@@ -124,7 +124,7 @@ internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?
 internal fun Method.toCovered(count: Count?) = CoverMethod(
     ownerClass = ownerClass,
     name = ownerClass.methodName(name),
-    desc = desc.takeIf { "):" in it } ?: declaration(desc), //TODO js methods
+    desc = desc.declaration(),
     hash = hash,
     count = count ?: zeroCount,
     coverageRate = count?.coverageRate() ?: CoverageRate.MISSED
@@ -136,6 +136,8 @@ internal fun String.typedTest(type: String) = TypedTest(
     type = type,
     name = urlDecode()
 )
+
+internal fun String.declaration() = takeIf { "):" in it } ?: declaration(this) //TODO js methods
 
 internal fun TypedTest.id() = "$name:$type"
 
