@@ -206,7 +206,7 @@ class Plugin(
         message = state.coverContext().parentBuild?.version?.let(::BuildVersionDto) ?: ""
     )
 
-    internal suspend fun sendBaseline() = send(
+    internal suspend fun sendBaseline(buildVersion: String = this.buildVersion) = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Baseline),
         message = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion?.let(::BuildVersionDto) ?: ""

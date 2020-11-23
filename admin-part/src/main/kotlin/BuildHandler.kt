@@ -4,7 +4,9 @@ import com.epam.drill.plugin.api.end.*
 
 internal suspend fun Plugin.toggleBaseline(): ActionResult =
     state.toggleBaseline()?.let {
-        sendBaseline()
+        adminData.buildManager.builds.forEach { buildInfo ->
+            sendBaseline(buildInfo.version)
+        }
         ActionResult(
             code = StatusCodes.OK,
             data = "Set baseline to '$it'"
