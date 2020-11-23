@@ -8,6 +8,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
+import io.kotlintest.matchers.numerics.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlin.test.*
@@ -20,7 +21,8 @@ class RisksTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
 
-                plugUi.activeScope()!!.coverage.percentage shouldBe 0.0
+                plugUi.buildCoverage()!!.count.covered shouldBe 0
+                plugUi.activeScope()!!.coverage.count.covered shouldBe 0
 
                 val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
                 pluginAction(startNewSession) { status, content ->
@@ -35,7 +37,7 @@ class RisksTest : E2EPluginTest() {
                     }
                     pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify())
                 }.join()
-                plugUi.activeScope()!!.coverage shouldNotBe 0.0
+                plugUi.activeScope()!!.coverage.count.covered shouldNotBe 0
 
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
@@ -45,19 +47,20 @@ class RisksTest : E2EPluginTest() {
                     )
                 ).stringify()
 
-                pluginAction(switchScope)
-
-                delay(300)
+                pluginAction(switchScope) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                }.join()
+                plugUi.activeScope()!!.coverage.count.covered shouldBe 0
+                plugUi.buildCoverage()!!.count.covered shouldBeGreaterThan 0
+                delay(500)
             }.reconnect<Build2> { plugUi, build ->
                 plugUi.risks()!!.apply {
                     size shouldBe 4
                     first { it.type == RiskType.NEW }.apply {
                         name shouldBe "firstMethod"
-                        desc shouldBe "(): void"
                     }
                     first { it.type == RiskType.MODIFIED }.apply {
                         name shouldBe "test1"
-                        desc shouldBe "(): void"
                     }
                 }
 
@@ -79,8 +82,6 @@ class RisksTest : E2EPluginTest() {
                         status1 shouldBe HttpStatusCode.OK
                     }.join()
                 }.join()
-                delay(300)//todo move it to core library
-                plugUi.activeSessions()!!.count shouldBe 0
 
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
@@ -89,7 +90,9 @@ class RisksTest : E2EPluginTest() {
                         prevScopeEnabled = true
                     )
                 ).stringify()
-                pluginAction(switchScope)
+                pluginAction(switchScope) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                }.join()
             }
         }
     }

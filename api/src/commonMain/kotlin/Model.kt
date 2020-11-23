@@ -97,10 +97,10 @@ enum class CoverageRate {
 }
 
 @Serializable
-data class RiskSummaryDto(
-    val total: Int = 0,
+data class RiskCounts(
     val new: Int = 0,
-    val modified: Int = 0
+    val modified: Int = 0,
+    val total: Int = 0
 )
 
 @Serializable
@@ -160,7 +160,7 @@ data class MethodsSummaryDto(
     val modified: Count,
     val unaffected: Count,
     val deleted: Count,
-    val risks: RiskSummaryDto = RiskSummaryDto()
+    val risks: RiskCounts = RiskCounts()
 )
 
 @Serializable
@@ -412,7 +412,7 @@ data class SummaryDto(
     val scopeCount: Int = 0,
     val arrow: ArrowType = ArrowType.UNCHANGED,
     val risks: Int = 0, //TODO remove after changes on frontend
-    val riskCounts: RiskSummaryDto = RiskSummaryDto(),
+    val riskCounts: RiskCounts = RiskCounts(),
     val tests: TestCountDto = TestCountDto(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet()

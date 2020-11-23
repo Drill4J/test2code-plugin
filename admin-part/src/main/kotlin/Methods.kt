@@ -20,6 +20,8 @@ internal data class Method(
     } ?: desc.compareTo(other.desc)
 }
 
+internal typealias TypedRisks = Map<RiskType, List<Method>>
+
 internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (any()) {
     if (otherMethods.any()) {
         val new = mutableListOf<Method>()
@@ -78,9 +80,30 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     deleted = deletedMethods.run { Count(coveredCount, totalCount) }
 )
 
-private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
-    next()
-} else null
+internal fun DiffMethods.risks(
+    bundleCounter: BundleCounter
+): TypedRisks = bundleCounter.coveredMethods(new + modified).let { covered ->
+    mapOf(
+        RiskType.NEW to new.filter { it !in covered },
+        RiskType.MODIFIED to modified.filter { it !in covered }
+    )
+}
+
+internal fun TypedRisks.toCounts() = RiskCounts(
+    new = this[RiskType.NEW]?.count() ?: 0,
+    modified = this[RiskType.MODIFIED]?.count() ?: 0
+).run { copy(total = new + modified) }
+
+internal fun TypedRisks.toListDto(): List<RiskDto> = flatMap { (type, methods) ->
+    methods.map { method ->
+        RiskDto(
+            type = type,
+            ownerClass = method.ownerClass,
+            name = method.name,
+            desc = method.desc
+        )
+    }
+}
 
 fun MethodsCoveredByTest.toSummary() = TestedMethodsSummary(
     id = id,
@@ -104,3 +127,7 @@ fun MethodsCoveredByType.toSummary() = TestedMethodsByTypeSummary(
         new = newMethods.count()
     )
 )
+
+private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
+    next()
+} else null

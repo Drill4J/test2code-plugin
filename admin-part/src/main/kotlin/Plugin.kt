@@ -311,14 +311,13 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.coverage.count } ?: zeroCount
+        val risks = context.methodChanges.risks(all)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            riskCount = context.methodChanges.run { new + modified }.run {
-                Count(
-                    covered = filterByCoverage(all, withCoverage = true).count(),
-                    total = count()
-                )
-            }
+            riskCount = Count(
+                risks.values.sumBy { it.count() },
+                context.methodChanges.run { new.count() + modified.count() }
+            )
         )
 
         state.updateBuildCoverage(buildVersion, buildCoverage)
@@ -330,10 +329,10 @@ class Plugin(
         val summary = cachedBuild.toSummary(
             agentInfo.name,
             context.testsToRun,
-            context.methodChanges,
+            risks,
             parentCoverageCount
         )
-        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary.risks, summary.testsToRun)
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary)
         val stats = summary.toStatsDto()
         val qualityGate = checkQualityGate(stats)
         send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
@@ -350,12 +349,11 @@ class Plugin(
     private suspend fun CoverageInfoSet.sendBuildCoverage(
         buildVersion: String,
         buildCoverage: BuildCoverage,
-        risks: RiskCount,
-        testsToRun: GroupedTests
+        summary: AgentSummary
     ) = Routes.Build().let { buildRoute ->
         val coverageRoute = Routes.Build.Coverage(buildRoute)
         send(buildVersion, coverageRoute, buildCoverage)
-        val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = risks.toSummaryDto())
+        val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = summary.riskCounts)
         send(buildVersion, Routes.Build.Methods(buildRoute), methodSummaryDto)
         val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
         val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
@@ -376,7 +374,7 @@ class Plugin(
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
         }
         Routes.Build.Summary(buildRoute).let {
-            send(buildVersion, Routes.Build.Summary.TestsToRun(it), testsToRun.toSummary())
+            send(buildVersion, Routes.Build.Summary.TestsToRun(it), summary.testsToRun.toTypeCounts())
         }
         //TODO remove after changes on the frontend
         send(buildVersion, Routes.Build.CoveredMethodsByTest(buildRoute), methodsCoveredByTest)
@@ -400,8 +398,8 @@ class Plugin(
                 send(buildVersion, Routes.Build.MethodsCoveredByTestType.New(testType), it.newMethods)
             }
         }
-        val context = state.coverContext()
-        send(buildVersion, Routes.Build.Risks(buildRoute), context.toRiskDtos())
+        send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
+        val context = state.coverContext() //TODO remove context from this method
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
     }
 

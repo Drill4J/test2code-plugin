@@ -53,3 +53,17 @@ internal fun CoverContext.testsToRunDto(
         )
     }
 }
+
+internal fun GroupedTests.toDto() = GroupedTestsDto(
+    totalCount = totalCount(),
+    byType = this
+)
+
+internal fun GroupedTests.totalCount(): Int = values.sumBy { it.count() }
+
+internal fun GroupedTests.toTypeCounts(): List<TestTypeCount> = map { (testType, list) ->
+    TestTypeCount(
+        type = testType,
+        count = list.count()
+    )
+}
