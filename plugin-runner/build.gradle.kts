@@ -46,4 +46,8 @@ tasks {
         environment("DRILL_DEFAULT_PACKAGES", "org/springframework/samples/petclinic")
         environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
     }
+    register("firstRun") {
+        group = "application"
+        dependsOn(cleanData, run)
+    }
 }
