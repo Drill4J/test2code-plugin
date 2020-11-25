@@ -40,6 +40,7 @@ internal suspend fun StoreClient.loadBuild(
 ): CachedBuild? = findById<CachedBuildCoverage>(version)?.let { coverage ->
     CachedBuild(
         version = version,
+        parentVersion = findById<ParentVersionBuild>(version)?.parentVersion,
         coverage = coverage,
         bundleCounters = findById<StoredBundles>(version)?.run {
             ProtoBuf.load(BundleCounters.serializer(), data)

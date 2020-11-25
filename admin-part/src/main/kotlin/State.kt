@@ -2,7 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
-import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
@@ -135,12 +134,16 @@ internal class AgentState(
         )
         _coverContext.value = coverContext
         val agentId = agentInfo.id
-        val parentVersion = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion
-        if (!parentVersion.isNullOrEmpty()) {
-            logger.debug { "parentVersion=$parentVersion for agentId=$agentId" }
-            storeClient.loadClassData(parentVersion)?.let { parentClassData ->
+        val parentVersion = build.parentVersion
+        val baselineVersion = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion
+        val newParentVersion = if (parentVersion.isNullOrEmpty()) baselineVersion else parentVersion
+        logger.debug { "cur parentVersion='$parentVersion', baseline='$baselineVersion' for agent(id=$agentId, buildVersion=$buildVersion)" }
+        if (!newParentVersion.isNullOrEmpty() && parentVersion != buildVersion) {
+            storeClient.loadClassData(newParentVersion)?.let { parentClassData ->
+                logger.debug { "new parentVersion=$newParentVersion for agent(id=$agentId, buildVersion=$buildVersion)" }
+                storeClient.store(ParentVersionBuild(buildVersion, newParentVersion))
                 val methodChanges = classData.methods.diff(parentClassData.methods)
-                val parentBuild = storeClient.loadBuild(parentVersion)
+                val parentBuild = storeClient.loadBuild(newParentVersion)
                 val testsToRun = parentBuild?.run {
                     bundleCounters.testsWith(methodChanges.modified)
                 }.orEmpty()
@@ -154,8 +157,10 @@ internal class AgentState(
                 )
             }
         } else {
-            logger.debug { "init the first build as a baseline for agent(id=$agentId, buildVersion=$buildVersion)" }
-            storeClient.store(GlobalAgentData(agentId, buildVersion))
+            if (baselineVersion == null) {
+                logger.debug { "init the first build as a baseline for agent(id=$agentId, buildVersion=$buildVersion)" }
+                storeClient.store(GlobalAgentData(agentId, buildVersion))
+            }
         }
         initActiveScope()
     }

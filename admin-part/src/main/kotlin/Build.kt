@@ -10,10 +10,17 @@ import kotlinx.serialization.*
 
 internal data class CachedBuild(
     val version: String,
+    val parentVersion: String? = "",
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
     val bundleCounters: BundleCounters = BundleCounters.empty,
     val coverage: CachedBuildCoverage = CachedBuildCoverage(version),
     val tests: BuildTests = BuildTests()
+)
+
+@Serializable
+internal data class ParentVersionBuild(
+    @Id val version: String,
+    val parentVersion: String?
 )
 
 @Serializable
