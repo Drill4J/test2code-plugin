@@ -10,7 +10,13 @@ import kotlinx.serialization.*
 @Serializable
 internal data class GlobalAgentData(
     @Id val agentId: String,
-    val baselineVersion: String = ""
+    val baseline: Baseline = Baseline()
+)
+
+@Serializable
+internal data class Baseline(
+    val version: String = "",
+    val parentVersion: String = ""
 )
 
 internal sealed class AgentData

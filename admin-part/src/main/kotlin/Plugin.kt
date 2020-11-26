@@ -209,7 +209,7 @@ class Plugin(
     internal suspend fun sendBaseline() = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Baseline),
-        message = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion?.let(::BuildVersionDto) ?: ""
+        message = storeClient.findById<GlobalAgentData>(agentId)?.baseline?.version?.let(::BuildVersionDto) ?: ""
     )
 
     private suspend fun ClassData.sendBuildStats() {
