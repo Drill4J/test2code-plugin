@@ -2,7 +2,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
-import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
@@ -135,12 +134,17 @@ internal class AgentState(
         )
         _coverContext.value = coverContext
         val agentId = agentInfo.id
-        val parentVersion = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion
-        if (!parentVersion.isNullOrEmpty()) {
-            logger.debug { "parentVersion=$parentVersion for agentId=$agentId" }
+        storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
+            val parentVersion = baseline.version
+            logger.debug { "baseline=$baseline for agent(id=$agentId, buildVersion=$buildVersion)" }
             storeClient.loadClassData(parentVersion)?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
-                val parentBuild = storeClient.loadBuild(parentVersion)
+                val baselineParentVersion = baseline.parentVersion
+                val parentBuild = storeClient.loadBuild(parentVersion)?.run {
+                    if (baselineParentVersion.any()) {
+                        copy(parentVersion = baselineParentVersion)
+                    } else this
+                }
                 val testsToRun = parentBuild?.run {
                     bundleCounters.testsWith(methodChanges.modified)
                 }.orEmpty()
@@ -149,14 +153,12 @@ internal class AgentState(
                 }.orEmpty()
                 _coverContext.value = coverContext.copy(
                     methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
+                    build = build.copy(parentVersion = parentVersion),
                     parentBuild = parentBuild,
                     testsToRun = testsToRun
                 )
             }
-        } else {
-            logger.debug { "init the first build as a baseline for agent(id=$agentId, buildVersion=$buildVersion)" }
-            storeClient.store(GlobalAgentData(agentId, buildVersion))
-        }
+        } ?: storeClient.store(GlobalAgentData(agentId, Baseline(buildVersion, "")))
         initActiveScope()
     }
 
@@ -294,17 +296,15 @@ internal class AgentState(
     )
 
     internal suspend fun toggleBaseline(): String? {
-        val parentBuild = coverContext().parentBuild
-        return parentBuild?.let {
-            val agentId = agentInfo.id
-            val buildVersion = agentInfo.buildVersion
-            val curBaseline = storeClient.findById<GlobalAgentData>(agentId)?.baselineVersion
-
+        val agentId = agentInfo.id
+        val buildVersion = agentInfo.buildVersion
+        val curBaseline = storeClient.findById<GlobalAgentData>(agentId)?.baseline
+        return curBaseline?.let {
             logger.debug { "toggle baseline for Agent(id=$agentId, version $buildVersion) cur baseline=$curBaseline" }
-            val newBaseline = if (buildVersion == curBaseline) {
-                parentBuild.version
+            val newBaseline = if (buildVersion == curBaseline.version) {
+                curBaseline.parentVersion
             } else buildVersion
-            storeClient.store(GlobalAgentData(agentId, newBaseline))
+            storeClient.store(GlobalAgentData(agentId, Baseline(newBaseline, curBaseline.version)))
 
             newBaseline
         }
