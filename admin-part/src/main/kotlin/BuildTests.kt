@@ -3,6 +3,9 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import kotlinx.serialization.*
+import mu.*
+
+private val logger = KotlinLogging.logger {}
 
 @Serializable
 data class BuildTests(
@@ -53,6 +56,31 @@ internal fun CoverContext.testsToRunDto(
         )
     }
 }
+
+internal fun CoverContext.testsDurationDto(
+    parentScopes: Sequence<FinishedScope>?
+): TestsDurationDto {
+    val parentTests = parentScopes?.map { scope ->
+        scope.data.sessions.map { session -> session.duration }.sum()
+    }?.sum() ?: 0
+
+    val parentTestsToRun = parentBuild?.let { testsToRunDuration(it) } ?: 0
+
+    val testsToRun = testsToRunDuration()
+
+    val testsDurationDto = TestsDurationDto(parentTests, parentTestsToRun, testsToRun)
+    logger.debug { "testsDurationDto=$testsDurationDto for buildVersion ${build.version}." }
+    return testsDurationDto
+}
+
+private fun CoverContext.testsToRunDuration(
+    build: CachedBuild = this.build
+): Long = this.testsToRun.flatMap { (type, tests) ->
+    tests.map { name ->
+        val typedTest = TypedTest(type = type, name = name)
+        build.bundleCounters.statsByTest[typedTest]?.duration
+    }
+}.filterNotNull().sum()
 
 internal fun GroupedTests.toDto() = GroupedTestsDto(
     totalCount = totalCount(),

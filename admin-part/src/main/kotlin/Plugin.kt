@@ -401,6 +401,10 @@ class Plugin(
         send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
         val context = state.coverContext() //TODO remove context from this method
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
+        val parentScopes = context.parentBuild?.version?.let {
+            state.scopeManager.byVersion(buildVersion = it, withData = true)
+        }
+        send(buildVersion, Routes.Build.TestsDuration(buildRoute), context.testsDurationDto(parentScopes))
     }
 
     private suspend fun Plugin.sendGroupSummary(summary: AgentSummary) {

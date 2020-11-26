@@ -309,6 +309,13 @@ data class TestCoverageDto(
 )
 
 @Serializable
+data class TestsDurationDto(
+    val parentTests: Long,
+    val parentTestsToRun: Long,
+    val testsToRun: Long
+)
+
+@Serializable
 data class TestStats(
     val duration: Long,
     val result: TestResult

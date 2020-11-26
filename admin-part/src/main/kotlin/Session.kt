@@ -75,6 +75,7 @@ class ActiveSession(
                     result = it.result
                 )
             } ?: emptyMap(),
+            duration = _testRun.value?.let { it.finishedAt - it.startedAt } ?: 0,
             probes = values.flatMap { it.values }
         )
     }
@@ -86,6 +87,7 @@ data class FinishedSession(
     override val testType: String,
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),
+    val duration: Long,
     val probes: List<ExecClassData>
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()

@@ -153,6 +153,9 @@ class Routes {
         @Location("/tests-to-run")
         class TestsToRun(val build: Build)
 
+        @Location("/tests-duration")
+        class TestsDuration(val build: Build)
+
         //TODO remove after changes on the frontend
         @Location("/tests/covered-methods")
         class CoveredMethodsByTest(val build: Build)
