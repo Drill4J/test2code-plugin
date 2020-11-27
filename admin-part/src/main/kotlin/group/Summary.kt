@@ -12,6 +12,8 @@ internal data class AgentSummary(
     val name: String,
     val buildVersion: String,
     val coverage: Count,
+    val coverageByType: CoverageByType,
+    val methodCount: Count,
     val scopeCount: Int,
     val arrow: ArrowType,
     val riskCounts: RiskCounts = RiskCounts(),
@@ -55,6 +57,8 @@ internal fun CachedBuild.toSummary(
     name = agentName,
     buildVersion = version,
     coverage = coverage.count,
+    methodCount = coverage.methodCount,
+    coverageByType = coverage.byTestType,
     scopeCount = coverage.scopeCount,
     arrow = parentCoverageCount.arrowType(coverage.count),
     risks = risks,
@@ -72,11 +76,12 @@ internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
 internal fun AgentSummary.toDto() = SummaryDto(
     coverage = coverage.percentage(),
     coverageCount = coverage,
+    methodCount = methodCount,
     scopeCount = scopeCount,
     arrow = arrow,
     risks = riskCounts.total, //TODO remove after changes on frontend
     riskCounts = riskCounts,
-    tests = tests.toTestCountDto(),
+    tests = coverageByType.toTestTypeSummary(tests),
     testsToRun = testsToRun.toTestCountDto(),
     recommendations = recommendations()
 )
@@ -85,6 +90,8 @@ internal operator fun AgentSummary.plus(
     other: AgentSummary
 ): AgentSummary = copy(
     coverage = coverage + other.coverage,
+    methodCount = methodCount + other.methodCount,
+    coverageByType = coverageByType + other.coverageByType,
     scopeCount = scopeCount + other.scopeCount,
     arrow = ArrowType.UNCHANGED,
     risks = emptyMap(),
@@ -115,3 +122,16 @@ private operator fun RiskCounts.plus(other: RiskCounts) = RiskCounts(
     modified = modified + other.modified,
     total = total + other.total
 )
+
+private fun CoverageByType.toTestTypeSummary(tests: GroupedTests) = map { (type, count) ->
+    TestTypeSummary(
+        type = type,
+        summary = TestSummary(
+            coverage = CoverDto(
+                percentage = count.percentage(),
+                count = count
+            ),
+            testCount = tests[type]?.count() ?: 0
+        )
+    )
+}

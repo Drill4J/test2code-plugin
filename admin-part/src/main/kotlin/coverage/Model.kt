@@ -104,9 +104,3 @@ data class MethodCounter(
 ) : NamedCounter() {
     val sign = "$name$desc"
 }
-
-@Serializable
-data class CoverageByTests(
-    val all: TestSummary,
-    val byType: List<TestTypeSummary>
-)
