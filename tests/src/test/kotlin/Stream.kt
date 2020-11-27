@@ -1,8 +1,3 @@
-@file:OptIn(
-    KtorExperimentalLocationsAPI::class,
-    ExperimentalCoroutinesApi::class
-)
-
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.admin.api.websocket.*
@@ -12,12 +7,11 @@ import com.epam.drill.common.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
-import io.ktor.application.*
-import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.locations.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
+import kotlinx.serialization.*
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.*
 import java.util.concurrent.*
@@ -32,13 +26,13 @@ class CoverageSocketStreams : PluginStreams() {
     }
 
 
-    lateinit var iut: SendChannel<Frame>
+    private lateinit var iut: SendChannel<Frame>
 
-    override suspend fun subscribe(sinf: AgentSubscription, destination: String) {
+    override suspend fun initSubscriptions(subscription: AgentSubscription) {
+        val message = Subscription.serializer() stringify subscription
         pathToCallBackMapping.filterKeys { !it.contains("{") }.forEach {
-            iut.send(Subscribe(it.key, Subscription.serializer() stringify sinf).toTextFrame())
+            iut.send(Subscribe(it.key, message).toTextFrame())
         }
-        delay(1000)
         activeScope()
         activeSessions()
         associatedTests()
@@ -48,291 +42,208 @@ class CoverageSocketStreams : PluginStreams() {
         risks()
         testsUsages()
         scopes()
+        summary()
     }
 
-    private val activeScope: Channel<ScopeSummary?> = Channel()
+    override suspend fun subscribe(subscription: AgentSubscription, destination: String) {
+        val message = Subscription.serializer() stringify subscription
+        iut.send(uiMessage(Subscribe(destination, message)))
+    }
+
+    private val activeScope: Channel<ScopeSummary?> = Channel(Channel.UNLIMITED)
     suspend fun activeScope() = activeScope.receive()
 
-    private val activeSessions: Channel<ActiveSessions?> = Channel()
+    private val activeSessions: Channel<ActiveSessions?> = Channel(Channel.UNLIMITED)
     suspend fun activeSessions() = activeSessions.receive()
 
-    private val associatedTests = Channel<List<AssociatedTests>?>()
+    private val associatedTests: Channel<List<AssociatedTests>?> = Channel(Channel.UNLIMITED)
     suspend fun associatedTests() = associatedTests.receive()
 
-    private val methods = Channel<MethodsSummaryDto?>()
+    private val methods: Channel<MethodsSummaryDto?> = Channel(Channel.UNLIMITED)
     suspend fun methods() = methods.receive()
 
-    private val buildCoverage = Channel<BuildCoverage?>()
+    private val buildCoverage: Channel<BuildCoverage?> = Channel(Channel.UNLIMITED)
     suspend fun buildCoverage() = buildCoverage.receive()
 
-    private val coveragePackages = Channel<List<JavaPackageCoverage>?>()
+    private val coveragePackages: Channel<List<JavaPackageCoverage>?> = Channel(Channel.UNLIMITED)
     suspend fun coveragePackages() = coveragePackages.receive()
 
-    private val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
+    private val testsUsages: Channel<List<TestsUsagesInfoByType>?> = Channel(Channel.UNLIMITED)
     suspend fun testsUsages() = testsUsages.receive()
 
 
-    private val risks: Channel<List<RiskDto>?> = Channel()
+    private val risks: Channel<List<RiskDto>?> = Channel(Channel.UNLIMITED)
     suspend fun risks() = risks.receive()
 
-    private val scopes: Channel<List<ScopeSummary>?> = Channel()
+    private val scopes: Channel<List<ScopeSummary>?> = Channel(Channel.UNLIMITED)
     suspend fun scopes() = scopes.receive()
 
-    private val summary: Channel<SummaryDto?> = Channel()
+    private val summary: Channel<SummaryDto?> = Channel(Channel.UNLIMITED)
     suspend fun summary() = summary.receive()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun queued(incoming: ReceiveChannel<Frame>, out: SendChannel<Frame>, isDebugStream: Boolean) {
         iut = out
         app.launch {
 
-            incoming.consumeEach {
-                when (it) {
+            incoming.consumeEach { frame ->
+                when (frame) {
                     is Frame.Text -> {
-                        val parseJson = json.parseJson(it.readText()) as JsonObject
+                        val json = json.parseJson(frame.readText()) as JsonObject
                         if (isDebugStream)
-                            println("PLUGIN: $parseJson")
-                        val messageType = WsMessageType.valueOf(parseJson[WsSendMessage::type.name]!!.content)
-                        val url = parseJson[WsSendMessage::destination.name]!!.content
-                        val content = parseJson[WsSendMessage::message.name]!!.toString()
+                            println("PLUGIN: $json")
+                        val messageType = WsMessageType.valueOf(json[WsSendMessage::type.name]!!.content)
+                        val url = json[WsSendMessage::destination.name]!!.content
+                        val jsonMessage = json[WsSendMessage::message.name]
+                        val content = jsonMessage!!.toString()
 
                         when (messageType) {
-                            WsMessageType.MESSAGE ->
-                                app.launch {
-                                    val resolve = app.resolve(url)
-                                    when (resolve) {
+                            WsMessageType.MESSAGE -> {
 
-                                        is Routes.ActiveScope -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                activeScope.send(null)
-                                            } else {
-                                                val element = ScopeSummary.serializer() parse content
-                                                activeScope.send(element)
-                                            }
-                                        }
-                                        is Routes.ActiveSessionStats -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                activeSessions.send(null)
-                                            } else {
-                                                activeSessions.send(ActiveSessions.serializer() parse content)
-                                            }
-                                        }
+                                when (val resolved = app.resolve(url)) {
 
-                                        is Routes.Scopes -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                scopes.send(null)
-                                            } else
-                                                scopes.send(ScopeSummary.serializer().list parse content)
-                                        }
-                                        is Routes.Scope -> {
-                                            delay(100)
-                                            val scope =
-                                                scopeSubscriptions.getValue(resolve.scopeId).first.scope
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                scope.send(null)
-                                            } else {
-                                                scope.send(
-                                                    ScopeSummary.serializer() parse content
-                                                )
-                                            }
-                                        }
-
-                                        is Routes.Scope.AssociatedTests -> {
-                                            delay(100)
-                                            val associatedTests =
-                                                scopeSubscriptions.getValue(resolve.scope.scopeId).first.associatedTests
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                associatedTests.send(null)
-                                            } else {
-                                                associatedTests.send(
-                                                    AssociatedTests.serializer().list parse content
-                                                )
-                                            }
-                                        }
-
-                                        is Routes.Scope.Methods -> {
-                                            delay(100)
-                                            val methods =
-                                                scopeSubscriptions.getValue(resolve.scope.scopeId).first.methods
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                methods.send(null)
-                                            } else
-                                                methods.send(
-                                                    MethodsSummaryDto.serializer() parse content
-                                                )
-                                        }
-
-                                        is Routes.Scope.TestsUsages -> {
-                                            delay(100)
-                                            val testsUsages =
-                                                scopeSubscriptions.getValue(resolve.scope.scopeId).first.testsUsages
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                testsUsages.send(null)
-                                            } else {
-                                                testsUsages.send(
-                                                    TestsUsagesInfoByType.serializer().list parse content
-                                                )
-                                            }
-                                        }
-
-                                        is Routes.Scope.Coverage.Packages -> {
-                                            delay(100)
-                                            val coveragePackages = run {
-                                                scopeSubscriptions.getValue(
-                                                    resolve.coverage.scope.scopeId
-                                                ).first.coveragePackages
-                                            }
-
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coveragePackages.send(null)
-                                            } else {
-                                                coveragePackages.send(
-                                                    JavaPackageCoverage.serializer().list parse content
-                                                )
-                                            }
-                                        }
-
-                                        is Routes.Scope.MethodsCoveredByTest.Summary -> {
-                                            delay(100)
-                                            val methodsCoveredByTest = testSubscriptions
-                                                .getValue(resolve.test.scope.scopeId)
-                                                .first
-                                                .methodsCoveredByTest
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                methodsCoveredByTest.send(null)
-                                            } else
-                                                methodsCoveredByTest.send(
-                                                    TestedMethodsSummary.serializer() parse content
-                                                )
-                                        }
-
-                                        is Routes.Scope.MethodsCoveredByTestType.Summary -> {
-                                            delay(100)
-                                            val methodsCoveredByTestType = testTypeSubscriptions
-                                                .getValue(resolve.type.scope.scopeId)
-                                                .first
-                                                .methodsCoveredByTestType
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                methodsCoveredByTestType.send(null)
-                                            } else
-                                                methodsCoveredByTestType.send(
-                                                    TestedMethodsByTypeSummary.serializer() parse content
-                                                )
-                                        }
-
-                                        is Routes.Scope.Coverage -> {
-                                            delay(100)
-                                            val coverage =
-                                                scopeSubscriptions.getValue(resolve.scope.scopeId).first.coverage
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coverage.send(null)
-                                            } else
-                                                coverage.send(ScopeCoverage.serializer() parse content)
-                                        }
-
-                                        is Routes.Build.AssociatedTests -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                associatedTests.send(null)
-                                            } else
-                                                associatedTests.send(AssociatedTests.serializer().list parse content)
-                                        }
-
-                                        is Routes.Build.Methods -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                methods.send(null)
-                                            } else methods.send(MethodsSummaryDto.serializer() parse content)
-                                        }
-
-                                        is Routes.Build.TestsUsages -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                testsUsages.send(null)
-                                            } else {
-                                                testsUsages.send(
-                                                    TestsUsagesInfoByType.serializer().list parse content
-                                                )
-                                            }
-                                        }
-
-                                        is Routes.Build.Coverage.Packages -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                coveragePackages.send(null)
-                                            } else {
-                                                coveragePackages.send(
-                                                    JavaPackageCoverage.serializer().list parse content
-                                                )
-                                            }
-                                        }
-
-                                        is Routes.Build.Coverage -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                buildCoverage.send(null)
-                                            } else
-                                                buildCoverage.send(BuildCoverage.serializer() parse content)
-                                        }
-
-                                        is Routes.Build.Risks -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                risks.send(null)
-                                            } else
-                                                risks.send(RiskDto.serializer().list parse content)
-                                        }
-
-                                        is Routes.ServiceGroup.Summary -> {
-                                            if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                                summary.send(null)
-                                            } else summary.send(SummaryDto.serializer() parse content)
-                                        }
-                                        else -> println("!!!$url ignored")
+                                    is Routes.ActiveScope -> {
+                                        activeScope.send(ScopeSummary.serializer(), content)
                                     }
+                                    is Routes.ActiveSessionStats -> {
+                                        activeSessions.send(ActiveSessions.serializer(), content)
+                                    }
+
+                                    is Routes.Scopes -> {
+                                        scopes.send(ScopeSummary.serializer().list, content)
+                                    }
+                                    is Routes.Scope -> {
+                                        val scope =
+                                            scopeSubscriptions.getValue(resolved.scopeId).first.scope
+                                        scope.send(ScopeSummary.serializer(), content)
+                                    }
+
+                                    is Routes.Scope.AssociatedTests -> {
+                                        val associatedTests =
+                                            scopeSubscriptions.getValue(resolved.scope.scopeId).first.associatedTests
+                                        associatedTests.send(
+                                            AssociatedTests.serializer().list, content
+                                        )
+                                    }
+
+                                    is Routes.Scope.Methods -> {
+                                        val methods =
+                                            scopeSubscriptions.getValue(resolved.scope.scopeId).first.methods
+                                        if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                            methods.send(null)
+                                        } else
+                                            methods.send(
+                                                MethodsSummaryDto.serializer(), content
+                                            )
+                                    }
+
+                                    is Routes.Scope.TestsUsages -> {
+                                        val testsUsages =
+                                            scopeSubscriptions.getValue(resolved.scope.scopeId).first.testsUsages
+                                        if (content.isEmpty() || content == "[]" || content == "\"\"") {
+                                            testsUsages.send(null)
+                                        } else {
+                                            testsUsages.send(
+                                                TestsUsagesInfoByType.serializer().list, content
+                                            )
+                                        }
+                                    }
+
+                                    is Routes.Scope.Coverage.Packages -> {
+                                        val coveragePackages = run {
+                                            scopeSubscriptions.getValue(
+                                                resolved.coverage.scope.scopeId
+                                            ).first.coveragePackages
+                                        }
+                                        coveragePackages.send(
+                                            JavaPackageCoverage.serializer().list, content
+                                        )
+                                    }
+
+                                    is Routes.Scope.MethodsCoveredByTest.Summary -> {
+                                        val methodsCoveredByTest = testSubscriptions
+                                            .getValue(resolved.test.scope.scopeId)
+                                            .first
+                                            .methodsCoveredByTest
+                                        methodsCoveredByTest.send(
+                                            TestedMethodsSummary.serializer(), content
+                                        )
+                                    }
+
+                                    is Routes.Scope.MethodsCoveredByTestType.Summary -> {
+                                        val methodsCoveredByTestType = testTypeSubscriptions
+                                            .getValue(resolved.type.scope.scopeId)
+                                            .first
+                                            .methodsCoveredByTestType
+                                        methodsCoveredByTestType.send(
+                                            TestedMethodsByTypeSummary.serializer(), content
+                                        )
+                                    }
+
+                                    is Routes.Scope.Coverage -> {
+                                        val coverage =
+                                            scopeSubscriptions.getValue(resolved.scope.scopeId).first.coverage
+                                        coverage.send(ScopeCoverage.serializer(), content)
+                                    }
+
+                                    is Routes.Build.AssociatedTests -> {
+                                        associatedTests.send(AssociatedTests.serializer().list, content)
+                                    }
+
+                                    is Routes.Build.Methods -> {
+                                        methods.send(MethodsSummaryDto.serializer(), content)
+                                    }
+
+                                    is Routes.Build.TestsUsages -> {
+                                        testsUsages.send(
+                                            TestsUsagesInfoByType.serializer().list, content
+                                        )
+                                    }
+
+                                    is Routes.Build.Coverage.Packages -> {
+                                        coveragePackages.send(
+                                            JavaPackageCoverage.serializer().list, content
+                                        )
+                                    }
+
+                                    is Routes.Build.Coverage -> {
+                                        buildCoverage.send(BuildCoverage.serializer(), content)
+                                    }
+
+                                    is Routes.Build.Risks -> {
+                                        risks.send(RiskDto.serializer().list, content)
+                                    }
+
+                                    is Routes.ServiceGroup.Summary -> {
+                                        summary.send(SummaryDto.serializer(), content)
+                                    }
+                                    else -> println("!!!$url ignored")
                                 }
-                            else -> TODO("not implemented yet")
+
+                            }
+                            else -> println("!!!!!$messageType not supported!")
                         }
                     }
+                    else -> println("!!!!${frame.frameType} not supported!")
                 }
             }
-
-
         }
     }
 
-
-    class ScopeContext {
-
-        internal val scope: Channel<ScopeSummary?> = Channel()
-        suspend fun scope() = scope.receive()
-
-        internal val associatedTests = Channel<List<AssociatedTests>?>()
-        suspend fun associatedTests() = associatedTests.receive()
-
-        internal val methods = Channel<MethodsSummaryDto?>()
-        suspend fun methods() = methods.receive()
-
-
-        internal val coverage = Channel<Coverage?>()
-        suspend fun coverage() = coverage.receive()
-
-        internal val coveragePackages = Channel<List<JavaPackageCoverage>?>()
-        suspend fun coveragePackages() = coveragePackages.receive()
-
-        internal val testsUsages = Channel<List<TestsUsagesInfoByType>?>()
-        suspend fun testsUsages() = testsUsages.receive()
-
+    private suspend fun <T> Channel<T?>.send(
+        serializer: KSerializer<T>,
+        message: String
+    ) {
+        val sentMessage = message.takeIf {
+            it.any() && it != "[]" && it != "\"\""
+        }?.let { serializer parse it }
+        send(sentMessage)
     }
-
-    class TestContext {
-        internal val methodsCoveredByTest = Channel<TestedMethodsSummary?>()
-        suspend fun methodsCoveredByTest() = methodsCoveredByTest.receive()
-    }
-
-    class TestTypeContext {
-        internal val methodsCoveredByTestType = Channel<TestedMethodsByTypeSummary?>()
-        suspend fun methodsCoveredByTestType() = methodsCoveredByTestType.receive()
-    }
-
 
     private val scopeSubscriptions = ConcurrentHashMap<String, Pair<ScopeContext, suspend ScopeContext.() -> Unit>>()
-    private val testSubscriptions = ConcurrentHashMap<String, Pair<TestContext, suspend TestContext.() -> Unit>>()
+    private val testSubscriptions = ConcurrentHashMap<String, Pair<TestChannels, suspend TestChannels.() -> Unit>>()
     private val testTypeSubscriptions =
-        ConcurrentHashMap<String, Pair<TestTypeContext, suspend TestTypeContext.() -> Unit>>()
+        ConcurrentHashMap<String, Pair<TestTypeChannels, suspend TestTypeChannels.() -> Unit>>()
 
     suspend fun subscribeOnScope(
         scopeId: String,
@@ -372,7 +283,7 @@ class CoverageSocketStreams : PluginStreams() {
         testId: String,
         agentId: String = info.agentId,
         buildVersion: String = info.buildVersionHash,
-        block: suspend TestContext.() -> Unit
+        block: suspend TestChannels.() -> Unit
     ) {
         val scope = Routes.Scope(scopeId)
         Routes.Scope.MethodsCoveredByTest(testId, scope).let {
@@ -388,7 +299,7 @@ class CoverageSocketStreams : PluginStreams() {
                 ).toTextFrame()
             )
         }
-        val testContext = TestContext()
+        val testContext = TestChannels()
         testSubscriptions[scopeId] = testContext to block
         block(testContext)
     }
@@ -398,7 +309,7 @@ class CoverageSocketStreams : PluginStreams() {
         testType: String,
         agentId: String = info.agentId,
         buildVersion: String = info.buildVersionHash,
-        block: suspend TestTypeContext.() -> Unit
+        block: suspend TestTypeChannels.() -> Unit
     ) {
         val scope = Routes.Scope(scopeId)
         Routes.Scope.MethodsCoveredByTestType(testType, scope).let {
@@ -414,7 +325,7 @@ class CoverageSocketStreams : PluginStreams() {
                 ).toTextFrame()
             )
         }
-        val testContext = TestTypeContext()
+        val testContext = TestTypeChannels()
         testTypeSubscriptions[scopeId] = testContext to block
         block(testContext)
     }
@@ -422,6 +333,7 @@ class CoverageSocketStreams : PluginStreams() {
 }
 
 val pathToCallBackMapping = mutableMapOf<String, KClass<*>>()
+@OptIn(KtorExperimentalLocationsAPI::class)
 fun fillMapping(kclass: KClass<*>, str: String = "") {
     kclass.nestedClasses.forEach {
         val nestedClasses = it.nestedClasses
@@ -436,34 +348,4 @@ fun fillMapping(kclass: KClass<*>, str: String = "") {
             fillMapping(it, str + path)
         }
     }
-}
-
-
-fun Application.resolve(destination: String): Any {
-    val p = "\\{(.*)}".toRegex()
-    val urlTokens = destination.split("/")
-
-    val filter = pathToCallBackMapping.filter { it.key.count { c -> c == '/' } + 1 == urlTokens.size }.filter {
-        var matche = true
-        it.key.split("/").forEachIndexed { x, y ->
-            if (!(y == urlTokens[x] || y.startsWith("{"))) {
-                matche = false
-            }
-        }
-        matche
-    }
-    val suitableRout = filter.entries.first()
-
-    val parameters = suitableRout.run {
-        val mutableMapOf = mutableMapOf<String, String>()
-        key.split("/").forEachIndexed { x, y ->
-            if (y != urlTokens[x] && (p.matches(y))) {
-                mutableMapOf[p.find(y)!!.groupValues[1]] = urlTokens[x]
-            }
-        }
-        val map = mutableMapOf.map { Pair(it.key, listOf(it.value)) }
-        parametersOf(* map.toTypedArray())
-    }
-    return feature(Locations).resolve(suitableRout.value, parameters)
-
 }
