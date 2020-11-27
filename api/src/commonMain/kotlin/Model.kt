@@ -275,6 +275,12 @@ data class CoveredMethodCounts(
 )
 
 @Serializable
+data class CoverageByTests(
+    val all: TestSummary,
+    val byType: List<TestTypeSummary>
+)
+
+@Serializable
 data class TestedMethodsSummary(
     val id: String,
     val testName: String,
@@ -409,11 +415,12 @@ data class BuildStatsDto(
 data class SummaryDto(
     val coverage: Double = 0.0,
     val coverageCount: Count = zeroCount,
+    val methodCount: Count = zeroCount,
     val scopeCount: Int = 0,
     val arrow: ArrowType = ArrowType.UNCHANGED,
     val risks: Int = 0, //TODO remove after changes on frontend
     val riskCounts: RiskCounts = RiskCounts(),
-    val tests: TestCountDto = TestCountDto(),
+    val tests: List<TestTypeSummary> = emptyList(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet()
 )
