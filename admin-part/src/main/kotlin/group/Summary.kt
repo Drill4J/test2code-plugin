@@ -12,7 +12,7 @@ internal data class AgentSummary(
     val name: String,
     val buildVersion: String,
     val coverage: Count,
-    val coverageByType: CoverageByType,
+    val coverageByType: Map<String, Count>,
     val methodCount: Count,
     val scopeCount: Int,
     val arrow: ArrowType,
@@ -91,13 +91,15 @@ internal operator fun AgentSummary.plus(
 ): AgentSummary = copy(
     coverage = coverage + other.coverage,
     methodCount = methodCount + other.methodCount,
-    coverageByType = coverageByType + other.coverageByType,
+    coverageByType = coverageByType.merge(other.coverageByType) { count1, count2 ->
+        count1 + count2
+    },
     scopeCount = scopeCount + other.scopeCount,
     arrow = ArrowType.UNCHANGED,
     risks = emptyMap(),
     riskCounts = riskCounts + other.riskCounts,
-    tests = tests + other.tests,
-    testsToRun = testsToRun + other.testsToRun
+    tests = tests.merge(other.tests, ::mergeDistinct),
+    testsToRun = testsToRun.merge(other.testsToRun, ::mergeDistinct)
 )
 
 operator fun Count.plus(other: Count): Count = copy(
@@ -110,20 +112,13 @@ private fun GroupedTests.toTestCountDto() = TestCountDto(
     byType = mapValues { it.value.count() }
 )
 
-private operator fun GroupedTests.plus(other: GroupedTests): GroupedTests = sequenceOf(this, other)
-    .flatMap { it.asSequence() }
-    .groupBy({ it.key }, { it.value })
-    .mapValues { (_, values) ->
-        values.flatten().distinct()
-    }
-
 private operator fun RiskCounts.plus(other: RiskCounts) = RiskCounts(
     new = new + other.new,
     modified = modified + other.modified,
     total = total + other.total
 )
 
-private fun CoverageByType.toTestTypeSummary(tests: GroupedTests) = map { (type, count) ->
+private fun Map<String, Count>.toTestTypeSummary(tests: GroupedTests) = map { (type, count) ->
     TestTypeSummary(
         type = type,
         summary = TestSummary(
@@ -135,3 +130,21 @@ private fun CoverageByType.toTestTypeSummary(tests: GroupedTests) = map { (type,
         )
     )
 }
+
+private fun <K, V> Map<K, V>.merge(
+    other: Map<K, V>,
+    operation: (V, V) -> V
+): Map<K, V> = mapValuesTo(mutableMapOf<K, V>()) { (k, v) ->
+    other[k]?.let { operation(v, it) } ?: v
+}.also { map ->
+    other.forEach { (k, v) ->
+        if (k !in map) {
+            map[k] = v
+        }
+    }
+}
+
+private fun mergeDistinct(
+    list1: List<String>,
+    list2: List<String>
+): List<String> = sequenceOf(list1, list2).map { it.asSequence() }.flatten().distinct().toList()

@@ -383,12 +383,6 @@ enum class RiskType {
 
 typealias GroupedTests = Map<String, List<String>>
 
-//TODO get rid of this unnecessary wrapping
-@Serializable
-data class TestsToRun(
-    val testTypeToNames: GroupedTests = emptyMap()
-)
-
 @Serializable
 data class TestTypeCount(
     val type: String,
