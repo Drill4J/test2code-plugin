@@ -135,15 +135,18 @@ internal class AgentState(
         _coverContext.value = coverContext
         val agentId = agentInfo.id
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
-            val parentVersion = baseline.version
-            logger.debug { "baseline=$baseline for agent(id=$agentId, buildVersion=$buildVersion)" }
-            storeClient.loadClassData(parentVersion)?.let { parentClassData ->
+            logger.debug { "Agent(id=$agentId, buildVersion=$buildVersion): baseline=$baseline." }
+            val parentVersion = when(baseline.version) {
+                buildVersion -> baseline.parentVersion
+                else -> baseline.version
+            }.takeIf(String::any)
+            logger.debug { "Agent(id=$agentId, buildVersion=$buildVersion): parentVersion=$parentVersion." }
+            parentVersion?.let { storeClient.loadClassData(it) }?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
-                val baselineParentVersion = baseline.parentVersion
                 val parentBuild = storeClient.loadBuild(parentVersion)?.run {
-                    if (baselineParentVersion.any()) {
-                        copy(parentVersion = baselineParentVersion)
-                    } else this
+                    baseline.parentVersion.takeIf(String::any)?.let {
+                        copy(parentVersion = it)
+                    } ?: this
                 }
                 val testsToRun = parentBuild?.run {
                     bundleCounters.testsWith(methodChanges.modified)
@@ -158,7 +161,7 @@ internal class AgentState(
                     testsToRun = testsToRun
                 )
             }
-        } ?: storeClient.store(GlobalAgentData(agentId, Baseline(buildVersion, "")))
+        } ?: storeClient.store(GlobalAgentData(agentId, Baseline(buildVersion)))
         initActiveScope()
     }
 
@@ -295,18 +298,30 @@ internal class AgentState(
         probeIds = probeIds
     )
 
-    internal suspend fun toggleBaseline(): String? {
+    internal suspend fun toggleBaseline(): String? = run {
         val agentId = agentInfo.id
         val buildVersion = agentInfo.buildVersion
-        val curBaseline = storeClient.findById<GlobalAgentData>(agentId)?.baseline
-        return curBaseline?.let {
-            logger.debug { "toggle baseline for Agent(id=$agentId, version $buildVersion) cur baseline=$curBaseline" }
-            val newBaseline = if (buildVersion == curBaseline.version) {
-                curBaseline.parentVersion
-            } else buildVersion
-            storeClient.store(GlobalAgentData(agentId, Baseline(newBaseline, curBaseline.version)))
-
-            newBaseline
-        }
+        val data = storeClient.findById(agentId) ?: GlobalAgentData(agentId)
+        val baseline = data.baseline
+        val parentBuild = coverContext().parentBuild
+        val parentVersion = coverContext().build.parentVersion
+        when(baseline.version) {
+            buildVersion -> parentBuild?.let {
+                Baseline(
+                    version = baseline.parentVersion,
+                    parentVersion = it.parentVersion
+                )
+            }
+            parentVersion -> Baseline(
+                version = buildVersion,
+                parentVersion = parentVersion
+            )
+            else -> null
+        }?.also { newBaseline ->
+            storeClient.store(data.copy(baseline = newBaseline))
+            logger.debug {
+                "Agent(id=$agentId, version=$buildVersion): toggled baseline $baseline->$newBaseline"
+            }
+        }?.version
     }
 }
