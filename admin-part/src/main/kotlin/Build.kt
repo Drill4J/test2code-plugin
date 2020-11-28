@@ -17,14 +17,12 @@ internal data class CachedBuild(
     val tests: BuildTests = BuildTests()
 )
 
-typealias CoverageByType = Map<String, Count>
-
 @Serializable
 internal data class CachedBuildCoverage(
     @Id val version: String,
     val count: Count = zeroCount,
     val methodCount: Count = zeroCount,
-    val byTestType: CoverageByType = emptyMap(),
+    val byTestType: Map<String, Count> = emptyMap(),
     val scopeCount: Int = 0
 )
 
@@ -49,12 +47,3 @@ internal fun CoverContext.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(
     unaffected = methodChanges.unaffected.count(),
     deleted = methodChanges.deleted.count()
 )
-
-internal operator fun CoverageByType.plus(
-    other: CoverageByType
-): CoverageByType = sequenceOf(this, other)
-    .flatMap { it.asSequence() }
-    .groupBy({ it.key }, { it.value })
-    .mapValues { (_, values) ->
-        values.reduce { acc, count -> acc + count }
-    }
