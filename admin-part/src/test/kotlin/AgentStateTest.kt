@@ -55,9 +55,10 @@ class AgentStateTest {
 
     @Test
     fun `toggleBaseline - 2 builds`() = runBlocking {
-        val state1 = AgentState(storeClient, agentInfo, adminData)
-        state1.initialized()
-        state1.storeBuild()
+        AgentState(storeClient, agentInfo, adminData).apply {
+            initialized()
+            storeBuild()
+        }
         val version1 = agentInfo.buildVersion
         storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
             assertEquals(version1, it.version)
@@ -101,8 +102,7 @@ class AgentStateTest {
         Unit
     }
 }
-
-private object EmptyBuildManager : BuildManager {
+internal object EmptyBuildManager : BuildManager {
     override val builds: Collection<BuildInfo> = emptyList()
 
     override fun get(version: String): BuildInfo? = null
