@@ -136,7 +136,7 @@ internal class AgentState(
         val agentId = agentInfo.id
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
             logger.debug { "Agent(id=$agentId, buildVersion=$buildVersion): baseline=$baseline." }
-            val parentVersion = when(baseline.version) {
+            val parentVersion = when (baseline.version) {
                 buildVersion -> baseline.parentVersion
                 else -> baseline.version
             }.takeIf(String::any)
@@ -305,7 +305,7 @@ internal class AgentState(
         val baseline = data.baseline
         val parentBuild = coverContext().parentBuild
         val parentVersion = coverContext().build.parentVersion
-        when(baseline.version) {
+        when (baseline.version) {
             buildVersion -> parentBuild?.let {
                 Baseline(
                     version = baseline.parentVersion,
