@@ -188,9 +188,6 @@ class Plugin(
 
     private suspend fun Plugin.processInitialized(): Boolean {
         initGateSettings()
-        adminData.buildManager.builds.filter { it.version != buildVersion }.forEach {
-            cleanActiveScope(it.version)
-        }
         sendGateSettings()
         sendParentBuild()
         sendBaseline()
@@ -264,10 +261,6 @@ class Plugin(
         val summary = activeScope.summary
         send(buildVersion, Routes.ActiveScope, summary)
         sendScopeSummary(summary)
-    }
-
-    private suspend fun cleanActiveScope(buildVersion: String) {
-        send(buildVersion, Routes.ActiveScope, "")
     }
 
     internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
