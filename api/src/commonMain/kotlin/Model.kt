@@ -255,17 +255,6 @@ data class MethodsCoveredByTest(
     val unaffectedMethods: List<CoverMethod> = emptyList()
 )
 
-//TODO remove this from the api and refactor after changes on the frontend
-@Serializable
-data class MethodsCoveredByType(
-    val testType: String,
-    val testsCount: Int,
-    val allMethods: List<CoverMethod> = emptyList(),
-    val newMethods: List<CoverMethod> = emptyList(),
-    val modifiedMethods: List<CoverMethod> = emptyList(),
-    val unaffectedMethods: List<CoverMethod> = emptyList()
-)
-
 @Serializable
 data class CoveredMethodCounts(
     val all: Int,

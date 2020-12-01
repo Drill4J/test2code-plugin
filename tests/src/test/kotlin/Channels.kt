@@ -9,11 +9,6 @@ class TestChannels {
     suspend fun methodsCoveredByTest() = methodsCoveredByTest.receive()
 }
 
-class TestTypeChannels {
-    internal val methodsCoveredByTestType: Channel<TestedMethodsByTypeSummary?> = Channel(Channel.UNLIMITED)
-    suspend fun methodsCoveredByTestType() = methodsCoveredByTestType.receive()
-}
-
 
 class ScopeContext {
 

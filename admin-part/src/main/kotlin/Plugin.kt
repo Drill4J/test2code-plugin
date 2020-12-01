@@ -371,7 +371,6 @@ class Plugin(
         }
         //TODO remove after changes on the frontend
         send(buildVersion, Routes.Build.CoveredMethodsByTest(buildRoute), methodsCoveredByTest)
-        send(buildVersion, Routes.Build.CoveredMethodsByType(buildRoute), methodsCoveredByType)
 
         methodsCoveredByTest.forEach {
             Routes.Build.MethodsCoveredByTest(it.id, buildRoute).let { test ->
@@ -380,15 +379,6 @@ class Plugin(
                 send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
                 send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
                 send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), it.newMethods)
-            }
-        }
-        methodsCoveredByType.forEach {
-            Routes.Build.MethodsCoveredByTestType(it.testType, buildRoute).let { testType ->
-                send(buildVersion, Routes.Build.MethodsCoveredByTestType.Summary(testType), it.toSummary())
-                send(buildVersion, Routes.Build.MethodsCoveredByTestType.All(testType), it.allMethods)
-                send(buildVersion, Routes.Build.MethodsCoveredByTestType.Modified(testType), it.modifiedMethods)
-                send(buildVersion, Routes.Build.MethodsCoveredByTestType.Unaffected(testType), it.unaffectedMethods)
-                send(buildVersion, Routes.Build.MethodsCoveredByTestType.New(testType), it.newMethods)
             }
         }
         send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
@@ -468,7 +458,6 @@ class Plugin(
         }
         //TODO remove after changes on the frontend
         send(buildVersion, Routes.Scope.CoveredMethodsByTest(scope), methodsCoveredByTest)
-        send(buildVersion, Routes.Scope.CoveredMethodsByType(scope), methodsCoveredByType)
 
         methodsCoveredByTest.forEach {
             Routes.Scope.MethodsCoveredByTest(it.id, scope).let { test ->
@@ -477,15 +466,6 @@ class Plugin(
                 send(buildVersion, Routes.Scope.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
                 send(buildVersion, Routes.Scope.MethodsCoveredByTest.New(test), it.newMethods)
                 send(buildVersion, Routes.Scope.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
-            }
-        }
-        methodsCoveredByType.forEach {
-            Routes.Scope.MethodsCoveredByTestType(it.testType, scope).let { testType ->
-                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.Summary(testType), it.toSummary())
-                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.All(testType), it.allMethods)
-                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.Modified(testType), it.modifiedMethods)
-                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.New(testType), it.newMethods)
-                send(buildVersion, Routes.Scope.MethodsCoveredByTestType.Unaffected(testType), it.unaffectedMethods)
             }
         }
     }

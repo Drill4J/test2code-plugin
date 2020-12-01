@@ -170,16 +170,6 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.MethodsCoveredByTestType.Summary -> {
-                                        val methodsCoveredByTestType = testTypeSubscriptions
-                                            .getValue(resolved.type.scope.scopeId)
-                                            .first
-                                            .methodsCoveredByTestType
-                                        methodsCoveredByTestType.send(
-                                            TestedMethodsByTypeSummary.serializer(), content
-                                        )
-                                    }
-
                                     is Routes.Scope.Coverage -> {
                                         val coverage =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.coverage
@@ -242,8 +232,6 @@ class CoverageSocketStreams : PluginStreams() {
 
     private val scopeSubscriptions = ConcurrentHashMap<String, Pair<ScopeContext, suspend ScopeContext.() -> Unit>>()
     private val testSubscriptions = ConcurrentHashMap<String, Pair<TestChannels, suspend TestChannels.() -> Unit>>()
-    private val testTypeSubscriptions =
-        ConcurrentHashMap<String, Pair<TestTypeChannels, suspend TestTypeChannels.() -> Unit>>()
 
     suspend fun subscribeOnScope(
         scopeId: String,
@@ -303,33 +291,6 @@ class CoverageSocketStreams : PluginStreams() {
         testSubscriptions[scopeId] = testContext to block
         block(testContext)
     }
-
-    suspend fun subscribeOnTestType(
-        scopeId: String,
-        testType: String,
-        agentId: String = info.agentId,
-        buildVersion: String = info.buildVersionHash,
-        block: suspend TestTypeChannels.() -> Unit
-    ) {
-        val scope = Routes.Scope(scopeId)
-        Routes.Scope.MethodsCoveredByTestType(testType, scope).let {
-            Routes.Scope.MethodsCoveredByTestType.Summary(it)
-        }.also {
-            iut.send(
-                Subscribe(
-                    destination = app.toLocation(it),
-                    message = Subscription.serializer() stringify AgentSubscription(
-                        agentId = agentId,
-                        buildVersion = buildVersion
-                    )
-                ).toTextFrame()
-            )
-        }
-        val testContext = TestTypeChannels()
-        testTypeSubscriptions[scopeId] = testContext to block
-        block(testContext)
-    }
-
 }
 
 val pathToCallBackMapping = mutableMapOf<String, KClass<*>>()
