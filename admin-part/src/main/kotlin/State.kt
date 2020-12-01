@@ -9,7 +9,6 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
-import mu.*
 import org.jacoco.core.internal.data.*
 
 /**
@@ -26,7 +25,7 @@ internal class AgentState(
     val agentInfo: AgentInfo,
     val adminData: AdminData
 ) {
-    private val logger = KotlinLogging.logger("AgentState ${agentInfo.id}")
+    private val logger = logger(agentInfo.id)
 
     val data get() = _data.value
 
@@ -135,12 +134,12 @@ internal class AgentState(
         _coverContext.value = coverContext
         val agentId = agentInfo.id
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
-            logger.debug { "Agent(id=$agentId, buildVersion=$buildVersion): baseline=$baseline." }
+            logger.debug { "(buildVersion=$buildVersion) Current baseline=$baseline." }
             val parentVersion = when (baseline.version) {
                 buildVersion -> baseline.parentVersion
                 else -> baseline.version
             }.takeIf(String::any)
-            logger.debug { "Agent(id=$agentId, buildVersion=$buildVersion): parentVersion=$parentVersion." }
+            logger.debug { "ParentVersion=$parentVersion." }
             parentVersion?.let { storeClient.loadClassData(it) }?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
                 val parentBuild = storeClient.loadBuild(parentVersion)?.run {
@@ -161,7 +160,11 @@ internal class AgentState(
                     testsToRun = testsToRun
                 )
             }
-        } ?: storeClient.store(GlobalAgentData(agentId, Baseline(buildVersion)))
+        } ?: run {
+            val baseline = Baseline(buildVersion)
+            storeClient.store(GlobalAgentData(agentId, baseline))
+            logger.debug { "(buildVersion=$buildVersion) Stored initial baseline $baseline." }
+        }
         initActiveScope()
     }
 
@@ -319,9 +322,7 @@ internal class AgentState(
             else -> null
         }?.also { newBaseline ->
             storeClient.store(data.copy(baseline = newBaseline))
-            logger.debug {
-                "Agent(id=$agentId, version=$buildVersion): toggled baseline $baseline->$newBaseline"
-            }
+            logger.debug { "(buildVersion=${agentInfo.buildVersion}) Toggled baseline $baseline->$newBaseline" }
         }?.version
     }
 }

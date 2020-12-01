@@ -15,7 +15,6 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
-import mu.*
 import java.io.*
 
 @Suppress("unused")
@@ -26,7 +25,8 @@ class Plugin(
     agentInfo: AgentInfo,
     id: String
 ) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id), Closeable {
-    internal val logger = KotlinLogging.logger("Plugin $id")
+
+    internal val logger = logger(agentInfo.id)
 
     override val serDe: SerDe<Action> = SerDe(Action.serializer())
 

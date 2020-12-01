@@ -6,9 +6,8 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import kotlinx.collections.immutable.*
-import mu.*
 
-private val logger = KotlinLogging.logger {}
+private val logger = logger {}
 
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext
