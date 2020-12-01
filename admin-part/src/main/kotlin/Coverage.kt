@@ -46,7 +46,6 @@ internal fun BundleCounters.calculateCoverageData(
     scope: Scope? = null
 ): CoverageInfoSet {
     val bundle = all
-    val bundlesByTestTypes = byTestType
     val bundlesByTests = byTest
 
     val assocTestsMap = bundlesByTests.associatedTests()
@@ -99,7 +98,6 @@ internal fun BundleCounters.calculateCoverageData(
     val packageCoverage = context.packageTree.packages.treeCoverage(bundle, assocTestsMap)
 
     val coveredByTest = bundlesByTests.methodsCoveredByTest(context)
-    val coveredByTestType = bundlesByTestTypes.methodsCoveredByType(context, bundlesByTests)
 
     val testsUsagesInfoByType = coverageByTests.byType.map { (testType, summary) ->
         TestsUsagesInfoByType(
@@ -117,8 +115,7 @@ internal fun BundleCounters.calculateCoverageData(
         packageCoverage,
         testsUsagesInfoByType,
         coverageByTests,
-        coveredByTest,
-        coveredByTestType
+        coveredByTest
     )
 }
 

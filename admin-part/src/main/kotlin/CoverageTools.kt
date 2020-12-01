@@ -24,8 +24,7 @@ internal data class CoverageInfoSet(
     val packageCoverage: List<JavaPackageCoverage> = emptyList(),
     val testsUsagesInfoByType: List<TestsUsagesInfoByType> = emptyList(),
     val coverageByTests: CoverageByTests,
-    val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList(),
-    val methodsCoveredByType: List<MethodsCoveredByType> = emptyList()
+    val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList()
 )
 
 fun BundleCounters.testUsages(
@@ -84,23 +83,6 @@ internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
         modifiedMethods = changes.allModifiedMethods.methods,
         unaffectedMethods = changes.unaffectedMethods.methods
     )
-}
-
-internal fun Map<String, BundleCounter>.methodsCoveredByType(
-    context: CoverContext,
-    bundlesByTests: Map<TypedTest, BundleCounter>
-): List<MethodsCoveredByType> = map { (type, bundle) ->
-    val typesCounts = bundlesByTests.keys.groupBy { it.type }.mapValues { it.value.count() }
-    val changes = context.calculateBundleMethods(bundle, true)
-    MethodsCoveredByType(
-        testType = type,
-        testsCount = typesCounts[type] ?: 0,
-        allMethods = changes.totalMethods.methods,
-        newMethods = changes.newMethods.methods,
-        modifiedMethods = changes.allModifiedMethods.methods,
-        unaffectedMethods = changes.unaffectedMethods.methods
-    )
-
 }
 
 private fun Iterable<Method>.toInfo(

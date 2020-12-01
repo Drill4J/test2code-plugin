@@ -68,17 +68,6 @@ class CoverageByPackagesTest : E2EPluginTest() {
                             }
                         }
                     }
-                    plugUi.subscribeOnTestType(scopeId, "MANUAL") {
-                        methodsCoveredByTestType()!!.apply {
-                            testType shouldBe "MANUAL"
-                            methodCounts.apply {
-                                new shouldBe 0
-                                modified shouldBe 0
-                                unaffected shouldBe 0
-                                all shouldBe 2
-                            }
-                        }
-                    }
                 }
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(

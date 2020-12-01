@@ -56,10 +56,6 @@ class Routes {
         @Location("/tests/covered-methods")
         class CoveredMethodsByTest(val scope: Scope)
 
-        //TODO remove after changes on the frontend
-        @Location("/test-types/covered-methods")
-        class CoveredMethodsByType(val scope: Scope)
-
         @Location("/tests/{testId}/methods")
         class MethodsCoveredByTest(val testId: String, val scope: Scope) {
             @Location("/summary")
@@ -76,24 +72,6 @@ class Routes {
 
             @Location("/unaffected")
             class Unaffected(val test: MethodsCoveredByTest)
-        }
-
-        @Location("/test-types/{testType}/methods")
-        class MethodsCoveredByTestType(val testType: String, val scope: Scope) {
-            @Location("/summary")
-            class Summary(val type: MethodsCoveredByTestType)
-
-            @Location("/all")
-            class All(val type: MethodsCoveredByTestType)
-
-            @Location("/new")
-            class New(val type: MethodsCoveredByTestType)
-
-            @Location("/modified")
-            class Modified(val type: MethodsCoveredByTestType)
-
-            @Location("/unaffected")
-            class Unaffected(val type: MethodsCoveredByTestType)
         }
     }
 
@@ -157,10 +135,6 @@ class Routes {
         @Location("/tests/covered-methods")
         class CoveredMethodsByTest(val build: Build)
 
-        //TODO remove after changes on the frontend
-        @Location("/test-types/covered-methods")
-        class CoveredMethodsByType(val build: Build)
-
         @Location("/tests/{testId}/methods")
         class MethodsCoveredByTest(val testId: String, val build: Build) {
             @Location("/summary")
@@ -177,24 +151,6 @@ class Routes {
 
             @Location("/unaffected")
             class Unaffected(val test: MethodsCoveredByTest)
-        }
-
-        @Location("/test-types/{testType}/methods")
-        class MethodsCoveredByTestType(val testType: String, val build: Build) {
-            @Location("/summary")
-            class Summary(val type: MethodsCoveredByTestType)
-
-            @Location("/all")
-            class All(val type: MethodsCoveredByTestType)
-
-            @Location("/new")
-            class New(val type: MethodsCoveredByTestType)
-
-            @Location("/modified")
-            class Modified(val type: MethodsCoveredByTestType)
-
-            @Location("/unaffected")
-            class Unaffected(val type: MethodsCoveredByTestType)
         }
     }
 

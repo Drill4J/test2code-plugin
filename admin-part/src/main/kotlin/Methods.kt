@@ -117,17 +117,6 @@ fun MethodsCoveredByTest.toSummary() = TestedMethodsSummary(
     )
 )
 
-fun MethodsCoveredByType.toSummary() = TestedMethodsByTypeSummary(
-    testType = testType,
-    testsCount = testsCount,
-    methodCounts = CoveredMethodCounts(
-        all = allMethods.count(),
-        modified = modifiedMethods.count(),
-        unaffected = unaffectedMethods.count(),
-        new = newMethods.count()
-    )
-)
-
 private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
     next()
 } else null
