@@ -311,6 +311,7 @@ data class TestCoverageDto(
     val name: String,
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
+    val parentCoverage: CoverDto = CoverDto(),
     val stats: TestStats = TestStats(0, TestResult.PASSED)
 )
 

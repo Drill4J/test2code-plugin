@@ -39,7 +39,8 @@ internal fun GroupedTests.withoutCoverage(
 }
 
 internal fun CoverContext.testsToRunDto(
-    bundleCounters: BundleCounters = build.bundleCounters
+    bundleCounters: BundleCounters = build.bundleCounters,
+    parentBundleCounters: BundleCounters? = parentBuild?.bundleCounters
 ): List<TestCoverageDto> = testsToRun.flatMap { (type, tests) ->
     tests.map { name ->
         val typedTest = TypedTest(type = type, name = name)
@@ -49,6 +50,7 @@ internal fun CoverContext.testsToRunDto(
             name = name,
             toRun = typedTest !in bundleCounters.byTest,
             coverage = bundleCounters.byTest[typedTest]?.toCoverDto(packageTree) ?: CoverDto(),
+            parentCoverage = parentBundleCounters?.byTest?.get(typedTest)?.toCoverDto(packageTree) ?: CoverDto(),
             stats = bundleCounters.statsByTest[typedTest] ?: TestStats(0, TestResult.PASSED)
         )
     }
