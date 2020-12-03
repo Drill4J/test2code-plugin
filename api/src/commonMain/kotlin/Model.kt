@@ -355,7 +355,16 @@ data class TestCountDto(
 @Serializable
 data class TestSummary(
     val coverage: CoverDto,
-    val testCount: Int = 0
+    val testCount: Int = 0,
+    val duration: Long = 0L
+)
+
+@Serializable
+data class TestsToRunSummaryDto(
+    val count: Int,
+    val completedCount: Int,
+    val currentDuration: Long,
+    val durationByParent: Long
 )
 
 @Serializable
@@ -371,12 +380,6 @@ enum class RiskType {
 }
 
 typealias GroupedTests = Map<String, List<String>>
-
-@Serializable
-data class TestTypeCount(
-    val type: String,
-    val count: Int
-)
 
 @Serializable
 data class GroupedTestsDto(
@@ -403,6 +406,7 @@ data class SummaryDto(
     val arrow: ArrowType = ArrowType.UNCHANGED,
     val risks: Int = 0, //TODO remove after changes on frontend
     val riskCounts: RiskCounts = RiskCounts(),
+    val testDuration: Long,
     val tests: List<TestTypeSummary> = emptyList(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet()

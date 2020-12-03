@@ -323,6 +323,7 @@ class Plugin(
             agentInfo.name,
             context.testsToRun,
             risks,
+            coverageInfoSet.coverageByTests,
             parentCoverageCount
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary)
@@ -366,9 +367,6 @@ class Plugin(
             send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
         }
-        Routes.Build.Summary(buildRoute).let {
-            send(buildVersion, Routes.Build.Summary.TestsToRun(it), summary.testsToRun.toTypeCounts())
-        }
         //TODO remove after changes on the frontend
         send(buildVersion, Routes.Build.CoveredMethodsByTest(buildRoute), methodsCoveredByTest)
 
@@ -384,6 +382,9 @@ class Plugin(
         send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
         val context = state.coverContext() //TODO remove context from this method
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
+        Routes.Build.Summary(buildRoute).let {
+            send(buildVersion, Routes.Build.Summary.TestsToRun(it), context.testsToRunSummaryDto())
+        }
     }
 
     private suspend fun Plugin.sendGroupSummary(summary: AgentSummary) {
