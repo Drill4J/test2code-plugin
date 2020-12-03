@@ -57,9 +57,10 @@ internal fun BundleCounters.calculateCoverageData(
     val coverageByTests = CoverageByTests(
         all = TestSummary(
             coverage = bundle.toCoverDto(context.packageTree),
-            testCount = bundlesByTests.keys.count()
+            testCount = bundlesByTests.keys.count(),
+            duration = statsByTest.values.map { it.duration }.sum()
         ),
-        byType = byTestType.coveragesByTestType(byTest, context)
+        byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
     )
     logger.info { coverageByTests.byType }
 
@@ -120,13 +121,15 @@ internal fun BundleCounters.calculateCoverageData(
 
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
-    context: CoverContext
+    context: CoverContext,
+    statsByTest: Map<TypedTest, TestStats>
 ): List<TestTypeSummary> = map { (testType, bundle) ->
     TestTypeSummary(
         type = testType,
         summary = TestSummary(
             coverage = bundle.toCoverDto(context.packageTree),
-            testCount = bundleMap.keys.filter { it.type == testType }.distinct().count()
+            testCount = bundleMap.keys.filter { it.type == testType }.distinct().count(),
+            duration = statsByTest.filter { it.key.type == testType }.map { it.value.duration }.sum()
         )
     )
 }

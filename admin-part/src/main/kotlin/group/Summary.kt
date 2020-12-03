@@ -19,8 +19,11 @@ internal data class AgentSummary(
     val riskCounts: RiskCounts = RiskCounts(),
     val risks: TypedRisks,
     val tests: GroupedTests,
-    val testsToRun: GroupedTests
+    val testDuration: Long,
+    val testsToRun: GroupedTests,
+    val durationByType: GroupedDuration
 )
+internal typealias GroupedDuration = Map<String, Long>
 
 internal typealias AgentSummaries = PersistentMap<String, AgentSummary>
 
@@ -52,6 +55,7 @@ internal fun CachedBuild.toSummary(
     agentName: String,
     testsToRun: GroupedTests,
     risks: TypedRisks,
+    coverageByTests: CoverageByTests? = null,
     parentCoverageCount: Count? = null
 ): AgentSummary = AgentSummary(
     name = agentName,
@@ -62,6 +66,10 @@ internal fun CachedBuild.toSummary(
     scopeCount = coverage.scopeCount,
     arrow = parentCoverageCount.arrowType(coverage.count),
     risks = risks,
+    testDuration = coverageByTests?.all?.duration ?: 0L,
+    durationByType = coverageByTests?.byType?.groupBy { it.type }
+        ?.mapValues { (_, values) -> values.map { it.summary.duration }.sum() }
+        ?: emptyMap(),
     tests = tests.tests,
     testsToRun = testsToRun.withoutCoverage(bundleCounters)
 ).run { copy(riskCounts = risks.toCounts()) }
@@ -81,7 +89,8 @@ internal fun AgentSummary.toDto() = SummaryDto(
     arrow = arrow,
     risks = riskCounts.total, //TODO remove after changes on frontend
     riskCounts = riskCounts,
-    tests = coverageByType.toTestTypeSummary(tests),
+    testDuration = testDuration,
+    tests = coverageByType.toTestTypeSummary(tests, durationByType),
     testsToRun = testsToRun.toTestCountDto(),
     recommendations = recommendations()
 )
@@ -98,8 +107,12 @@ internal operator fun AgentSummary.plus(
     arrow = ArrowType.UNCHANGED,
     risks = emptyMap(),
     riskCounts = riskCounts + other.riskCounts,
+    testDuration = testDuration + other.testDuration,
     tests = tests.merge(other.tests, ::mergeDistinct),
-    testsToRun = testsToRun.merge(other.testsToRun, ::mergeDistinct)
+    testsToRun = testsToRun.merge(other.testsToRun, ::mergeDistinct),
+    durationByType = durationByType.merge(other.durationByType) { duration1, duration2 ->
+        duration1 + duration2
+    }
 )
 
 operator fun Count.plus(other: Count): Count = copy(
@@ -118,7 +131,10 @@ private operator fun RiskCounts.plus(other: RiskCounts) = RiskCounts(
     total = total + other.total
 )
 
-private fun Map<String, Count>.toTestTypeSummary(tests: GroupedTests) = map { (type, count) ->
+private fun Map<String, Count>.toTestTypeSummary(
+    tests: GroupedTests,
+    durationByType: GroupedDuration
+) = map { (type, count) ->
     TestTypeSummary(
         type = type,
         summary = TestSummary(
@@ -126,7 +142,8 @@ private fun Map<String, Count>.toTestTypeSummary(tests: GroupedTests) = map { (t
                 percentage = count.percentage(),
                 count = count
             ),
-            testCount = tests[type]?.count() ?: 0
+            testCount = tests[type]?.count() ?: 0,
+            duration = durationByType[type] ?: 0L
         )
     )
 }

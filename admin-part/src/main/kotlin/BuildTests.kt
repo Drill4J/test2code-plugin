@@ -38,6 +38,12 @@ internal fun GroupedTests.withoutCoverage(
     TypedTest(name, type) !in bundleCounters.byTest
 }
 
+internal fun GroupedTests.withCoverage(
+    bundleCounters: BundleCounters
+): GroupedTests = filter { name, type ->
+    TypedTest(name, type) in bundleCounters.byTest
+}
+
 internal fun CoverContext.testsToRunDto(
     bundleCounters: BundleCounters = build.bundleCounters
 ): List<TestCoverageDto> = testsToRun.flatMap { (type, tests) ->
@@ -54,16 +60,26 @@ internal fun CoverContext.testsToRunDto(
     }
 }
 
+internal fun CoverContext.testsToRunSummaryDto() = TestsToRunSummaryDto(
+    count = testsToRun.totalCount(),
+    completedCount = testsToRun.withCoverage(build.bundleCounters).totalCount(),
+    currentDuration = testsToRun.totalDuration(build.bundleCounters.statsByTest),
+    durationByParent = testsToRunDurationByParent
+)
+
+internal fun GroupedTests.totalDuration(
+    statsByTest: Map<TypedTest, TestStats>
+): Long = this.flatMap { (type, tests) ->
+    tests.map { name ->
+        val typedTest = TypedTest(type = type, name = name)
+        statsByTest[typedTest]?.duration
+    }
+}.filterNotNull().sum()
+
+
 internal fun GroupedTests.toDto() = GroupedTestsDto(
     totalCount = totalCount(),
     byType = this
 )
 
 internal fun GroupedTests.totalCount(): Int = values.sumBy { it.count() }
-
-internal fun GroupedTests.toTypeCounts(): List<TestTypeCount> = map { (testType, list) ->
-    TestTypeCount(
-        type = testType,
-        count = list.count()
-    )
-}

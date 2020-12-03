@@ -117,8 +117,7 @@ class Routes {
                 @Location("/by-type")
                 class ByType(val tests: Tests)
             }
-
-            @Location("/tests-to-run/by-type")
+            @Location("/tests-to-run")
             class TestsToRun(val parent: Summary)
         }
 
