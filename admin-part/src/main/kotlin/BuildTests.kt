@@ -83,3 +83,19 @@ internal fun GroupedTests.toDto() = GroupedTestsDto(
 )
 
 internal fun GroupedTests.totalCount(): Int = values.sumBy { it.count() }
+
+//TODO remove after changes on frontend EPMDJ-5622
+internal fun List<TestCoverageDto>.toUsageInfo() = groupBy { it.type }.map { (type, testCoverages) ->
+    TestsUsagesInfoByType(
+        testType = type,
+        tests = testCoverages.map {
+            TestUsagesInfo(
+                id = TypedTest(it.name, type).id(),
+                testName = it.name,
+                methodCalls = it.coverage.methodCount.covered,
+                coverage = it.coverage.percentage,
+                stats = it.stats
+            )
+        }
+    )
+}

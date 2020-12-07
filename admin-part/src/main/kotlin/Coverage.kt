@@ -49,13 +49,13 @@ internal fun BundleCounters.calculateCoverageData(
     val assocTestsMap = bundlesByTests.associatedTests()
     val associatedTests = assocTestsMap.getAssociatedTests()
 
-    val totalCount = context.packageTree.totalCount
-    val coverageCount = bundle.count.copy(total = totalCount)
+    val tree = context.packageTree
+    val coverageCount = bundle.count.copy(total = tree.totalCount)
     val totalCoveragePercent = coverageCount.percentage()
 
     val coverageByTests = CoverageByTests(
         all = TestSummary(
-            coverage = bundle.toCoverDto(context.packageTree),
+            coverage = bundle.toCoverDto(tree),
             testCount = bundlesByTests.keys.count(),
             duration = statsByTest.values.map { it.duration }.sum()
         ),
@@ -63,9 +63,9 @@ internal fun BundleCounters.calculateCoverageData(
     )
     logger.info { coverageByTests.byType }
 
-    val methodCount = bundle.methodCount.copy(total = context.packageTree.totalMethodCount)
-    val classCount = bundle.classCount.copy(total = context.packageTree.totalClassCount)
-    val packageCount = bundle.packageCount.copy(total = context.packageTree.packages.count())
+    val methodCount = bundle.methodCount.copy(total = tree.totalMethodCount)
+    val classCount = bundle.classCount.copy(total = tree.totalClassCount)
+    val packageCount = bundle.packageCount.copy(total = tree.packages.count())
     val coverageBlock: Coverage = when (scope) {
         null -> {
             BuildCoverage(
@@ -74,7 +74,7 @@ internal fun BundleCounters.calculateCoverageData(
                 methodCount = methodCount,
                 classCount = classCount,
                 packageCount = packageCount,
-                testTypeOverlap = testTypeOverlap.toCoverDto(context.packageTree),
+                testTypeOverlap = testTypeOverlap.toCoverDto(tree),
                 byTestType = coverageByTests.byType
             )
         }
@@ -82,11 +82,11 @@ internal fun BundleCounters.calculateCoverageData(
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
             count = coverageCount,
-            overlap = overlap.toCoverDto(context.packageTree),
+            overlap = overlap.toCoverDto(tree),
             methodCount = methodCount,
             classCount = classCount,
             packageCount = packageCount,
-            testTypeOverlap = testTypeOverlap.toCoverDto(context.packageTree),
+            testTypeOverlap = testTypeOverlap.toCoverDto(tree),
             byTestType = coverageByTests.byType
         )
     }
@@ -94,25 +94,26 @@ internal fun BundleCounters.calculateCoverageData(
 
     val buildMethods = context.calculateBundleMethods(bundle)
 
-    val packageCoverage = context.packageTree.packages.treeCoverage(bundle, assocTestsMap)
+    val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
     val coveredByTest = bundlesByTests.methodsCoveredByTest(context)
 
-    val testsUsagesInfoByType = coverageByTests.byType.map { (testType, summary) ->
-        TestsUsagesInfoByType(
-            testType = testType,
-            coverage = summary.coverage.percentage,
-            methodsCount = summary.coverage.methodCount.covered,
-            tests = testUsages(totalCount, testType)
+    val tests = bundlesByTests.map { (typedTest, bundle) ->
+        TestCoverageDto(
+            id = typedTest.id(),
+            type = typedTest.type,
+            name = typedTest.name,
+            coverage = bundle.toCoverDto(tree),
+            stats = statsByTest[typedTest] ?: TestStats(0, TestResult.PASSED)
         )
-    }.sortedBy { it.testType }
+    }.sortedBy { it.type }
 
     return CoverageInfoSet(
         associatedTests,
         coverageBlock,
         buildMethods,
         packageCoverage,
-        testsUsagesInfoByType,
+        tests,
         coverageByTests,
         coveredByTest
     )

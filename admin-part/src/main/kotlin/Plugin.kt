@@ -378,7 +378,9 @@ class Plugin(
             }
             send(buildVersion, Routes.Build.AssociatedTests(buildRoute), beautifiedAssociatedTests)
         }
-        send(buildVersion, Routes.Build.TestsUsages(buildRoute), testsUsagesInfoByType)
+        send(buildVersion, Routes.Build.Tests(buildRoute), tests)
+        //TODO remove after changes on frontend EPMDJ-5622
+        send(buildVersion, Routes.Build.TestsUsages(buildRoute), tests.toUsageInfo())
         Routes.Build.Summary.Tests(Routes.Build.Summary(buildRoute)).let {
             send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
@@ -468,7 +470,9 @@ class Plugin(
             }
             send(buildVersion, Routes.Scope.AssociatedTests(scope), beautifiedAssociatedTests)
         }
-        send(buildVersion, Routes.Scope.TestsUsages(scope), testsUsagesInfoByType)
+        send(buildVersion, Routes.Scope.Tests(scope), tests)
+        //TODO remove after changes on frontend EPMDJ-5622
+        send(buildVersion, Routes.Scope.TestsUsages(scope), tests.toUsageInfo())
         Routes.Scope.Summary.Tests(Routes.Scope.Summary(scope)).let {
             send(buildVersion, Routes.Scope.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
