@@ -22,24 +22,10 @@ internal data class CoverageInfoSet(
     val coverage: Coverage,
     val buildMethods: BuildMethods = BuildMethods(),
     val packageCoverage: List<JavaPackageCoverage> = emptyList(),
-    val testsUsagesInfoByType: List<TestsUsagesInfoByType> = emptyList(),
+    val tests: List<TestCoverageDto> = emptyList(),
     val coverageByTests: CoverageByTests,
     val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList()
 )
-
-fun BundleCounters.testUsages(
-    totalCoverageCount: Int,
-    testType: String
-): List<TestUsagesInfo> = byTest.filter { it.key.type == testType }
-    .map { (test, bundle) ->
-        TestUsagesInfo(
-            id = test.id(),
-            testName = test.name,
-            methodCalls = bundle.methodCount.covered,
-            coverage = bundle.count.copy(total = totalCoverageCount).percentage(),
-            stats = statsByTest[test] ?: TestStats(duration = 0, result = TestResult.PASSED)
-        )
-    }.sortedBy { it.testName }
 
 fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) ->
     AssociatedTests(

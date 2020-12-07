@@ -49,6 +49,10 @@ class Routes {
             }
         }
 
+        @Location("/tests")
+        class Tests(val scope: Scope)
+
+        //TODO remove after changes on the frontend EPMDJ-5622
         @Location("/tests-usages")
         class TestsUsages(val scope: Scope)
 
@@ -121,6 +125,10 @@ class Routes {
             class TestsToRun(val parent: Summary)
         }
 
+        @Location("/tests")
+        class Tests(val build: Build)
+
+        //TODO remove after changes on the frontend EPMDJ-5622
         @Location("/tests-usages")
         class TestsUsages(val build: Build)
 
