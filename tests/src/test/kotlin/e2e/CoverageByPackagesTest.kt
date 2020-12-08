@@ -44,7 +44,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()) { status, _ ->
                     status shouldBe HttpStatusCode.OK
                 }.join()
-                delay(1100)//todo move it to core library
+                delay(3000)//todo move it to core library
 
                 val scopeId = plugUi.activeScope()!!.id
                 plugUi.subscribeOnScope(scopeId) {
@@ -99,7 +99,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         st shouldBe HttpStatusCode.OK
                     }.join()
                 }.join()
-                delay(1100)//todo move it to core library
+                delay(3000)//todo move it to core library
 
                 plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
                     coveragePackages()!!.first().apply {
