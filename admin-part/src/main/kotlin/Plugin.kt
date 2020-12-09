@@ -4,7 +4,6 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
-import com.epam.drill.plugin.api.message.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -141,19 +140,25 @@ class Plugin(
         }
     }
 
-    override suspend fun processData(dm: DrillMessage): Any = dm.content!!.let { content ->
+    override suspend fun processData(
+        instanceId: String,
+        content: String
+    ): Any = run {
         val message = CoverMessage.serializer() parse content
-        processData(message)
+        processData(instanceId, message)
             .let { "" } //TODO eliminate magic empty strings from API
     }
 
-    private suspend fun processData(message: CoverMessage) = when (message) {
+    private suspend fun processData(
+        instanceId: String,
+        message: CoverMessage
+    ) = when (message) {
         is InitInfo -> {
             if (message.init) {
                 state.init()
             }
-            logger.info { message.message } //log init message
-            logger.info { "${message.classesCount} classes to load" }
+            logger.info { "$instanceId: ${message.message}" } //log init message
+            logger.info { "$instanceId: ${message.classesCount} classes to load" }
         }
         is InitDataPart -> {
             (state.data as? DataBuilder)?.also {
@@ -165,25 +170,25 @@ class Plugin(
             processInitialized()
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
-        is SessionStarted -> logger.info { "Agent session ${message.sessionId} started." }
-        is SessionCancelled -> logger.info { "Agent session ${message.sessionId} cancelled." }
+        is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
+        is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
         is SessionsCancelled -> message.run {
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
-            logger.info { "Agent sessions cancelled: $ids." }
+            logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
         is CoverDataPart -> activeScope.addProbes(message.sessionId) { message.data }
         is SessionChanged -> activeScope.probesChanged()
         is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             state.finishSession(message.sessionId) ?: logger.info {
-                "No active session with id ${message.sessionId}."
+                "$instanceId: No active session with id ${message.sessionId}."
             }
         }
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
         }
-        else -> logger.info { "Message is not supported! $message" }
+        else -> logger.info { "$instanceId: Message is not supported! $message" }
     }
 
     private suspend fun Plugin.processInitialized(): Boolean {
@@ -469,9 +474,6 @@ class Plugin(
                 send(buildVersion, Routes.Scope.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
             }
         }
-    }
-
-    override suspend fun dropData() {
     }
 
     internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
