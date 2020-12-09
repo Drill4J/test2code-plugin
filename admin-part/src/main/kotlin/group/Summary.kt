@@ -90,7 +90,7 @@ internal fun AgentSummary.toDto() = SummaryDto(
     risks = riskCounts.total, //TODO remove after changes on frontend
     riskCounts = riskCounts,
     testDuration = testDuration,
-    tests = coverageByType.toTestTypeSummary(tests, durationByType),
+    tests = toTestTypeSummary(),
     testsToRun = testsToRun.toTestCountDto(),
     recommendations = recommendations()
 )
@@ -131,21 +131,20 @@ private operator fun RiskCounts.plus(other: RiskCounts) = RiskCounts(
     total = total + other.total
 )
 
-private fun Map<String, Count>.toTestTypeSummary(
-    tests: GroupedTests,
-    durationByType: GroupedDuration
-) = map { (type, count) ->
-    TestTypeSummary(
-        type = type,
-        summary = TestSummary(
-            coverage = CoverDto(
-                percentage = count.percentage(),
-                count = count
-            ),
-            testCount = tests[type]?.count() ?: 0,
-            duration = durationByType[type] ?: 0L
+private fun AgentSummary.toTestTypeSummary() = coverageByType.map { (type, count) ->
+    count.copy(total = coverage.total).let {
+        TestTypeSummary(
+            type = type,
+            summary = TestSummary(
+                coverage = CoverDto(
+                    percentage = it.percentage(),
+                    count = it
+                ),
+                testCount = tests[type]?.count() ?: 0,
+                duration = durationByType[type] ?: 0L
+            )
         )
-    )
+    }
 }
 
 private fun <K, V> Map<K, V>.merge(
