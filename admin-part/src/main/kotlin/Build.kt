@@ -13,24 +13,25 @@ internal data class CachedBuild(
     val parentVersion: String = "",
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
     val bundleCounters: BundleCounters = BundleCounters.empty,
-    val coverage: CachedBuildCoverage = CachedBuildCoverage(version),
+    val stats: BuildStats = BuildStats(version),
     val tests: BuildTests = BuildTests()
 )
 
 @Serializable
-internal data class CachedBuildCoverage(
+internal data class BuildStats(
     @Id val version: String,
-    val count: Count = zeroCount,
+    val coverage: Count = zeroCount,
     val methodCount: Count = zeroCount,
-    val byTestType: Map<String, Count> = emptyMap(),
+    val coverageByType: Map<String, Count> = emptyMap(),
     val scopeCount: Int = 0
 )
 
-internal fun BuildCoverage.toCachedBuildCoverage(version: String) = CachedBuildCoverage(
-    version = version,
-    count = count,
+internal fun BuildCoverage.toCachedBuildStats(
+    context: CoverContext
+): BuildStats = context.build.stats.copy(
+    coverage = count,
     methodCount = methodCount,
-    byTestType = byTestType.map { it.type to it.summary.coverage.count }.toMap(),
+    coverageByType = byTestType.map { it.type to it.summary.coverage.count }.toMap(),
     scopeCount = finishedScopesCount
 )
 

@@ -153,15 +153,21 @@ internal class AgentState(
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
                     bundleCounters.all.coveredMethods(methodChanges.deleted)
                 }.orEmpty()
-                val parentTestsToRunDuration = parentBuild?.let {
-                    testsToRun.totalDuration(it.bundleCounters.statsByTest)
-                } ?: 0L
+                val testsToRunParentDurations = parentBuild?.let {
+                    TestDurations(
+                        all = testsToRun.totalDuration(it.bundleCounters.statsByTest),
+                        byType = testsToRun.mapValues { (type, tests) ->
+                            mapOf(type to tests).totalDuration(it.bundleCounters.statsByTest)
+                        }
+                    )
+                } ?: TestDurations(all = 0L, byType = emptyMap())
+                logger.debug { "testsToRun parent durations $testsToRunParentDurations" }
                 _coverContext.value = coverContext.copy(
                     methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
                     build = build.copy(parentVersion = parentVersion),
                     parentBuild = parentBuild,
-                    testsToRunDurationByParent = parentTestsToRunDuration,
-                    testsToRun = testsToRun
+                    testsToRun = testsToRun,
+                    testsToRunParentDurations = testsToRunParentDurations
                 )
             }
         } ?: run {
@@ -207,11 +213,11 @@ internal class AgentState(
         )
     }
 
-    internal fun updateBuildCoverage(
-        buildVersion: String,
-        buildCoverage: BuildCoverage
+    internal fun updateBuildStats(
+        buildCoverage: BuildCoverage,
+        context: CoverContext
     ): CachedBuild = updateBuild {
-        copy(coverage = buildCoverage.toCachedBuildCoverage(buildVersion))
+        copy(stats = buildCoverage.toCachedBuildStats(context))
     }
 
     private fun updateBuild(

@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code.coverage
 
-import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import kotlinx.serialization.*
@@ -17,6 +16,11 @@ internal data class DiffMethods(
     override fun hashCode(): Int = super.hashCode()
 }
 
+data class TestDurations(
+    val all: Long = 0L,
+    val byType: Map<String, Long> = emptyMap()
+)
+
 internal data class CoverContext(
     val agentType: String,
     val packageTree: PackageTree,
@@ -26,8 +30,8 @@ internal data class CoverContext(
     val classBytes: Map<String, ByteArray> = emptyMap(),
     val build: CachedBuild,
     val parentBuild: CachedBuild? = null,
-    val testsToRunDurationByParent: Long = 0L,
-    val testsToRun: GroupedTests = emptyMap()
+    val testsToRun: GroupedTests = emptyMap(),
+    val testsToRunParentDurations : TestDurations = TestDurations()
 ) {
     override fun equals(other: Any?): Boolean = super.equals(other)
 

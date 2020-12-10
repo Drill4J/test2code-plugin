@@ -60,13 +60,6 @@ internal fun CoverContext.testsToRunDto(
     }
 }
 
-internal fun CoverContext.testsToRunSummaryDto() = TestsToRunSummaryDto(
-    count = testsToRun.totalCount(),
-    completedCount = testsToRun.withCoverage(build.bundleCounters).totalCount(),
-    currentDuration = testsToRun.totalDuration(build.bundleCounters.statsByTest),
-    durationByParent = testsToRunDurationByParent
-)
-
 internal fun GroupedTests.totalDuration(
     statsByTest: Map<TypedTest, TestStats>
 ): Long = this.flatMap { (type, tests) ->

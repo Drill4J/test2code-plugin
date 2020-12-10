@@ -37,10 +37,10 @@ internal suspend fun ClassData.store(storage: StoreClient) {
 
 internal suspend fun StoreClient.loadBuild(
     version: String
-): CachedBuild? = findById<CachedBuildCoverage>(version)?.let { coverage ->
+): CachedBuild? = findById<BuildStats>(version)?.let { stats ->
     CachedBuild(
         version = version,
-        coverage = coverage,
+        stats = stats,
         bundleCounters = findById<StoredBundles>(version)?.run {
             ProtoBuf.load(BundleCounters.serializer(), data)
         } ?: BundleCounters.empty,
@@ -54,7 +54,7 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
     storage.executeInAsyncTransaction {
         val bundleData = ProtoBuf.dump(BundleCounters.serializer(), bundleCounters)
         val testData = ProtoBuf.dump(BuildTests.serializer(), tests)
-        store(coverage)
+        store(stats)
         store(StoredBundles(version, bundleData))
         store(StoredBuildTests(version, testData))
     }

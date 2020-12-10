@@ -207,6 +207,7 @@ class Plugin(
         sendGateSettings()
         sendParentBuild()
         sendBaseline()
+        sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes(buildVersion)
         calculateAndSendCachedCoverage()
@@ -225,6 +226,15 @@ class Plugin(
         message = storeClient.findById<GlobalAgentData>(agentId)?.baseline?.version?.let(::BuildVersionDto) ?: ""
     )
 
+    private suspend fun sendParentTestsToRunStats() = send(
+        buildVersion,
+        destination = Routes.Build().let(Routes.Build::TestsToRun).let(Routes.Build.TestsToRun::ParentTestsToRunStats),
+        message = state.storeClient.loadTestsToRunSummary(
+            buildVersion = buildVersion,
+            parentVersion = state.coverContext().build.parentVersion
+        ).map { it.toTestsToRunSummaryDto() }
+    )
+
     private suspend fun ClassData.sendBuildStats() {
         send(buildVersion, Routes.Data().let(Routes.Data::Build), state.coverContext().toBuildStatsDto())
     }
@@ -235,7 +245,7 @@ class Plugin(
         )
         state.updateProbes(scopes.enabled())
         val coverContext = state.coverContext()
-        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.coverage.scopeCount)
+        build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
             val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
@@ -319,7 +329,7 @@ class Plugin(
         scopeCount: Int
     ) {
         val coverageInfoSet = calculateCoverageData(context)
-        val parentCoverageCount = context.parentBuild?.let { context.parentBuild.coverage.count } ?: zeroCount
+        val parentCoverageCount = context.parentBuild?.let { context.parentBuild.stats.coverage } ?: zeroCount
         val risks = context.methodChanges.risks(all)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
@@ -328,8 +338,7 @@ class Plugin(
                 context.methodChanges.run { new.count() + modified.count() }
             )
         )
-
-        state.updateBuildCoverage(buildVersion, buildCoverage)
+        state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
             byTest.keys.groupBy(TypedTest::type, TypedTest::name),
             coverageInfoSet.associatedTests
@@ -398,8 +407,10 @@ class Plugin(
         send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
         val context = state.coverContext() //TODO remove context from this method
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
+        val testsToRunSummary = context.toTestsToRunSummary()
+        state.storeClient.store(testsToRunSummary)
         Routes.Build.Summary(buildRoute).let {
-            send(buildVersion, Routes.Build.Summary.TestsToRun(it), context.testsToRunSummaryDto())
+            send(buildVersion, Routes.Build.Summary.TestsToRun(it), testsToRunSummary.toTestsToRunSummaryDto())
         }
     }
 
