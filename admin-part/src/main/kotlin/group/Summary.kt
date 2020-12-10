@@ -60,11 +60,11 @@ internal fun CachedBuild.toSummary(
 ): AgentSummary = AgentSummary(
     name = agentName,
     buildVersion = version,
-    coverage = coverage.count,
-    methodCount = coverage.methodCount,
-    coverageByType = coverage.byTestType,
-    scopeCount = coverage.scopeCount,
-    arrow = parentCoverageCount.arrowType(coverage.count),
+    coverage = stats.coverage,
+    methodCount = stats.methodCount,
+    coverageByType = stats.coverageByType,
+    scopeCount = stats.scopeCount,
+    arrow = parentCoverageCount.arrowType(stats.coverage),
     risks = risks,
     testDuration = coverageByTests?.all?.duration ?: 0L,
     durationByType = coverageByTests?.byType?.groupBy { it.type }

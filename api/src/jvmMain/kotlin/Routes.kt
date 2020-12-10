@@ -121,6 +121,7 @@ class Routes {
                 @Location("/by-type")
                 class ByType(val tests: Tests)
             }
+
             @Location("/tests-to-run")
             class TestsToRun(val parent: Summary)
         }
@@ -136,7 +137,10 @@ class Routes {
         class Risks(val build: Build)
 
         @Location("/tests-to-run")
-        class TestsToRun(val build: Build)
+        class TestsToRun(val build: Build) {
+            @Location("/parent-stats")
+            class ParentTestsToRunStats(val parent: TestsToRun)
+        }
 
         //TODO remove after changes on the frontend
         @Location("/tests/covered-methods")

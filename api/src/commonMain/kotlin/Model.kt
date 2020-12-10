@@ -356,10 +356,17 @@ data class TestSummary(
 
 @Serializable
 data class TestsToRunSummaryDto(
-    val count: Int,
-    val completedCount: Int,
-    val currentDuration: Long,
-    val durationByParent: Long
+    val buildVersion: String,
+    val stats: TestsToRunStatsDto,
+    val statsByType: Map<String, TestsToRunStatsDto> = emptyMap()
+)
+
+@Serializable
+data class TestsToRunStatsDto(
+    val total: Int,
+    val completed: Int,
+    val duration: Long,
+    val parentDuration: Long
 )
 
 @Serializable
