@@ -23,7 +23,7 @@ class Plugin(
     val storeClient: StoreClient,
     agentInfo: AgentInfo,
     id: String
-) : AdminPluginPart<Action>(adminData, sender, storeClient, agentInfo, id), Closeable {
+) : AdminPluginPart<Action>(adminData, sender, agentInfo, id), Closeable {
 
     internal val logger = logger(agentInfo.id)
 
