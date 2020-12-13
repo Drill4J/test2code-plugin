@@ -16,7 +16,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
 
     @Test
     fun `cover one method in 2 scopes`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams> {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 35L) {
             connectAgent<Build1> { plugUi, build ->
 
                 plugUi.coveragePackages()!!.first().apply {
