@@ -20,13 +20,11 @@ class AgentStateTest {
         name = "ag",
         description = "",
         buildVersion = "0.1.0",
-        agentType = AgentType.JAVA,
-        status = AgentStatus.ONLINE,
+        agentType = "JAVA",
         agentVersion = "0.1.0"
     )
 
     private val adminData = object : AdminData {
-        override val buildManager = EmptyBuildManager
         override val classBytes = emptyMap<String, ByteArray>()
     }
 
@@ -101,10 +99,4 @@ class AgentStateTest {
         }
         Unit
     }
-}
-internal object EmptyBuildManager : BuildManager {
-    override val builds: Collection<BuildInfo> = emptyList()
-
-    override fun get(version: String): BuildInfo? = null
-
 }

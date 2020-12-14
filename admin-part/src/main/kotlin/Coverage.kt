@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
@@ -158,7 +157,7 @@ internal fun Sequence<ExecClassData>.overlappingBundle(
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext
 ): BundleCounter = when (context.agentType) {
-    AgentType.JAVA -> bundle(
+    "JAVA" -> bundle(
         probeIds = context.probeIds,
         classBytes = context.classBytes
     )

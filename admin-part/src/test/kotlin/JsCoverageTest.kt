@@ -1,6 +1,5 @@
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.test.js.*
@@ -27,7 +26,6 @@ class JsCoverageTest {
     @Test
     fun `coverageData for active scope with custom js probes`() = runBlocking {
         val adminData = object : AdminData {
-            override val buildManager = buildManager()
             override val classBytes = emptyMap<String, ByteArray>()
         }
         val state = AgentState(
@@ -78,16 +76,5 @@ class JsCoverageTest {
         startSession(sessionId, testType)
         block(sessionId)
         finishSession(sessionId)
-    }
-
-    private fun buildManager(): BuildManager {
-        return object : BuildManager {
-            val info = BuildInfo(jsAgentInfo.buildVersion).let { mapOf(it.version to it) }
-
-            override val builds = info.values
-
-            override fun get(version: String) = info[version]
-
-        }
     }
 }

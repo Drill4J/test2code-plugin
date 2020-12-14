@@ -1,7 +1,8 @@
+package com.epam.drill.plugins.test2code
+
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
-import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import jetbrains.exodus.entitystore.*
@@ -22,15 +23,13 @@ class PluginTest {
         name = "ag",
         description = "",
         buildVersion = "0.1.0",
-        agentType = AgentType.JAVA,
-        status = AgentStatus.ONLINE,
+        agentType = "JAVA",
         agentVersion = "0.1.0"
     )
 
     private val sender = EmptySender
 
     private val adminData = object : AdminData {
-        override val buildManager = EmptyBuildManager
         override val classBytes = emptyMap<String, ByteArray>()
     }
 

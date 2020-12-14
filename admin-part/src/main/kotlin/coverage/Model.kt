@@ -18,7 +18,7 @@ internal data class DiffMethods(
 }
 
 internal data class CoverContext(
-    val agentType: AgentType,
+    val agentType: String,
     val packageTree: PackageTree,
     val methods: List<Method>,
     val methodChanges: DiffMethods = DiffMethods(),

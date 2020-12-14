@@ -8,8 +8,7 @@ val jsAgentInfo = AgentInfo(
     name = "jsag",
     description = "",
     buildVersion = "0.1.0",
-    agentType = AgentType.NODEJS,
-    status = AgentStatus.ONLINE,
+    agentType = "NODEJS",
     agentVersion = ""
 )
 

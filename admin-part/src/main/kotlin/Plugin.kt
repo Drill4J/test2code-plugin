@@ -14,6 +14,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
+import kotlinx.serialization.json.*
 import java.io.*
 
 @Suppress("unused")
@@ -23,11 +24,17 @@ class Plugin(
     val storeClient: StoreClient,
     agentInfo: AgentInfo,
     id: String
-) : AdminPluginPart<Action>(adminData, sender, agentInfo, id), Closeable {
+) : AdminPluginPart<Action>(
+    id = id,
+    agentInfo = agentInfo,
+    adminData = adminData,
+    sender = sender
+), Closeable {
+    companion object {
+        val json = Json(JsonConfiguration.Stable)
+    }
 
     internal val logger = logger(agentInfo.id)
-
-    override val serDe: SerDe<Action> = SerDe(Action.serializer())
 
     internal val runtimeConfig = RuntimeConfig(id)
 
@@ -57,6 +64,10 @@ class Plugin(
         storeClient.deleteById<ClassData>(buildVersion)
         changeState()
     }
+
+    override fun parseAction(
+        rawAction: String
+    ): Action = json.parse(Action.serializer(), rawAction)
 
     override suspend fun doAction(
         action: Action
