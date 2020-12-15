@@ -31,7 +31,7 @@ class Plugin(
     sender = sender
 ), Closeable {
     companion object {
-        val json = Json(JsonConfiguration.Stable)
+        val json = Json(JsonConfiguration.Stable.copy(isLenient = true))
     }
 
     internal val logger = logger(agentInfo.id)
