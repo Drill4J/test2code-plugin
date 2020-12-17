@@ -7,7 +7,6 @@ plugins {
 
 val scriptUrl: String by extra
 
-
 val drillPluginId: String by project
 
 val drillApiVersion: String by project

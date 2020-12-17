@@ -114,6 +114,8 @@ class ActiveScope(
         activeSessions(key) { existing ->
             existing ?: newSession.takeIf { activeSessionOrNull(it.id) == null }
         } === newSession
+    }?.also {
+        println("some changes")
     }?.also { sessionsChanged() }
 
     fun activeSessionOrNull(id: String): ActiveSession? = activeSessions.run {

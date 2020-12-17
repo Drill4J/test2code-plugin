@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Get the version
+          id: get_version
+          run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3 | cut -c 2-)
       - id: cache-gradle
         uses: actions/cache@v1
         with:
@@ -26,4 +29,4 @@ jobs:
           java-version: 11
       - uses: eskatos/gradle-command-action@v1
         with:
-          arguments: -s check
+          arguments: -s -i check
