@@ -2,11 +2,11 @@ plugins {
     base
     distribution
     `maven-publish`
-    id("com.epam.drill.version.plugin")
     kotlin("jvm") apply false
 }
 
-apply(from = "publishing.gradle.kts")
+val scriptUrl: String by extra
+
 
 val drillPluginId: String by project
 
@@ -17,18 +17,19 @@ val coroutinesVersion: String by project
 val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
 
-subprojects {
-    apply<BasePlugin>()
-    apply(plugin = "com.epam.drill.version.plugin")
-
-    group = "${rootProject.group}.$drillPluginId"
-
+allprojects {
+    apply(from = rootProject.uri("$scriptUrl/git-version.gradle.kts"))
     repositories {
         mavenLocal()
-        maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
-        mavenCentral()
+        apply(from = "$scriptUrl/maven-repo.gradle.kts")
         jcenter()
     }
+}
+
+subprojects {
+    apply<BasePlugin>()
+
+    group = "${rootProject.group}.$drillPluginId"
 
     val constraints = listOf(
         "com.epam.drill:common-jvm:$drillApiVersion",

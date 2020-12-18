@@ -1,12 +1,10 @@
 pluginManagement {
     val kotlinVersion: String by settings
     val atomicFuVersion: String by settings
-    val drillGradlePluginVersion: String by settings
     plugins {
         kotlin("jvm") version kotlinVersion
         kotlin("plugin.serialization") version kotlinVersion
         id("kotlinx-atomicfu") version atomicFuVersion
-        id("com.epam.drill.version.plugin") version drillGradlePluginVersion
         id("com.github.johnrengelman.shadow") version "5.2.0"
     }
 
