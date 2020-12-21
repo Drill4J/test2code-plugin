@@ -292,7 +292,7 @@ class Plugin(
     }
 
     internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
-        send(buildVersion, Routes.Scope(scopeSummary.id), scopeSummary)
+        send(buildVersion, scopeById(scopeSummary.id), scopeSummary)
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
@@ -308,7 +308,7 @@ class Plugin(
             agentId,
             buildVersion
         ),
-        destination = Routes.Scopes,
+        destination = Routes.Build.Scopes(Routes.Build()).let { Routes.Build.Scopes.FinishedScopes(it) },
         message = scopes.summaries()
     )
 
@@ -464,38 +464,38 @@ class Plugin(
     internal suspend fun CoverageInfoSet.sendScopeCoverage(
         buildVersion: String,
         scopeId: String
-    ) = Routes.Scope(scopeId).let { scope ->
-        val coverageRoute = Routes.Scope.Coverage(scope)
+    ) = scopeById(scopeId).let { scope ->
+        val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
-        send(buildVersion, Routes.Scope.Methods(scope), buildMethods.toSummaryDto())
-        val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
+        send(buildVersion, Routes.Build.Scopes.Scope.Methods(scope), buildMethods.toSummaryDto())
+        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
         val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
         packages.forEach {
-            send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
+            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
         }
         if (associatedTests.isNotEmpty()) {
             logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             val beautifiedAssociatedTests = associatedTests.map { batch ->
                 batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
             }
-            send(buildVersion, Routes.Scope.AssociatedTests(scope), beautifiedAssociatedTests)
+            send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(scope), beautifiedAssociatedTests)
         }
-        send(buildVersion, Routes.Scope.Tests(scope), tests)
-        Routes.Scope.Summary.Tests(Routes.Scope.Summary(scope)).let {
-            send(buildVersion, Routes.Scope.Summary.Tests.All(it), coverageByTests.all)
-            send(buildVersion, Routes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
+        send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), tests)
+        Routes.Build.Scopes.Scope.Summary.Tests(Routes.Build.Scopes.Scope.Summary(scope)).let {
+            send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
+            send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
         }
         //TODO remove after changes on the frontend
-        send(buildVersion, Routes.Scope.CoveredMethodsByTest(scope), methodsCoveredByTest)
+        send(buildVersion, Routes.Build.Scopes.Scope.CoveredMethodsByTest(scope), methodsCoveredByTest)
 
         methodsCoveredByTest.forEach {
-            Routes.Scope.MethodsCoveredByTest(it.id, scope).let { test ->
-                send(buildVersion, Routes.Scope.MethodsCoveredByTest.Summary(test), it.toSummary())
-                send(buildVersion, Routes.Scope.MethodsCoveredByTest.All(test), it.allMethods)
-                send(buildVersion, Routes.Scope.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
-                send(buildVersion, Routes.Scope.MethodsCoveredByTest.New(test), it.newMethods)
-                send(buildVersion, Routes.Scope.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
+            Routes.Build.Scopes.Scope.MethodsCoveredByTest(it.id, scope).let { test ->
+                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), it.toSummary())
+                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), it.allMethods)
+                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
+                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), it.newMethods)
+                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
             }
         }
     }

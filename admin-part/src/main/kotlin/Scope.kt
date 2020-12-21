@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
@@ -222,3 +223,7 @@ internal data class ActiveScopeInfo(
 )
 
 internal fun ActiveScopeInfo.inc() = copy(nth = nth.inc())
+
+fun scopeById(scopeId: String) = Routes.Build.Scopes(Routes.Build()).let {
+    Routes.Build.Scopes.Scope(scopeId, it)
+}

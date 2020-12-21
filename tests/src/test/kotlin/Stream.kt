@@ -109,16 +109,16 @@ class CoverageSocketStreams : PluginStreams() {
                                         activeSessions.send(ActiveSessions.serializer(), content)
                                     }
 
-                                    is Routes.Scopes -> {
+                                    is Routes.Build.Scopes.FinishedScopes -> {
                                         scopes.send(ListSerializer(ScopeSummary.serializer()), content)
                                     }
-                                    is Routes.Scope -> {
+                                    is Routes.Build.Scopes.Scope -> {
                                         val scope =
                                             scopeSubscriptions.getValue(resolved.scopeId).first.scope
                                         scope.send(ScopeSummary.serializer(), content)
                                     }
 
-                                    is Routes.Scope.AssociatedTests -> {
+                                    is Routes.Build.Scopes.Scope.AssociatedTests -> {
                                         val associatedTests =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.associatedTests
                                         associatedTests.send(
@@ -126,7 +126,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.Methods -> {
+                                    is Routes.Build.Scopes.Scope.Methods -> {
                                         val methods =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.methods
                                         methods.send(
@@ -134,7 +134,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.Tests -> {
+                                    is Routes.Build.Scopes.Scope.Tests -> {
                                         val tests =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.tests
                                         tests.send(
@@ -142,7 +142,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.Coverage.Packages -> {
+                                    is Routes.Build.Scopes.Scope.Coverage.Packages -> {
                                         val coveragePackages = run {
                                             scopeSubscriptions.getValue(
                                                 resolved.coverage.scope.scopeId
@@ -153,7 +153,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.MethodsCoveredByTest.Summary -> {
+                                    is Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary -> {
                                         val methodsCoveredByTest = testSubscriptions
                                             .getValue(resolved.test.scope.scopeId)
                                             .first
@@ -163,7 +163,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.Coverage -> {
+                                    is Routes.Build.Scopes.Scope.Coverage -> {
                                         val coverage =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.coverage
                                         coverage.send(ScopeCoverage.serializer(), content)
@@ -232,16 +232,16 @@ class CoverageSocketStreams : PluginStreams() {
         buildVersion: String = info.buildVersionHash,
         block: suspend ScopeContext.() -> Unit
     ) {
-        val scope = Routes.Scope(scopeId)
-        val coverage = Routes.Scope.Coverage(scope)
+        val scope = scopeById(scopeId)
+        val coverage = Routes.Build.Scopes.Scope.Coverage(scope)
         arrayOf(
             scope,
-            Routes.Scope.Methods(scope),
+            Routes.Build.Scopes.Scope.Methods(scope),
             coverage,
-            Routes.Scope.Coverage.Packages(coverage),
-            Routes.Scope.Tests(scope),
-            Routes.Scope.AssociatedTests(scope),
-            Routes.Scope.AssociatedTests(scope)
+            Routes.Build.Scopes.Scope.Coverage.Packages(coverage),
+            Routes.Build.Scopes.Scope.Tests(scope),
+            Routes.Build.Scopes.Scope.AssociatedTests(scope),
+            Routes.Build.Scopes.Scope.AssociatedTests(scope)
         ).forEach {
             iut.send(
                 Subscribe(
@@ -266,9 +266,9 @@ class CoverageSocketStreams : PluginStreams() {
         buildVersion: String = info.buildVersionHash,
         block: suspend TestChannels.() -> Unit
     ) {
-        val scope = Routes.Scope(scopeId)
-        Routes.Scope.MethodsCoveredByTest(testId, scope).let {
-            Routes.Scope.MethodsCoveredByTest.Summary(it)
+        val scope = scopeById(scopeId)
+        Routes.Build.Scopes.Scope.MethodsCoveredByTest(testId, scope).let {
+            Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(it)
         }.also {
             iut.send(
                 Subscribe(

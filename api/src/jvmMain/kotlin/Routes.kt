@@ -16,65 +16,6 @@ class Routes {
         class ActiveSessions(val activeScope: ActiveScope)
     }
 
-    @Location("/scopes")
-    object Scopes
-
-    @Location("/scope/{scopeId}")
-    class Scope(val scopeId: String) {
-
-        @Location("/coverage")
-        class Coverage(val scope: Scope) {
-            @Location("/packages")
-            class Packages(val coverage: Coverage) {
-                @Location("/{path}")
-                class Package(val path: String, val packages: Packages)
-            }
-        }
-
-        @Location("/associated-tests")
-        class AssociatedTests(val scope: Scope)
-
-        @Location("/methods")
-        class Methods(val scope: Scope)
-
-        @Location("/summary")
-        class Summary(val build: Scope) {
-            @Location("/tests")
-            class Tests(val parent: Summary) {
-                @Location("/all")
-                class All(val tests: Tests)
-
-                @Location("/by-type")
-                class ByType(val tests: Tests)
-            }
-        }
-
-        @Location("/tests")
-        class Tests(val scope: Scope)
-
-        //TODO remove after changes on the frontend
-        @Location("/tests/covered-methods")
-        class CoveredMethodsByTest(val scope: Scope)
-
-        @Location("/tests/{testId}/methods")
-        class MethodsCoveredByTest(val testId: String, val scope: Scope) {
-            @Location("/summary")
-            class Summary(val test: MethodsCoveredByTest)
-
-            @Location("/all")
-            class All(val test: MethodsCoveredByTest)
-
-            @Location("/new")
-            class New(val test: MethodsCoveredByTest)
-
-            @Location("/modified")
-            class Modified(val test: MethodsCoveredByTest)
-
-            @Location("/unaffected")
-            class Unaffected(val test: MethodsCoveredByTest)
-        }
-    }
-
     @Location("/build")
     class Build {
         @Location("/coverage")
@@ -125,6 +66,7 @@ class Routes {
         @Location("/tests")
         class Tests(val build: Build)
 
+
         @Location("/risks")
         class Risks(val build: Build)
 
@@ -133,7 +75,6 @@ class Routes {
             @Location("/parent-stats")
             class ParentTestsToRunStats(val parent: TestsToRun)
         }
-
         //TODO remove after changes on the frontend
         @Location("/tests/covered-methods")
         class CoveredMethodsByTest(val build: Build)
@@ -154,6 +95,68 @@ class Routes {
 
             @Location("/unaffected")
             class Unaffected(val test: MethodsCoveredByTest)
+        }
+
+        @Location("/scopes")
+        class Scopes(val build: Build) {
+            @Location("/finished")
+            class FinishedScopes(val scopes: Scopes)
+
+            @Location("/{scopeId}")
+            class Scope(val scopeId: String, val scopes: Scopes) {
+                @Location("/coverage")
+                class Coverage(val scope: Scope) {
+                    @Location("/packages")
+                    class Packages(val coverage: Coverage) {
+                        @Location("/{path}")
+                        class Package(val path: String, val packages: Packages)
+                    }
+                }
+
+                @Location("/associated-tests")
+                class AssociatedTests(val scope: Scope)
+
+                @Location("/methods")
+                class Methods(val scope: Scope)
+
+                @Location("/summary")
+                class Summary(val build: Scope) {
+                    @Location("/tests")
+                    class Tests(val parent: Summary) {
+                        @Location("/all")
+                        class All(val tests: Tests)
+
+                        @Location("/by-type")
+                        class ByType(val tests: Tests)
+                    }
+                }
+
+                @Location("/tests")
+                class Tests(val scope: Scope)
+
+                //TODO remove after changes on the frontend
+                @Location("/tests/covered-methods")
+                class CoveredMethodsByTest(val scope: Scope)
+
+                @Location("/tests/{testId}/methods")
+                class MethodsCoveredByTest(val testId: String, val scope: Scope) {
+                    @Location("/summary")
+                    class Summary(val test: MethodsCoveredByTest)
+
+                    @Location("/all")
+                    class All(val test: MethodsCoveredByTest)
+
+                    @Location("/new")
+                    class New(val test: MethodsCoveredByTest)
+
+                    @Location("/modified")
+                    class Modified(val test: MethodsCoveredByTest)
+
+                    @Location("/unaffected")
+                    class Unaffected(val test: MethodsCoveredByTest)
+                }
+            }
+
         }
     }
 
