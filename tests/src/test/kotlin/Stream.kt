@@ -105,7 +105,7 @@ class CoverageSocketStreams : PluginStreams() {
                                     is Routes.ActiveScope -> {
                                         activeScope.send(ScopeSummary.serializer(), content)
                                     }
-                                    is Routes.ActiveSessionStats -> {
+                                    is Routes.ActiveScope.ActiveSessionSummary -> {
                                         activeSessions.send(ActiveSessions.serializer(), content)
                                     }
 
@@ -204,7 +204,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         risks.send(RiskDto.serializer().list, content)
                                     }
 
-                                    is Routes.ServiceGroup.Summary -> {
+                                    is Routes.Group.Summary -> {
                                         summary.send(SummaryDto.serializer(), content)
                                     }
                                     else -> println("!!!$url ignored")

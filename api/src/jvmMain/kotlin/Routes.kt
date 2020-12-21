@@ -7,17 +7,17 @@ import io.ktor.locations.*
 class Routes {
 
     @Location("/active-scope")
-    object ActiveScope
+    class ActiveScope {
 
-    @Location("/active-sessions")
-    object ActiveSessionStats
+        @Location("/summary/active-sessions")
+        class ActiveSessionSummary(val activeScope: ActiveScope)
 
-    @Location("/active/sessions")
-    object ActiveSessions
+        @Location("/active-sessions")
+        class ActiveSessions(val activeScope: ActiveScope)
+    }
 
     @Location("/scopes")
     object Scopes
-
 
     @Location("/scope/{scopeId}")
     class Scope(val scopeId: String) {
@@ -195,16 +195,16 @@ class Routes {
         class QualityGate(val parent: Data)
     }
 
-    @Location("/service-group")
-    class ServiceGroup {
+    @Location("/group")
+    class Group {
         @Location("/summary")
-        class Summary(val serviceGroup: ServiceGroup)
+        class Summary(val group: Group)
 
-        @Location("/active/sessions")
-        class ActiveSessions(val serviceGroup: ServiceGroup)
+        @Location("/active-sessions")
+        class ActiveSessions(val parent: Group)
 
         @Location("/data")
-        class Data(val serviceGroup: ServiceGroup) {
+        class Data(val group: Group) {
             @Location("/tests")
             class Tests(val parent: Data)
 
