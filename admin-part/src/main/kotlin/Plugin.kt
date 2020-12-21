@@ -271,13 +271,15 @@ class Plugin(
             count = sessions.count(),
             testTypes = sessions.groupBy { it.testType }.keys
         )
-        send(buildVersion, Routes.ActiveSessionStats, summary)
-        send(buildVersion, Routes.ActiveSessions, sessions)
+        Routes.ActiveScope().let {
+            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
+            send(buildVersion, Routes.ActiveScope.ActiveSessions(it), sessions)
+        }
         val serviceGroup = agentInfo.serviceGroup
         if (serviceGroup.any()) {
             val aggregatedSessions = sessionAggregator(serviceGroup, agentId, sessions) ?: sessions
             sendToGroup(
-                destination = Routes.ServiceGroup.ActiveSessions(Routes.ServiceGroup()),
+                destination = Routes.Group.ActiveSessions(Routes.Group()),
                 message = aggregatedSessions
             )
         }
@@ -285,7 +287,7 @@ class Plugin(
 
     internal suspend fun sendActiveScope() {
         val summary = activeScope.summary
-        send(buildVersion, Routes.ActiveScope, summary)
+        send(buildVersion, Routes.ActiveScope(), summary)
         sendScopeSummary(summary)
     }
 
@@ -419,9 +421,9 @@ class Plugin(
         if (serviceGroup.any()) {
             val aggregated = summaryAggregator(serviceGroup, agentId, summary)
             val summaries = summaryAggregator.getSummaries(serviceGroup)
-            Routes.ServiceGroup().let { groupParent ->
+            Routes.Group().let { groupParent ->
                 sendToGroup(
-                    destination = Routes.ServiceGroup.Summary(groupParent),
+                    destination = Routes.Group.Summary(groupParent),
                     message = ServiceGroupSummaryDto(
                         name = serviceGroup,
                         aggregated = aggregated.toDto(),
@@ -430,18 +432,18 @@ class Plugin(
                         }
                     )
                 )
-                Routes.ServiceGroup.Data(groupParent).let {
+                Routes.Group.Data(groupParent).let {
                     sendToGroup(
-                        destination = Routes.ServiceGroup.Data.Tests(it),
+                        destination = Routes.Group.Data.Tests(it),
                         message = aggregated.tests.toDto()
                     )
 
                     sendToGroup(
-                        destination = Routes.ServiceGroup.Data.TestsToRun(it),
+                        destination = Routes.Group.Data.TestsToRun(it),
                         message = aggregated.testsToRun.toDto()
                     )
                     sendToGroup(
-                        destination = Routes.ServiceGroup.Data.Recommendations(it),
+                        destination = Routes.Group.Data.Recommendations(it),
                         message = aggregated.recommendations()
                     )
                 }
