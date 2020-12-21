@@ -120,17 +120,17 @@ internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
     )
 }
 
-private suspend fun Plugin.cleanTopics(scopeId: String) = Routes.Scope(scopeId).let { scope ->
-    send(buildVersion, Routes.Scope.AssociatedTests(scope), "")
-    val coverageRoute = Routes.Scope.Coverage(scope)
+private suspend fun Plugin.cleanTopics(scopeId: String) = scopeById(scopeId).let { scope ->
+    send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(scope), "")
+    val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
     send(buildVersion, coverageRoute, "")
     state.classDataOrNull()?.let { classData ->
-        val pkgsRoute = Routes.Scope.Coverage.Packages(coverageRoute)
+        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
         classData.packageTree.packages.forEach {
-            send(buildVersion, Routes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
+            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
         }
     }
-    send(buildVersion, Routes.Scope.Tests(scope), "")
+    send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), "")
 }
 
 private suspend fun Plugin.handleChange(scope: FinishedScope) {
