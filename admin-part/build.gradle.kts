@@ -51,6 +51,7 @@ tasks {
     }
 
     shadowJar {
+        destinationDirectory.set(file("$buildDir/shadowLibs"))
         archiveFileName.set("admin-part.jar")
         isZip64 = true
         configurations = listOf(jarDeps)

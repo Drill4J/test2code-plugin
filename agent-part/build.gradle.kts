@@ -41,6 +41,7 @@ tasks {
 
     fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.commonConfig() {
         isZip64 = true
+        destinationDirectory.set(file("$buildDir/shadowLibs"))
         archiveFileName.set("agent-part.jar")
         configurations = listOf(jarDeps)
         dependencies {
