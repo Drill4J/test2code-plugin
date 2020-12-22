@@ -5,10 +5,9 @@ plugins {
     kotlin("jvm") apply false
 }
 
-val scriptUrl: String by extra
-
-
 val drillPluginId: String by project
+
+val scriptUrl: String by extra
 
 val drillApiVersion: String by project
 val atomicFuVersion: String by project
@@ -21,7 +20,8 @@ allprojects {
     apply(from = rootProject.uri("$scriptUrl/git-version.gradle.kts"))
     repositories {
         mavenLocal()
-        apply(from = "$scriptUrl/maven-repo.gradle.kts")
+        apply(from = rootProject.uri("$scriptUrl/maven-repo.gradle.kts"))
+        mavenCentral()
         jcenter()
     }
 }
