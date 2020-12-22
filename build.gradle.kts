@@ -66,7 +66,7 @@ subprojects {
         }
     }
 }
-
+println(version)
 val pluginConfigJson = file("plugin_config.json")
 
 val prepareConfigJson by tasks.creating(Copy::class) {
