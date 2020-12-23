@@ -40,7 +40,7 @@ class CoverageSocketStreams : PluginStreams() {
         coveragePackages()
         methods()
         risks()
-        testsUsages()
+        tests()
         scopes()
         summary()
     }
@@ -68,8 +68,8 @@ class CoverageSocketStreams : PluginStreams() {
     private val coveragePackages: Channel<List<JavaPackageCoverage>?> = Channel(Channel.UNLIMITED)
     suspend fun coveragePackages() = coveragePackages.receive()
 
-    private val testsUsages: Channel<List<TestsUsagesInfoByType>?> = Channel(Channel.UNLIMITED)
-    suspend fun testsUsages() = testsUsages.receive()
+    private val tests: Channel<List<TestCoverageDto>?> = Channel(Channel.UNLIMITED)
+    suspend fun tests() = tests.receive()
 
 
     private val risks: Channel<List<RiskDto>?> = Channel(Channel.UNLIMITED)
@@ -134,11 +134,11 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Scope.TestsUsages -> {
-                                        val testsUsages =
-                                            scopeSubscriptions.getValue(resolved.scope.scopeId).first.testsUsages
-                                        testsUsages.send(
-                                            ListSerializer(TestsUsagesInfoByType.serializer()), content
+                                    is Routes.Scope.Tests -> {
+                                        val tests =
+                                            scopeSubscriptions.getValue(resolved.scope.scopeId).first.tests
+                                        tests.send(
+                                            ListSerializer(TestCoverageDto.serializer()), content
                                         )
                                     }
 
@@ -177,9 +177,9 @@ class CoverageSocketStreams : PluginStreams() {
                                         methods.send(MethodsSummaryDto.serializer(), content)
                                     }
 
-                                    is Routes.Build.TestsUsages -> {
-                                        testsUsages.send(
-                                            ListSerializer(TestsUsagesInfoByType.serializer()), content
+                                    is Routes.Build.Tests -> {
+                                        tests.send(
+                                            ListSerializer(TestCoverageDto.serializer()), content
                                         )
                                     }
 
@@ -239,7 +239,7 @@ class CoverageSocketStreams : PluginStreams() {
             Routes.Scope.Methods(scope),
             coverage,
             Routes.Scope.Coverage.Packages(coverage),
-            Routes.Scope.TestsUsages(scope),
+            Routes.Scope.Tests(scope),
             Routes.Scope.AssociatedTests(scope),
             Routes.Scope.AssociatedTests(scope)
         ).forEach {
