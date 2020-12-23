@@ -52,10 +52,6 @@ class Routes {
         @Location("/tests")
         class Tests(val scope: Scope)
 
-        //TODO remove after changes on the frontend EPMDJ-5622
-        @Location("/tests-usages")
-        class TestsUsages(val scope: Scope)
-
         //TODO remove after changes on the frontend
         @Location("/tests/covered-methods")
         class CoveredMethodsByTest(val scope: Scope)
@@ -128,10 +124,6 @@ class Routes {
 
         @Location("/tests")
         class Tests(val build: Build)
-
-        //TODO remove after changes on the frontend EPMDJ-5622
-        @Location("/tests-usages")
-        class TestsUsages(val build: Build)
 
         @Location("/risks")
         class Risks(val build: Build)

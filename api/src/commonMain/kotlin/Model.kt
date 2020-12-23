@@ -277,16 +277,6 @@ data class TestedMethodsSummary(
     val methodCounts: CoveredMethodCounts
 )
 
-//TODO remove after changes on frontend EPMDJ-5622
-@Serializable
-data class TestUsagesInfo(
-    val id: String,
-    val testName: String,
-    val methodCalls: Int,
-    val coverage: Double,
-    val stats: TestStats
-)
-
 @Serializable
 data class TestCoverageDto(
     val id: String,
@@ -301,15 +291,6 @@ data class TestCoverageDto(
 data class TestStats(
     val duration: Long,
     val result: TestResult
-)
-
-//TODO remove after changes on frontend EPMDJ-5622
-@Serializable
-data class TestsUsagesInfoByType(
-    val testType: String,
-    val coverage: Double = 0.0,
-    val methodsCount: Int = 0,
-    val tests: List<TestUsagesInfo> = emptyList()
 )
 
 @Serializable

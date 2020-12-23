@@ -33,8 +33,8 @@ class ScopeContext {
         Channel(Channel.UNLIMITED)
     suspend fun coveragePackages() = coveragePackages.receive()
 
-    internal val testsUsages: Channel<List<TestsUsagesInfoByType>?> =
+    internal val tests: Channel<List<TestCoverageDto>?> =
         Channel(Channel.UNLIMITED)
-    suspend fun testsUsages() = testsUsages.receive()
+    suspend fun tests() = tests.receive()
 
 }
