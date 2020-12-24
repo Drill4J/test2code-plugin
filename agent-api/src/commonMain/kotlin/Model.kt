@@ -3,11 +3,6 @@ package com.epam.drill.plugins.test2code.common.api
 import kotlinx.serialization.*
 
 @Serializable
-data class CoverConfig(
-    val message: String = ""
-)
-
-@Serializable
 data class AstEntity(
     val path: String,
     val name: String,

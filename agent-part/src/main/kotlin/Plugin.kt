@@ -1,32 +1,46 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
+import kotlinx.serialization.json.*
 import org.jacoco.core.internal.data.*
 
 @Suppress("unused")
 class Plugin(
-    override val id: String,
-    agentContext: AgentContext
-) : AgentPart<CoverConfig, AgentAction>(id, agentContext), Instrumenter {
-    private val logger = agentContext.logging.logger("Plugin $id")
+    id: String,
+    agentContext: AgentContext,
+    sender: Sender,
+    logging: LoggerFactory
+) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter {
+    private val logger = logging.logger("Plugin $id")
 
-    override val confSerializer = CoverConfig.serializer()
+    internal val json = Json(JsonConfiguration.Stable)
 
-    override val serDe: SerDe<AgentAction> = SerDe(AgentAction.serializer())
+    private val _enabled = atomic(false)
 
-    private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider
+    private val enabled: Boolean get() = _enabled.value
+
+    private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider.apply {
+        defaultContext = agentContext
+    }
 
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
 
     private val _retransformed = atomic(false)
 
+    //TODO remove
+    override fun setEnabled(enabled: Boolean) {
+        _enabled.value = enabled
+    }
+
+    //TODO remove
+    override fun isEnabled(): Boolean = _enabled.value
+
     override fun on() {
-        val initInfo = InitInfo(
-            message = "Initializing plugin $id...\nConfig: ${config.message}"
-        )
+        val initInfo = InitInfo(message = "Initializing plugin $id...")
         sendMessage(initInfo)
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
@@ -131,9 +145,13 @@ class Plugin(
             else -> Unit
         }
     }
+
+    override fun parseAction(
+        rawAction: String
+    ): AgentAction = json.parse(AgentAction.serializer(), rawAction)
 }
 
-fun AgentPart<*, *>.probeSender(
+fun Plugin.probeSender(
     sessionId: String,
     sendChanged: Boolean = false
 ): RealtimeHandler = { execData ->
@@ -148,7 +166,7 @@ fun AgentPart<*, *>.probeSender(
         }
 }
 
-fun AgentPart<*, *>.sendMessage(message: CoverMessage) {
-    val messageStr = CoverMessage.serializer() stringify message
+fun Plugin.sendMessage(message: CoverMessage) {
+    val messageStr = json.stringify(CoverMessage.serializer(), message)
     send(messageStr)
 }
