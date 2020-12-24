@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.logger.api.*
+import com.epam.drill.plugin.api.processing.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.analysis.*
@@ -14,8 +15,8 @@ class InstrumentationTest {
     companion object {
         const val sessionId = "xxx"
 
-        val instrContextStub: com.epam.drill.plugin.api.processing.IDrillContex =
-            object : com.epam.drill.plugin.api.processing.IDrillContex {
+        val instrContextStub: AgentContext =
+            object : AgentContext {
                 override fun get(key: String): String? = when (key) {
                     DRIlL_TEST_NAME -> "test"
                     else -> null

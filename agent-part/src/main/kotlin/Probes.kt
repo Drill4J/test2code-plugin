@@ -107,14 +107,22 @@ class ExecRuntime(
  * The provider must be a Kotlin singleton object, otherwise the instrumented probe calls will fail.
  */
 open class SimpleSessionProbeArrayProvider(
-    private val instrContext: IDrillContex = DrillContext
+    defaultContext: AgentContext? = null
 ) : SessionProbeArrayProvider {
+
+    var defaultContext: AgentContext?
+        get() = _defaultContext.value
+        set(value) {
+            _defaultContext.value = value
+        }
 
     private val runtimes get() = _runtimes.value
 
-    private val _context = atomic<IDrillContex?>(null)
+    private val _defaultContext = atomic(defaultContext)
 
-    private val _globalContext = atomic<IDrillContex?>(null)
+    private val _context = atomic<AgentContext?>(null)
+
+    private val _globalContext = atomic<AgentContext?>(null)
 
     private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
 
@@ -130,7 +138,7 @@ open class SimpleSessionProbeArrayProvider(
         it(id, name, probeCount)
     } ?: stubArray(probeCount)
 
-    private operator fun IDrillContex.invoke(
+    private operator fun AgentContext.invoke(
         id: Long,
         name: String,
         probeCount: Int
@@ -152,7 +160,7 @@ open class SimpleSessionProbeArrayProvider(
             _globalContext.value = GlobalContext(sessionId, testName)
             add(sessionId, realtimeHandler)
         } else {
-            _context.update { it ?: instrContext }
+            _context.update { it ?: defaultContext }
             add(sessionId, realtimeHandler)
         }
     }
@@ -221,7 +229,7 @@ open class SimpleSessionProbeArrayProvider(
 private class GlobalContext(
     private val sessionId: String,
     private val testName: String?
-) : IDrillContex {
+) : AgentContext {
     override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME }
 
     override fun invoke(): String? = sessionId
