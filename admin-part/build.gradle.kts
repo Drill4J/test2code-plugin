@@ -39,6 +39,7 @@ dependencies {
     implementation("com.epam.drill:kodux-jvm")
     implementation("org.jetbrains.xodus:xodus-entity-store")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
+    implementation("com.github.luben:zstd-jni")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")

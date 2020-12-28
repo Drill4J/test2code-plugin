@@ -15,6 +15,7 @@ val ktorVersion: String by project
 val coroutinesVersion: String by project
 val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
+val zstdJniVersion: String by rootProject
 
 allprojects {
     apply(from = rootProject.uri("$scriptUrl/git-version.gradle.kts"))
@@ -43,6 +44,7 @@ subprojects {
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
         "com.epam.drill:kodux-jvm:0.1.8",
+        "com.github.luben:zstd-jni:$zstdJniVersion",
         "org.jetbrains.xodus:xodus-entity-store:1.3.91",
         "io.ktor:ktor-locations:$ktorVersion",
         "org.jacoco:org.jacoco.core:0.8.5",

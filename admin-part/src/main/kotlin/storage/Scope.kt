@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
@@ -27,14 +28,9 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
             store(scope.copy(data = ScopeData.empty))
-            scope.takeIf { it.any() }?.run {
-                store(
-                    ScopeDataBytes(
-                        id = id,
-                        buildVersion = buildVersion,
-                        bytes = ProtoBuf.dump(ScopeData.serializer(), data)
-                    )
-                )
+            scope.takeIf { it.any() }?.let {
+                val dataBytes: ScopeDataBytes = it.toDataBytes()
+                store(dataBytes)
             }
         }
     }
@@ -67,15 +63,23 @@ class ScopeManager(private val storage: StoreClient) {
     internal suspend fun counter(buildVersion: String): ActiveScopeInfo? = storage.findById(buildVersion)
 
     internal suspend fun storeCounter(activeScopeInfo: ActiveScopeInfo) = storage.store(activeScopeInfo)
-
-    private fun FinishedScope.withProbes(data: ScopeDataBytes?) = data?.let {
-        copy(data = ProtoBuf.load(ScopeData.serializer(), it.bytes))
-    } ?: this
 }
 
 @Serializable
-class ScopeDataBytes(
+internal class ScopeDataBytes(
     @Id val id: String,
     val buildVersion: String,
     val bytes: ByteArray
 )
+
+private fun FinishedScope.toDataBytes() = ScopeDataBytes(
+    id = id,
+    buildVersion = buildVersion,
+    bytes = ProtoBuf.dump(ScopeData.serializer(), data).let(Zstd::compress)
+)
+
+private fun FinishedScope.withProbes(
+    data: ScopeDataBytes?
+): FinishedScope = data?.let {
+    copy(data = ProtoBuf.load(ScopeData.serializer(), Zstd.decompress(it.bytes)))
+} ?: this

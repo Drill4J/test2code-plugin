@@ -2,6 +2,7 @@ package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
@@ -27,12 +28,12 @@ class StoredBuildTests(
 internal suspend fun StoreClient.loadClassData(
     version: String
 ): ClassData? = findById<StoredClassData>(version)?.run {
-    ProtoBuf.load(ClassData.serializer(), data)
+    ProtoBuf.load(ClassData.serializer(), Zstd.decompress(data))
 }
 
 internal suspend fun ClassData.store(storage: StoreClient) {
     val stored = ProtoBuf.dump(ClassData.serializer(), this)
-    storage.store(StoredClassData(buildVersion, stored))
+    storage.store(StoredClassData(buildVersion, Zstd.compress(stored)))
 }
 
 internal suspend fun StoreClient.loadBuild(
@@ -42,10 +43,10 @@ internal suspend fun StoreClient.loadBuild(
         version = version,
         stats = stats,
         bundleCounters = findById<StoredBundles>(version)?.run {
-            ProtoBuf.load(BundleCounters.serializer(), data)
+            ProtoBuf.load(BundleCounters.serializer(), Zstd.decompress(data))
         } ?: BundleCounters.empty,
         tests = findById<StoredBuildTests>(version)?.run {
-            ProtoBuf.load(BuildTests.serializer(), data)
+            ProtoBuf.load(BuildTests.serializer(), Zstd.decompress(data))
         } ?: BuildTests()
     )
 }
@@ -55,8 +56,7 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
         val bundleData = ProtoBuf.dump(BundleCounters.serializer(), bundleCounters)
         val testData = ProtoBuf.dump(BuildTests.serializer(), tests)
         store(stats)
-        store(StoredBundles(version, bundleData))
-        store(StoredBuildTests(version, testData))
+        store(StoredBundles(version, Zstd.compress(bundleData)))
+        store(StoredBuildTests(version, Zstd.compress(testData)))
     }
 }
-
