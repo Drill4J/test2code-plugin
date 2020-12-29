@@ -17,6 +17,13 @@ val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
 val zstdJniVersion: String by rootProject
 
+//TODO remove this block and gradle/classes dir after gradle is updated to v6.8
+buildscript {
+    dependencies {
+        classpath(files("gradle/classes"))
+    }
+}
+
 allprojects {
     apply(from = rootProject.uri("$scriptUrl/git-version.gradle.kts"))
     repositories {

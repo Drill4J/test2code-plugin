@@ -38,7 +38,7 @@ val genTsd by tasks.registering(JavaExec::class) {
     CommandLineArgumentProvider {
         val genPaths = main.output.classesDirs + main.runtimeDependencyFiles.files
         val drillPluginId: String by project.extra
-        val tsDir = buildDir.resolve("ts").also(File::mkdirs)
+        val tsDir = buildDir.resolve("ts").apply { mkdirs() }
         val tsdFile = tsDir.resolve("$drillPluginId.d.ts")
         mutableListOf(
             "--module=@drill4j/$drillPluginId-types",
