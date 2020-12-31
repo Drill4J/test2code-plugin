@@ -27,7 +27,6 @@ dependencies {
 
 
     //provided by drill runtime
-    implementation("com.epam.drill:common")
     implementation("com.epam.drill:drill-admin-part")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
