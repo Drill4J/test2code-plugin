@@ -155,7 +155,7 @@ class Plugin(
         instanceId: String,
         content: String
     ): Any = run {
-        val message = CoverMessage.serializer() parse content
+        val message = json.parse(CoverMessage.serializer(), content)
         processData(instanceId, message)
             .let { "" } //TODO eliminate magic empty strings from API
     }

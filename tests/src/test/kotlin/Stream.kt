@@ -2,8 +2,8 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.admin.api.websocket.*
 import com.epam.drill.admin.common.*
+import com.epam.drill.admin.common.serialization.*
 import com.epam.drill.admin.endpoints.*
-import com.epam.drill.common.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
@@ -294,6 +294,7 @@ class CoverageSocketStreams : PluginStreams() {
 }
 
 val pathToCallBackMapping = mutableMapOf<String, KClass<*>>()
+
 @OptIn(KtorExperimentalLocationsAPI::class)
 fun fillMapping(kclass: KClass<*>, str: String = "") {
     kclass.nestedClasses.forEach {
