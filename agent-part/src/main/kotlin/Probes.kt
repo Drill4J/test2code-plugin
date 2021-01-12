@@ -145,7 +145,7 @@ open class SimpleSessionProbeArrayProvider(
     ): BooleanArray? = run {
         val sessionId = this()
         runtimes[sessionId]?.let { sessionRuntime ->
-            val testName = this[DRIlL_TEST_NAME] ?: "default"
+            val testName = this[DRIlL_TEST_NAME] ?: "unspecified"
             sessionRuntime(id, name, probeCount, testName)
         }
     }
