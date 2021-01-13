@@ -17,7 +17,7 @@ fun Action.stringify() = Action.serializer().stringify(this)
 fun AgentAction.stringify() = AgentAction.serializer().stringify(this)
 
 @OptIn(ImplicitReflectionSerializer::class)
-inline fun <reified T> String.parseJsonData() = serializer<T>().parse(extractJsonData())
+inline fun <reified T: AgentAction> String.parseJsonData() = AgentAction.serializer().parse(extractJsonData()) as T
 
 fun WsReceiveMessage.toTextFrame(): Frame.Text = Frame.Text(
     WsReceiveMessage.serializer().stringify(this)

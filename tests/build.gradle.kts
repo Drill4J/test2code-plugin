@@ -37,7 +37,6 @@ dependencies {
     testImplementation("com.epam.drill:drill-agent-part")
     testImplementation("com.epam.drill:drill-admin-part")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
-    testImplementation("org.jetbrains.kotlinx:atomicfu")
     testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
 
     testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
