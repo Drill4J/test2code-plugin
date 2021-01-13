@@ -15,6 +15,8 @@ val ktorVersion: String by project
 val coroutinesVersion: String by project
 val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
+val koduxVersion: String by extra
+val xodusVersion: String by extra
 val zstdJniVersion: String by rootProject
 
 //TODO remove this block and gradle/classes dir after gradle is updated to v6.8
@@ -50,9 +52,9 @@ subprojects {
         "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
-        "com.epam.drill:kodux-jvm:0.1.8",
+        "com.epam.drill:kodux-jvm:$koduxVersion",
+        "org.jetbrains.xodus:xodus-entity-store:$xodusVersion",
         "com.github.luben:zstd-jni:$zstdJniVersion",
-        "org.jetbrains.xodus:xodus-entity-store:1.3.91",
         "io.ktor:ktor-locations:$ktorVersion",
         "org.jacoco:org.jacoco.core:0.8.5",
         "org.apache.bcel:bcel:6.3.1",

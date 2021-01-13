@@ -92,10 +92,10 @@ class CoverageSocketStreams : PluginStreams() {
                         val json = frame.readText().parseJson() as JsonObject
                         if (isDebugStream)
                             println("PLUGIN: $json")
-                        val messageType = WsMessageType.valueOf(json[WsSendMessage::type.name]!!.content)
-                        val url = json[WsSendMessage::destination.name]!!.content
+                        val messageType = WsMessageType.valueOf((json[WsSendMessage::type.name] as JsonPrimitive).content)
+                        val url = (json[WsSendMessage::destination.name] as JsonPrimitive).content
                         val jsonMessage = json[WsSendMessage::message.name]
-                        val content = jsonMessage!!.toString()
+                        val content = jsonMessage?.run { toString() }
 
                         when (messageType) {
                             WsMessageType.MESSAGE -> {
@@ -110,7 +110,7 @@ class CoverageSocketStreams : PluginStreams() {
                                     }
 
                                     is Routes.Scopes -> {
-                                        scopes.send(ScopeSummary.serializer().list, content)
+                                        scopes.send(ListSerializer(ScopeSummary.serializer()), content)
                                     }
                                     is Routes.Scope -> {
                                         val scope =
@@ -122,31 +122,24 @@ class CoverageSocketStreams : PluginStreams() {
                                         val associatedTests =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.associatedTests
                                         associatedTests.send(
-                                            AssociatedTests.serializer().list, content
+                                            ListSerializer(AssociatedTests.serializer()), content
                                         )
                                     }
 
                                     is Routes.Scope.Methods -> {
                                         val methods =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.methods
-                                        if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                            methods.send(null)
-                                        } else
-                                            methods.send(
-                                                MethodsSummaryDto.serializer(), content
-                                            )
+                                        methods.send(
+                                            MethodsSummaryDto.serializer(), content
+                                        )
                                     }
 
                                     is Routes.Scope.TestsUsages -> {
                                         val testsUsages =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.testsUsages
-                                        if (content.isEmpty() || content == "[]" || content == "\"\"") {
-                                            testsUsages.send(null)
-                                        } else {
-                                            testsUsages.send(
-                                                TestsUsagesInfoByType.serializer().list, content
-                                            )
-                                        }
+                                        testsUsages.send(
+                                            ListSerializer(TestsUsagesInfoByType.serializer()), content
+                                        )
                                     }
 
                                     is Routes.Scope.Coverage.Packages -> {
@@ -156,7 +149,7 @@ class CoverageSocketStreams : PluginStreams() {
                                             ).first.coveragePackages
                                         }
                                         coveragePackages.send(
-                                            JavaPackageCoverage.serializer().list, content
+                                            ListSerializer(JavaPackageCoverage.serializer()), content
                                         )
                                     }
 
@@ -177,7 +170,7 @@ class CoverageSocketStreams : PluginStreams() {
                                     }
 
                                     is Routes.Build.AssociatedTests -> {
-                                        associatedTests.send(AssociatedTests.serializer().list, content)
+                                        associatedTests.send(ListSerializer(AssociatedTests.serializer()), content)
                                     }
 
                                     is Routes.Build.Methods -> {
@@ -186,13 +179,13 @@ class CoverageSocketStreams : PluginStreams() {
 
                                     is Routes.Build.TestsUsages -> {
                                         testsUsages.send(
-                                            TestsUsagesInfoByType.serializer().list, content
+                                            ListSerializer(TestsUsagesInfoByType.serializer()), content
                                         )
                                     }
 
                                     is Routes.Build.Coverage.Packages -> {
                                         coveragePackages.send(
-                                            JavaPackageCoverage.serializer().list, content
+                                            ListSerializer(JavaPackageCoverage.serializer()), content
                                         )
                                     }
 
@@ -201,7 +194,7 @@ class CoverageSocketStreams : PluginStreams() {
                                     }
 
                                     is Routes.Build.Risks -> {
-                                        risks.send(RiskDto.serializer().list, content)
+                                        risks.send(ListSerializer(RiskDto.serializer()), content)
                                     }
 
                                     is Routes.ServiceGroup.Summary -> {
@@ -222,9 +215,9 @@ class CoverageSocketStreams : PluginStreams() {
 
     private suspend fun <T> Channel<T?>.send(
         serializer: KSerializer<T>,
-        message: String
+        message: String?
     ) {
-        val sentMessage = message.takeIf {
+        val sentMessage = message?.takeIf {
             it.any() && it != "[]" && it != "\"\""
         }?.let { serializer parse it }
         send(sentMessage)

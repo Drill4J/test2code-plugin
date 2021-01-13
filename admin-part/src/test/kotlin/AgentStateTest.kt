@@ -30,7 +30,7 @@ class AgentStateTest {
 
     @AfterTest
     fun cleanStore() {
-        storeClient.store.close()
+        storeClient.close()
         storageDir.deleteRecursively()
     }
 
