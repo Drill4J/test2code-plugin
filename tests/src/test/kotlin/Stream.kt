@@ -89,7 +89,7 @@ class CoverageSocketStreams : PluginStreams() {
             incoming.consumeEach { frame ->
                 when (frame) {
                     is Frame.Text -> {
-                        val json = json.parseJson(frame.readText()) as JsonObject
+                        val json = frame.readText().parseJson() as JsonObject
                         if (isDebugStream)
                             println("PLUGIN: $json")
                         val messageType = WsMessageType.valueOf(json[WsSendMessage::type.name]!!.content)
