@@ -19,7 +19,7 @@ class JsCoverageTest {
 
     @AfterTest
     fun cleanStore() {
-        storeClient.store.close()
+        storeClient.close()
         storageDir.deleteRecursively()
     }
 

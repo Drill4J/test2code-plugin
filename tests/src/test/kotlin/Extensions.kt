@@ -8,7 +8,6 @@ import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.locations.*
-import kotlinx.serialization.*
 
 fun String.extractJsonData() = substringAfter("\"data\":").substringBeforeLast("}")
 
@@ -16,7 +15,6 @@ fun Action.stringify() = Action.serializer().stringify(this)
 
 fun AgentAction.stringify() = AgentAction.serializer().stringify(this)
 
-@OptIn(ImplicitReflectionSerializer::class)
 inline fun <reified T: AgentAction> String.parseJsonData() = AgentAction.serializer().parse(extractJsonData()) as T
 
 fun WsReceiveMessage.toTextFrame(): Frame.Text = Frame.Text(

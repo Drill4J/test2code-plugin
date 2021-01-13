@@ -25,7 +25,7 @@ configurations {
 val drillAdminVersion: String by rootProject
 val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
-val aircompressorVersion: String by rootProject
+val kodeinVersion: String by extra
 
 dependencies {
     testCompileOnly(project(":api"))
@@ -42,7 +42,7 @@ dependencies {
     testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
     testImplementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
 
-    testImplementation("org.kodein.di:kodein-di-generic-jvm:6.2.0")
+    testImplementation("org.kodein.di:kodein-di-generic-jvm:$kodeinVersion")
 
     testImplementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
     testImplementation(ktor("server-test-host"))
