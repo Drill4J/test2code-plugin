@@ -42,17 +42,17 @@ subprojects {
     group = "${rootProject.group}.$drillPluginId"
 
     val constraints = listOf(
-        "com.epam.drill:common-jvm:$drillApiVersion",
         "com.epam.drill:common:$drillApiVersion",
         "com.epam.drill:drill-admin-part:$drillApiVersion",
         "com.epam.drill:drill-agent-part:$drillApiVersion",
         "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$kxSerializationVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kxSerializationVersion",
+        "org.jetbrains.kotlinx:kotlinx-serialization-core:$kxSerializationVersion",
+        "org.jetbrains.kotlinx:kotlinx-serialization-json:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
+        "org.jetbrains.kotlinx:kotlinx-collections-immutable:$kxCollectionsVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
-        "com.epam.drill:kodux-jvm:$koduxVersion",
+        "com.epam.drill:kodux:$koduxVersion",
         "org.jetbrains.xodus:xodus-entity-store:$xodusVersion",
         "com.github.luben:zstd-jni:$zstdJniVersion",
         "io.ktor:ktor-locations:$ktorVersion",
@@ -71,6 +71,7 @@ subprojects {
                 jvmTarget = "1.8"
                 freeCompilerArgs = listOf(
                     "-Xuse-experimental=kotlin.Experimental",
+                    "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi",
                     "-Xuse-experimental=kotlin.time.ExperimentalTime"
                 )
             }

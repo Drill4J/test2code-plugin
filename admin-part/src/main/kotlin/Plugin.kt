@@ -31,7 +31,7 @@ class Plugin(
     sender = sender
 ), Closeable {
     companion object {
-        val json = Json(JsonConfiguration.Stable)
+        val json = Json { encodeDefaults = true }
     }
 
     internal val logger = logger(agentInfo.id)
@@ -67,7 +67,7 @@ class Plugin(
 
     override fun parseAction(
         rawAction: String
-    ): Action = json.parse(Action.serializer(), rawAction)
+    ): Action = json.decodeFromString(Action.serializer(), rawAction)
 
     override suspend fun doAction(
         action: Action
@@ -155,7 +155,7 @@ class Plugin(
         instanceId: String,
         content: String
     ): Any = run {
-        val message = json.parse(CoverMessage.serializer(), content)
+        val message = json.decodeFromString(CoverMessage.serializer(), content)
         processData(instanceId, message)
             .let { "" } //TODO eliminate magic empty strings from API
     }

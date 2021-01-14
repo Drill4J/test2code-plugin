@@ -16,14 +16,13 @@ dependencies {
     jarDeps(project(":agent-api"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm") { isTransitive = false }
-    //TODO remove this dependency - use drill runtime serialization lib after Kotlin v1.4 update
-    jarDeps("org.jetbrains.kotlinx:kotlinx-serialization-runtime") { isTransitive = false }
 
     implementation(kotlin("stdlib"))
 
     //provided by drill runtime
     implementation("com.epam.drill:drill-agent-part")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(kotlin("test-junit5"))
@@ -52,8 +51,6 @@ tasks {
         listOf(
             "org.objectweb.asm",
             "org.jacoco.core",
-            "kotlinx.io",
-            "kotlinx.serialization",
             "kotlinx.collections.immutable"
         ).forEach { relocate(it, "${rootProject.group}.test2code.shadow.$it") }
     }
