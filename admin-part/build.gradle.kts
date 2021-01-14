@@ -25,19 +25,18 @@ dependencies {
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.apache.bcel:bcel")
 
-
     //provided by drill runtime
     implementation("com.epam.drill:drill-admin-part")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     //provided by admin
     //TODO create a platform for admin dependencies
-    implementation("com.epam.drill:kodux-jvm")
+    implementation("com.epam.drill:kodux")
     implementation("org.jetbrains.xodus:xodus-entity-store")
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
     implementation("com.github.luben:zstd-jni")
 
     testImplementation(kotlin("test-junit5"))

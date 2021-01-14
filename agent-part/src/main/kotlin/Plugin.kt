@@ -17,7 +17,7 @@ class Plugin(
 ) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter {
     private val logger = logging.logger("Plugin $id")
 
-    internal val json = Json(JsonConfiguration.Stable)
+    internal val json = Json { encodeDefaults = true }
 
     private val _enabled = atomic(false)
 
@@ -148,7 +148,7 @@ class Plugin(
 
     override fun parseAction(
         rawAction: String
-    ): AgentAction = json.parse(AgentAction.serializer(), rawAction)
+    ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 }
 
 fun Plugin.probeSender(
@@ -167,6 +167,6 @@ fun Plugin.probeSender(
 }
 
 fun Plugin.sendMessage(message: CoverMessage) {
-    val messageStr = json.stringify(CoverMessage.serializer(), message)
+    val messageStr = json.encodeToString(CoverMessage.serializer(), message)
     send(messageStr)
 }

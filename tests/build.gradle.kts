@@ -36,8 +36,8 @@ dependencies {
     testImplementation("com.epam.drill:common")
     testImplementation("com.epam.drill:drill-agent-part")
     testImplementation("com.epam.drill:drill-admin-part")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
     testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
     testImplementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
@@ -55,7 +55,7 @@ dependencies {
     testImplementation(ktor("client-cio"))
     testImplementation(ktor("serialization"))
 
-    testImplementation("com.epam.drill:kodux-jvm")
+    testImplementation("com.epam.drill:kodux")
     testImplementation("org.jetbrains.xodus:xodus-entity-store")
 
     testImplementation("org.jacoco:org.jacoco.core")

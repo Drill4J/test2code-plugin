@@ -8,7 +8,7 @@ kotlin {
     sourceSets.commonMain {
         dependencies {
             //provided by drill runtime or clients
-            compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime-common")
+            compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
         }
     }
 
@@ -18,12 +18,13 @@ kotlin {
             dependencies {
                 //provided by drill runtime or clients
                 compileOnly("io.ktor:ktor-locations") { isTransitive = false }
-                compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-runtime")
             }
         }
     }
 }
 
+/*
+TODO Update Kotlin in kt2dts
 val kt2dts by configurations.creating
 
 dependencies {
@@ -51,3 +52,4 @@ val genTsd by tasks.registering(JavaExec::class) {
 tasks.compileKotlinMetadata {
     dependsOn(genTsd)
 }
+*/
