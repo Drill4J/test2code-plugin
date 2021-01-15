@@ -23,12 +23,10 @@ kotlin {
     }
 }
 
-/*
-TODO Update Kotlin in kt2dts
 val kt2dts by configurations.creating
 
 dependencies {
-    kt2dts("com.epam.drill.ts:kt2dts-cli:0.2.0")
+    kt2dts("com.epam.drill.ts:kt2dts-cli:0.3.0")
 }
 
 val genTsd by tasks.registering(JavaExec::class) {
@@ -52,4 +50,3 @@ val genTsd by tasks.registering(JavaExec::class) {
 tasks.compileKotlinMetadata {
     dependsOn(genTsd)
 }
-*/
