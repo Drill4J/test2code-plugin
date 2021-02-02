@@ -30,6 +30,7 @@ internal suspend fun Plugin.changeActiveScope(
     sendActiveScope()
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
+            logger.debug { "finish scope with id=${prevScope.id}" }
             val context = state.coverContext()
             val counters = prevScope.calcBundleCounters(context)
             val coverData = counters.calculateCoverageData(context, prevScope)

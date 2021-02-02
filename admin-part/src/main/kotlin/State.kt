@@ -42,7 +42,9 @@ internal class AgentState(
     private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
 
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
+        logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
+            logger.debug { "take from DB count methods ${classData.methods.size}" }
             _data.value = classData
             initialized(classData)
             block()
@@ -55,10 +57,12 @@ internal class AgentState(
     }
 
     fun close() {
+        logger.debug { "close active scope id=${activeScope.id}" }
         activeScope.close()
     }
 
     suspend fun initialized(block: suspend () -> Unit = {}) {
+        logger.debug { "initialized by event from agent..." }
         _data.getAndUpdate {
             when (it) {
                 is ClassData -> it
@@ -67,6 +71,7 @@ internal class AgentState(
         }.takeIf { it !is ClassData }?.also { data ->
             val classData = when (data) {
                 is DataBuilder -> data.flatMap { e -> e.methods.map { e to it } }.run {
+                    logger.debug { "initializing DataBuilder..." }
                     val methods = map { (e, m) ->
                         Method(
                             ownerClass = "${e.path}/${e.name}",
@@ -85,6 +90,7 @@ internal class AgentState(
                 }
                 is NoData -> {
                     val classBytes = adminData.classBytes
+                    logger.info { "initializing noData with classBytes size ${classBytes.size}..." }
                     val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
                     val bundleCoverage = classBytes.keys.bundle(classBytes, probeIds)
                     val sortedPackages = bundleCoverage.packages.asSequence().run {
@@ -117,6 +123,9 @@ internal class AgentState(
             classData.store(storeClient)
             initialized(classData)
             block()
+        } ?: _coverContext.update {
+            logger.debug { "update classes context, old count: ${it?.classBytes?.size} new ${adminData.classBytes.size}" }
+            it?.copy(classBytes = adminData.classBytes)
         }
     }
 
@@ -133,6 +142,7 @@ internal class AgentState(
         )
         _coverContext.value = coverContext
         val agentId = agentInfo.id
+        logger.debug { "agent(id=$agentId, version=$buildVersion) initializing with classes count ${adminData.classBytes.size}..." }
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
             logger.debug { "(buildVersion=$buildVersion) Current baseline=$baseline." }
             val parentVersion = when (baseline.version) {
@@ -262,6 +272,7 @@ internal class AgentState(
     private suspend fun initActiveScope() {
         readActiveScopeInfo()?.run {
             val sessions = storeClient.loadSessions(id)
+            logger.debug { "load sessions for active scope with id=$id" }
             _activeScope.update {
                 ActiveScope(
                     id = id,

@@ -11,6 +11,7 @@ private val logger = logger {}
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext
 ) = run {
+    logger.trace { "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${this.toList().map { it.id + " " }})..." }
     val probesByTestType = groupBy(Session::testType)
     val testTypeOverlap: Sequence<ExecClassData> = if (probesByTestType.size > 1) {
         probesByTestType.values.asSequence().run {
@@ -20,6 +21,7 @@ internal fun Sequence<Session>.calcBundleCounters(
             }
         }.values.asSequence()
     } else emptySequence()
+    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${context.classBytes.size}..." }
     BundleCounters(
         all = flatten().bundle(context),
         testTypeOverlap = testTypeOverlap.bundle(context),

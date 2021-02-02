@@ -49,6 +49,7 @@ class Plugin(
     private val _state = atomic<AgentState?>(null)
 
     override suspend fun initialize() {
+        logger.debug { "agent(id=$id, version=$buildVersion) initializing from admin..." }
         changeState()
         state.loadFromDb {
             processInitialized()
@@ -173,7 +174,7 @@ class Plugin(
         }
         is InitDataPart -> {
             (state.data as? DataBuilder)?.also {
-                logger.info { message }
+                logger.info { "$instanceId: $message" }
                 it += message.astEntities
             }
         }
@@ -505,6 +506,7 @@ class Plugin(
     }
 
     private fun changeState() {
+        logger.debug { "agent(id=$agentId, version=$buildVersion) classes count from admin ${adminData.classBytes.size}, changing state..." }
         _state.getAndUpdate {
             AgentState(
                 storeClient = storeClient,
