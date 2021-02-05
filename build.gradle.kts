@@ -3,6 +3,7 @@ plugins {
     distribution
     `maven-publish`
     kotlin("jvm") apply false
+    id("com.github.hierynomus.license")
 }
 
 val drillPluginId: String by project
@@ -137,3 +138,13 @@ publishing {
         }
     }
 }
+
+val licenseFormatSettings by tasks.registering(com.hierynomus.gradle.license.tasks.LicenseFormat::class) {
+    source = fileTree(project.projectDir).also {
+        include("**/*.kt", "**/*.java", "**/*.groovy")
+        exclude("**/.idea")
+    }.asFileTree
+    headerURI = java.net.URI("https://raw.githubusercontent.com/Drill4J/drill4j/develop/COPYRIGHT")
+}
+
+tasks["licenseFormat"].dependsOn(licenseFormatSettings)
