@@ -140,6 +140,9 @@ internal class AgentState(
             block()
         } ?: _coverContext.update {
             logger.debug { "update classes context, old count: ${it?.classBytes?.size} new ${adminData.classBytes.size}" }
+            activeScope.activeSessions.values.map { session ->
+                activeScope.finishSession(session.id)
+            }
             it?.copy(classBytes = adminData.classBytes)
         }
     }
