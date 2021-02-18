@@ -152,6 +152,12 @@ class Plugin(
             activeScope.cancelAllSessions()
             CancelAllAgentSessions.toActionResult()
         }
+        is AddTests -> action.payload.run {
+            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+                testRun?.let { session.setTestRun(it) }
+                ActionResult(StatusCodes.OK, "")
+            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
+        }
         is StopSession -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 testRun?.let { session.setTestRun(it) }

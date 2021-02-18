@@ -44,6 +44,10 @@ object CancelAllSessions : Action()
 @Serializable
 data class StopSession(val payload: StopSessionPayload) : Action()
 
+@SerialName("ADD_TESTS")
+@Serializable
+data class AddTests(val payload: AddTestsPayload) : Action()
+
 @SerialName("STOP_ALL")
 @Serializable
 object StopAllSessions : Action()
