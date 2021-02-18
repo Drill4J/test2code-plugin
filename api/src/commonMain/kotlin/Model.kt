@@ -52,6 +52,12 @@ data class StopSessionPayload(
 )
 
 @Serializable
+data class AddTestsPayload(
+    val sessionId: String,
+    val testRun: TestRun? = null
+)
+
+@Serializable
 data class TestRun(
     val name: String = "",
     val startedAt: Long,
@@ -71,7 +77,8 @@ enum class TestResult {
     PASSED,
     FAILED,
     ERROR,
-    SKIPPED
+    SKIPPED,
+    UNKNOWN
 }
 
 @Serializable

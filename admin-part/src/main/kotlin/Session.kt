@@ -40,7 +40,13 @@ class ActiveSession(
     override val tests: Set<TypedTest>
         get() = _probes.value.keys
 
-    override val testStats: Map<TypedTest, TestStats> = emptyMap()
+    override val testStats: Map<TypedTest, TestStats>
+        get() = _testRun.value?.tests?.associate {
+            TypedTest(type = testType, name = it.name) to TestStats(
+                duration = it.finishedAt - it.startedAt,
+                result = it.result
+            )
+        } ?: emptyMap()
 
     private val _probes = atomic(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
@@ -70,7 +76,9 @@ class ActiveSession(
     }
 
     fun setTestRun(testRun: TestRun) {
-        _testRun.value = testRun
+        _testRun.update { current ->
+            current?.let { it + testRun } ?: testRun
+        }
     }
 
     override fun iterator(): Iterator<ExecClassData> = Sequence {
@@ -109,3 +117,9 @@ data class FinishedSession(
 
     override fun hashCode(): Int = id.hashCode()
 }
+
+private operator fun TestRun.plus(other: TestRun) = copy(
+    startedAt = startedAt.takeIf { it < other.startedAt } ?: other.startedAt,
+    finishedAt = finishedAt.takeIf { it > other.finishedAt } ?: other.finishedAt,
+    tests = tests + other.tests
+)
