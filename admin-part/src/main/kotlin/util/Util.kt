@@ -15,13 +15,19 @@
  */
 package com.epam.drill.plugins.test2code.util
 
+import kotlinx.coroutines.*
 import org.jacoco.core.internal.data.*
 import java.net.*
 import java.util.*
+import java.util.concurrent.*
 
 fun currentTimeMillis() = System.currentTimeMillis()
 
 fun genUuid() = "${UUID.randomUUID()}"
+
+internal val AVAILABLE_PROCESSORS = Runtime.getRuntime().availableProcessors()
+
+internal val allAvailableProcessDispatcher = Executors.newFixedThreadPool(AVAILABLE_PROCESSORS).asCoroutineDispatcher()
 
 tailrec fun Int.gcd(other: Int): Int = takeIf { other == 0 } ?: other.gcd(rem(other))
 

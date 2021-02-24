@@ -18,8 +18,8 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
+import kotlinx.coroutines.*
 import kotlin.math.*
 
 internal fun ExecClassData.id(): Long = id ?: className.crc64()
@@ -84,17 +84,24 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal fun Iterable<Method>.toCoverMap(
+internal fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean
 ): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
     val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
         c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
     }.toMap()
-    mapNotNull { m ->
-        val covered = m.toCovered(map[m.ownerClass to m.signature()])
-        covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { m to it }
-    }.toMap()
+    runBlocking(allAvailableProcessDispatcher) {
+        val subCollectionSize = (size / AVAILABLE_PROCESSORS).takeIf { it > 0 } ?: 1
+        chunked(subCollectionSize).map { subList ->
+            async {
+                subList.mapNotNull { method ->
+                    val covered = method.toCovered(map[method.ownerClass to method.signature()])
+                    covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
+                }
+            }
+        }.flatMap { it.await() }.toMap()
+    }
 }
 
 internal fun BundleCounter.coveredMethods(
@@ -139,7 +146,7 @@ internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?
 internal fun Method.toCovered(count: Count?) = CoverMethod(
     ownerClass = ownerClass,
     name = ownerClass.methodName(name),
-    desc = desc.takeIf { "):" in it } ?: declaration(desc), //TODO js methods
+    desc = desc,//.takeIf { "):" in it } ?: declaration(desc), //TODO js methods //Regex has a big impact on performance
     hash = hash,
     count = count ?: zeroCount,
     coverageRate = count?.coverageRate() ?: CoverageRate.MISSED

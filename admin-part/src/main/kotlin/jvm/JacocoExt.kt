@@ -98,7 +98,7 @@ internal fun IBundleCoverage.toCounter() = BundleCounter(
                             MethodCounter(
                                 name = m.name,
                                 desc = m.desc,
-                                decl = declaration(m.desc),
+                                decl = m.desc,//declaration(m.desc), //TODO Regex has a big impact on performance
                                 count = m.instructionCounter.toCount()
                             )
                         }
