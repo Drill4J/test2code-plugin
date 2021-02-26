@@ -21,6 +21,8 @@ import com.epam.drill.plugins.test2code.util.*
 
 //TODO Rewrite all of this, remove the file
 
+private val _cache = AtomicCache<BundleCounter, BuildMethods>()
+
 internal data class BuildMethods(
     val totalMethods: MethodsInfo = MethodsInfo(),
     val newMethods: MethodsInfo = MethodsInfo(),
@@ -74,7 +76,7 @@ internal fun CoverContext.calculateBundleMethods(
 internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
     context: CoverContext
 ): List<MethodsCoveredByTest> = map { (typedTest, bundle) ->
-    val changes = context.calculateBundleMethods(bundle, true)
+    val changes = _cache[bundle] ?: context.calculateBundleMethods(bundle, true).also { _cache[bundle] = it }
     MethodsCoveredByTest(
         id = typedTest.id(),
         testName = typedTest.name,
@@ -93,3 +95,7 @@ private fun Iterable<Method>.toInfo(
     coveredCount = count { covered[it]?.count?.covered ?: 0 > 0 },
     methods = mapNotNull(covered::get)
 )
+
+fun clearCache() {
+    _cache.clear()
+}

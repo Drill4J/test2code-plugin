@@ -183,6 +183,8 @@ class ActiveScope(
         _change.value = null
         activeSessions.clear()
         changeJob.cancel()
+        clearCache()
+        resetCache()
     }
 
     override fun toString() = "act-scope($id, $name)"

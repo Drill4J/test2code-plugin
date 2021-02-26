@@ -19,14 +19,21 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlinx.collections.immutable.*
 
 private val logger = logger {}
 
+private val _cache = AtomicCache<TypedTest, BundleCounter>()
+
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext
 ) = run {
-    logger.trace { "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${this.toList().map { it.id + " " }})..." }
+    logger.trace {
+        "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
+            this.toList().map { it.id + " " }
+        })..."
+    }
     val probesByTestType = groupBy(Session::testType)
     val testTypeOverlap: Sequence<ExecClassData> = if (probesByTestType.size > 1) {
         probesByTestType.values.asSequence().run {
@@ -154,15 +161,18 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Sequence<Session>.bundlesByTests(
     context: CoverContext
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
-    val map = flatMap { it.tests.asSequence() }.associateWithTo(mutableMapOf()) {
-        BundleCounter("")
-    }
     groupBy(Session::testType).map { (testType, sessions) ->
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
-            .mapValuesTo(map) { it.value.asSequence().bundle(context) }
+            .filterNot { _cache.map.containsKey(it.key) }
+            .map { it.key to it.value.asSequence().bundle(context) }
+            .toMap(mutableMapOf())
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
+    }.let { mutableMap ->
+        val finalizedTests = flatMap { map -> map.testStats.keys }
+        val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
+        mutableMap + _cache.putAll(testsAddToCache)
     }
 } ?: emptyMap()
 
@@ -189,3 +199,5 @@ private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, Li
         }.distinct()
         .groupBy({ it.first }) { it.second }
 }
+
+fun resetCache() = _cache.clear()
