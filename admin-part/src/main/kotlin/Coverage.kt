@@ -24,10 +24,9 @@ import kotlinx.collections.immutable.*
 
 private val logger = logger {}
 
-private val _cache = AtomicCache<TypedTest, BundleCounter>()
-
 internal fun Sequence<Session>.calcBundleCounters(
-    context: CoverContext
+    context: CoverContext,
+    cache: AtomicCache<TypedTest, BundleCounter>? = null
 ) = run {
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
@@ -51,7 +50,7 @@ internal fun Sequence<Session>.calcBundleCounters(
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context)
         },
-        byTest = bundlesByTests(context),
+        byTest = bundlesByTests(context, cache),
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -120,7 +119,9 @@ internal fun BundleCounters.calculateCoverageData(
 
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
-    val coveredByTest = bundlesByTests.methodsCoveredByTest(context)
+    val cache = (scope as? ActiveScope)?.methodsCoveredByTestCache
+
+    val coveredByTest = bundlesByTests.methodsCoveredByTest(context, cache)
 
     val tests = bundlesByTests.map { (typedTest, bundle) ->
         TestCoverageDto(
@@ -159,12 +160,13 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 }
 
 private fun Sequence<Session>.bundlesByTests(
-    context: CoverContext
+    context: CoverContext,
+    cache: AtomicCache<TypedTest, BundleCounter>?
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
     groupBy(Session::testType).map { (testType, sessions) ->
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
-            .filterNot { _cache.map.containsKey(it.key) }
+            .filterNot { cache?.map?.containsKey(it.key) ?: false }
             .map { it.key to it.value.asSequence().bundle(context) }
             .toMap(mutableMapOf())
     }.reduce { m1, m2 ->
@@ -172,7 +174,7 @@ private fun Sequence<Session>.bundlesByTests(
     }.let { mutableMap ->
         val finalizedTests = flatMap { map -> map.testStats.keys }
         val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
-        mutableMap + _cache.putAll(testsAddToCache)
+        mutableMap + (cache?.putAll(testsAddToCache) ?: emptyMap())
     }
 } ?: emptyMap()
 
@@ -200,4 +202,3 @@ private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, Li
         .groupBy({ it.first }) { it.second }
 }
 
-fun resetCache() = _cache.clear()

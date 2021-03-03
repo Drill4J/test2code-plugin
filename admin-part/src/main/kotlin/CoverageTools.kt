@@ -21,8 +21,6 @@ import com.epam.drill.plugins.test2code.util.*
 
 //TODO Rewrite all of this, remove the file
 
-private val _cache = AtomicCache<BundleCounter, BuildMethods>()
-
 internal data class BuildMethods(
     val totalMethods: MethodsInfo = MethodsInfo(),
     val newMethods: MethodsInfo = MethodsInfo(),
@@ -74,18 +72,20 @@ internal fun CoverContext.calculateBundleMethods(
 }
 
 internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
-    context: CoverContext
+    context: CoverContext,
+    cache: AtomicCache<BundleCounter, MethodsCoveredByTest>?
 ): List<MethodsCoveredByTest> = map { (typedTest, bundle) ->
-    val changes = _cache[bundle] ?: context.calculateBundleMethods(bundle, true).also { _cache[bundle] = it }
-    MethodsCoveredByTest(
-        id = typedTest.id(),
-        testName = typedTest.name,
-        testType = typedTest.type,
-        allMethods = changes.totalMethods.methods,
-        newMethods = changes.newMethods.methods,
-        modifiedMethods = changes.allModifiedMethods.methods,
-        unaffectedMethods = changes.unaffectedMethods.methods
-    )
+    cache?.get(bundle) ?: context.calculateBundleMethods(bundle, true).let { changes ->
+        MethodsCoveredByTest(
+            id = typedTest.id(),
+            testName = typedTest.name,
+            testType = typedTest.type,
+            allMethods = changes.totalMethods.methods,
+            newMethods = changes.newMethods.methods,
+            modifiedMethods = changes.allModifiedMethods.methods,
+            unaffectedMethods = changes.unaffectedMethods.methods
+        ).also { cache?.set(bundle, it) }
+    }
 }
 
 private fun Iterable<Method>.toInfo(
@@ -95,7 +95,3 @@ private fun Iterable<Method>.toInfo(
     coveredCount = count { covered[it]?.count?.covered ?: 0 > 0 },
     methods = mapNotNull(covered::get)
 )
-
-fun clearCache() {
-    _cache.clear()
-}

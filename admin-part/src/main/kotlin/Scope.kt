@@ -58,6 +58,10 @@ class ActiveScope(
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
+    val methodsCoveredByTestCache = AtomicCache<BundleCounter, MethodsCoveredByTest>()
+
+    val bundlesByTestsCache = AtomicCache<TypedTest, BundleCounter>()
+
     private val _sessions = atomic(sessions.toPersistentList())
 
     //TODO remove summary for this class
@@ -183,8 +187,8 @@ class ActiveScope(
         _change.value = null
         activeSessions.clear()
         changeJob.cancel()
-        clearCache()
-        resetCache()
+        methodsCoveredByTestCache.clear()
+        bundlesByTestsCache.clear()
     }
 
     override fun toString() = "act-scope($id, $name)"

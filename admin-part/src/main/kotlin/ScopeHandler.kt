@@ -27,7 +27,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions
     }
     sessions?.let {
         val context = state.coverContext()
-        val bundleCounters = sessions.calcBundleCounters(context)
+        val bundleCounters = sessions.calcBundleCounters(context, activeScope.bundlesByTestsCache)
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
         sendActiveScope()
