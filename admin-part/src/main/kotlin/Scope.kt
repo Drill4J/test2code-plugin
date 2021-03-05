@@ -25,6 +25,7 @@ import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
+import kotlinx.serialization.Transient
 
 interface Scope : Sequence<FinishedSession> {
     val id: String
@@ -205,6 +206,7 @@ class ActiveScope(
 
 @Serializable
 data class ScopeData(
+    @Transient
     val sessions: List<FinishedSession> = emptyList(),
     val typedTests: Set<TypedTest> = emptySet(),
     val bundleCounters: BundleCounters = BundleCounters.empty
