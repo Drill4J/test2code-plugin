@@ -47,9 +47,3 @@ internal suspend fun StoreClient.storeSession(
         )
     )
 }
-
-internal suspend fun StoreClient.deleteSessions(
-    scopeId: String
-) = deleteBy<StoredSession> {
-    StoredSession::scopeId eq scopeId
-}

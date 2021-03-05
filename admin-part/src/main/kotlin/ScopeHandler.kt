@@ -51,7 +51,6 @@ internal suspend fun Plugin.changeActiveScope(
 ): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
     val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
     state.storeActiveScopeInfo()
-    storeClient.deleteSessions(prevScope.id)
     sendActiveSessions()
     sendActiveScope()
     if (scopeChange.savePrevScope) {
