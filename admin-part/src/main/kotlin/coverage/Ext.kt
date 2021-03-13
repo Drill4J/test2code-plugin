@@ -67,6 +67,17 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
 }
 
 internal fun BundleCounter.coverageKeys(): Sequence<CoverageKey> = packages.asSequence().flatMap { p ->
+    //Only packages
+    /* sequenceOf(p.coverageKey()) */
+    //Only methods
+    /*
+       p.classes.asSequence().flatMap { c ->
+        c.methods.asSequence().mapNotNull { m ->
+            m.takeIf { it.count.covered > 0 }?.coverageKey(c)
+        }
+    }
+    */
+    //All
     sequenceOf(p.coverageKey()) + p.classes.asSequence().flatMap { c ->
         sequenceOf(c.coverageKey()) + c.methods.asSequence().mapNotNull { m ->
             m.takeIf { it.count.covered > 0 }?.coverageKey(c)

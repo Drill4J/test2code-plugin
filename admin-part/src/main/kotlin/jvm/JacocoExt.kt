@@ -43,7 +43,7 @@ internal fun Iterable<String>.bundle(
     probeIds: Map<String, Long>
 ): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->
     forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
-}.toCounter()
+}.toCounter(false)
 
 private fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
@@ -69,7 +69,7 @@ internal fun Sequence<ExecClassData>.execDataStore(
     }
 }
 
-internal fun IBundleCoverage.toCounter() = BundleCounter(
+internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
     name = "",
     count = instructionCounter.toCount(),
     methodCount = methodCounter.toCount(),
@@ -81,7 +81,7 @@ internal fun IBundleCoverage.toCounter() = BundleCounter(
                 if (!it) {
                     logger.warn { "Class without methods - ${c.name}." }
                 }
-            }
+            } && c.methods.takeIf { filter }?.any { it.instructionCounter.coveredCount > 0 } ?: true
         }
         if (classesWithMethods.any()) {
             PackageCounter(
@@ -101,7 +101,7 @@ internal fun IBundleCoverage.toCounter() = BundleCounter(
                                 decl = m.desc,//declaration(m.desc), //TODO Regex has a big impact on performance
                                 count = m.instructionCounter.toCount()
                             )
-                        }
+                        }.run { takeIf { filter }?.filter { it.count.covered > 0 } ?: this }
                     )
                 }
             )

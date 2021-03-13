@@ -21,6 +21,7 @@ import com.epam.kodux.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
 
+private val logger = logger {}
 fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
 
 class ScopeManager(private val storage: StoreClient) {
@@ -35,7 +36,7 @@ class ScopeManager(private val storage: StoreClient) {
             takeIf { withData }?.run {
                 findBy<ScopeDataBytes> { ScopeDataBytes::buildVersion eq buildVersion }.takeIf { it.any() }
             }?.associateBy { it.id }?.let { dataMap ->
-                map { it.withProbes(dataMap[it.id]) }
+                map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
         }
     }.asSequence()
@@ -70,7 +71,7 @@ class ScopeManager(private val storage: StoreClient) {
     ): FinishedScope? = storage.run {
         takeIf { withProbes }?.executeInAsyncTransaction {
             findById<FinishedScope>(scopeId)?.run {
-                withProbes(findById(scopeId))
+                withProbes(findById(scopeId), storage)
             }
         } ?: findById(scopeId)
     }
@@ -93,8 +94,12 @@ private fun FinishedScope.toDataBytes() = ScopeDataBytes(
     bytes = ProtoBuf.dump(ScopeData.serializer(), data).let(Zstd::compress)
 )
 
-private fun FinishedScope.withProbes(
-    data: ScopeDataBytes?
+private suspend fun FinishedScope.withProbes(
+    data: ScopeDataBytes?,
+    storeClient: StoreClient,
 ): FinishedScope = data?.let {
-    copy(data = ProtoBuf.load(ScopeData.serializer(), Zstd.decompress(it.bytes)))
+    val scopeData = ProtoBuf.load(ScopeData.serializer(), Zstd.decompress(it.bytes))
+    val sessions = storeClient.loadSessions(id)
+    logger.debug { "take scope $id $name with sessions size ${sessions.size}" }
+    copy(data = scopeData.copy(sessions = sessions))
 } ?: this

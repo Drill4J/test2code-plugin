@@ -46,7 +46,7 @@ internal data class CoverContext(
     val build: CachedBuild,
     val parentBuild: CachedBuild? = null,
     val testsToRun: GroupedTests = emptyMap(),
-    val testsToRunParentDurations : TestDurations = TestDurations()
+    val testsToRunParentDurations: TestDurations = TestDurations()
 ) {
     override fun equals(other: Any?): Boolean = super.equals(other)
 
@@ -110,7 +110,7 @@ data class ClassCounter(
     val path: String,
     override val name: String,
     override val count: Count,
-    val methods: List<MethodCounter>
+    val methods: List<MethodCounter> = emptyList()
 ) : NamedCounter() {
     val fullName = if (path.any()) "$path/$name" else name
 }

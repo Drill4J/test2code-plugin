@@ -18,12 +18,15 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
+import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.kodux.*
 import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
 import java.io.*
 import java.util.*
+import kotlin.random.Random.*
 import kotlin.test.*
 
 
@@ -67,6 +70,111 @@ class PluginTest {
         initialize()
         return this
     }
+
+    @Test
+    fun `check finish session takes probes`() = runBlocking {
+        val plugin: Plugin = initPlugin("0.1.0")
+        plugin.state.initialized()
+        val finishedSession = finishedSession(plugin, "sessionId", 1, 3, 5)
+        assertEquals(3, finishedSession?.probes?.size)
+    }
+
+
+    @Test
+    fun `perf test! check finish session`() = runBlocking {
+        val plugin: Plugin = initPlugin("0.1.0")
+        plugin.state.initialized()
+        val finishedSession = finishedSession(plugin, "sessionId", 30)
+        println(finishedSession?.probes?.size)
+    }
+
+    @Test
+    fun `check finish scope with 2 session takes probes`() = runBlocking {
+        val buildVersion = "0.1.0"
+        val plugin: Plugin = initPlugin(buildVersion)
+        plugin.state.initialized()
+        finishedSession(plugin, "sessionId")
+        finishedSession(plugin, "sessionId2")
+        val res = plugin.changeActiveScope(ActiveScopeChangePayload("new scope", true))
+        val scopes = plugin.state.scopeManager.run {
+            byVersion(buildVersion, withData = true)
+        }
+        assertEquals(200, res.code)
+        assertEquals(2, scopes.first().data.sessions.size)
+        println(scopes)
+    }
+
+    @Test
+    fun `perf check! check finish scope with 2 session takes probes`() = runBlocking {
+        val buildVersion = "0.1.0"
+        val plugin: Plugin = initPlugin(buildVersion)
+        plugin.state.initialized()
+        finishedSession(plugin, "sessionId", 20)//OOM
+        finishedSession(plugin, "sessionId2", 20)
+        val res = plugin.changeActiveScope(ActiveScopeChangePayload("new scope", true))
+        val scopes = plugin.state.scopeManager.run {
+            byVersion(buildVersion, withData = true)
+        }
+        assertEquals(200, res.code)
+        assertEquals(2, scopes.first().data.sessions.size)
+        println(scopes)
+    }
+
+    /**
+     * //        addProbes(plugin, sessionId, countAddProbes=1_000, sizeExec = 100_000, sizeProbes = 100_000_000) //OOM randomBoolean
+    //        addProbes(plugin, sessionId, countAddProbes = 200, sizeExec = 100, sizeProbes = 10_000)//randomBoolean
+    //        addProbes(plugin, sessionId, countAddProbes = 100, sizeExec = 100, sizeProbes = 10_000)//finish session store seesion
+    //        addProbes(plugin, sessionId, countAddProbes = 50, sizeExec = 100, sizeProbes = 10_000)//finish session store seesion
+              addProbes(plugin, sessionId, countAddProbes = 40, sizeExec = 100, sizeProbes = 10_000)//finish session store seesion
+
+    //        addProbes(plugin, sessionId, countAddProbes = 10, sizeExec = 100, sizeProbes = 10_000)//completed
+     */
+    private suspend fun finishedSession(
+        plugin: Plugin,
+        sessionId: String,
+        countAddProbes:Int = 1,
+        sizeExec:Int = 100,
+        sizeProbes:Int = 10_000
+    ): FinishedSession? {
+        plugin.activeScope.startSession(
+            sessionId,
+            "MANUAL"
+        )
+        addProbes(
+            plugin,
+            sessionId,
+            countAddProbes = countAddProbes,
+            sizeExec = sizeExec,
+            sizeProbes = sizeProbes
+        )
+        println("finished added probes")
+        val finishedSession = plugin.state.finishSession(sessionId)
+        println(finishedSession?.probes?.size)
+        return finishedSession
+    }
+
+    private fun addProbes(
+        plugin: Plugin,
+        sessionId: String,
+        countAddProbes: Int = 1_000,
+        sizeExec: Int = 100_000,
+        sizeProbes: Int = 100_000_000,
+    ) {
+        repeat(countAddProbes) { index ->
+            index.takeIf { it % 10 == 0 }?.let { println(it) }
+            val execClassData = listOf(0 until sizeExec).flatten().map {
+                ExecClassData(
+                    id = Default.nextLong(100_000_000),
+                    className = "foo/Bar",
+                    probes = randomBoolean(sizeProbes)
+                )
+            }
+//        println("execClassData=$execClassData")
+            plugin.activeScope.addProbes(sessionId) { execClassData }
+        }
+    }
+
+    private fun randomBoolean(n: Int = 100) = listOf(0 until n).flatten().map { true }
 
     @Test
     fun `cannot toggleBaseline initial build`() = runBlocking {

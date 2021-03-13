@@ -25,6 +25,7 @@ import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
+import kotlinx.serialization.Transient
 
 interface Scope : Sequence<FinishedSession> {
     val id: String
@@ -57,6 +58,10 @@ class ActiveScope(
     override val name get() = summary.name
 
     val activeSessions = AtomicCache<String, ActiveSession>()
+
+    val methodsCoveredByTestCache = AtomicCache<BundleCounter, MethodsCoveredByTest>()
+
+    val bundlesByTestsCache = AtomicCache<TypedTest, BundleCounter>()
 
     private val _sessions = atomic(sessions.toPersistentList())
 
@@ -112,8 +117,8 @@ class ActiveScope(
         ),
         data = toList().let { sessions ->
             ScopeData(
-                sessions = sessions,
-                typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests)
+                sessions = sessions//,
+               // typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests)
             )
         }
     )
@@ -185,6 +190,11 @@ class ActiveScope(
         changeJob.cancel()
     }
 
+    fun resetCache() {
+        methodsCoveredByTestCache.clear()
+        bundlesByTestsCache.clear()
+    }
+
     override fun toString() = "act-scope($id, $name)"
 
     private fun sessionsChanged() {
@@ -205,8 +215,9 @@ class ActiveScope(
 
 @Serializable
 data class ScopeData(
+    @Transient
     val sessions: List<FinishedSession> = emptyList(),
-    val typedTests: Set<TypedTest> = emptySet(),
+  //  val typedTests: Set<TypedTest> = emptySet(),
     val bundleCounters: BundleCounters = BundleCounters.empty
 ) {
     companion object {

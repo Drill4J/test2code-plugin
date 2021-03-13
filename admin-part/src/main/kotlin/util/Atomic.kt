@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code.util
 
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import java.util.*
 
 class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
 
@@ -39,6 +40,8 @@ class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
     operator fun contains(key: K): Boolean = key in map
 
     operator fun set(key: K, value: V): V? = this(key) { value }
+
+    fun putAll(m: Map<out K, V>) = _map.getAndUpdate { it.putAll(m) }
 
     fun remove(key: K) = _map.getAndUpdate { it.remove(key) }[key]
 
