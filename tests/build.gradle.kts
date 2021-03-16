@@ -28,39 +28,39 @@ val ktorSwaggerVersion: String by rootProject
 val kodeinVersion: String by extra
 
 dependencies {
-    testCompileOnly(project(":api"))
-    testCompileOnly(project(":agent-api"))
-    testImplementation(project(":admin-part"))
-    testCompileOnly(project(":agent-part"))
+    compileOnly(project(":api"))
+    compileOnly(project(":agent-api"))
+    implementation(project(":admin-part"))
+    compileOnly(project(":agent-part"))
 
-    testImplementation("com.epam.drill:common")
-    testImplementation("com.epam.drill:drill-agent-part")
-    testImplementation("com.epam.drill:drill-admin-part")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
+    implementation("com.epam.drill:common")
+    implementation("com.epam.drill:drill-agent-part")
+    implementation("com.epam.drill:drill-admin-part")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
-    testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
-    testImplementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
+    implementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
+    implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
 
-    testImplementation("org.kodein.di:kodein-di-generic-jvm:$kodeinVersion")
+    implementation("org.kodein.di:kodein-di-generic-jvm:$kodeinVersion")
 
-    testImplementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
-    testImplementation(ktor("server-test-host"))
-    testImplementation(ktor("auth"))
-    testImplementation(ktor("auth-jwt"))
-    testImplementation(ktor("server-netty"))
-    testImplementation(ktor("locations"))
-    testImplementation(ktor("server-core"))
-    testImplementation(ktor("websockets"))
-    testImplementation(ktor("client-cio"))
-    testImplementation(ktor("serialization"))
+    implementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
+    implementation(ktor("server-test-host"))
+    implementation(ktor("auth"))
+    implementation(ktor("auth-jwt"))
+    implementation(ktor("server-netty"))
+    implementation(ktor("locations"))
+    implementation(ktor("server-core"))
+    implementation(ktor("websockets"))
+    implementation(ktor("client-cio"))
+    implementation(ktor("serialization"))
 
-    testImplementation("com.epam.drill:kodux")
-    testImplementation("org.jetbrains.xodus:xodus-entity-store")
+    implementation("com.epam.drill:kodux")
+    implementation("org.jetbrains.xodus:xodus-entity-store")
 
-    testImplementation("org.jacoco:org.jacoco.core")
-    testImplementation("org.apache.bcel:bcel:6.3.1")
-    testImplementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
+    implementation("org.jacoco:org.jacoco.core")
+    implementation("org.apache.bcel:bcel:6.3.1")
+    implementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
