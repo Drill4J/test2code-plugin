@@ -18,7 +18,6 @@ package com.epam.drill.plugins.test2code.e2e
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
-import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -30,6 +29,62 @@ import kotlinx.coroutines.*
 import kotlin.test.*
 
 class PluginInstanceStateTest : E2EPluginTest() {
+
+    @Test
+    fun `e2e coverage test start& stop session, switch scope`() {
+        createSimpleAppWithPlugin<CoverageSocketStreams> {
+            connectAgent<Build1> { plugUi, build ->
+                plugUi.buildCoverage()
+                plugUi.coveragePackages()
+                plugUi.activeSessions()!!.run {
+                    count shouldBe 0
+                    testTypes shouldBe emptySet()
+                }
+                plugUi.activeScope()
+                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
+
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
+
+                    repeat(10) { index ->
+                        runWithSession(startSession.payload.sessionId) {//todo change testName
+                            val tests = build.entryPoint()
+
+                            println(takeIf { index % 10 == 0 })
+                            tests.test1()
+                            tests.test2()
+                            tests.test3()
+
+                        }
+                    }
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
+                }.join()
+                plugUi.activeSessions()!!.count shouldBe 0
+                plugUi.activeScope()!!.apply {
+                    coverage.percentage shouldBe 100.0
+                }
+                val switchScope = SwitchActiveScope(
+                    ActiveScopeChangePayload(
+                        scopeName = "new2",
+                        savePrevScope = true,
+                        prevScopeEnabled = true
+                    )
+                ).stringify()
+                pluginAction(switchScope) { status, _ ->
+                    status shouldBe HttpStatusCode.OK
+                    plugUi.buildCoverage()!!.apply {
+                        count.covered shouldBeGreaterThan 0
+                    }
+                    plugUi.coveragePackages()!!.apply {
+                        first().coverage shouldBeGreaterThan 0.0
+                    }
+                }.join()
+                delay(100)
+            }
+        }
+    }
 
     @Test
     fun `deploy build2 with finishing active scope and session on previous build`() {
