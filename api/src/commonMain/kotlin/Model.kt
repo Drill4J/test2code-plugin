@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.api
 
+import com.epam.drill.plugins.test2code.util.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -202,7 +203,9 @@ data class PackageTree(
 
 @Serializable
 data class JavaPackageCoverage(
+    @StringIntern
     val id: String,
+    @StringIntern
     val name: String,
     val totalClassesCount: Int = 0,
     val totalMethodsCount: Int = 0,
@@ -216,8 +219,11 @@ data class JavaPackageCoverage(
 
 @Serializable
 data class JavaClassCoverage(
+    @StringIntern
     val id: String,
+    @StringIntern
     val name: String,
+    @StringIntern
     val path: String,
     val totalMethodsCount: Int = 0,
     val totalCount: Int = 0,
@@ -230,9 +236,13 @@ data class JavaClassCoverage(
 
 @Serializable
 data class JavaMethodCoverage(
+    @StringIntern
     val id: String,
+    @StringIntern
     val name: String,
+    @StringIntern
     val desc: String,
+    @StringIntern
     val decl: String,
     val count: Int,
     val coverage: Double = 0.0,
@@ -249,9 +259,13 @@ data class ProbeRange(val first: Int, val last: Int) {
 
 @Serializable
 data class AssociatedTests(
+    @StringIntern
     val id: String,
+    @StringIntern
     val packageName: String = "",
+    @StringIntern
     val className: String = "",
+    @StringIntern
     val methodName: String = "",
     val tests: List<TypedTest> = emptyList()
 ) {
@@ -261,7 +275,9 @@ data class AssociatedTests(
 
 @Serializable
 data class TypedTest(
+    @StringIntern
     val name: String,
+    @StringIntern
     val type: String
 )
 

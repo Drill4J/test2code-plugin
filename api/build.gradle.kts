@@ -8,6 +8,7 @@ kotlin {
     sourceSets.commonMain {
         dependencies {
             //provided by drill runtime or clients
+            compileOnly(project(":common"))
             compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
         }
     }
@@ -35,7 +36,7 @@ val genTsd by tasks.registering(JavaExec::class) {
     val main by kotlin.jvm().compilations
     dependsOn(main.compileAllTaskName)
     CommandLineArgumentProvider {
-        val genPaths = main.output.classesDirs + main.runtimeDependencyFiles.files
+        val genPaths = main.output.classesDirs + main.runtimeDependencyFiles.files + main.compileDependencyFiles.files
         val drillPluginId: String by project.extra
         val tsDir = buildDir.resolve("ts").apply { mkdirs() }
         val tsdFile = tsDir.resolve("$drillPluginId.d.ts")

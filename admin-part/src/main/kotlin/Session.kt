@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
@@ -105,7 +106,9 @@ class ActiveSession(
 
 @Serializable
 data class FinishedSession(
+    @StringIntern
     override val id: String,
+    @StringIntern
     override val testType: String,
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),
