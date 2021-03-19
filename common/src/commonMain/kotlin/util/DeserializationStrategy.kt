@@ -16,17 +16,10 @@
 package com.epam.drill.plugins.test2code.util
 
 import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.*
 
-inline fun <reified T> BinaryFormat.dump(
-    value: T
-): ByteArray = encodeToByteArray(serializer(), value)
+@SerialInfo
+@Target(AnnotationTarget.PROPERTY)
+annotation class StringIntern
 
-fun <T> BinaryFormat.dump(
-    serializer: SerializationStrategy<T>,
-    value: T
-): ByteArray = encodeToByteArray(serializer, value)
-
-fun <T> BinaryFormat.load(
-    deserializer: DeserializationStrategy<T>,
-    bytes: ByteArray
-): T = decodeFromByteArray(StringInternDeserializationStrategy(deserializer), bytes)
