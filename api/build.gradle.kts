@@ -8,6 +8,7 @@ kotlin {
     sourceSets.commonMain {
         dependencies {
             //provided by drill runtime or clients
+            compileOnly(project(":common"))
             compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
         }
     }

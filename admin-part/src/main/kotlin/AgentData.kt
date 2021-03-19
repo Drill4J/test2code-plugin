@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
@@ -49,6 +50,7 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 
 @Serializable
 internal data class ClassData(
+    @StringIntern
     @Id val buildVersion: String,
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),

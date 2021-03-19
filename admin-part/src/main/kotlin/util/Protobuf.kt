@@ -29,4 +29,4 @@ fun <T> BinaryFormat.dump(
 fun <T> BinaryFormat.load(
     deserializer: DeserializationStrategy<T>,
     bytes: ByteArray
-): T = decodeFromByteArray(deserializer, bytes)
+): T = decodeFromByteArray(StringInternDeserializationStrategy(deserializer), bytes)

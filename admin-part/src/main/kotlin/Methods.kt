@@ -17,13 +17,18 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlinx.serialization.*
 
 @Serializable
 internal data class Method(
+    @StringIntern
     val ownerClass: String,
+    @StringIntern
     val name: String,
+    @StringIntern
     val desc: String,
+    @StringIntern
     val hash: String
 ) : Comparable<Method> {
     override fun compareTo(
