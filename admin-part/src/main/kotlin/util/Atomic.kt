@@ -40,6 +40,8 @@ class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
 
     operator fun set(key: K, value: V): V? = this(key) { value }
 
+    fun putAll(m: Map<out K, V>) = _map.getAndUpdate { it.putAll(m) }
+
     fun remove(key: K) = _map.getAndUpdate { it.remove(key) }[key]
 
     fun clear() = _map.getAndUpdate { it.clear() }

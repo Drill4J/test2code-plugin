@@ -532,7 +532,8 @@ class Plugin(
             AgentState(
                 storeClient = storeClient,
                 agentInfo = agentInfo,
-                adminData = adminData
+                adminData = adminData,
+                realtimeCache = runtimeConfig.realtimeCache
             )
         }?.close()
     }

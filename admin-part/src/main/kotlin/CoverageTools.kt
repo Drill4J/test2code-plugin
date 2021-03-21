@@ -72,18 +72,20 @@ internal fun CoverContext.calculateBundleMethods(
 }
 
 internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
-    context: CoverContext
+    context: CoverContext,
+    cache: AtomicCache<Int, MethodsCoveredByTest>?
 ): List<MethodsCoveredByTest> = map { (typedTest, bundle) ->
-    val changes = context.calculateBundleMethods(bundle, true)
-    MethodsCoveredByTest(
-        id = typedTest.id(),
-        testName = typedTest.name,
-        testType = typedTest.type,
-        allMethods = changes.totalMethods.methods,
-        newMethods = changes.newMethods.methods,
-        modifiedMethods = changes.allModifiedMethods.methods,
-        unaffectedMethods = changes.unaffectedMethods.methods
-    )
+    cache?.get(bundle.hashCode()) ?: context.calculateBundleMethods(bundle, true).let { changes ->
+        MethodsCoveredByTest(
+            id = typedTest.id(),
+            testName = typedTest.name,
+            testType = typedTest.type,
+            allMethods = changes.totalMethods.methods,
+            newMethods = changes.newMethods.methods,
+            modifiedMethods = changes.allModifiedMethods.methods,
+            unaffectedMethods = changes.unaffectedMethods.methods
+        ).also { cache?.set(bundle.hashCode(), it) }
+    }
 }
 
 private fun Iterable<Method>.toInfo(

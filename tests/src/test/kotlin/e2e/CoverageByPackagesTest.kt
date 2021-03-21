@@ -29,6 +29,7 @@ import kotlin.test.*
 
 class CoverageByPackagesTest : E2EPluginTest() {
 
+    @Ignore
     @Test
     fun `cover one method in 2 scopes`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
