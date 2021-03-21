@@ -38,7 +38,8 @@ internal const val DEFAULT_SCOPE_NAME = "New Scope"
 internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
-    val adminData: AdminData
+    val adminData: AdminData,
+    realtimeCache: Boolean = true
 ) {
     private val logger = logger(agentInfo.id)
 
@@ -54,7 +55,7 @@ internal class AgentState(
 
     private val _coverContext = atomic<CoverContext?>(null)
 
-    private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion))
+    private val _activeScope = atomic(ActiveScope(buildVersion = agentInfo.buildVersion, realtimeCache = realtimeCache))
 
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }

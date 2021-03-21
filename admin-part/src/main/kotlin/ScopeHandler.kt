@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
+import kotlin.time.*
 
 internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions, sessions ->
     if (sendSessions) {
@@ -27,8 +28,18 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions
     }
     sessions?.let {
         val context = state.coverContext()
-        val bundleCounters = sessions.calcBundleCounters(context)
-        val coverageInfoSet = bundleCounters.calculateCoverageData(context, this)
+        val bundleCounters = measureTimedValue {
+            sessions.calcBundleCounters(context, activeScope.bundlesByTestsCache)
+        }.apply {
+            logger.info { "Bundle calculation time: ${duration.inSeconds}" }
+        }.value
+
+        val coverageInfoSet = measureTimedValue {
+            bundleCounters.calculateCoverageData(context, this, activeScope.methodsCoveredByTestCache)
+        }.apply {
+            logger.info { "Coverage calculation time: ${duration.inSeconds}" }
+        }.value
+
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
         sendActiveScope()
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
