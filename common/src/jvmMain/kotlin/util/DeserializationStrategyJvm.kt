@@ -29,6 +29,29 @@ class StringInternDeserializationStrategy<T>(private val deserializationStrategy
     }
 }
 
+class StringInternCollectionDeserializationStrategy<T>(private val deserializationStrategy: AbstractCollectionSerializer<*, T, *>) :
+    DeserializationStrategy<T> by deserializationStrategy {
+
+    override fun deserialize(decoder: Decoder): T {
+        return deserializationStrategy.deserialize(DecodeAdapter(decoder))
+    }
+}
+
+class StringInternMapDeserializationStrategy<T>(
+    private val deserializationStrategy: MapLikeSerializer<*, *, T, *>,
+) : DeserializationStrategy<T> by deserializationStrategy {
+
+    override val descriptor: SerialDescriptor
+        get() = deserializationStrategy.descriptor
+
+    override fun deserialize(decoder: Decoder): T {
+        // deserializationStrategy.keySerializer
+//        deserializationStrategy.keySerializer.descriptor
+//        deserializationStrategy.
+        return deserializationStrategy.deserialize(decoder)
+    }
+}
+
 internal class StringInternDecoder(private val decoder: CompositeDecoder) : CompositeDecoder by decoder {
     override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String {
         return decoder.decodeStringElement(descriptor, index).run {
@@ -42,9 +65,10 @@ internal class StringInternDecoder(private val decoder: CompositeDecoder) : Comp
         deserializer: DeserializationStrategy<T>,
         previousValue: T?
     ): T {
-        val deserializationStrategy = when (deserializer) {
-            is MapLikeSerializer<*, *, *, *> -> deserializer
-            is AbstractCollectionSerializer<*, *, *> -> deserializer
+        @Suppress("UNCHECKED_CAST")
+        val deserializationStrategy: DeserializationStrategy<T> = when (deserializer) {
+            is MapLikeSerializer<*, *, *, *> -> StringInternDeserializationStrategy(deserializer) as DeserializationStrategy<T>
+            is AbstractCollectionSerializer<*, *, *> -> StringInternDeserializationStrategy(deserializer) as DeserializationStrategy<T>
             else -> deserializer.takeIf {
                 deserializer.descriptor == ByteArraySerializer().descriptor
             } ?: StringInternDeserializationStrategy(deserializer)
