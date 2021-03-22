@@ -17,7 +17,7 @@ package com.epam.drill.plugins.test2code.util
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
 import kotlin.test.*
 
@@ -31,6 +31,15 @@ private data class TestClass(
 
 @Serializable
 private data class ListWrapper(val list: List<TestClass>)
+
+@Serializable
+private data class ListListWrapper(val list: List<List<TestClass>>)
+
+@Serializable
+private data class MapWrapper(val map: Map<String, TestClass>)
+
+@Serializable
+private data class MapMapWrapper(val map: Map<String, Map<String, TestClass>>)
 
 class ProtobufTest {
     @Test
@@ -46,11 +55,75 @@ class ProtobufTest {
     @Test
     fun `decoded strings of list must be in string pool`() {
         val string = "I am string"
+        val list = Array(10) { TestClass(1, string) }.toList()
         val wrapperTestClass = ProtoBuf.load(
             ListWrapper.serializer(),
-            ProtoBuf.dump(ListWrapper.serializer(), ListWrapper(Array(10) { TestClass(1, string) }.toList()))
+            ProtoBuf.dump(ListWrapper.serializer(), ListWrapper(list))
         )
+        assertEquals(list.size, wrapperTestClass.list.size)
         wrapperTestClass.list.forEach { assertSame(string, it.string) }
+    }
+
+    @Ignore
+    @Test
+    fun `decoded strings of list of list must be in string pool`() {
+        val string = "I am string"
+        val list = Array(5) { Array(10) { TestClass(1, string) }.toList() }.toList()
+        val wrapperTestClass = ProtoBuf.load(
+            ListListWrapper.serializer(),
+            ProtoBuf.dump(
+                ListListWrapper.serializer(),
+                ListListWrapper(list)
+            )
+        )
+        //default realisation doesn't work wright lists  are not equals, wtf ??
+        assertEquals(list.size, wrapperTestClass.list.size)
+        wrapperTestClass.list.forEach { listOfList -> listOfList.forEach { assertSame(string, it.string) } }
+    }
+
+    @Test
+    fun `decoded strings of map must be in string pool`() {
+
+        val string = "I am string"
+        val strings = Array(10) { "$string $it" }
+        val map = strings.asSequence().associateWith { TestClass(1, string) }.toMap()
+        val wrapperTestClass = ProtoBuf.load(
+            MapWrapper.serializer(),
+            ProtoBuf.dump(
+                MapWrapper.serializer(),
+                MapWrapper(map)
+            )
+        )
+        assertEquals(map.size, wrapperTestClass.map.size)
+        wrapperTestClass.map.values.forEach { assertSame(string, it.string) }
+    }
+
+    @Test
+    fun `decoded strings of map of map must be in string pool`() {
+
+        val string = "I am string"
+        val strings = Array(10) { "$string $it" }
+        val map = strings.asSequence().associateWith {
+            strings.asSequence().associateWith { TestClass(1, string) }.toMap()
+        }
+        val wrapperTestClass = ProtoBuf.load(
+            MapMapWrapper.serializer(),
+            ProtoBuf.dump(
+                MapMapWrapper.serializer(),
+                MapMapWrapper(map)
+            )
+        )
+        assertEquals(map.size, wrapperTestClass.map.size)
+        map.forEach { (k, v) ->
+            assertEquals(v.size, wrapperTestClass.map[k]?.size)
+        }
+        assertEquals(map.size, wrapperTestClass.map.size)
+
+        wrapperTestClass.map.values.forEach {
+            it.values.forEach { test ->
+                assertSame(test.string, string)
+            }
+        }
     }
 
     @Test
