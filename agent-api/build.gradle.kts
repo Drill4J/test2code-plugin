@@ -7,7 +7,6 @@ plugins {
 kotlin {
     sourceSets.commonMain {
         dependencies {
-            compileOnly(project(":common"))
             compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
         }
     }

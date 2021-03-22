@@ -15,7 +15,6 @@
  */
 package com.epam.drill.plugins.test2code.common.api
 
-import com.epam.drill.plugins.test2code.util.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -62,9 +61,7 @@ data class AgentSessionDataPayload(val sessionId: String, val data: String)
 @Serializable
 data class ExecClassData(
     val id: Long? = null,
-    @StringIntern
     val className: String,
     val probes: List<Boolean>,
-    @StringIntern
     val testName: String = ""
 )
