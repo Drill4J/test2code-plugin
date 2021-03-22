@@ -16,8 +16,10 @@
 package com.epam.drill.plugins.test2code.util
 
 import kotlinx.serialization.*
+import kotlinx.serialization.builtins.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
+import kotlinx.serialization.internal.*
 
 
 class StringInternDeserializationStrategy<T>(private val deserializationStrategy: DeserializationStrategy<T>) :
@@ -40,10 +42,17 @@ internal class StringInternDecoder(private val decoder: CompositeDecoder) : Comp
         deserializer: DeserializationStrategy<T>,
         previousValue: T?
     ): T {
+        val deserializationStrategy = when (deserializer) {
+            is MapLikeSerializer<*, *, *, *> -> deserializer
+            is AbstractCollectionSerializer<*, *, *> -> deserializer
+            else -> deserializer.takeIf {
+                deserializer.descriptor == ByteArraySerializer().descriptor
+            } ?: StringInternDeserializationStrategy(deserializer)
+        }
         return decoder.decodeSerializableElement(
             descriptor,
             index,
-            StringInternDeserializationStrategy(deserializer),
+            deserializationStrategy,
             previousValue
         )
     }
