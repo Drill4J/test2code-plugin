@@ -22,39 +22,20 @@ import kotlinx.serialization.encoding.*
 import kotlinx.serialization.internal.*
 
 
-class StringInternDeserializationStrategy<T>(private val deserializationStrategy: DeserializationStrategy<T>) :
-    DeserializationStrategy<T> by deserializationStrategy {
+class StringInternDeserializationStrategy<T>(private val deserializationStrategy: KSerializer<T>) :
+    KSerializer<T> by deserializationStrategy {
     override fun deserialize(decoder: Decoder): T {
         return deserializationStrategy.deserialize(DecodeAdapter(decoder))
-    }
-}
-
-class StringInternCollectionDeserializationStrategy<T>(private val deserializationStrategy: AbstractCollectionSerializer<*, T, *>) :
-    DeserializationStrategy<T> by deserializationStrategy {
-
-    override fun deserialize(decoder: Decoder): T {
-        return deserializationStrategy.deserialize(DecodeAdapter(decoder))
-    }
-}
-
-class StringInternMapDeserializationStrategy<T>(
-    private val deserializationStrategy: MapLikeSerializer<*, *, T, *>,
-) : DeserializationStrategy<T> by deserializationStrategy {
-
-    override val descriptor: SerialDescriptor
-        get() = deserializationStrategy.descriptor
-
-    override fun deserialize(decoder: Decoder): T {
-        // deserializationStrategy.keySerializer
-//        deserializationStrategy.keySerializer.descriptor
-//        deserializationStrategy.
-        return deserializationStrategy.deserialize(decoder)
     }
 }
 
 internal class StringInternDecoder(private val decoder: CompositeDecoder) : CompositeDecoder by decoder {
+    val map: Map<KSerializer<*>, KSerializer<*>> = mutableMapOf<KSerializer<*>, KSerializer<*>>()
+
+
     override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String {
-        return decoder.decodeStringElement(descriptor, index).run {
+        val decodeStringElement = decoder.decodeStringElement(descriptor, index)
+        return decodeStringElement.run {
             takeIf { descriptor.getElementAnnotations(index).any { it is StringIntern } }?.intern() ?: this
         }
     }
@@ -67,11 +48,16 @@ internal class StringInternDecoder(private val decoder: CompositeDecoder) : Comp
     ): T {
         @Suppress("UNCHECKED_CAST")
         val deserializationStrategy: DeserializationStrategy<T> = when (deserializer) {
-            is MapLikeSerializer<*, *, *, *> -> StringInternDeserializationStrategy(deserializer) as DeserializationStrategy<T>
+
+            is MapLikeSerializer<*, *, *, *> -> {
+                val valueSerializer = deserializer.valueSerializer
+                val keySerializer = deserializer.keySerializer
+                MapSerializer(defineComplexSerializer(keySerializer), defineComplexSerializer(valueSerializer)) as DeserializationStrategy<T>
+            }
             is AbstractCollectionSerializer<*, *, *> -> StringInternDeserializationStrategy(deserializer) as DeserializationStrategy<T>
             else -> deserializer.takeIf {
                 deserializer.descriptor == ByteArraySerializer().descriptor
-            } ?: StringInternDeserializationStrategy(deserializer)
+            } ?: StringInternDeserializationStrategy(deserializer as KSerializer<T>)
         }
         return decoder.decodeSerializableElement(
             descriptor,
@@ -80,6 +66,15 @@ internal class StringInternDecoder(private val decoder: CompositeDecoder) : Comp
             previousValue
         )
     }
+
+    private fun defineComplexSerializer(keySerializer: KSerializer<out Any?>) =
+        if (keySerializer is MapLikeSerializer<*, *, *, *>)
+            MapSerializer(
+                StringInternDeserializationStrategy(keySerializer.keySerializer),
+                StringInternDeserializationStrategy(keySerializer.valueSerializer)
+            )
+        else
+            StringInternDeserializationStrategy(keySerializer)
 }
 
 internal class DecodeAdapter(private val decoder: Decoder) : Decoder by decoder {
