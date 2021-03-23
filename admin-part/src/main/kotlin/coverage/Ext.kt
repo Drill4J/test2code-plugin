@@ -50,7 +50,7 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
     is MethodCounter -> CoverageKey(
         id = "${parent?.name}.$name$desc".crc64,
         packageName = (parent as? ClassCounter)?.path ?: "",
-        className = (parent as? ClassCounter)?.fullName ?: "",
+        className = (parent as? ClassCounter)?.name ?: "",
         methodName = name,
         methodDesc = desc
     )
@@ -66,12 +66,14 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
     else -> CoverageKey(name.crc64)
 }
 
-internal fun BundleCounter.coverageKeys(): Sequence<CoverageKey> = packages.asSequence().flatMap { p ->
-    sequenceOf(p.coverageKey()) + p.classes.asSequence().flatMap { c ->
+internal fun BundleCounter.coverageKeys(
+    onlyPackages: Boolean = true
+): Sequence<CoverageKey> = packages.asSequence().flatMap { p ->
+    sequenceOf(p.coverageKey()) + (p.classes.takeIf { !onlyPackages }?.asSequence()?.flatMap { c ->
         sequenceOf(c.coverageKey()) + c.methods.asSequence().mapNotNull { m ->
             m.takeIf { it.count.covered > 0 }?.coverageKey(c)
         }
-    }
+    } ?: sequenceOf())
 }
 
 internal fun BundleCounter.toCoverDto(

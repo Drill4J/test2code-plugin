@@ -21,8 +21,7 @@ import kotlinx.serialization.*
 
 @Serializable
 data class BuildTests(
-    val tests: GroupedTests = emptyMap(),
-    val assocTests: Set<AssociatedTests> = emptySet()
+    val tests: GroupedTests = emptyMap()
 )
 
 internal fun BundleCounters.testsWith(

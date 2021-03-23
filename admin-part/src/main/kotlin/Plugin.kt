@@ -31,6 +31,7 @@ import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import java.io.*
+import kotlin.time.*
 
 @Suppress("unused")
 class Plugin(
@@ -269,8 +270,10 @@ class Plugin(
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
-            val coverageInfoSet = scope.data.bundleCounters.calculateCoverageData(coverContext, scope)
+            val bundleCounters = scope.data.bundleCounters
+            val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
+            bundleCounters.assocTestsJob(scope)
         }
     }
 
@@ -362,12 +365,10 @@ class Plugin(
                 context.methodChanges.run { new.count() + modified.count() }
             )
         )
-        state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
             byTest.keys.groupBy(TypedTest::type, TypedTest::name),
-            coverageInfoSet.associatedTests
         )
-        state.storeBuild()
+        state.updateBuildStats(buildCoverage, context)
         val summary = cachedBuild.toSummary(
             agentInfo.name,
             context.testsToRun,
@@ -376,6 +377,8 @@ class Plugin(
             parentCoverageCount
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary)
+        assocTestsJob()
+        state.storeBuild()
         val stats = summary.toStatsDto()
         val qualityGate = checkQualityGate(stats)
         send(buildVersion, Routes.Build().let(Routes.Build::Summary), summary.toDto())
@@ -398,19 +401,7 @@ class Plugin(
         send(buildVersion, coverageRoute, buildCoverage)
         val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = summary.riskCounts)
         send(buildVersion, Routes.Build.Methods(buildRoute), methodSummaryDto)
-        val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
-        val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
-        send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
-        packages.forEach {
-            send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
-        }
-        if (associatedTests.isNotEmpty()) {
-            logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
-            val beautifiedAssociatedTests = associatedTests.map { batch ->
-                batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
-            }
-            send(buildVersion, Routes.Build.AssociatedTests(buildRoute), beautifiedAssociatedTests)
-        }
+        sendBuildTree(packageCoverage, associatedTests)
         send(buildVersion, Routes.Build.Tests(buildRoute), tests)
         Routes.Build.Summary.Tests(Routes.Build.Summary(buildRoute)).let {
             send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
@@ -433,6 +424,25 @@ class Plugin(
         state.storeClient.store(testsToRunSummary)
         Routes.Build.Summary(buildRoute).let {
             send(buildVersion, Routes.Build.Summary.TestsToRun(it), testsToRunSummary.toTestsToRunSummaryDto())
+        }
+    }
+
+    private suspend fun sendBuildTree(
+        treeCoverage: List<JavaPackageCoverage>,
+        associatedTests: List<AssociatedTests>
+    ) {
+        val coverageRoute = Routes.Build.Coverage(Routes.Build())
+        val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
+        val packages = treeCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
+        send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
+        packages.forEach {
+            send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
+        }
+        if (associatedTests.isNotEmpty()) {
+            logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
+            associatedTests.forEach {
+                send(buildVersion, Routes.Build.AssociatedTests(it.id, Routes.Build()), it)
+            }
         }
     }
 
@@ -479,6 +489,29 @@ class Plugin(
             it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage)
         }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
+        bundleCounters.assocTestsJob(scope)
+    }
+
+    private suspend fun sendScopeTree(
+        scopeId: String,
+        associatedTests: List<AssociatedTests>,
+        treeCoverage: List<JavaPackageCoverage>
+    ) {
+        val scopeRoute = Routes.Build.Scopes.Scope(scopeId, Routes.Build.Scopes(Routes.Build()))
+        if (associatedTests.isNotEmpty()) {
+            logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
+            associatedTests.forEach { assocTests ->
+                val assocTestsRoute = Routes.Build.Scopes.Scope.AssociatedTests(assocTests.id, scopeRoute)
+                send(buildVersion, assocTestsRoute, assocTests)
+            }
+        }
+        val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scopeRoute)
+        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
+        val packages = treeCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
+        send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
+        packages.forEach {
+            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
+        }
     }
 
     internal suspend fun CoverageInfoSet.sendScopeCoverage(
@@ -488,19 +521,7 @@ class Plugin(
         val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
         send(buildVersion, Routes.Build.Scopes.Scope.Methods(scope), buildMethods.toSummaryDto())
-        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
-        val packages = packageCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
-        send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
-        packages.forEach {
-            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
-        }
-        if (associatedTests.isNotEmpty()) {
-            logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
-            val beautifiedAssociatedTests = associatedTests.map { batch ->
-                batch.copy(className = batch.className.replace("${batch.packageName}/", ""))
-            }
-            send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(scope), beautifiedAssociatedTests)
-        }
+        sendScopeTree(scopeId, associatedTests, packageCoverage)
         send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), tests)
         Routes.Build.Scopes.Scope.Summary.Tests(Routes.Build.Scopes.Scope.Summary(scope)).let {
             send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
@@ -513,7 +534,11 @@ class Plugin(
                 send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), it.allMethods)
                 send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
                 send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), it.newMethods)
-                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
+                send(
+                    buildVersion,
+                    Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
+                    it.unaffectedMethods
+                )
             }
         }
     }
@@ -532,5 +557,20 @@ class Plugin(
                 runtimeConfig = runtimeConfig
             )
         }?.close()
+    }
+
+    internal fun BundleCounters.assocTestsJob(
+        scope: Scope? = null
+    ) = GlobalScope.launch {
+        logger.debug { "Calculating all associated tests..." }
+        val assocTestsMap = byTest.associatedTests(onlyPackages = false)
+        val associatedTests: List<AssociatedTests> = measureTimedValue {
+            assocTestsMap.getAssociatedTests()
+        }.apply { logger.trace { "Calculated in ${duration.inSeconds}" } }.value
+        val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
+        logger.debug { "Sending all associated tests" }
+        scope?.let {
+            sendScopeTree(it.id, associatedTests, treeCoverage)
+        } ?: sendBuildTree(treeCoverage, associatedTests)
     }
 }

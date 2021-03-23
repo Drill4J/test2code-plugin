@@ -42,8 +42,8 @@ class Routes {
             }
         }
 
-        @Location("/associated-tests")
-        class AssociatedTests(val build: Build)
+        @Location("/tests/associatedWith/{id}")
+        class AssociatedTests(val id: String, val build: Build)
 
         @Location("/methods")
         class Methods(val build: Build) {
@@ -125,8 +125,8 @@ class Routes {
                     }
                 }
 
-                @Location("/associated-tests")
-                class AssociatedTests(val scope: Scope)
+                @Location("/tests/associatedWith/{id}")
+                class AssociatedTests(val id: String, val scope: Scope)
 
                 @Location("/methods")
                 class Methods(val scope: Scope)

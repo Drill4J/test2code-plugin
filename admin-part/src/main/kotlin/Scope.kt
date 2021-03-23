@@ -106,7 +106,7 @@ class ActiveScope(
 
     fun rename(name: String): ScopeSummary = _summary.updateAndGet { it.copy(name = name) }
 
-    fun finish(enabled: Boolean) = FinishedScope(
+    fun finish(enabled: Boolean, counterInitializer: () -> BundleCounters = { BundleCounters.empty }) = FinishedScope(
         id = id,
         buildVersion = buildVersion,
         name = summary.name,
@@ -119,7 +119,8 @@ class ActiveScope(
         data = toList().let { sessions ->
             ScopeData(
                 sessions = sessions,
-                typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests)
+                typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests),
+                bundleCounters = counterInitializer()
             )
         }
     )

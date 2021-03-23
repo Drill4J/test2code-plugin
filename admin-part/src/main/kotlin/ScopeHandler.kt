@@ -21,8 +21,8 @@ import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlin.time.*
 
-internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions, sessions ->
-    if (sendSessions) {
+internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChanged, sessions ->
+    if (sessionChanged) {
         sendActiveSessions()
     }
     sessions?.let {
@@ -32,7 +32,6 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions
         }.apply {
             logger.info { "Bundle calculation time: ${duration.inSeconds}" }
         }.value
-
         val coverageInfoSet = measureTimedValue {
             bundleCounters.calculateCoverageData(context, this, methodsCoveredByTestCache)
         }.apply {
@@ -42,6 +41,9 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sendSessions
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
         sendActiveScope()
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
+        if (sessionChanged) {
+            bundleCounters.assocTestsJob(this)
+        }
     }
 }
 
@@ -55,7 +57,9 @@ internal suspend fun Plugin.changeActiveScope(
     if (scopeChange.savePrevScope) {
         if (prevScope.any()) {
             logger.debug { "finish scope with id=${prevScope.id}" }
-            val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
+            val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled) {
+                prevScope.calcBundleCounters(state.coverContext(), prevScope.bundleByTestCache)
+            }
             state.scopeManager.store(finishedScope)
             sendScopeSummary(finishedScope.summary)
             logger.info { "$finishedScope has been saved." }
@@ -136,13 +140,19 @@ internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
 }
 
 private suspend fun Plugin.cleanTopics(scopeId: String) = scopeById(scopeId).let { scope ->
-    send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(scope), "")
     val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
     send(buildVersion, coverageRoute, "")
     state.classDataOrNull()?.let { classData ->
         val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
-        classData.packageTree.packages.forEach {
-            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), "")
+        classData.packageTree.packages.forEach { p ->
+            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(p.name, pkgsRoute), "")
+            send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(p.id, scope), "")
+            p.classes.forEach { c ->
+                send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(c.id, scope), "")
+                c.methods.forEach { m ->
+                    send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(m.id, scope), "")
+                }
+            }
         }
     }
     send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), "")

@@ -31,10 +31,6 @@ class ScopeContext {
         Channel(Channel.UNLIMITED)
     suspend fun scope() = scope.receive()
 
-    internal val associatedTests: Channel<List<AssociatedTests>?> =
-        Channel(Channel.UNLIMITED)
-    suspend fun associatedTests() = associatedTests.receive()
-
     internal val methods: Channel<MethodsSummaryDto?> =
         Channel(Channel.UNLIMITED)
     suspend fun methods() = methods.receive()
