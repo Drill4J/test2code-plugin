@@ -205,11 +205,10 @@ internal fun Sequence<ExecClassData>.bundle(
     else -> bundle(context.packageTree)
 }
 
-private fun Map<TypedTest, BundleCounter>.associatedTests(): Map<CoverageKey, List<TypedTest>> = run {
-    entries.asSequence()
-        .flatMap { (test, bundle) ->
-            bundle.coverageKeys().map { it to test }
-        }.distinct()
-        .groupBy({ it.first }) { it.second }
-}
-
+internal fun Map<TypedTest, BundleCounter>.associatedTests(
+    onlyPackages: Boolean = true
+): Map<CoverageKey, List<TypedTest>> = entries.asSequence()
+    .flatMap { (test, bundle) ->
+        bundle.coverageKeys(onlyPackages).map { it to test }
+    }.distinct()
+    .groupBy({ it.first }) { it.second }

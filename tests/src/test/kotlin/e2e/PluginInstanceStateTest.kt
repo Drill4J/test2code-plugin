@@ -72,6 +72,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                     plugUi.buildCoverage()!!.apply {
                         count.covered shouldBeGreaterThan 0
                     }
+                    plugUi.coveragePackages()
                     plugUi.coveragePackages()!!.apply {
                         first().coverage shouldBeGreaterThan 0.0
                     }
@@ -186,6 +187,7 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 ).stringify()
                 pluginAction(switchScope).join()
 
+                plugUi.coveragePackages()
                 plugUi.coveragePackages()!!.apply {
                     first().coverage shouldBeGreaterThan 0.0
                 }

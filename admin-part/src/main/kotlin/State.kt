@@ -238,13 +238,9 @@ internal class AgentState(
 
     internal fun updateBuildTests(
         tests: GroupedTests,
-        assocTests: List<AssociatedTests>
     ): CachedBuild = updateBuild {
         copy(
-            tests = this.tests.copy(
-                tests = tests,
-                assocTests = assocTests.toSet()
-            )
+            tests = this.tests.copy(tests = tests)
         )
     }
 
