@@ -90,9 +90,6 @@ class Routes {
             @Location("/parent-stats")
             class ParentTestsToRunStats(val parent: TestsToRun)
         }
-        //TODO remove after changes on the frontend
-        @Location("/tests/covered-methods")
-        class CoveredMethodsByTest(val build: Build)
 
         @Location("/tests/{testId}/methods")
         class MethodsCoveredByTest(val testId: String, val build: Build) {
@@ -148,11 +145,7 @@ class Routes {
 
                 @Location("/tests")
                 class Tests(val scope: Scope)
-
-                //TODO remove after changes on the frontend
-                @Location("/tests/covered-methods")
-                class CoveredMethodsByTest(val scope: Scope)
-
+                
                 @Location("/tests/{testId}/methods")
                 class MethodsCoveredByTest(val testId: String, val scope: Scope) {
                     @Location("/summary")
