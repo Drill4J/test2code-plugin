@@ -45,7 +45,7 @@ class ActiveScope(
     val nth: Int = 1,
     name: String = "$DEFAULT_SCOPE_NAME $nth",
     sessions: List<FinishedSession> = emptyList(),
-    realtimeCache: Boolean = true
+    realtimeCalculationCache: Boolean = true
 ) : Scope {
 
     private enum class Change(val sessions: Boolean, val probes: Boolean) {
@@ -60,9 +60,9 @@ class ActiveScope(
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
-    val methodsCoveredByTestCache = getCache<Int, MethodsCoveredByTest>(realtimeCache)
+    val methodsCoveredByTestCache = getCache<Int, MethodsCoveredByTest>(realtimeCalculationCache)
 
-    val bundlesByTestsCache = getCache<TypedTest, BundleCounter>(realtimeCache)
+    val bundlesByTestsCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
 
     private val _sessions = atomic(sessions.toPersistentList())
 

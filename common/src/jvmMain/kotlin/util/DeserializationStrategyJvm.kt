@@ -30,8 +30,6 @@ class StringInternDeserializationStrategy<T>(private val deserializationStrategy
 }
 
 internal class StringInternDecoder(private val decoder: CompositeDecoder) : CompositeDecoder by decoder {
-    val map: Map<KSerializer<*>, KSerializer<*>> = mutableMapOf<KSerializer<*>, KSerializer<*>>()
-
 
     override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String {
         val decodeStringElement = decoder.decodeStringElement(descriptor, index)

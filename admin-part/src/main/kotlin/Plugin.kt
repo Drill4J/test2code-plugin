@@ -416,8 +416,6 @@ class Plugin(
             send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
         }
-        //TODO remove after changes on the frontend
-        send(buildVersion, Routes.Build.CoveredMethodsByTest(buildRoute), methodsCoveredByTest)
 
         methodsCoveredByTest.forEach {
             Routes.Build.MethodsCoveredByTest(it.id, buildRoute).let { test ->
@@ -508,8 +506,6 @@ class Plugin(
             send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
         }
-        //TODO remove after changes on the frontend
-        send(buildVersion, Routes.Build.Scopes.Scope.CoveredMethodsByTest(scope), methodsCoveredByTest)
 
         methodsCoveredByTest.forEach {
             Routes.Build.Scopes.Scope.MethodsCoveredByTest(it.id, scope).let { test ->
@@ -533,7 +529,7 @@ class Plugin(
                 storeClient = storeClient,
                 agentInfo = agentInfo,
                 adminData = adminData,
-                realtimeCache = runtimeConfig.realtimeCache
+                realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
             )
         }?.close()
     }
