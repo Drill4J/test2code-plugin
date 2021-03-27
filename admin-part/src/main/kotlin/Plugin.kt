@@ -529,7 +529,7 @@ class Plugin(
                 storeClient = storeClient,
                 agentInfo = agentInfo,
                 adminData = adminData,
-                realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
+                runtimeConfig = runtimeConfig
             )
         }?.close()
     }

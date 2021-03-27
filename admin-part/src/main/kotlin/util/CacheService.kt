@@ -15,4 +15,9 @@
  */
 package com.epam.drill.plugins.test2code.util
 
+/**
+ * The cache is used for real-time coverage calculations.
+ * Enabling and disabling depends on the system property: "drill.plugins.test2code.features.realtime.cache".
+ * Only tests in the finalize state are added to the cache
+ */
 fun <K, V> getCache(enabled: Boolean = true): AtomicCache<K, V>? = if (enabled) AtomicCache() else null
