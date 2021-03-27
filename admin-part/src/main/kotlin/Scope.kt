@@ -45,7 +45,7 @@ class ActiveScope(
     val nth: Int = 1,
     name: String = "$DEFAULT_SCOPE_NAME $nth",
     sessions: List<FinishedSession> = emptyList(),
-    realtimeCalculationCache: Boolean = true
+    realtimeCalculationCache: Boolean
 ) : Scope {
 
     private enum class Change(val sessions: Boolean, val probes: Boolean) {
@@ -60,9 +60,9 @@ class ActiveScope(
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
-    val methodsCoveredByTestCache = getCache<Int, MethodsCoveredByTest>(realtimeCalculationCache)
+    val methodsCoveredByTestCache = getCache<TypedTest, MethodsCoveredByTest>(realtimeCalculationCache)
 
-    val bundlesByTestsCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
+    val bundleByTestCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
 
     private val _sessions = atomic(sessions.toPersistentList())
 
@@ -194,7 +194,7 @@ class ActiveScope(
 
     fun resetCaches() {
         methodsCoveredByTestCache?.clear()
-        bundlesByTestsCache?.clear()
+        bundleByTestCache?.clear()
     }
 
     override fun toString() = "act-scope($id, $name)"

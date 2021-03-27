@@ -39,7 +39,7 @@ internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
     val adminData: AdminData,
-    realtimeCalculationCache: Boolean = true
+    val runtimeConfig: RuntimeConfig
 ) {
     private val logger = logger(agentInfo.id)
 
@@ -56,7 +56,10 @@ internal class AgentState(
     private val _coverContext = atomic<CoverContext?>(null)
 
     private val _activeScope = atomic(
-        ActiveScope(buildVersion = agentInfo.buildVersion, realtimeCalculationCache = realtimeCalculationCache)
+        ActiveScope(
+            buildVersion = agentInfo.buildVersion,
+            realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
+        )
     )
 
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
@@ -301,7 +304,8 @@ internal class AgentState(
                     nth = nth,
                     buildVersion = agentInfo.buildVersion,
                     name = name,
-                    sessions = sessions
+                    sessions = sessions,
+                    realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
                 ).apply {
                     updateSummary {
                         it.copy(started = startedAt)
@@ -312,7 +316,12 @@ internal class AgentState(
     }
 
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
-        ActiveScope(nth = it.nth.inc(), name = scopeName(name), buildVersion = agentInfo.buildVersion)
+        ActiveScope(
+            nth = it.nth.inc(),
+            name = scopeName(name),
+            buildVersion = agentInfo.buildVersion,
+            realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
+        )
     }.apply { close() }
 
     private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentInfo.buildVersion)

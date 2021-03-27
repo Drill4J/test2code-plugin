@@ -73,9 +73,10 @@ internal fun CoverContext.calculateBundleMethods(
 
 internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
     context: CoverContext,
-    cache: AtomicCache<Int, MethodsCoveredByTest>?
+    cache: AtomicCache<TypedTest, MethodsCoveredByTest>?,
+    finalizedTests: Sequence<TypedTest>
 ): List<MethodsCoveredByTest> = map { (typedTest, bundle) ->
-    cache?.get(bundle.hashCode()) ?: context.calculateBundleMethods(bundle, true).let { changes ->
+    cache?.get(typedTest) ?: context.calculateBundleMethods(bundle, true).let { changes ->
         MethodsCoveredByTest(
             id = typedTest.id(),
             testName = typedTest.name,
@@ -84,7 +85,10 @@ internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
             newMethods = changes.newMethods.methods,
             modifiedMethods = changes.allModifiedMethods.methods,
             unaffectedMethods = changes.unaffectedMethods.methods
-        ).also { cache?.set(bundle.hashCode(), it) }
+        ).also {
+            if (typedTest in finalizedTests)
+                cache?.set(typedTest, it)
+        }
     }
 }
 

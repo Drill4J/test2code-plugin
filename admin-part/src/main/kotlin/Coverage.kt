@@ -65,7 +65,7 @@ internal fun Sequence<Session>.calcBundleCounters(
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null,
-    cache: AtomicCache<Int, MethodsCoveredByTest>? = null
+    cache: AtomicCache<TypedTest, MethodsCoveredByTest>? = null
 ): CoverageInfoSet {
     val bundle = all
     val bundlesByTests = byTest
@@ -120,7 +120,9 @@ internal fun BundleCounters.calculateCoverageData(
 
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
-    val coveredByTest = bundlesByTests.methodsCoveredByTest(context, cache)
+    val finalizedTests = (scope as? ActiveScope)?.flatMap { it.testStats.keys } ?: emptySequence()
+
+    val coveredByTest = bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests)
 
     val tests = bundlesByTests.map { (typedTest, bundle) ->
         TestCoverageDto(
@@ -162,20 +164,30 @@ private fun Sequence<Session>.bundlesByTests(
     context: CoverContext,
     cache: AtomicCache<TypedTest, BundleCounter>?
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
+    val testsWithEmptyBundle = testsWithBundle(cache)
     groupBy(Session::testType).map { (testType, sessions) ->
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
             .filterNot { cache?.map?.containsKey(it.key) ?: false }
-            .map { it.key to it.value.asSequence().bundle(context) }
-            .toMap(mutableMapOf())
+            .mapValuesTo(testsWithEmptyBundle) { it.value.asSequence().bundle(context) }
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
     }.let { mutableMap ->
-        val finalizedTests = flatMap { map -> map.testStats.keys }
+        val finalizedTests = flatMap { it.testStats.keys }
         val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
         mutableMap + (cache?.putAll(testsAddToCache) ?: emptyMap())
     }
 } ?: emptyMap()
+
+private fun Sequence<Session>.testsWithBundle(
+    cache: AtomicCache<TypedTest, BundleCounter>?,
+    bundle: BundleCounter = BundleCounter("")
+): MutableMap<TypedTest, BundleCounter> = flatMap { session ->
+    session.tests.asSequence().filterNot { cache?.map?.containsKey(it) ?: false }
+}.associateWithTo(mutableMapOf()) {
+    bundle
+}
+
 
 internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext

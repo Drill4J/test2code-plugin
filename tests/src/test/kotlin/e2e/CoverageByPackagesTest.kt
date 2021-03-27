@@ -29,12 +29,10 @@ import kotlin.test.*
 
 class CoverageByPackagesTest : E2EPluginTest() {
 
-    @Ignore
     @Test
     fun `cover one method in 2 scopes`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<Build1> { plugUi, build ->
-
                 plugUi.coveragePackages()!!.first().apply {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 0

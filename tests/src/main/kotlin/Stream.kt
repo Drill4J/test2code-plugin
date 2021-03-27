@@ -249,6 +249,10 @@ class CoverageSocketStreams : PluginStreams() {
     ) {
         val scope = scopeById(scopeId)
         val coverage = Routes.Build.Scopes.Scope.Coverage(scope)
+
+        val scopeContext = ScopeContext()
+        scopeSubscriptions[scopeId] = scopeContext to block
+
         arrayOf(
             scope,
             Routes.Build.Scopes.Scope.Methods(scope),
@@ -268,9 +272,6 @@ class CoverageSocketStreams : PluginStreams() {
                 ).toTextFrame()
             )
         }
-
-        val scopeContext = ScopeContext()
-        scopeSubscriptions[scopeId] = scopeContext to block
         block(scopeContext)
     }
 
