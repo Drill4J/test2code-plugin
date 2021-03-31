@@ -47,6 +47,8 @@ val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character
 
 internal fun String.crc64(): Long = CRC64.classId(toByteArray())
 
+internal fun ByteArray.crc64(): Long = CRC64.classId(this)
+
 infix fun Number.percentOf(other: Number): Double = when (val dOther = other.toDouble()) {
     0.0 -> 0.0
     else -> toDouble() * 100.0 / dOther

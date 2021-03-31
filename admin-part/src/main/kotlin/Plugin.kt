@@ -30,7 +30,9 @@ import com.epam.kodux.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
+import org.jacoco.core.data.*
 import java.io.*
+import java.util.*
 import kotlin.time.*
 
 @Suppress("unused")
@@ -39,7 +41,7 @@ class Plugin(
     sender: Sender,
     val storeClient: StoreClient,
     agentInfo: AgentInfo,
-    id: String
+    id: String,
 ) : AdminPluginPart<Action>(
     id = id,
     agentInfo = agentInfo,
@@ -83,11 +85,11 @@ class Plugin(
     }
 
     override fun parseAction(
-        rawAction: String
+        rawAction: String,
     ): Action = json.decodeFromString(Action.serializer(), rawAction)
 
     override suspend fun doAction(
-        action: Action
+        action: Action,
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
@@ -144,6 +146,39 @@ class Plugin(
                 ActionResult(StatusCodes.OK, "")
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+        is ExportCoverage -> runCatching {
+            val probesByteArray = ByteArrayOutputStream().use { outputStream ->
+                val executionDataWriter = ExecutionDataWriter(outputStream)
+                val classBytes = state.coverContext().classBytes
+                val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
+                allFinishedScopes.flatMap { finishedScope ->
+                    finishedScope.data.sessions.flatMap { it.probes }
+                }.forEach { execClassData ->
+                    executionDataWriter.visitClassExecution(
+                        ExecutionData(
+                            classBytes[execClassData.className]?.crc64() ?: execClassData.id(),
+                            execClassData.className,
+                            execClassData.probes.toBooleanArray()
+                        )
+                    )
+                }
+                activeScope.iterator().asSequence().flatMap { it.probes }.forEach { execClassData ->
+                    executionDataWriter.visitClassExecution(
+                        ExecutionData(
+                            classBytes[execClassData.className]?.crc64() ?: execClassData.id(),
+                            execClassData.className,
+                            execClassData.probes.toBooleanArray()
+                        )
+                    )
+                }
+                outputStream.toByteArray()
+            }
+            val encodedProbes = Base64.getEncoder().encodeToString(probesByteArray)
+            ActionResult(StatusCodes.OK, encodedProbes)
+        }.getOrElse {
+            logger.error(it) { "Can't get coverage. Reason:" }
+            ActionResult(StatusCodes.BAD_REQUEST, "Can't get coverage.")
+        }
         is CancelSession -> action.payload.run {
             activeScope.cancelSession(action.payload.sessionId)?.let { session ->
                 CancelAgentSession(payload = AgentSessionPayload(session.id)).toActionResult()
@@ -176,7 +211,7 @@ class Plugin(
 
     override suspend fun processData(
         instanceId: String,
-        content: String
+        content: String,
     ): Any = run {
         val message = json.decodeFromString(CoverMessage.serializer(), content)
         processData(instanceId, message)
@@ -185,7 +220,7 @@ class Plugin(
 
     private suspend fun processData(
         instanceId: String,
-        message: CoverMessage
+        message: CoverMessage,
     ) = when (message) {
         is InitInfo -> {
             if (message.init) {
@@ -327,7 +362,7 @@ class Plugin(
 
     private suspend fun sendScopes(
         buildVersion: String,
-        scopes: Sequence<FinishedScope>
+        scopes: Sequence<FinishedScope>,
     ) = sender.send(
         context = AgentSendContext(
             agentId,
@@ -353,7 +388,7 @@ class Plugin(
 
     private suspend fun BundleCounters.calculateAndSendBuildCoverage(
         context: CoverContext,
-        scopeCount: Int
+        scopeCount: Int,
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.stats.coverage } ?: zeroCount
@@ -395,7 +430,7 @@ class Plugin(
     private suspend fun CoverageInfoSet.sendBuildCoverage(
         buildVersion: String,
         buildCoverage: BuildCoverage,
-        summary: AgentSummary
+        summary: AgentSummary,
     ) = Routes.Build().let { buildRoute ->
         val coverageRoute = Routes.Build.Coverage(buildRoute)
         send(buildVersion, coverageRoute, buildCoverage)
@@ -429,7 +464,7 @@ class Plugin(
 
     private suspend fun sendBuildTree(
         treeCoverage: List<JavaPackageCoverage>,
-        associatedTests: List<AssociatedTests>
+        associatedTests: List<AssociatedTests>,
     ) {
         val coverageRoute = Routes.Build.Coverage(Routes.Build())
         val pkgsRoute = Routes.Build.Coverage.Packages(coverageRoute)
@@ -495,7 +530,7 @@ class Plugin(
     private suspend fun sendScopeTree(
         scopeId: String,
         associatedTests: List<AssociatedTests>,
-        treeCoverage: List<JavaPackageCoverage>
+        treeCoverage: List<JavaPackageCoverage>,
     ) {
         val scopeRoute = Routes.Build.Scopes.Scope(scopeId, Routes.Build.Scopes(Routes.Build()))
         if (associatedTests.isNotEmpty()) {
@@ -516,7 +551,7 @@ class Plugin(
 
     internal suspend fun CoverageInfoSet.sendScopeCoverage(
         buildVersion: String,
-        scopeId: String
+        scopeId: String,
     ) = scopeById(scopeId).let { scope ->
         val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
@@ -560,7 +595,7 @@ class Plugin(
     }
 
     internal fun BundleCounters.assocTestsJob(
-        scope: Scope? = null
+        scope: Scope? = null,
     ) = GlobalScope.launch {
         logger.debug { "Calculating all associated tests..." }
         val assocTestsMap = byTest.associatedTests(onlyPackages = false)
