@@ -91,6 +91,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     )
                 ).stringify()
                 pluginAction(switchScope)
+                plugUi.coveragePackages()!!
                 plugUi.coveragePackages()!!.first().apply {
                     id shouldBe "vsu9sbxes5bl"
                     coveredClassesCount shouldBe 1
