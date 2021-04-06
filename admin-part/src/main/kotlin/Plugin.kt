@@ -365,10 +365,10 @@ class Plugin(
                 context.methodChanges.run { new.count() + modified.count() }
             )
         )
+        state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
             byTest.keys.groupBy(TypedTest::type, TypedTest::name),
         )
-        state.updateBuildStats(buildCoverage, context)
         val summary = cachedBuild.toSummary(
             agentInfo.name,
             context.testsToRun,
