@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.JvmSerializable
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
@@ -55,7 +56,7 @@ internal data class ClassData(
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),
     val probeIds: Map<String, Long> = emptyMap()
-) : AgentData() {
+) : AgentData(), JvmSerializable {
     companion object {
         private val emptyPackageTree = PackageTree()
     }

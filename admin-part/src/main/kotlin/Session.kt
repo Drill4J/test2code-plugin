@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.atomicfu.*
@@ -24,7 +25,7 @@ import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
 @Serializable
-sealed class Session : Sequence<ExecClassData> {
+sealed class Session : Sequence<ExecClassData>, JvmSerializable {
     abstract val id: String
     abstract val testType: String
     abstract val tests: Set<TypedTest>
@@ -35,7 +36,7 @@ class ActiveSession(
     override val id: String,
     override val testType: String,
     val isGlobal: Boolean = false,
-    val isRealtime: Boolean = false
+    val isRealtime: Boolean = false,
 ) : Session() {
 
     override val tests: Set<TypedTest>
@@ -90,9 +91,9 @@ class ActiveSession(
         FinishedSession(
             id = id,
             testType = testType,
-            tests = _testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
+            tests = HashSet(_testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
                 keys + tests.map { it.name.typedTest(testType) }
-            } ?: keys,
+            } ?: keys),
             testStats = _testRun.value?.tests?.associate {
                 TypedTest(type = testType, name = it.name) to TestStats(
                     duration = it.finishedAt - it.startedAt,
@@ -112,8 +113,8 @@ data class FinishedSession(
     override val testType: String,
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),
-    val probes: List<ExecClassData>
-) : Session() {
+    val probes: List<ExecClassData>,
+) : Session(), JvmSerializable {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
 
     override fun equals(other: Any?): Boolean = other is FinishedSession && id == other.id

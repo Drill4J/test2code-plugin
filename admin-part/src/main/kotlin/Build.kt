@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
 import com.epam.kodux.*
@@ -39,7 +40,7 @@ internal data class BuildStats(
     val methodCount: Count = zeroCount,
     val coverageByType: Map<String, Count> = emptyMap(),
     val scopeCount: Int = 0
-)
+) : JvmSerializable
 
 internal fun BuildCoverage.toCachedBuildStats(
     context: CoverContext
