@@ -22,7 +22,7 @@ import kotlinx.serialization.*
 @Serializable
 data class BuildTests(
     val tests: GroupedTests = emptyMap()
-)
+) : java.io.Serializable
 
 internal fun BundleCounters.testsWith(
     methods: Iterable<Method>

@@ -55,7 +55,7 @@ internal data class ClassData(
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),
     val probeIds: Map<String, Long> = emptyMap()
-) : AgentData() {
+) : AgentData(), java.io.Serializable {
     companion object {
         private val emptyPackageTree = PackageTree()
     }

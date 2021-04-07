@@ -64,4 +64,7 @@ data class ExecClassData(
     val className: String,
     val probes: List<Boolean>,
     val testName: String = ""
-)
+) : JvmSerializable
+
+expect interface JvmSerializable
+

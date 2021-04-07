@@ -45,7 +45,7 @@ class ActiveScope(
     val nth: Int = 1,
     name: String = "$DEFAULT_SCOPE_NAME $nth",
     sessions: List<FinishedSession> = emptyList(),
-    realtimeCalculationCache: Boolean
+    realtimeCalculationCache: Boolean,
 ) : Scope {
 
     private enum class Change(val sessions: Boolean, val probes: Boolean) {
@@ -64,7 +64,7 @@ class ActiveScope(
 
     val bundleByTestCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
 
-    private val _sessions = atomic(sessions.toPersistentList())
+    private val _sessions = atomic(sessions.toList())
 
     //TODO remove summary for this class
     private val _summary = atomic(
@@ -131,7 +131,7 @@ class ActiveScope(
         sessionId: String,
         testType: String,
         isGlobal: Boolean = false,
-        isRealtime: Boolean = false
+        isRealtime: Boolean = false,
     ) = ActiveSession(sessionId, testType, isGlobal, isRealtime).takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
@@ -147,7 +147,7 @@ class ActiveScope(
 
     fun addProbes(
         sessionId: String,
-        probeProvider: () -> Collection<ExecClassData>
+        probeProvider: () -> Collection<ExecClassData>,
     ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
 
     fun probesChanged() = _change.update {
@@ -158,7 +158,7 @@ class ActiveScope(
     }
 
     fun cancelSession(
-        sessionId: String
+        sessionId: String,
     ): ActiveSession? = removeSession(sessionId)?.also {
         if (it.any()) {
             _change.value = Change.ALL
@@ -174,11 +174,11 @@ class ActiveScope(
     }
 
     fun finishSession(
-        sessionId: String
+        sessionId: String,
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
-                val updatedSessions = _sessions.updateAndGet { it.add(finished) }
+                val updatedSessions = _sessions.updateAndGet { list -> ArrayList(list).also { it.add(finished) } }
                 _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
                 _change.value = Change.ALL
             } else sessionsChanged()
@@ -221,8 +221,8 @@ data class ScopeData(
     @Transient
     val sessions: List<FinishedSession> = emptyList(),
     val typedTests: Set<TypedTest> = emptySet(),
-    val bundleCounters: BundleCounters = BundleCounters.empty
-) {
+    val bundleCounters: BundleCounters = BundleCounters.empty,
+) : java.io.Serializable {
     companion object {
         val empty = ScopeData()
     }
@@ -235,7 +235,7 @@ data class FinishedScope(
     override val name: String,
     override val summary: ScopeSummary,
     val enabled: Boolean,
-    val data: ScopeData
+    val data: ScopeData,
 ) : Scope {
     override fun iterator() = data.sessions.iterator()
 
@@ -248,7 +248,7 @@ internal data class ActiveScopeInfo(
     val id: String = genUuid(),
     val nth: Int = 1,
     val name: String = "",
-    val startedAt: Long = 0L
+    val startedAt: Long = 0L,
 )
 
 internal fun ActiveScopeInfo.inc() = copy(nth = nth.inc())

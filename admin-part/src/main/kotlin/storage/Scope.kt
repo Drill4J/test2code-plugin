@@ -16,10 +16,8 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
-import kotlinx.serialization.protobuf.*
 
 private val logger = logger {}
 fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
@@ -28,13 +26,13 @@ class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byVersion(
         buildVersion: String,
-        withData: Boolean = false
+        withData: Boolean = false,
     ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
         findBy<FinishedScope> {
             FinishedScope::buildVersion eq buildVersion
         }.run {
             takeIf { withData }?.run {
-                findBy<ScopeDataBytes> { ScopeDataBytes::buildVersion eq buildVersion }.takeIf { it.any() }
+                findBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }.takeIf { it.any() }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
@@ -45,8 +43,7 @@ class ScopeManager(private val storage: StoreClient) {
         storage.executeInAsyncTransaction {
             store(scope.copy(data = ScopeData.empty))
             scope.takeIf { it.any() }?.let {
-                val dataBytes: ScopeDataBytes = it.toDataBytes()
-                store(dataBytes)
+                store(ScopeDataEntity(it.id, it.buildVersion, it.data))
             }
         }
     }
@@ -54,20 +51,20 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun deleteById(scopeId: String): FinishedScope? = storage.executeInAsyncTransaction {
         findById<FinishedScope>(scopeId)?.also {
             deleteById<FinishedScope>(scopeId)
-            deleteById<ScopeDataBytes>(scopeId)
+            deleteById<ScopeDataEntity>(scopeId)
         }
     }
 
     suspend fun deleteByVersion(buildVersion: String) {
         storage.executeInAsyncTransaction {
             deleteBy<FinishedScope> { FinishedScope::buildVersion eq buildVersion }
-            deleteBy<ScopeDataBytes> { ScopeDataBytes::buildVersion eq buildVersion }
+            deleteBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }
         }
     }
 
     suspend fun byId(
         scopeId: String,
-        withProbes: Boolean = false
+        withProbes: Boolean = false,
     ): FinishedScope? = storage.run {
         takeIf { withProbes }?.executeInAsyncTransaction {
             findById<FinishedScope>(scopeId)?.run {
@@ -82,23 +79,18 @@ class ScopeManager(private val storage: StoreClient) {
 }
 
 @Serializable
-internal class ScopeDataBytes(
+internal class ScopeDataEntity(
     @Id val id: String,
     val buildVersion: String,
-    val bytes: ByteArray
-)
-
-private fun FinishedScope.toDataBytes() = ScopeDataBytes(
-    id = id,
-    buildVersion = buildVersion,
-    bytes = ProtoBuf.dump(ScopeData.serializer(), data).let(Zstd::compress)
-)
+    @CustomSerialization(SerializationType.FST, CompressType.ZSTD)
+    val bytes: ScopeData,
+) : java.io.Serializable
 
 private suspend fun FinishedScope.withProbes(
-    data: ScopeDataBytes?,
+    data: ScopeDataEntity?,
     storeClient: StoreClient,
 ): FinishedScope = data?.let {
-    val scopeData = ProtoBuf.load(ScopeData.serializer(), Zstd.decompress(it.bytes))
+    val scopeData: ScopeData = it.bytes
     val sessions = storeClient.loadSessions(id)
     logger.debug { "take scope $id $name with sessions size ${sessions.size}" }
     copy(data = scopeData.copy(sessions = sessions))

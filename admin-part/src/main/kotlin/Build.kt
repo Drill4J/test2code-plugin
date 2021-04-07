@@ -39,7 +39,7 @@ internal data class BuildStats(
     val methodCount: Count = zeroCount,
     val coverageByType: Map<String, Count> = emptyMap(),
     val scopeCount: Int = 0
-)
+) : java.io.Serializable
 
 internal fun BuildCoverage.toCachedBuildStats(
     context: CoverContext
