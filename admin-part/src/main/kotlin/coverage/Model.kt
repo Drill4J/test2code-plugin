@@ -74,7 +74,7 @@ class BundleCounters(
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
     val statsByTest: Map<TypedTest, TestStats> = emptyMap()
-) {
+) : java.io.Serializable {
     companion object {
         val empty = BundleCounter("").let {
             BundleCounters(all = it, testTypeOverlap = it, overlap = it)
@@ -82,7 +82,7 @@ class BundleCounters(
     }
 }
 
-sealed class NamedCounter {
+sealed class NamedCounter : java.io.Serializable{
     abstract val name: String
     abstract val count: Count
 }
@@ -96,7 +96,7 @@ data class BundleCounter(
     val classCount: Count = zeroCount,
     val packageCount: Count = zeroCount,
     val packages: List<PackageCounter> = emptyList()
-) : NamedCounter()
+) : NamedCounter(), java.io.Serializable
 
 @Serializable
 data class PackageCounter(
@@ -106,7 +106,7 @@ data class PackageCounter(
     val classCount: Count,
     val methodCount: Count,
     val classes: List<ClassCounter>
-) : NamedCounter()
+) : NamedCounter(), java.io.Serializable
 
 @Serializable
 data class ClassCounter(
@@ -116,7 +116,7 @@ data class ClassCounter(
     override val name: String,
     override val count: Count,
     val methods: List<MethodCounter>
-) : NamedCounter() {
+) : NamedCounter(), java.io.Serializable {
     val fullName = if (path.any()) "$path/$name" else name
 }
 
@@ -129,6 +129,6 @@ data class MethodCounter(
     @StringIntern
     val decl: String,
     override val count: Count
-) : NamedCounter() {
+) : NamedCounter(), java.io.Serializable {
     val sign = "$name$desc"
 }

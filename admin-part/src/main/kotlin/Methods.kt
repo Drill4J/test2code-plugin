@@ -30,7 +30,7 @@ internal data class Method(
     val desc: String,
     @StringIntern
     val hash: String
-) : Comparable<Method> {
+) : Comparable<Method> , java.io.Serializable {
     override fun compareTo(
         other: Method
     ): Int = ownerClass.compareTo(other.ownerClass).takeIf {
