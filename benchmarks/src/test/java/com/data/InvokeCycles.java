@@ -13,8 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.plugins.test2code
+package com.data;
 
-internal fun Class<*>.readBytes(): ByteArray = getResourceAsStream(
-    "/${name.replace('.', '/')}.class"
-).readBytes()
+import java.util.Random;
+
+public class InvokeCycles implements Runnable {
+    BigClazz bigClazz = new BigClazz();
+
+    @Override
+    public void run() {
+        Random random = new Random();
+        long i = bigClazz.manyForInFor(random.nextLong());
+        System.out.println("res====" + i);
+    }
+}

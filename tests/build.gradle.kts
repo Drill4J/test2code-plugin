@@ -31,7 +31,7 @@ dependencies {
     implementation(project(":api"))
     implementation(project(":agent-api"))
     implementation(project(":admin-part"))
-    testCompileOnly(project(":agent-part"))
+    implementation(project(":agent-part"))
 
     implementation("com.epam.drill:common")
     implementation("com.epam.drill:drill-agent-part")
@@ -62,6 +62,7 @@ dependencies {
     implementation("org.apache.bcel:bcel:6.3.1")
     implementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
 
+    testImplementation(project(":tests"))
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
