@@ -23,21 +23,21 @@ import kotlinx.serialization.*
 @Serializable
 internal class StoredClassData(
     @Id val version: String,
-    @CustomSerialization(SerializationType.FST, CompressType.ZSTD)
+    @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
     val data: ClassData,
 ) : java.io.Serializable
 
 @Serializable
 internal class StoredBundles(
     @Id val version: String,
-    @CustomSerialization(SerializationType.FST, CompressType.ZSTD)
+    @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
     val data: BundleCounters,
 ) : java.io.Serializable
 
 @Serializable
 class StoredBuildTests(
     @Id val version: String,
-    @CustomSerialization(SerializationType.FST, CompressType.ZSTD)
+    @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
     val data: BuildTests,
 ) : java.io.Serializable
 

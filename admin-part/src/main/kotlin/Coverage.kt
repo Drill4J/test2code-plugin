@@ -174,9 +174,9 @@ private fun Iterable<Session>.bundlesByTests(
     cache: AtomicCache<TypedTest, BundleCounter>?,
     context: CoverContext
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
-    val toMap: Map<ExecClassData, ClassCounter?> = map {
-        val calculed = it.calculated
-        it.map {
+    val toMap: Map<ExecClassData, ClassCounter?> = map { session ->
+        val calculed = session.calculated
+        session.map {
             it to calculed[it]
         }
 

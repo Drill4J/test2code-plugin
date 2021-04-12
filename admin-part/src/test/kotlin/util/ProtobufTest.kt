@@ -19,7 +19,9 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
+import org.junit.jupiter.api.*
 import kotlin.test.*
+import kotlin.test.Test
 
 
 @Serializable
@@ -41,6 +43,7 @@ private data class MapWrapper(val map: Map<String, TestClass>)
 @Serializable
 private data class MapMapWrapper(val map: Map<String, Map<String, TestClass>>)
 
+@Disabled
 class ProtobufTest {
     @Test
     fun `decoded string of POJO must be in string pool`() {

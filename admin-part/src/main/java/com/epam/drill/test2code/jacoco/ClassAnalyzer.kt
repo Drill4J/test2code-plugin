@@ -25,8 +25,8 @@ class JvmClassAnalyzer {
             return null
         }
         val classCoverage = ClassCoverage(reader.className.intr())
-        val analyzer = ClassAnalyzer(classCoverage)
-        reader.accept(ClassProbesAdapter(analyzer, false), 0)
+        val classProbesAdapter = ClassProbesAdapter(ClassAnalyzer(classCoverage), false)
+        reader.accept(classProbesAdapter, 0)
         classCoverage.totalInstruction = classCoverage.methods.values.stream().map(MethodCoverage::totalInstruction)
             .reduce(0) { a: Int, b: Int -> Integer.sum(a, b) }
         val integers = HashMap<Int, Int>()
@@ -47,14 +47,14 @@ class ClassAnalyzer(private val classCoverage: ClassCoverage) : ClassProbesVisit
         name: String,
         signature: String?,
         superName: String,
-        interfaces: Array<String>
+        interfaces: Array<String>,
     ) {
     }
 
     override fun visitAnnotation(
         desc: String,
-        visible: Boolean
-    ): AnnotationVisitor {
+        visible: Boolean,
+    ): AnnotationVisitor? {
         classAnnotations.add(desc)
         return super.visitAnnotation(desc, visible)
     }
@@ -69,7 +69,7 @@ class ClassAnalyzer(private val classCoverage: ClassCoverage) : ClassProbesVisit
         name: String,
         desc: String,
         signature: String?,
-        exceptions: Array<String>?
+        exceptions: Array<String>?,
     ): MethodProbesVisitor {
         val builder = InstructionsBuilder(
             classCoverage.method(name, desc)
@@ -77,7 +77,7 @@ class ClassAnalyzer(private val classCoverage: ClassCoverage) : ClassProbesVisit
         return object : MethodAnalyzer(builder) {
             override fun accept(
                 methodNode: MethodNode,
-                methodVisitor: MethodVisitor?
+                methodVisitor: MethodVisitor?,
             ) {
                 super.accept(methodNode, methodVisitor)
                 val total =
@@ -94,7 +94,7 @@ class ClassAnalyzer(private val classCoverage: ClassCoverage) : ClassProbesVisit
         desc: String,
         signature: String?,
         icc: InstructionsBuilder,
-        methodNode: MethodNode
+        methodNode: MethodNode,
     ) {
         val mcc = MethodCoverageCalculator(
             icc.getInstructions()
@@ -114,8 +114,8 @@ class ClassAnalyzer(private val classCoverage: ClassCoverage) : ClassProbesVisit
         name: String,
         desc: String,
         signature: String?,
-        value: Any
-    ): FieldVisitor {
+        value: Any?,
+    ): FieldVisitor? {
         return super.visitField(access, name, desc, signature, value)
     }
 
@@ -156,7 +156,7 @@ internal open class MethodSanitizer(
     name: String?,
     desc: String?,
     signature: String?,
-    exceptions: Array<String?>?
+    exceptions: Array<String?>?,
 ) : JSRInlinerAdapter(
     InstrSupport.ASM_API_VERSION, mv, access, name, desc, signature,
     exceptions
@@ -167,7 +167,7 @@ internal open class MethodSanitizer(
         signature: String?,
         start: Label?,
         end: Label?,
-        index: Int
+        index: Int,
     ) {
         // Here we rely on the usage of the info fields by the tree API. If the
         // labels have been properly used before the info field contains a
@@ -193,26 +193,26 @@ abstract class MethodProbesVisitor @JvmOverloads constructor(mv: MethodVisitor? 
     open fun visitProbe(probeId: Int) {}
     open fun visitJumpInsnWithProbe(
         opcode: Int, label: Label?,
-        probeId: Int, frame: IFrame?
+        probeId: Int, frame: IFrame?,
     ) {
     }
 
     open fun visitInsnWithProbe(opcode: Int, probeId: Int) {}
     open fun visitTableSwitchInsnWithProbes(
         min: Int, max: Int,
-        dflt: Label?, labels: Array<out Label?>, frame: IFrame?
+        dflt: Label?, labels: Array<out Label?>, frame: IFrame?,
     ) {
     }
 
     open fun visitLookupSwitchInsnWithProbes(
         dflt: Label?,
-        keys: IntArray?, labels: Array<out Label?>, frame: IFrame?
+        keys: IntArray?, labels: Array<out Label?>, frame: IFrame?,
     ) {
     }
 
     open fun accept(
         methodNode: MethodNode,
-        methodVisitor: MethodVisitor?
+        methodVisitor: MethodVisitor?,
     ) {
         methodNode.accept(methodVisitor)
     }
@@ -221,7 +221,7 @@ abstract class MethodProbesVisitor @JvmOverloads constructor(mv: MethodVisitor? 
 
 class MethodProbesAdapter(
     private val probesVisitor: MethodProbesVisitor,
-    private val idGenerator: IProbeIdGenerator
+    private val idGenerator: IProbeIdGenerator,
 ) : MethodVisitor(InstrSupport.ASM_API_VERSION, probesVisitor) {
     private var analyzer: AnalyzerAdapter? = null
     private val tryCatchProbeLabels: MutableMap<Label?, Label>
@@ -231,7 +231,7 @@ class MethodProbesAdapter(
 
     override fun visitTryCatchBlock(
         start: Label, end: Label,
-        handler: Label, type: String
+        handler: Label, type: String,
     ) {
         probesVisitor.visitTryCatchBlock(
             getTryCatchLabel(start),
@@ -296,7 +296,7 @@ class MethodProbesAdapter(
     override fun visitLookupSwitchInsn(
         dflt: Label,
         keys: IntArray,
-        labels: Array<Label>
+        labels: Array<Label>,
     ) {
         if (markLabels(dflt, labels)) {
             probesVisitor.visitLookupSwitchInsnWithProbes(
@@ -310,7 +310,7 @@ class MethodProbesAdapter(
 
     override fun visitTableSwitchInsn(
         min: Int, max: Int,
-        dflt: Label, vararg labels: Label
+        dflt: Label, vararg labels: Label,
     ) {
         if (markLabels(dflt, labels)) {
             probesVisitor.visitTableSwitchInsnWithProbes(
@@ -354,7 +354,7 @@ open class MethodAnalyzer internal constructor(private val builder: Instructions
     private var currentNode: AbstractInsnNode? = null
     override fun accept(
         methodNode: MethodNode,
-        methodVisitor: MethodVisitor?
+        methodVisitor: MethodVisitor?,
     ) {
         methodVisitor!!.visitCode()
         for (n in methodNode.tryCatchBlocks) {
@@ -393,21 +393,21 @@ open class MethodAnalyzer internal constructor(private val builder: Instructions
 
     override fun visitFieldInsn(
         opcode: Int, owner: String,
-        name: String, desc: String
+        name: String, desc: String,
     ) {
         builder.addInstruction(currentNode)
     }
 
     override fun visitMethodInsn(
         opcode: Int, owner: String,
-        name: String, desc: String, itf: Boolean
+        name: String, desc: String, itf: Boolean,
     ) {
         builder.addInstruction(currentNode)
     }
 
     override fun visitInvokeDynamicInsn(
         name: String, desc: String,
-        bsm: Handle, vararg bsmArgs: Any
+        bsm: Handle, vararg bsmArgs: Any,
     ) {
         builder.addInstruction(currentNode)
     }
@@ -427,14 +427,14 @@ open class MethodAnalyzer internal constructor(private val builder: Instructions
 
     override fun visitTableSwitchInsn(
         min: Int, max: Int,
-        dflt: Label, vararg labels: Label
+        dflt: Label, vararg labels: Label,
     ) {
         visitSwitchInsn(dflt, labels)
     }
 
     override fun visitLookupSwitchInsn(
         dflt: Label, keys: IntArray,
-        labels: Array<Label>
+        labels: Array<Label>,
     ) {
         visitSwitchInsn(dflt, labels)
     }
@@ -465,7 +465,7 @@ open class MethodAnalyzer internal constructor(private val builder: Instructions
 
     override fun visitJumpInsnWithProbe(
         opcode: Int, label: Label?,
-        probeId: Int, frame: IFrame?
+        probeId: Int, frame: IFrame?,
     ) {
         builder.addInstruction(currentNode)
         builder.addProbe(probeId, 1)
@@ -478,21 +478,21 @@ open class MethodAnalyzer internal constructor(private val builder: Instructions
 
     override fun visitTableSwitchInsnWithProbes(
         min: Int, max: Int,
-        dflt: Label?, labels: Array<out Label?>, frame: IFrame?
+        dflt: Label?, labels: Array<out Label?>, frame: IFrame?,
     ) {
         visitSwitchInsnWithProbes(dflt, labels)
     }
 
     override fun visitLookupSwitchInsnWithProbes(
         dflt: Label?,
-        keys: IntArray?, labels: Array<out Label?>, frame: IFrame?
+        keys: IntArray?, labels: Array<out Label?>, frame: IFrame?,
     ) {
         visitSwitchInsnWithProbes(dflt, labels)
     }
 
     private fun visitSwitchInsnWithProbes(
         dflt: Label?,
-        labels: Array<out Label?>
+        labels: Array<out Label?>,
     ) {
         builder.addInstruction(currentNode)
         LabelInfo.resetDone(dflt)
@@ -531,6 +531,7 @@ class LabelInfo private constructor() {
 
     companion object {
         const val NO_PROBE = -1
+
         @JvmStatic
         fun setTarget(label: Label) {
             val info = create(label)
@@ -613,7 +614,7 @@ class LabelInfo private constructor() {
 
         fun setIntermediateLabel(
             label: Label,
-            intermediate: Label?
+            intermediate: Label?,
         ) {
             create(label).intermediate = intermediate
         }
@@ -626,7 +627,7 @@ class LabelInfo private constructor() {
         @JvmStatic
         fun setInstruction(
             label: Label,
-            instruction: Instruction?
+            instruction: Instruction?,
         ) {
             create(label).instruction = instruction
         }
@@ -660,7 +661,7 @@ class LabelFlowAnalyzer : MethodVisitor(InstrSupport.ASM_API_VERSION) {
     var lineStart: Label? = null
     override fun visitTryCatchBlock(
         start: Label, end: Label,
-        handler: Label, type: String
+        handler: Label, type: String,
     ) {
         // Enforce probe at the beginning of the block. Assuming the start of
         // the block already is successor of some other code, adding a target
@@ -696,14 +697,14 @@ class LabelFlowAnalyzer : MethodVisitor(InstrSupport.ASM_API_VERSION) {
 
     override fun visitTableSwitchInsn(
         min: Int, max: Int,
-        dflt: Label, vararg labels: Label
+        dflt: Label, vararg labels: Label,
     ) {
         visitSwitchInsn(dflt, labels)
     }
 
     override fun visitLookupSwitchInsn(
         dflt: Label, keys: IntArray,
-        labels: Array<Label>
+        labels: Array<Label>,
     ) {
         visitSwitchInsn(dflt, labels)
     }
@@ -745,7 +746,7 @@ class LabelFlowAnalyzer : MethodVisitor(InstrSupport.ASM_API_VERSION) {
 
     override fun visitFieldInsn(
         opcode: Int, owner: String,
-        name: String, desc: String
+        name: String, desc: String,
     ) {
         successor = true
         first = false
@@ -753,7 +754,7 @@ class LabelFlowAnalyzer : MethodVisitor(InstrSupport.ASM_API_VERSION) {
 
     override fun visitMethodInsn(
         opcode: Int, owner: String,
-        name: String, desc: String, itf: Boolean
+        name: String, desc: String, itf: Boolean,
     ) {
         successor = true
         first = false
@@ -762,7 +763,7 @@ class LabelFlowAnalyzer : MethodVisitor(InstrSupport.ASM_API_VERSION) {
 
     override fun visitInvokeDynamicInsn(
         name: String, desc: String,
-        bsm: Handle, vararg bsmArgs: Any
+        bsm: Handle, vararg bsmArgs: Any,
     ) {
         successor = true
         first = false
@@ -813,7 +814,6 @@ class LabelFlowAnalyzer : MethodVisitor(InstrSupport.ASM_API_VERSION) {
 }
 
 
-
 class ClassProbesAdapter(val cv: ClassProbesVisitor?, private val trackFrames: Boolean) :
     ClassVisitor(InstrSupport.ASM_API_VERSION, cv), IProbeIdGenerator {
 
@@ -829,7 +829,7 @@ class ClassProbesAdapter(val cv: ClassProbesVisitor?, private val trackFrames: B
         version: Int, access: Int, name: String,
         signature: String?,
         superName: String,
-        interfaces: Array<String>
+        interfaces: Array<String>,
     ) {
         this.name = name
         super.visit(version, access, name, signature, superName, interfaces)
@@ -840,7 +840,7 @@ class ClassProbesAdapter(val cv: ClassProbesVisitor?, private val trackFrames: B
         name: String,
         desc: String,
         signature: String?,
-        exceptions: Array<String?>?
+        exceptions: Array<String?>?,
     ): MethodVisitor {
         val methodProbes: MethodProbesVisitor
         val mv: MethodProbesVisitor? = cv.visitMethod(
@@ -966,7 +966,7 @@ internal class MethodCoverageCalculator(private val instructions: MutableMap<Abs
     // === IFilterOutput API ===
     override fun ignore(
         fromInclusive: AbstractInsnNode,
-        toInclusive: AbstractInsnNode
+        toInclusive: AbstractInsnNode,
     ) {
         var i = fromInclusive
         while (i !== toInclusive) {
@@ -989,7 +989,7 @@ internal class MethodCoverageCalculator(private val instructions: MutableMap<Abs
 
     override fun replaceBranches(
         source: AbstractInsnNode,
-        newTargets: Set<AbstractInsnNode>
+        newTargets: Set<AbstractInsnNode>,
     ) {
         replacements[source] = newTargets
     }
@@ -1002,13 +1002,14 @@ internal class MethodCoverageCalculator(private val instructions: MutableMap<Abs
 }
 
 
-abstract class ClassProbesVisitor @JvmOverloads constructor(cv: ClassVisitor? = null) : ClassVisitor(InstrSupport.ASM_API_VERSION, cv) {
+abstract class ClassProbesVisitor @JvmOverloads constructor(cv: ClassVisitor? = null) :
+    ClassVisitor(InstrSupport.ASM_API_VERSION, cv) {
     abstract override fun visitMethod(
         access: Int,
         name: String,
         desc: String,
         signature: String?,
-        exceptions: Array<String>?
+        exceptions: Array<String>?,
     ): MethodProbesVisitor
 
     abstract fun visitTotalProbeCount(count: Int)
@@ -1048,7 +1049,7 @@ class Instruction(val line: Int, private var methodCoverage: MethodCoverage, pri
     }
 
     fun replaceBranches(
-        newBranches: Collection<Instruction>
+        newBranches: Collection<Instruction>,
     ): Instruction {
         val result = Instruction(line, methodCoverage, currentProbe)
         result.branches = newBranches.size
@@ -1154,7 +1155,7 @@ internal class InstructionsBuilder(methodCoverage: MethodCoverage) {
     private class Jump internal constructor(
         private val source: Instruction?,
         private val target: Label?,
-        private val branch: Int
+        private val branch: Int,
     ) {
         fun wire() {
             val instruction = LabelInfo.getInstruction(
