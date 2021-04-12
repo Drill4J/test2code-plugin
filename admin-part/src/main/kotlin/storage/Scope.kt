@@ -82,7 +82,7 @@ class ScopeManager(private val storage: StoreClient) {
 internal class ScopeDataEntity(
     @Id val id: String,
     val buildVersion: String,
-    @CustomSerialization(SerializationType.FST, CompressType.ZSTD)
+    @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
     val bytes: ScopeData,
 ) : java.io.Serializable
 

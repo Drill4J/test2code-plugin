@@ -455,11 +455,27 @@ data class CoverDto(
     val count: Count = zeroCount,
 ) : JvmSerializable
 
-@Serializable
-data class Count(
-    val covered: Int,
-    val total: Int,
-) : JvmSerializable
+//@Serializable
+//data class Count(
+//    val covered: Int,
+//    val total: Int,
+//) : JvmSerializable
 
+typealias Count = Long
+
+val Count.covered
+    get() = (this shr 32).toInt()
+
+val Count.total
+    get() = this.toInt()
+
+
+fun Count.copy(covered: Int = (this shr 32).toInt(), total: Int = this.toInt()): Count {
+    return Count(covered, total)
+}
+
+fun Count(covered: Int, total: Int): Count {
+    return (covered.toLong() shl 32) or (total.toLong() and 0xFFFFFFFFL)
+}
 
 expect interface JvmSerializable
