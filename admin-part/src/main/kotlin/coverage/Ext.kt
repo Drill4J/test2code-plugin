@@ -19,10 +19,15 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
-import kotlinx.coroutines.*
+import java.util.*
 import kotlin.math.*
+import java.lang.ref.WeakReference
+
+import java.util.WeakHashMap
 
 internal fun ExecClassData.id(): Long = id ?: className.crc64()
+
+internal fun BitSet.toCount() = Count(maxOf(0, cardinality() - 1), length() - 1)
 
 internal fun List<Boolean>.toCount() = Count(count { it }, size)
 
@@ -31,10 +36,10 @@ internal fun <T> List<T>.slice(probeRange: ProbeRange): List<T> = slice(probeRan
 internal fun Count.percentage(): Double = covered percentOf total
 
 internal fun Count?.arrowType(other: Count): ArrowType = this?.run {
-    (this - other).first.sign.toArrowType()
+    (this.minuss( other)).first.sign.toArrowType()
 } ?: ArrowType.UNCHANGED
 
-internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
+internal infix fun Count.minuss(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
     total.gcd(other.total).let { gcd ->
         val (totalLong, otherTotalLong) = total.toLong() to other.total.toLong()
         Pair(
@@ -48,11 +53,11 @@ internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
-        id = "${parent?.name}.$name$desc".crc64,
-        packageName = (parent as? ClassCounter)?.path ?: "",
-        className = (parent as? ClassCounter)?.name ?: "",
-        methodName = name,
-        methodDesc = desc
+        id = "${parent?.name}.$sign".crc64,
+        packageName = (parent as? ClassCounter)?.path?.intern() ?: "",
+        className = (parent as? ClassCounter)?.name?.intern() ?: "",
+        methodName = name.intern(),
+        methodDesc = desc.intern()
     )
     is ClassCounter -> CoverageKey(
         id = "$path.$name".crc64,
@@ -86,24 +91,23 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal fun List<Method>.toCoverMap(
+internal fun Map<String, CoverMethod>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean
-): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
-    val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
-        c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
-    }.toMap()
-    runBlocking(allAvailableProcessDispatcher) {
-        val subCollectionSize = (size / availableProcessors).takeIf { it > 0 } ?: 1
-        chunked(subCollectionSize).map { subList ->
-            async {
-                subList.mapNotNull { method ->
-                    val covered = method.toCovered(map[method.ownerClass to method.signature()])
-                    covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
-                }
+): Map<String, CoverMethod> {
+    if (bundle == BundleCounter.empty)
+        return this
+    return bundle.packages.flatMap { it.classes }.flatMap { c ->
+        c.methods.mapNotNull { m ->
+            m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
+                m.key to get(m.key)!!.copy(
+                    count = it.count,
+                    coverageRate = it.count.coverageRate()
+                )
             }
-        }.flatMap { it.await() }.toMap()
-    }
+
+        }
+    }.toMap()
 }
 
 internal fun BundleCounter.coveredMethods(
@@ -131,9 +135,7 @@ internal fun Sequence<PackageCounter>.toCoveredMethods(
                 val covered: Map<String, MethodCounter> = c.methods.asSequence()
                     .filter(NamedCounter::hasCoverage)
                     .associateBy(MethodCounter::sign)
-                mapNotNull { m ->
-                    covered[m.signature()]?.let { m to it.count }
-                }.asSequence()
+                mapNotNull { m -> covered[m.signature]?.let { m to it.count } }.asSequence()
             }
         }.flatten()
     }
@@ -157,19 +159,17 @@ internal fun Method.toCovered(count: Count?) = CoverMethod(
 internal fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
 
 internal fun String.typedTest(type: String) = TypedTest(
-    type = type,
-    name = urlDecode()
+    type = type.intr(),
+    name = urlDecode().intr()
 )
 
-internal fun TypedTest.id() = "$name:$type"
+internal fun TypedTest.id() = "$name:$type".intr()
 
 private fun Int.toArrowType(): ArrowType? = when (this) {
     in Int.MIN_VALUE..-1 -> ArrowType.INCREASE
     in 1..Int.MAX_VALUE -> ArrowType.DECREASE
     else -> null
 }
-
-private fun Method.signature() = "$name$desc"
 
 //TODO remove
 internal fun Count.coverageRate() = when (covered) {

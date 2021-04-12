@@ -18,12 +18,12 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.collections.immutable.*
 
-internal fun Sequence<ExecClassData>.merge(): PersistentMap<Long, ExecClassData> = run {
+internal fun Iterable<ExecClassData>.merge(): PersistentMap<Long, ExecClassData> = run {
     persistentMapOf<Long, ExecClassData>().merge(this)
 }
 
 internal fun PersistentMap<Long, ExecClassData>.merge(
-    probes: Sequence<ExecClassData>
+    probes: Iterable<ExecClassData>
 ): PersistentMap<Long, ExecClassData> = if (probes.any()) {
     mutate { map ->
         probes.forEach { data ->
@@ -33,7 +33,7 @@ internal fun PersistentMap<Long, ExecClassData>.merge(
 } else this
 
 internal fun PersistentMap<Long, ExecClassData>.intersect(
-    other: Sequence<ExecClassData>
+    other: Iterable<ExecClassData>
 ): PersistentMap<Long, ExecClassData> = if (any() && other.any()) {
     other.merge().let { merged ->
         merged.mutate { map ->
@@ -50,14 +50,33 @@ internal fun ExecClassData.merge(other: ExecClassData): ExecClassData = copy(
     probes = probes.merge(other.probes)
 )
 
-internal fun List<Boolean>.intersect(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
-    if (i < other.size) {
-        b && other[i]
-    } else false
+operator fun Probes.contains(value: Boolean): Boolean {
+    return if (value) {
+        !isEmpty
+    } else {
+        isEmpty  //fixme for false value
+    }
 }
 
-internal fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
-    if (i < other.size) {
-        b || other[i]
-    } else b
+fun Probes.copy(): Probes {
+    return clone() as Probes
+}
+
+val Probes.size
+    get() = this.length() - 1
+
+fun Probes.merge(set: Probes): Probes {
+    return copy().apply { or(set) }
+}
+
+inline fun Probes.any(predicate: (Boolean) -> Boolean): Boolean {
+    return !isEmpty //fixme for false value
+}
+
+fun Probes.intersect(set: Probes): Probes {
+    return copy().apply { and(set) }
+}
+
+fun Probes.covered(): Int {
+    return maxOf(0, cardinality() - 1)
 }

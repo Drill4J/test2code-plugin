@@ -15,16 +15,18 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.*
 import mu.*
 
 private val packagePrefix: String = ::logger::class.qualifiedName?.run {
-    substringBeforeLast('.').substringBeforeLast('.')
+    substringBeforeLast('.').substringBeforeLast('.').intr()
 }.orEmpty()
 
 internal fun logger(block: () -> Unit): KLogger = run {
     val name = block::class.qualifiedName?.run {
         if ('$' in this) substringBefore('$') else this
-    }?.toLoggerName().orEmpty()
+    }?.toLoggerName().orEmpty().intern()
     KotlinLogging.logger(name)
 }
 
@@ -35,5 +37,5 @@ internal fun Any.logger(vararg fields: String): KLogger = run {
 }
 
 private fun String.toLoggerName(): String = removePrefix(packagePrefix).run {
-    "plugins/${replace('.', '/')}"
+    "plugins/${replace('.', '/')}".intr()
 }

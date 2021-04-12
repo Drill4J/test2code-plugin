@@ -32,18 +32,18 @@ internal val allAvailableProcessDispatcher = Executors.newFixedThreadPool(availa
 tailrec fun Int.gcd(other: Int): Int = takeIf { other == 0 } ?: other.gcd(rem(other))
 
 fun String.methodName(name: String): String = when (name) {
-    "<init>" -> toShortClassName()
-    "<clinit>" -> "static ${toShortClassName()}"
-    else -> name
+    "<init>" -> toShortClassName().intr()
+    "<clinit>" -> "static ${toShortClassName()}".intr()
+    else -> name.intr()
 }
 
 internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {
     runCatching { URLDecoder.decode(this, "UTF-8") }.getOrNull()
 } ?: this
 
-internal fun String.toShortClassName(): String = substringAfterLast('/')
+internal fun String.toShortClassName(): String = substringAfterLast('/').intr()
 
-val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
+val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX).intr()
 
 internal fun String.crc64(): Long = CRC64.classId(toByteArray())
 

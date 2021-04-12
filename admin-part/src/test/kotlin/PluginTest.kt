@@ -21,13 +21,16 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
 import java.io.*
 import java.util.*
 import kotlin.random.Random.*
+import kotlin.random.Random.Default.nextInt
 import kotlin.test.*
+import kotlin.time.*
 
 
 class PluginTest {
@@ -151,7 +154,7 @@ class PluginTest {
                 ExecClassData(
                     id = Default.nextLong(100_000_000),
                     className = "foo/Bar",
-                    probes = randomBoolean(sizeProbes)
+                    probes = randomBoolean(sizeProbes).toBitSet()
                 )
             }
             plugin.activeScope.addProbes(sessionId) { execClassData }
@@ -287,6 +290,36 @@ class PluginTest {
         assertEquals(2, testsToRunSummaries.size)
         assertTrue(testsToRunSummaries.first().lastModifiedAt < testsToRunSummaries.last().lastModifiedAt)
     }
+
+    data class Xs(val covered:Int, val total:Int)
+
+    @Test
+    fun xx() {
+
+        val times = Int.MAX_VALUE
+        measureTimedValue {
+            repeat(times) {
+                Xs(nextInt(), nextInt())
+            }
+        }.duration
+
+        println(
+            measureTimedValue {
+                repeat(times) {
+                    Xs(nextInt(), nextInt())
+                }
+            }.duration
+        )
+
+        println(
+            measureTimedValue {
+                repeat(times) {
+                    Count(nextInt(), nextInt())
+                }
+            }.duration
+        )
+    }
+
 
 }
 

@@ -147,7 +147,7 @@ internal fun ClassCounter.toMethodCoverage(
 }
 
 internal fun AstMethod.toDesc(): String = params.joinToString(
-    prefix = "(", postfix = "):$returnType"
+    prefix = "(", postfix = "):$returnType".intr()
 )
 
 private fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }

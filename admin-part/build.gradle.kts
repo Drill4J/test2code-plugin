@@ -47,6 +47,7 @@ dependencies {
 
 tasks {
     test {
+        maxHeapSize="5g"
         useJUnitPlatform()
     }
 

@@ -25,13 +25,13 @@ class ProbesTest {
         val data = ExecClassData(
             id = 1L,
             className = "foo/Bar",
-            probes = listOf(true, true, false)
+            probes = booleanArrayOf(true, true, false).toBitSet()
         )
         val map = persistentMapOf(data.id() to data)
         val emptyMap = persistentHashMapOf<Long, ExecClassData>()
-        assertEquals(map, map.intersect(map.values.asSequence()))
-        assertEquals(emptyMap, map.intersect(emptySequence()))
-        assertEquals(emptyMap, emptyMap.intersect(map.values.asSequence()))
+        assertEquals(map, map.intersect(map.values))
+        assertEquals(emptyMap, map.intersect(emptyList()))
+        assertEquals(emptyMap, emptyMap.intersect(map.values))
     }
 
     @Test
@@ -39,12 +39,12 @@ class ProbesTest {
         val data = ExecClassData(
             id = 1L,
             className = "foo/Bar",
-            probes = listOf(true, true, false)
+            probes = booleanArrayOf(true, true, false).toBitSet()
         )
         val data2 = data.copy(
             id = 2L,
             className = "bar/Baz",
-            probes = listOf(true, false, false)
+            probes = booleanArrayOf(true, false, false).toBitSet()
 
         )
         val map = listOf(
@@ -52,13 +52,13 @@ class ProbesTest {
             data2
         ).associateBy { it.id() }.toPersistentMap()
         val expected = data.run {
-            persistentMapOf(id() to copy(probes = listOf(false, true, false)))
+            persistentMapOf(id() to copy(probes = booleanArrayOf(false, true, false).toBitSet()))
         }
         val intersection = map.intersect(
-            sequenceOf(
-                data.copy(probes = listOf(false, true, true)),
-                data.copy(probes = listOf(false, false, true)),
-                data2.copy(probes = listOf(false, true, true))
+            listOf(
+                data.copy(probes = booleanArrayOf(false, true, true).toBitSet()),
+                data.copy(probes = booleanArrayOf(false, false, true).toBitSet()),
+                data2.copy(probes = booleanArrayOf(false, true, true).toBitSet())
             )
         )
         assertEquals(expected, intersection)

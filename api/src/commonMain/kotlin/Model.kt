@@ -358,7 +358,7 @@ data class ScopeSummary(
     val coverage: ScopeCoverage = ScopeCoverage(),
 ) : JvmSerializable
 
-val zeroCount = Count(covered = 0, total = 0)
+const val zeroCount: Count = 0
 
 @Serializable
 data class TestCountDto(
@@ -455,11 +455,44 @@ data class CoverDto(
     val count: Count = zeroCount,
 ) : JvmSerializable
 
-@Serializable
-data class Count(
-    val covered: Int,
-    val total: Int,
-) : JvmSerializable
+//@Serializable
+//data class Count(
+//    val covered: Int,
+//    val total: Int
+//)
+
+typealias Count = Long
+
+val Count.covered
+    get() = (this shr 32).toInt()
+
+val Count.total
+    get() = this.toInt()
+
+
+fun Count.copy(covered: Int = (this shr 32).toInt(), total: Int = this.toInt()): Count {
+    return Count(covered, total)
+}
+
+fun Count(covered: Int, total: Int): Count {
+    return (covered.toLong() shl 32) or (total.toLong() and 0xFFFFFFFFL)
+}
 
 
 expect interface JvmSerializable
+//@Serializable
+//inline class Count(val value: Long) {
+//    val covered
+//        get() = (value shr 32).toInt()
+//
+//    val total
+//        get() = value.toInt()
+//
+//    fun copy(covered: Int = (value shr 32).toInt(), total: Int = value.toInt()): Count {
+//        return Count(covered, total)
+//    }
+//}
+//
+//fun Count(covered: Int, total: Int): Count {
+//    return Count((covered.toLong() shl 32) or (total.toLong() and 0xFFFFFFFFL))
+//}

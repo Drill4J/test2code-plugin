@@ -87,6 +87,7 @@ tasks {
     }
 
     val loadTest by registering(Test::class) {
+        maxHeapSize = "8g"
         description = "Runs the loadTest tests"
         group = "verification"
         dependsOn(testBuildClassesTasks.toTypedArray())

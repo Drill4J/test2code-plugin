@@ -62,7 +62,7 @@ val probes = listOf(
     ExecClassData(
         className = "foo/bar/baz.js",
         testName = "default",
-        probes = listOf(true, true, false, true, false)
+        probes = booleanArrayOf(true, true, false, true, false).toBitSet()
     )
 )
 
@@ -71,7 +71,7 @@ object IncorrectProbes {
         ExecClassData(
             className = "foo/bar/baz.js",
             testName = "default",
-            probes = listOf(true, true, false, true, false, /*extra*/ false)
+            probes = booleanArrayOf(true, true, false, true, false, /*extra*/ false).toBitSet()
         )
     )
 
@@ -79,7 +79,7 @@ object IncorrectProbes {
         ExecClassData(
             className = "foo/bar/baz.js",
             testName = "default",
-            probes = listOf(true, true, false, true)
+            probes = booleanArrayOf(true, true, false, true).toBitSet()
         )
     )
 
@@ -87,7 +87,7 @@ object IncorrectProbes {
         ExecClassData(
             className = "foo/bar/not-existing",
             testName = "default",
-            probes = listOf(false, false)
+            probes = booleanArrayOf(false, false).toBitSet()
         )
     )
 }

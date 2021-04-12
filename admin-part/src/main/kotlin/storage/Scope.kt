@@ -16,18 +16,20 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
-fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
+fun Iterable<FinishedScope>.enabled() = filter { it.enabled }
 
 class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byVersion(
         buildVersion: String,
-        withData: Boolean = false,
-    ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
+        withData: Boolean = false
+    ): Iterable<FinishedScope> = storage.executeInAsyncTransaction {
         findBy<FinishedScope> {
             FinishedScope::buildVersion eq buildVersion
         }.run {
@@ -37,13 +39,15 @@ class ScopeManager(private val storage: StoreClient) {
                 map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
         }
-    }.asSequence()
+    }
 
     suspend fun store(scope: FinishedScope) {
-        storage.executeInAsyncTransaction {
-            store(scope.copy(data = ScopeData.empty))
-            scope.takeIf { it.any() }?.let {
-                store(ScopeDataEntity(it.id, it.buildVersion, it.data))
+        trackTime("Scope store") {
+            storage.executeInAsyncTransaction {
+                store(scope.copy(data = ScopeData.empty))
+                scope.takeIf { it.any() }?.let {
+                    store(ScopeDataEntity(it.id, it.buildVersion, it.data))
+                }
             }
         }
     }

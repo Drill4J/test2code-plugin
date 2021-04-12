@@ -19,6 +19,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.atomicfu.*
@@ -27,23 +28,23 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.Transient
 
-interface Scope : Sequence<FinishedSession> {
+interface Scope : Iterable<FinishedSession> {
     val id: String
     val buildVersion: String
     val name: String
     val summary: ScopeSummary
 }
 
-fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
+fun Iterable<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary)
 
 
-typealias ActiveScopeHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) -> Unit
+typealias ActiveScopeHandler = suspend ActiveScope.(Boolean, Iterable<Session>?) -> Unit
 
 class ActiveScope(
     override val id: String = genUuid(),
     override val buildVersion: String,
     val nth: Int = 1,
-    name: String = "$DEFAULT_SCOPE_NAME $nth",
+    name: String = "$DEFAULT_SCOPE_NAME $nth".intr(),
     sessions: List<FinishedSession> = emptyList(),
     realtimeCalculationCache: Boolean,
 ) : Scope {
@@ -86,7 +87,7 @@ class ActiveScope(
                 delay(250)
                 _change.getAndUpdate { null }?.let { change ->
                     _handler.value?.let { handler ->
-                        val probes: Sequence<Session>? = if (change.probes) {
+                        val probes: Iterable<Session>? = if (change.probes) {
                             this@ActiveScope + activeSessions.values.filter { it.isRealtime }
                         } else null
                         handler(change.sessions, probes)
@@ -132,7 +133,8 @@ class ActiveScope(
         testType: String,
         isGlobal: Boolean = false,
         isRealtime: Boolean = false,
-    ) = ActiveSession(sessionId, testType, isGlobal, isRealtime).takeIf { newSession ->
+        analyzedClasses: Map<String, ClassCoverage> = emptyMap(),
+        ) = ActiveSession(sessionId, testType, isGlobal, isRealtime).apply { this.classMapping = analyzedClasses }.takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
             existing ?: newSession.takeIf { activeSessionOrNull(it.id) == null }

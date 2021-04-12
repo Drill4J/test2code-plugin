@@ -22,10 +22,10 @@ class LoadTest : E2EPluginTest() {
 
 
     companion object {
-        private const val CLASS_COUNT = 1000
-        private const val METHODS_COUNT = 5000
-        private const val PACKAGES_COUNT = 50
-        private const val PACKAGE_HIERARCHY_LEVEL = 4
+        private const val CLASS_COUNT = 40000
+        private const val METHODS_COUNT = 300000
+        private const val PACKAGES_COUNT = 200
+        private const val PACKAGE_HIERARCHY_LEVEL = 6
     }
 
     @BeforeEach
@@ -48,6 +48,21 @@ class LoadTest : E2EPluginTest() {
                         cc.addMethod(
                             CtMethod.make(
                                 """
+                        private final boolean isPrime$idx$it(int n) {
+      for(int i = 2; i * i <= n; ++i) {
+         if ((n ^ i) == 0) {
+            return false;
+         }
+      }
+
+      return true;
+   }
+                        """.trimIndent(), cc
+                            )
+                        )
+                    cc.addMethod(
+                            CtMethod.make(
+                                """
                         public void method$idx$it(boolean ifBranch, boolean elseBranch) {
                             if (ifBranch) {
                                 
@@ -57,7 +72,9 @@ class LoadTest : E2EPluginTest() {
                             if (elseBranch) {
                                     long w = $idx${it}l;
                                     boolean s = System.nanoTime() > w;
-                                
+                                    if(s){
+                                        isPrime$idx$it(new java.util.Random().nextInt()); 
+                                    }
                             }
                         }
                         """.trimIndent(), cc
@@ -81,7 +98,7 @@ class LoadTest : E2EPluginTest() {
     @Test
     fun `load test`() {
 
-        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 500) {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 5000) {
             connectAgent<CustomBuild> { plugUi, build ->
                 plugUi.buildCoverage()
                 plugUi.coveragePackages()
@@ -97,7 +114,7 @@ class LoadTest : E2EPluginTest() {
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
-                    repeat(10) { index ->
+                    repeat(1) { index ->
                         runWithSession(startSession.payload.sessionId, "test$index") {//todo change testName
                             val tests = build.tests
 
@@ -114,6 +131,7 @@ class LoadTest : E2EPluginTest() {
 
                         }
                     }
+                    delay(10000)
                     pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
                 plugUi.activeSessions()!!.count shouldBe 0

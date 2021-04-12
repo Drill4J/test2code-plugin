@@ -146,6 +146,7 @@ class ProtobufTest {
                                     "MethodCounter",
                                     "desc",
                                     "decl",
+                                    "Package/ClassCounter" + ":" + "MethodCounter" + "desc",
                                     zeroCount
                                 )
                             )

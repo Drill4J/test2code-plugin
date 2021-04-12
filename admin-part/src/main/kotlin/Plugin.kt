@@ -33,6 +33,7 @@ import kotlinx.serialization.json.*
 import org.jacoco.core.data.*
 import java.io.*
 import java.util.*
+import kotlin.random.Random
 import kotlin.time.*
 
 @Suppress("unused")
@@ -103,7 +104,8 @@ class Plugin(
                 newSessionId,
                 testType,
                 isGlobal,
-                runtimeConfig.realtime && isRealtime
+                runtimeConfig.realtime && isRealtime,
+                state.coverContext().analyzedClasses.associateBy { it.jvmClassName.intr() }
             )?.run {
                 StartAgentSession(
                     payload = StartSessionPayload(
@@ -137,7 +139,7 @@ class Plugin(
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 data.map { probes ->
-                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes)
+                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes.toBitSet())
                 }
             }?.run {
                 if (isRealtime) {
@@ -245,16 +247,26 @@ class Plugin(
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
-        is CoverDataPart -> activeScope.addProbes(message.sessionId) { message.data }
+        is CoverDataPart -> activeScope.addProbes(message.sessionId) {
+            message.data
+//                .also {
+//                logger.debug { "new exec data: ${it.size}" }
+//            }
+//            val array = Array(35) {
+//                message.data.map { it.copy(testName = "test${Random.nextInt()}".intern()) }
+//            }
+//            array.flatMap { it }
+
+        }
         is SessionChanged -> activeScope.probesChanged()
         is SessionFinished -> {
-            delay(500L) //TODO remove after multi-instance core is implemented
+            delay(500L) //TODO wait for all CoverDataPart
             state.finishSession(message.sessionId) ?: logger.info {
                 "$instanceId: No active session with id ${message.sessionId}."
             }
         }
         is SessionsFinished -> {
-            delay(500L) //TODO remove after multi-instance core is implemented
+            delay(500L) //TODO wait for all CoverDataPart
             message.ids.forEach { state.finishSession(it) }
         }
         else -> logger.info { "$instanceId: Message is not supported! $message" }
@@ -362,7 +374,7 @@ class Plugin(
 
     private suspend fun sendScopes(
         buildVersion: String,
-        scopes: Sequence<FinishedScope>,
+        scopes: Iterable<FinishedScope>,
     ) = sender.send(
         context = AgentSendContext(
             agentId,
@@ -379,7 +391,7 @@ class Plugin(
         scopes.calculateAndSendBuildCoverage(state.coverContext())
     }
 
-    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
+    private suspend fun Iterable<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         val bundleCounters = flatten().calcBundleCounters(context)
         state.updateBundleCounters(bundleCounters)

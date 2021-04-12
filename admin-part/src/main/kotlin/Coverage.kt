@@ -24,7 +24,7 @@ import kotlinx.collections.immutable.*
 
 private val logger = logger {}
 
-internal fun Sequence<Session>.calcBundleCounters(
+internal fun Iterable<Session>.calcBundleCounters(
     context: CoverContext,
     cache: AtomicCache<TypedTest, BundleCounter>? = null
 ) = run {
@@ -34,23 +34,30 @@ internal fun Sequence<Session>.calcBundleCounters(
         })..."
     }
     val probesByTestType = groupBy(Session::testType)
-    val testTypeOverlap: Sequence<ExecClassData> = if (probesByTestType.size > 1) {
-        probesByTestType.values.asSequence().run {
-            val initial: PersistentMap<Long, ExecClassData> = first().asSequence().flatten().merge()
+    val testTypeOverlap = if (probesByTestType.size > 1) {
+        probesByTestType.values.run {
+            val initial: PersistentMap<Long, ExecClassData> = first().flatten().merge()
             drop(1).fold(initial) { intersection, sessions ->
-                intersection.intersect(sessions.asSequence().flatten())
+                intersection.intersect(sessions.flatten())
             }
-        }.values.asSequence()
-    } else emptySequence()
+        }.values
+    } else emptyList()
+
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${context.classBytes.size}..." }
+    val bundleProcessor = BundleProcessor.bundleProcessor(context)
+    val execClassData = flatten()
     BundleCounters(
-        all = flatten().bundle(context),
-        testTypeOverlap = testTypeOverlap.bundle(context),
-        overlap = flatten().overlappingBundle(context),
-        byTestType = probesByTestType.mapValues {
-            it.value.asSequence().flatten().bundle(context)
+        all = trackTime("bundle all") { bundleProcessor.bundle(execClassData) },
+        testTypeOverlap = bundleProcessor.bundle(testTypeOverlap),
+        overlap = bundleProcessor.bundle(context.build.probes.intersect(execClassData).values),
+        byTestType = probesByTestType.mapValues { bundleProcessor.bundle(it.value.flatten()) },
+        byTest = trackTime("bundle by test") {
+            bundlesByTests(
+                bundleProcessor,
+                cache,
+                context
+            )
         },
-        byTest = bundlesByTests(context, cache),
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -70,22 +77,23 @@ internal fun BundleCounters.calculateCoverageData(
     val bundle = all
     val bundlesByTests = byTest
 
-    val assocTestsMap = bundlesByTests.associatedTests()
-    val associatedTests = assocTestsMap.getAssociatedTests()
+    val assocTestsMap = trackTime("assocTestsMap") { bundlesByTests.associatedTests() }
+    val associatedTests = trackTime("associatedTests") { assocTestsMap.getAssociatedTests() }
 
     val tree = context.packageTree
     val coverageCount = bundle.count.copy(total = tree.totalCount)
     val totalCoveragePercent = coverageCount.percentage()
 
-    val coverageByTests = CoverageByTests(
-        all = TestSummary(
-            coverage = bundle.toCoverDto(tree),
-            testCount = bundlesByTests.keys.count(),
-            duration = statsByTest.values.map { it.duration }.sum()
-        ),
-        byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
-    )
-    logger.info { coverageByTests.byType }
+    val coverageByTests = trackTime("coverageByTests") {
+        CoverageByTests(
+            all = TestSummary(
+                coverage = bundle.toCoverDto(tree),
+                testCount = bundlesByTests.keys.count(),
+                duration = statsByTest.values.map { it.duration }.sum()
+            ),
+            byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
+        )
+    }
 
     val methodCount = bundle.methodCount.copy(total = tree.totalMethodCount)
     val classCount = bundle.classCount.copy(total = tree.totalClassCount)
@@ -120,9 +128,10 @@ internal fun BundleCounters.calculateCoverageData(
 
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
-    val finalizedTests = (scope as? ActiveScope)?.flatMap { it.testStats.keys } ?: emptySequence()
+    val finalizedTests = (scope as? ActiveScope)?.flatMap { it.testStats.keys } ?: emptyList()
 
-    val coveredByTest = bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests)
+    val coveredByTest =
+        trackTime("coveredByTest") { bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests) }
 
     val tests = bundlesByTests.map { (typedTest, bundle) ->
         TestCoverageDto(
@@ -160,16 +169,43 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
     )
 }
 
-private fun Sequence<Session>.bundlesByTests(
-    context: CoverContext,
-    cache: AtomicCache<TypedTest, BundleCounter>?
+private fun Iterable<Session>.bundlesByTests(
+    bundleProc: BundleProc,
+    cache: AtomicCache<TypedTest, BundleCounter>?,
+    context: CoverContext
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
+    val toMap: Map<ExecClassData, ClassCounter?> = map {
+        val calculed = it.calculated
+        it.map {
+            it to calculed[it]
+        }
+
+    }.flatten().toMap()  //fixme
+    val fullAnalyzedTree = context.analyzedClasses.groupBy { it.packageName }
+        .map {
+            PackageCoverage(it.key).apply {
+                totalInstruction = it.value.map { it.totalInstruction }.sum()
+                totalClasses = it.value.size
+                totalMethods = it.value.map { it.methods.values }.flatten().size
+                classes = it.value
+            }
+        }.associateBy { it.packageName }
+        .mapValues {
+            it.value to it.value.classes.associateBy { it.jvmClassName }
+        }
     val testsWithEmptyBundle = testsWithBundle(cache)
     groupBy(Session::testType).map { (testType, sessions) ->
+
         sessions.asSequence().flatten()
             .groupBy { TypedTest(it.testName, testType) }
             .filterNot { cache?.map?.containsKey(it.key) ?: false }
-            .mapValuesTo(testsWithEmptyBundle) { it.value.asSequence().bundle(context) }
+            .mapValuesTo(testsWithEmptyBundle) {
+                if(context.agentType == "JAVA") //fixme
+                    it.value.mapNotNull { toMap[it] }.toBundle(fullAnalyzedTree)
+                else  //fixme
+                    it.value.asSequence().bundle(context)
+//                bundleProc.fastBundle(precalculated.filterKeys {w-> x.value.any { it == w } })
+            }
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
     }.let { mutableMap ->
@@ -179,7 +215,7 @@ private fun Sequence<Session>.bundlesByTests(
     }
 } ?: emptyMap()
 
-private fun Sequence<Session>.testsWithBundle(
+private fun Iterable<Session>.testsWithBundle(
     cache: AtomicCache<TypedTest, BundleCounter>?,
     bundle: BundleCounter = BundleCounter("")
 ): MutableMap<TypedTest, BundleCounter> = flatMap { session ->
@@ -188,12 +224,6 @@ private fun Sequence<Session>.testsWithBundle(
     bundle
 }
 
-
-internal fun Sequence<ExecClassData>.overlappingBundle(
-    context: CoverContext
-): BundleCounter = context.build.probes.intersect(this).run {
-    values.asSequence()
-}.bundle(context)
 
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext
@@ -207,8 +237,9 @@ internal fun Sequence<ExecClassData>.bundle(
 
 internal fun Map<TypedTest, BundleCounter>.associatedTests(
     onlyPackages: Boolean = true
-): Map<CoverageKey, List<TypedTest>> = entries.asSequence()
-    .flatMap { (test, bundle) ->
+): Map<CoverageKey, List<TypedTest>> = run {
+    flatMapTo(mutableSetOf()) { (test, bundle) ->
         bundle.coverageKeys(onlyPackages).map { it to test }
-    }.distinct()
-    .groupBy({ it.first }) { it.second }
+    }.groupBy({ it.first }) { it.second }
+}
+

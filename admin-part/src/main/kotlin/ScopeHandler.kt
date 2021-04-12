@@ -19,6 +19,7 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlin.time.*
 
 internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChanged, sessions ->
@@ -50,6 +51,8 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChang
 internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload
 ): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
+
+    trackTime("changeActiveScope") {
     val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
     state.storeActiveScopeInfo()
     sendActiveSessions()
@@ -75,6 +78,7 @@ internal suspend fun Plugin.changeActiveScope(
             prevId = prevScope.id
         )
     ).toActionResult()
+    }
 } else ActionResult(
     code = StatusCodes.CONFLICT,
     data = "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"

@@ -18,17 +18,22 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
+import java.util.concurrent.*
 
 @Serializable
-sealed class Session : Sequence<ExecClassData>, java.io.Serializable {
+sealed class Session : Iterable<ExecClassData>, java.io.Serializable {
     abstract val id: String
     abstract val testType: String
     abstract val tests: Set<TypedTest>
     abstract val testStats: Map<TypedTest, TestStats>
+
+    //    @Transient
+    var calculated: MutableMap<ExecClassData, ClassCounter> = mutableMapOf()
 }
 
 class ActiveSession(
@@ -37,6 +42,8 @@ class ActiveSession(
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
 ) : Session() {
+    @Transient
+    var classMapping: Map<String, ClassCoverage> = emptyMap()
 
     override val tests: Set<TypedTest>
         get() = _probes.value.keys
@@ -55,26 +62,39 @@ class ActiveSession(
 
     private val _testRun = atomic<TestRun?>(null)
 
-    fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
-        probe.id?.let { probe } ?: probe.copy(id = probe.id())
-    }.forEach { probe ->
-        if (true in probe.probes) {
-            val typedTest = probe.testName.typedTest(testType)
-            _probes.update { map ->
-                (map[typedTest] ?: persistentHashMapOf()).let { testData ->
-                    val probeId = probe.id()
-                    if (probeId in testData) {
-                        testData.getValue(probeId).run {
-                            val merged = probes.merge(probe.probes)
-                            merged.takeIf { it != probes }?.let {
-                                testData.put(probeId, copy(probes = merged))
+    fun addAll(dataPart: Collection<ExecClassData>) =
+        dataPart.map { probe ->
+            probe.id?.let { probe } ?: probe.copy(id = probe.id())
+        }.forEach { probe ->
+            if (true in probe.probes) {
+                val typedTest = probe.testName.intr().typedTest(testType.intr())
+                _probes.update { map ->
+                    (map[typedTest] ?: persistentHashMapOf()).let { testData ->
+                        val probeId = probe.id()
+                        if (probeId in testData) {
+                            testData.getValue(probeId).run {
+                                val merged = probes.merge(probe.probes)
+                                merged.takeIf { it != probes }?.let {
+                                    copy(probes = merged).let { data ->
+                                        classMapping[data.className]?.toCoverageUnit(data.probes)?.let {
+                                            calculated[data] = it
+                                        }
+                                        testData.put(probeId, data)
+                                    }
+                                }
+                            }
+                        } else {
+                            probe.copy(testName = typedTest.name).let { data ->
+                                classMapping[data.className]?.toCoverageUnit(data.probes)?.let {
+                                    calculated[data] = it
+                                }
+                                testData.put(probeId, data)
                             }
                         }
-                    } else testData.put(probeId, probe.copy(testName = typedTest.name))
-                }?.let { map.put(typedTest, it) } ?: map
+                    }?.let { map.put(typedTest, it) } ?: map
+                }
             }
         }
-    }
 
     fun setTestRun(testRun: TestRun) {
         _testRun.update { current ->
@@ -82,11 +102,11 @@ class ActiveSession(
         }
     }
 
-    override fun iterator(): Iterator<ExecClassData> = Sequence {
-        _probes.value.values.asSequence().flatMap { it.values.asSequence() }.iterator()
-    }.iterator()
+    override fun iterator(): Iterator<ExecClassData> = _probes.value.values.flatMap { it.values }.iterator()
 
     fun finish() = _probes.value.run {
+
+        println(_probes.value.size)
         FinishedSession(
             id = id,
             testType = testType,
@@ -99,8 +119,10 @@ class ActiveSession(
                     result = it.result
                 )
             } ?: emptyMap(),
-            probes = values.flatMap { it.values }
-        )
+            probes = values.flatMap { it.values },
+        ).apply {
+            calculated = this@ActiveSession.calculated
+        }
     }
 }
 

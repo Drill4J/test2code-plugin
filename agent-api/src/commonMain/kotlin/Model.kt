@@ -62,9 +62,14 @@ data class AgentSessionDataPayload(val sessionId: String, val data: String)
 data class ExecClassData(
     val id: Long? = null,
     val className: String,
-    val probes: List<Boolean>,
-    val testName: String = ""
+    @Serializable(with = BitSetSerializer::class) val probes: Probes,
+    val testName: String = "",
 ) : JvmSerializable
 
-expect interface JvmSerializable
+expect class Probes(size: Int) {
+    fun length(): Int
+    fun get(ind: Int): Boolean
+    fun set(ind: Int, value: Boolean)
 
+}
+expect interface JvmSerializable

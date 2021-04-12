@@ -39,7 +39,7 @@ internal fun Sequence<ExecClassData>.bundle(
 }.toCounter()
 
 internal fun Iterable<String>.bundle(
-    classBytes: Map<String, ByteArray>,
+    classBytes: ClassBytes,
     probeIds: Map<String, Long>
 ): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->
     forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
@@ -99,6 +99,7 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
                                 name = m.name,
                                 desc = m.desc,
                                 decl = m.desc,//declaration(m.desc), //TODO Regex has a big impact on performance
+                                key = c.name + ":" + m.name + m.desc,
                                 count = m.instructionCounter.toCount()
                             )
                         }
@@ -143,7 +144,7 @@ fun parseDescTypes(argDesc: String): List<String> {
     val descItr = argDesc.iterator()
     while (descItr.hasNext()) {
         val char = descItr.nextChar()
-        val arg = parseDescType(char, descItr)
+        val arg = parseDescType(char, descItr).intr()
         types.add(arg)
     }
     return types

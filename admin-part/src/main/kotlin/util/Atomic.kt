@@ -46,7 +46,7 @@ class AtomicCache<K, V> : (K, (V?) -> V?) -> V? {
 
     fun clear() = _map.getAndUpdate { it.clear() }
 
-    override fun toString(): String = map.toString()
+    override fun toString(): String = map.toString().intr()
 }
 
 val <K, V> AtomicCache<K, V>.keys get() = map.keys
