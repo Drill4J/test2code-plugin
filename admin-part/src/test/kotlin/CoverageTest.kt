@@ -22,13 +22,13 @@ import kotlin.test.*
 class CoverageTest {
     @Test
     fun `count - operation minus`() {
-        assertEquals(0L to 0L, zeroCount - zeroCount)
-        assertEquals(1L to 2L, Count(1, 2) - zeroCount)
-        assertEquals(1L to 2L, Count(1, 2) - Count(2, 0))
-        assertEquals(0L to 3L, Count(1, 3) - Count(1, 3))
-        assertEquals(1L to 6L, Count(1, 2) - Count(1, 3))
-        assertEquals(2L to 6L, Count(4, 6) - Count(1, 3))
-        assertEquals(3L to 6L, Count(1, 2) - Count(0, 3))
+        assertEquals(0L to 0L, zeroCount subtraction zeroCount)
+        assertEquals(1L to 2L, Count(1, 2) subtraction  zeroCount)
+        assertEquals(1L to 2L, Count(1, 2) subtraction Count(2, 0))
+        assertEquals(0L to 3L, Count(1, 3) subtraction Count(1, 3))
+        assertEquals(1L to 6L, Count(1, 2) subtraction Count(1, 3))
+        assertEquals(2L to 6L, Count(4, 6) subtraction Count(1, 3))
+        assertEquals(3L to 6L, Count(1, 2) subtraction Count(0, 3))
     }
 
     @Test

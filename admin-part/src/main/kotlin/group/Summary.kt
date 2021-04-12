@@ -153,7 +153,7 @@ private fun AgentSummary.toTestTypeSummary() = coverageByType.map { (type, count
             summary = TestSummary(
                 coverage = CoverDto(
                     percentage = it.percentage(),
-                    count = it
+                    count = it.toDto()
                 ),
                 testCount = tests[type]?.count() ?: 0,
                 duration = durationByType[type] ?: 0L

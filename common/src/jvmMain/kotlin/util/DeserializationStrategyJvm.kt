@@ -20,6 +20,8 @@ import kotlinx.serialization.builtins.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import kotlinx.serialization.internal.*
+import java.lang.ref.*
+import java.util.*
 
 
 class StringInternDeserializationStrategy<T>(private val deserializationStrategy: KSerializer<T>) :
@@ -34,7 +36,7 @@ internal class StringInternDecoder(private val decoder: CompositeDecoder) : Comp
     override fun decodeStringElement(descriptor: SerialDescriptor, index: Int): String {
         val decodeStringElement = decoder.decodeStringElement(descriptor, index)
         return decodeStringElement.run {
-            takeIf { descriptor.getElementAnnotations(index).any { it is StringIntern } }?.intern() ?: this
+            takeIf { descriptor.getElementAnnotations(index).any { it is StringIntern } }?.intr() ?: this
         }
     }
 
@@ -79,4 +81,16 @@ internal class DecodeAdapter(private val decoder: Decoder) : Decoder by decoder 
     override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder {
         return StringInternDecoder(decoder.beginStructure(descriptor))
     }
+}
+
+val s_manualCache = WeakHashMap<String, WeakReference<String>>(1000000)
+
+fun String.intr(): String {
+    val cached = s_manualCache[this]
+    if (cached != null) {
+        val value = cached.get()
+        if (value != null) return value
+    }
+    s_manualCache[this] = WeakReference(this)
+    return this
 }

@@ -29,7 +29,7 @@ internal data class CachedBuild(
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
     val bundleCounters: BundleCounters = BundleCounters.empty,
     val stats: BuildStats = BuildStats(version),
-    val tests: BuildTests = BuildTests()
+    val tests: BuildTests = BuildTests(),
 )
 
 @Serializable
@@ -38,15 +38,20 @@ internal data class BuildStats(
     val coverage: Count = zeroCount,
     val methodCount: Count = zeroCount,
     val coverageByType: Map<String, Count> = emptyMap(),
-    val scopeCount: Int = 0
+    val scopeCount: Int = 0,
 ) : java.io.Serializable
 
 internal fun BuildCoverage.toCachedBuildStats(
-    context: CoverContext
+    context: CoverContext,
 ): BuildStats = context.build.stats.copy(
     coverage = count,
     methodCount = methodCount,
-    coverageByType = byTestType.map { it.type to it.summary.coverage.count }.toMap(),
+    coverageByType = byTestType.map {
+        it.type to Count(
+            it.summary.coverage.count.covered,
+            it.summary.coverage.count.total
+        )
+    }.toMap(),
     scopeCount = finishedScopesCount
 )
 
