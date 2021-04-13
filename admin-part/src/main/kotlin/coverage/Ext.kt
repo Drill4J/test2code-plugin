@@ -19,6 +19,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 import kotlinx.coroutines.*
 import kotlin.math.*
 
@@ -49,19 +50,19 @@ internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
         id = "${parent?.name}.$name$desc".crc64,
-        packageName = (parent as? ClassCounter)?.path ?: "",
-        className = (parent as? ClassCounter)?.name ?: "",
-        methodName = name,
-        methodDesc = desc
+        packageName = (parent as? ClassCounter)?.path?.weakIntern() ?: "",
+        className = (parent as? ClassCounter)?.name?.weakIntern() ?: "",
+        methodName = name.weakIntern(),
+        methodDesc = desc.weakIntern()
     )
     is ClassCounter -> CoverageKey(
         id = "$path.$name".crc64,
-        packageName = path,
-        className = name
+        packageName = path.weakIntern(),
+        className = name.weakIntern()
     )
     is PackageCounter -> CoverageKey(
         id = name.crc64,
-        packageName = name
+        packageName = name.weakIntern()
     )
     else -> CoverageKey(name.crc64)
 }
@@ -146,10 +147,10 @@ internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?
 }.orEmpty()
 
 internal fun Method.toCovered(count: Count?) = CoverMethod(
-    ownerClass = ownerClass,
+    ownerClass = ownerClass.weakIntern(),
     name = ownerClass.methodName(name),
-    desc = desc,//.takeIf { "):" in it } ?: declaration(desc), //TODO js methods //Regex has a big impact on performance
-    hash = hash,
+    desc = desc.weakIntern(),//.takeIf { "):" in it } ?: declaration(desc), //TODO js methods //Regex has a big impact on performance
+    hash = hash.weakIntern(),
     count = count ?: zeroCount,
     coverageRate = count?.coverageRate() ?: CoverageRate.MISSED
 )
@@ -157,11 +158,11 @@ internal fun Method.toCovered(count: Count?) = CoverMethod(
 internal fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
 
 internal fun String.typedTest(type: String) = TypedTest(
-    type = type,
-    name = urlDecode()
+    type = type.weakIntern(),
+    name = urlDecode().weakIntern()
 )
 
-internal fun TypedTest.id() = "$name:$type"
+internal fun TypedTest.id() = "$name:$type".weakIntern()
 
 private fun Int.toArrowType(): ArrowType? = when (this) {
     in Int.MIN_VALUE..-1 -> ArrowType.INCREASE
@@ -169,7 +170,7 @@ private fun Int.toArrowType(): ArrowType? = when (this) {
     else -> null
 }
 
-private fun Method.signature() = "$name$desc"
+private fun Method.signature() = "$name$desc".weakIntern()
 
 //TODO remove
 internal fun Count.coverageRate() = when (covered) {

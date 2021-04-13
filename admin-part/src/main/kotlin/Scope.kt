@@ -64,7 +64,7 @@ class ActiveScope(
 
     val bundleByTestCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
 
-    private val _sessions = atomic(sessions.toList())
+    private val _sessions = atomic(sessions.toMutableList())
 
     //TODO remove summary for this class
     private val _summary = atomic(
@@ -178,7 +178,7 @@ class ActiveScope(
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
-                val updatedSessions = _sessions.updateAndGet { list -> ArrayList(list).also { it.add(finished) } }
+                val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
                 _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
                 _change.value = Change.ALL
             } else sessionsChanged()

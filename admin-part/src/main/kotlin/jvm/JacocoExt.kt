@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 
@@ -85,20 +86,20 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
         }
         if (classesWithMethods.any()) {
             PackageCounter(
-                name = p.name,
+                name = p.name.weakIntern(),
                 count = p.instructionCounter.toCount(),
                 classCount = p.classCounter.toCount(),
                 methodCount = p.methodCounter.toCount(),
                 classes = classesWithMethods.map { c ->
                     ClassCounter(
-                        path = p.name,
+                        path = p.name.weakIntern(),
                         name = c.name.toShortClassName(),
                         count = c.instructionCounter.toCount(),
                         methods = c.methods.map { m ->
                             MethodCounter(
-                                name = m.name,
-                                desc = m.desc,
-                                decl = m.desc,//declaration(m.desc), //TODO Regex has a big impact on performance
+                                name = m.name.weakIntern(),
+                                desc = m.desc.weakIntern(),
+                                decl = m.desc.weakIntern(),//declaration(m.desc), //TODO Regex has a big impact on performance
                                 count = m.instructionCounter.toCount()
                             )
                         }

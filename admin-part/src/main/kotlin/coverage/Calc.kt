@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 
 internal fun Sequence<ExecClassData>.bundle(
     tree: PackageTree
@@ -43,7 +44,7 @@ internal fun Sequence<ExecClassData>.bundle(
         val classes = classNames.map { className ->
             val probes = probesByClasses.getValue(className)
             ClassCounter(
-                path = pkgName,
+                path = pkgName.weakIntern(),
                 name = className.toShortClassName(),
                 count = probes.toCount(),
                 methods = classMethods.getValue(className).map {
