@@ -22,17 +22,13 @@ import kotlinx.serialization.*
 
 @Serializable
 internal data class Method(
-    @StringIntern
     val ownerClass: String,
-    @StringIntern
     val name: String,
-    @StringIntern
     val desc: String,
-    @StringIntern
-    val hash: String
-) : Comparable<Method> , java.io.Serializable {
+    val hash: String,
+) : Comparable<Method>, java.io.Serializable {
     override fun compareTo(
-        other: Method
+        other: Method,
     ): Int = ownerClass.compareTo(other.ownerClass).takeIf {
         it != 0
     } ?: name.compareTo(other.name).takeIf {
@@ -101,7 +97,7 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
 )
 
 internal fun DiffMethods.risks(
-    bundleCounter: BundleCounter
+    bundleCounter: BundleCounter,
 ): TypedRisks = bundleCounter.coveredMethods(new + modified).let { covered ->
     mapOf(
         RiskType.NEW to new.filter { it !in covered },

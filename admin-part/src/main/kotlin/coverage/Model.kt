@@ -25,7 +25,7 @@ internal data class DiffMethods(
     val modified: List<Method> = emptyList(),
     val deleted: List<Method> = emptyList(),
     val unaffected: List<Method> = emptyList(),
-    val deletedWithCoverage: Map<Method, Count> = emptyMap()
+    val deletedWithCoverage: Map<Method, Count> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean = super.equals(other)
 
@@ -34,7 +34,7 @@ internal data class DiffMethods(
 
 data class TestDurations(
     val all: Long = 0L,
-    val byType: Map<String, Long> = emptyMap()
+    val byType: Map<String, Long> = emptyMap(),
 )
 
 internal data class CoverContext(
@@ -47,7 +47,7 @@ internal data class CoverContext(
     val build: CachedBuild,
     val parentBuild: CachedBuild? = null,
     val testsToRun: GroupedTests = emptyMap(),
-    val testsToRunParentDurations : TestDurations = TestDurations()
+    val testsToRunParentDurations: TestDurations = TestDurations(),
 ) {
     override fun equals(other: Any?): Boolean = super.equals(other)
 
@@ -59,7 +59,7 @@ data class CoverageKey(
     val packageName: String = "",
     val className: String = "",
     val methodName: String = "",
-    val methodDesc: String = ""
+    val methodDesc: String = "",
 ) {
     override fun equals(other: Any?) = other is CoverageKey && id == other.id
 
@@ -73,7 +73,7 @@ class BundleCounters(
     val overlap: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
-    val statsByTest: Map<TypedTest, TestStats> = emptyMap()
+    val statsByTest: Map<TypedTest, TestStats> = emptyMap(),
 ) : java.io.Serializable {
     companion object {
         val empty = BundleCounter("").let {
@@ -82,53 +82,46 @@ class BundleCounters(
     }
 }
 
-sealed class NamedCounter : java.io.Serializable{
+sealed class NamedCounter : java.io.Serializable {
     abstract val name: String
     abstract val count: Count
 }
 
 @Serializable
 data class BundleCounter(
-    @StringIntern
     override val name: String,
     override val count: Count = zeroCount,
     val methodCount: Count = zeroCount,
     val classCount: Count = zeroCount,
     val packageCount: Count = zeroCount,
-    val packages: List<PackageCounter> = emptyList()
+    val packages: List<PackageCounter> = emptyList(),
 ) : NamedCounter(), java.io.Serializable
 
 @Serializable
 data class PackageCounter(
-    @StringIntern
     override val name: String,
     override val count: Count,
     val classCount: Count,
     val methodCount: Count,
-    val classes: List<ClassCounter>
+    val classes: List<ClassCounter>,
 ) : NamedCounter(), java.io.Serializable
 
 @Serializable
 data class ClassCounter(
-    @StringIntern
     val path: String,
-    @StringIntern
     override val name: String,
     override val count: Count,
-    val methods: List<MethodCounter>
+    val methods: List<MethodCounter>,
 ) : NamedCounter(), java.io.Serializable {
     val fullName = if (path.any()) "$path/$name" else name
 }
 
 @Serializable
 data class MethodCounter(
-    @StringIntern
     override val name: String,
-    @StringIntern
     val desc: String,
-    @StringIntern
     val decl: String,
-    override val count: Count
+    override val count: Count,
 ) : NamedCounter(), java.io.Serializable {
     val sign = "$name$desc"
 }

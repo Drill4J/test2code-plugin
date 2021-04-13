@@ -106,9 +106,7 @@ class ActiveSession(
 
 @Serializable
 data class FinishedSession(
-    @StringIntern
     override val id: String,
-    @StringIntern
     override val testType: String,
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),

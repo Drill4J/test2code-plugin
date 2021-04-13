@@ -178,7 +178,7 @@ class SessionTest : E2EPluginTest() {
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!
                 plugUi.activeScope()!!.coverage.run {
-                    testTypeOverlap.count shouldBe Count(7, 15)
+                    testTypeOverlap.count shouldBe Count(7, 15).toDto()
                     byTestType.size shouldBe 2
                 }
             }

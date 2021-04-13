@@ -50,7 +50,6 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 
 @Serializable
 internal data class ClassData(
-    @StringIntern
     @Id val buildVersion: String,
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),

@@ -18,7 +18,6 @@ val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
 val koduxVersion: String by extra
 val xodusVersion: String by extra
-val zstdJniVersion: String by rootProject
 
 //TODO remove this block and gradle/classes dir after gradle is updated to v6.8
 buildscript {
@@ -55,7 +54,6 @@ subprojects {
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
         "com.epam.drill:kodux:$koduxVersion",
         "org.jetbrains.xodus:xodus-entity-store:$xodusVersion",
-        "com.github.luben:zstd-jni:$zstdJniVersion",
         "io.ktor:ktor-locations:$ktorVersion",
         "org.jacoco:org.jacoco.core:0.8.5",
         "org.apache.bcel:bcel:6.3.1",
