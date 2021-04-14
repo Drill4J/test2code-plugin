@@ -19,6 +19,7 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlin.time.*
 
 internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChanged, sessions ->
@@ -27,17 +28,12 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChang
     }
     sessions?.let {
         val context = state.coverContext()
-        val bundleCounters = measureTimedValue {
+        val bundleCounters =  trackTime("bundleCounters") {
             sessions.calcBundleCounters(context, bundleByTestCache)
-        }.apply {
-            logger.info { "Bundle calculation time: ${duration.inSeconds}" }
-        }.value
-        val coverageInfoSet = measureTimedValue {
+        }
+        val coverageInfoSet =  trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this, methodsCoveredByTestCache)
-        }.apply {
-            logger.info { "Coverage calculation time: ${duration.inSeconds}" }
-        }.value
-
+        }
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
         sendActiveScope()
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
@@ -48,33 +44,35 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChang
 }
 
 internal suspend fun Plugin.changeActiveScope(
-    scopeChange: ActiveScopeChangePayload
+    scopeChange: ActiveScopeChangePayload,
 ): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
-    val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
-    state.storeActiveScopeInfo()
-    sendActiveSessions()
-    sendActiveScope()
-    if (scopeChange.savePrevScope) {
-        if (prevScope.any()) {
-            logger.debug { "finish scope with id=${prevScope.id}" }
-            val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled) {
-                prevScope.calcBundleCounters(state.coverContext(), prevScope.bundleByTestCache)
+    trackTime("changeActiveScope") {
+        val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
+        state.storeActiveScopeInfo()
+        sendActiveSessions()
+        sendActiveScope()
+        if (scopeChange.savePrevScope) {
+            if (prevScope.any()) {
+                logger.debug { "finish scope with id=${prevScope.id}" }
+                val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled) {
+                    prevScope.calcBundleCounters(state.coverContext(), prevScope.bundleByTestCache)
+                }
+                state.scopeManager.store(finishedScope)
+                sendScopeSummary(finishedScope.summary)
+                logger.info { "$finishedScope has been saved." }
+            } else {
+                cleanTopics(prevScope.id)
+                logger.info { "$prevScope is empty, it won't be added to the build." }
             }
-            state.scopeManager.store(finishedScope)
-            sendScopeSummary(finishedScope.summary)
-            logger.info { "$finishedScope has been saved." }
-        } else {
-            cleanTopics(prevScope.id)
-            logger.info { "$prevScope is empty, it won't be added to the build." }
-        }
-    } else cleanTopics(prevScope.id)
-    InitActiveScope(
-        payload = InitScopePayload(
-            id = activeScope.id,
-            name = activeScope.name,
-            prevId = prevScope.id
-        )
-    ).toActionResult()
+        } else cleanTopics(prevScope.id)
+        InitActiveScope(
+            payload = InitScopePayload(
+                id = activeScope.id,
+                name = activeScope.name,
+                prevId = prevScope.id
+            )
+        ).toActionResult()
+    }
 } else ActionResult(
     code = StatusCodes.CONFLICT,
     data = "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
@@ -93,7 +91,7 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
 }
 
 internal suspend fun Plugin.renameScope(
-    payload: RenameScopePayload
+    payload: RenameScopePayload,
 ): ActionResult = state.scopeById(payload.scopeId)?.let { scope ->
     val scopeName = payload.scopeName
     if (state.scopeByName(scopeName) == null) {

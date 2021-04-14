@@ -40,4 +40,4 @@ internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = ru
 
 private fun org.apache.bcel.classfile.Method?.checksum(): String = (this?.code?.run {
     Utility.codeToString(code, constantPool, 0, length, false)
-} ?: "").crc64
+} ?: "").crc64.weakIntern()

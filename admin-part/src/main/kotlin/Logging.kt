@@ -15,16 +15,17 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.kodux.util.*
 import mu.*
 
 private val packagePrefix: String = ::logger::class.qualifiedName?.run {
-    substringBeforeLast('.').substringBeforeLast('.')
+    substringBeforeLast('.').substringBeforeLast('.').weakIntern()
 }.orEmpty()
 
 internal fun logger(block: () -> Unit): KLogger = run {
     val name = block::class.qualifiedName?.run {
         if ('$' in this) substringBefore('$') else this
-    }?.toLoggerName().orEmpty()
+    }?.toLoggerName().orEmpty().weakIntern()
     KotlinLogging.logger(name)
 }
 

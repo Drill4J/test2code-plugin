@@ -34,8 +34,8 @@ tailrec fun Int.gcd(other: Int): Int = takeIf { other == 0 } ?: other.gcd(rem(ot
 
 fun String.methodName(name: String): String = when (name) {
     "<init>" -> toShortClassName()
-    "<clinit>" -> "static ${toShortClassName()}"
-    else -> name
+    "<clinit>" -> "static ${toShortClassName()}".weakIntern()
+    else -> name.weakIntern()
 }
 
 internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {

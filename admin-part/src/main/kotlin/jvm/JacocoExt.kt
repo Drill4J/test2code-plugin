@@ -144,7 +144,7 @@ fun parseDescTypes(argDesc: String): List<String> {
     val descItr = argDesc.iterator()
     while (descItr.hasNext()) {
         val char = descItr.nextChar()
-        val arg = parseDescType(char, descItr)
+        val arg = parseDescType(char, descItr).weakIntern()
         types.add(arg)
     }
     return types

@@ -39,7 +39,7 @@ internal fun Sequence<ExecClassData>.bundle(
     }
     val covered = probesByClasses.values.sumBy { probes -> probes.count { it } }
     val packages = probesByClasses.keys.groupBy {
-        it.substringBeforeLast("/")
+        it.substringBeforeLast("/").weakIntern()
     }.map { (pkgName, classNames) ->
         val classes = classNames.map { className ->
             val probes = probesByClasses.getValue(className)
