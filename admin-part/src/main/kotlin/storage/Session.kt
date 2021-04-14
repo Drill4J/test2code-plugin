@@ -37,6 +37,7 @@ internal suspend fun StoreClient.storeSession(
     scopeId: String,
     session: FinishedSession
 ) {
+    println("STORING SESSION")
     store(
         StoredSession(
             id = session.id,

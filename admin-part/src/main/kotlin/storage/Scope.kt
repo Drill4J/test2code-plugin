@@ -40,6 +40,7 @@ class ScopeManager(private val storage: StoreClient) {
     }.asSequence()
 
     suspend fun store(scope: FinishedScope) {
+        println("STORING FINISHED SCOPE")
         storage.executeInAsyncTransaction {
             store(scope.copy(data = ScopeData.empty))
             scope.takeIf { it.any() }?.let {
@@ -66,6 +67,7 @@ class ScopeManager(private val storage: StoreClient) {
         scopeId: String,
         withProbes: Boolean = false,
     ): FinishedScope? = storage.run {
+        println("Loading scope by id")
         takeIf { withProbes }?.executeInAsyncTransaction {
             findById<FinishedScope>(scopeId)?.run {
                 withProbes(findById(scopeId), storage)

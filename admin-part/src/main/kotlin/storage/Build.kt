@@ -48,6 +48,7 @@ internal suspend fun StoreClient.loadClassData(
 }
 
 internal suspend fun ClassData.store(storage: StoreClient) {
+    println("STORING CLASS DATA")
     storage.store(StoredClassData(buildVersion, this))
 }
 
@@ -65,7 +66,9 @@ internal suspend fun StoreClient.loadBuild(
 internal suspend fun CachedBuild.store(storage: StoreClient) {
     storage.executeInAsyncTransaction {
         store(stats)
+        println("STORING Bundles")
         store(StoredBundles(version, bundleCounters))
+        println("STORING Bundles")
         store(StoredBuildTests(version, tests))
     }
 }

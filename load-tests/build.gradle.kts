@@ -81,6 +81,8 @@ tasks {
         delete(distrDir)
     }
 
+
+
     val prepareDist by registering(Sync::class) {
         from(rootProject.tasks.named("testDistZip"))
         into(distrDir.resolve("adminStorage"))
@@ -89,6 +91,7 @@ tasks {
     val loadTest by registering(Test::class) {
         description = "Runs the loadTest tests"
         group = "verification"
+        maxHeapSize="1500m"
         dependsOn(testBuildClassesTasks.toTypedArray())
         dependsOn(prepareDist)
         useJUnitPlatform()

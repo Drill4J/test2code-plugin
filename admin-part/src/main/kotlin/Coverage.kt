@@ -123,7 +123,8 @@ internal fun BundleCounters.calculateCoverageData(
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
     val finalizedTests = (scope as? ActiveScope)?.flatMap { it.testStats.keys } ?: emptySequence()
-
+    println("METHODS BY TESTS")
+    println("Size: ${bundlesByTests.size}")
     val coveredByTest = trackTime("coveredByTest") {
         bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests)
     }

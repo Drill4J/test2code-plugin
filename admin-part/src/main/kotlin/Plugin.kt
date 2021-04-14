@@ -33,6 +33,9 @@ import kotlinx.serialization.json.*
 import org.jacoco.core.data.*
 import java.io.*
 import java.util.*
+import kotlin.random.*
+import kotlin.random.Random
+
 import kotlin.time.*
 
 @Suppress("unused")
@@ -245,16 +248,24 @@ class Plugin(
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
-        is CoverDataPart -> activeScope.addProbes(message.sessionId) { message.data }
+        is CoverDataPart -> activeScope.addProbes(message.sessionId) { message.data
+            .also {
+                logger.debug { "new exec data: ${it.size}" }
+            }
+            val array = Array(1) {
+                message.data.map { it.copy(testName = "test${Random.nextInt()}".intern()) }
+            }
+            array.flatMap { it }
+            }
         is SessionChanged -> activeScope.probesChanged()
         is SessionFinished -> {
-            delay(500L) //TODO remove after multi-instance core is implemented
+            delay(1000L) //TODO remove after multi-instance core is implemented
             state.finishSession(message.sessionId) ?: logger.info {
                 "$instanceId: No active session with id ${message.sessionId}."
             }
         }
         is SessionsFinished -> {
-            delay(500L) //TODO remove after multi-instance core is implemented
+            delay(1000L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
         }
         else -> logger.info { "$instanceId: Message is not supported! $message" }

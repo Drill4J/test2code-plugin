@@ -20,12 +20,12 @@ import kotlin.test.Test
 
 class LoadTest : E2EPluginTest() {
 
-
     companion object {
-        private const val CLASS_COUNT = 1000
-        private const val METHODS_COUNT = 5000
-        private const val PACKAGES_COUNT = 50
-        private const val PACKAGE_HIERARCHY_LEVEL = 4
+        //with such setting max heap size is ~1.3g time for test ~15 min
+        private const val CLASS_COUNT = 25_000 //50_000
+        private const val METHODS_COUNT = 45_000 //100_000
+        private const val PACKAGES_COUNT = 80 //150
+        private const val PACKAGE_HIERARCHY_LEVEL = 10
     }
 
     @BeforeEach
@@ -80,8 +80,7 @@ class LoadTest : E2EPluginTest() {
 
     @Test
     fun `load test`() {
-
-        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 500) {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 500000000) {
             connectAgent<CustomBuild> { plugUi, build ->
                 plugUi.buildCoverage()
                 plugUi.coveragePackages()
@@ -91,13 +90,14 @@ class LoadTest : E2EPluginTest() {
                 }
                 plugUi.activeScope()
                 val startNewSession = StartNewSession(StartPayload("LOAD")).stringify()
+                println("START SESSION")
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
-                    repeat(10) { index ->
+                    repeat(1) { index ->
                         runWithSession(startSession.payload.sessionId, "test$index") {//todo change testName
                             val tests = build.tests
 
@@ -116,10 +116,13 @@ class LoadTest : E2EPluginTest() {
                     }
                     pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
                 }.join()
+                println("STOP SESSION")
                 plugUi.activeSessions()!!.count shouldBe 0
+                println("SMT HAPPEN")
                 plugUi.activeScope()!!.apply {
                     coverage.percentage shouldBeGreaterThan 0.0
                 }
+                println("SMT HAPPEN X2")
                 val switchScope = SwitchActiveScope(
                     ActiveScopeChangePayload(
                         scopeName = "new2",
@@ -127,16 +130,22 @@ class LoadTest : E2EPluginTest() {
                         prevScopeEnabled = true
                     )
                 ).stringify()
+                println("SWITCHING SCOPE")
                 pluginAction(switchScope) { status, _ ->
                     status shouldBe HttpStatusCode.OK
                     plugUi.buildCoverage()!!.apply {
                         count.covered shouldBeGreaterThan 0
                     }
                     plugUi.coveragePackages()!!.apply {
-                        first().coverage shouldBeGreaterThan 0.0
+                        //  first().coverage shouldBeGreaterThan 0.0
                     }
                 }.join()
-                delay(100)
+                println("EVERYTHING DONE")
+
+                //Waiting for culc after change scope
+                while (true)
+                    delay(100)
+
             }
         }
     }
