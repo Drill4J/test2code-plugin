@@ -39,7 +39,6 @@ internal data class CoverageInfoSet(
     val packageCoverage: List<JavaPackageCoverage> = emptyList(),
     val tests: List<TestCoverageDto> = emptyList(),
     val coverageByTests: CoverageByTests,
-    val methodsCoveredByTest: List<MethodsCoveredByTest> = emptyList()
 )
 
 fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) ->
@@ -68,27 +67,6 @@ internal fun CoverContext.calculateBundleMethods(
                 methods = deleted.map { it.toCovered(deletedWithCoverage[it]) }
             )
         )
-    }
-}
-
-internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(
-    context: CoverContext,
-    cache: AtomicCache<TypedTest, MethodsCoveredByTest>?,
-    finalizedTests: Sequence<TypedTest>
-): List<MethodsCoveredByTest> = map { (typedTest, bundle) ->
-    cache?.get(typedTest) ?: context.calculateBundleMethods(bundle, true).let { changes ->
-        MethodsCoveredByTest(
-            id = typedTest.id(),
-            testName = typedTest.name,
-            testType = typedTest.type,
-            allMethods = changes.totalMethods.methods,
-            newMethods = changes.newMethods.methods,
-            modifiedMethods = changes.allModifiedMethods.methods,
-            unaffectedMethods = changes.unaffectedMethods.methods
-        ).also {
-            if (typedTest in finalizedTests)
-                cache?.set(typedTest, it)
-        }
     }
 }
 

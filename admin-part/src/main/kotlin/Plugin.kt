@@ -309,6 +309,7 @@ class Plugin(
             val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
             bundleCounters.assocTestsJob(scope)
+            bundleCounters.byTest.coveredMethodsJob(scope)
         }
     }
 
@@ -413,6 +414,7 @@ class Plugin(
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary)
         assocTestsJob()
+        byTest.coveredMethodsJob()
         state.storeBuild()
         val stats = summary.toStatsDto()
         val qualityGate = checkQualityGate(stats)
@@ -441,16 +443,6 @@ class Plugin(
         Routes.Build.Summary.Tests(Routes.Build.Summary(buildRoute)).let {
             send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
-        }
-
-        methodsCoveredByTest.forEach {
-            Routes.Build.MethodsCoveredByTest(it.id, buildRoute).let { test ->
-                send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), it.toSummary())
-                send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), it.allMethods)
-                send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
-                send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), it.unaffectedMethods)
-                send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), it.newMethods)
-            }
         }
         send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
         val context = state.coverContext() //TODO remove context from this method
@@ -525,6 +517,7 @@ class Plugin(
         }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         bundleCounters.assocTestsJob(scope)
+        bundleCounters.byTest.coveredMethodsJob(scope)
     }
 
     private suspend fun sendScopeTree(
@@ -562,20 +555,6 @@ class Plugin(
             send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
         }
-
-        methodsCoveredByTest.forEach {
-            Routes.Build.Scopes.Scope.MethodsCoveredByTest(it.id, scope).let { test ->
-                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), it.toSummary())
-                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), it.allMethods)
-                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), it.modifiedMethods)
-                send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), it.newMethods)
-                send(
-                    buildVersion,
-                    Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
-                    it.unaffectedMethods
-                )
-            }
-        }
     }
 
     internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
@@ -607,5 +586,39 @@ class Plugin(
         scope?.let {
             sendScopeTree(it.id, associatedTests, treeCoverage)
         } ?: sendBuildTree(treeCoverage, associatedTests)
+    }
+
+    internal suspend fun Map<TypedTest, BundleCounter>.coveredMethodsJob(
+        scope: Scope? = null,
+        context: CoverContext = state.coverContext()
+    ) = GlobalScope.launch {
+        trackTime("coveredByTest") {
+            map { (typedTest, bundle) ->
+                val coveredMethods = context.methods.toCoverMap(bundle, true)
+                val summary = coveredMethods.toSummary(typedTest, context)
+                val all = coveredMethods.values.toList()
+                val modified = coveredMethods.filterValues { it in context.methodChanges.modified }
+                val new = coveredMethods.filterValues { it in context.methodChanges.new }
+                val unaffected = coveredMethods.filterValues { it in context.methodChanges.unaffected }
+                scope?.let {
+                    val scopeRoute = scopeById(it.id)
+                    Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeRoute).let { test ->
+                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), summary)
+                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
+                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
+                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
+                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), unaffected)
+                    }
+                } ?: run {
+                    Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), summary)
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), all)
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), modified)
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), new)
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), unaffected)
+                    }
+                }
+            }
+        }
     }
 }

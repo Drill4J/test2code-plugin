@@ -65,7 +65,6 @@ internal fun Sequence<Session>.calcBundleCounters(
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null,
-    cache: AtomicCache<TypedTest, MethodsCoveredByTest>? = null,
 ): CoverageInfoSet {
     val bundle = all
     val bundlesByTests = byTest
@@ -122,12 +121,6 @@ internal fun BundleCounters.calculateCoverageData(
 
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
-    val finalizedTests = (scope as? ActiveScope)?.flatMap { it.testStats.keys } ?: emptySequence()
-
-    val coveredByTest = trackTime("coveredByTest") {
-        bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests)
-    }
-
     val tests = bundlesByTests.map { (typedTest, bundle) ->
         TestCoverageDto(
             id = typedTest.id(),
@@ -145,7 +138,6 @@ internal fun BundleCounters.calculateCoverageData(
         packageCoverage,
         tests,
         coverageByTests,
-        coveredByTest
     )
 }
 
