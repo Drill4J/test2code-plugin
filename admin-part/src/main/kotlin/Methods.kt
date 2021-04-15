@@ -121,17 +121,24 @@ internal fun TypedRisks.toListDto(): List<RiskDto> = flatMap { (type, methods) -
     }
 }
 
-fun MethodsCoveredByTest.toSummary() = TestedMethodsSummary(
-    id = id,
-    testName = testName,
-    testType = testType,
+internal fun Map<Method, CoverMethod>.toSummary(
+    typedTest: TypedTest,
+    context: CoverContext,
+) = TestedMethodsSummary(
+    id = typedTest.id(),
+    testName = typedTest.name,
+    testType = typedTest.type,
     methodCounts = CoveredMethodCounts(
-        all = allMethods.count(),
-        modified = modifiedMethods.count(),
-        unaffected = unaffectedMethods.count(),
-        new = newMethods.count()
+        all = size,
+        modified = context.methodChanges.modified.count { it in this },
+        new = context.methodChanges.new.count { it in this },
+        unaffected = context.methodChanges.unaffected.count { it in this }
     )
 )
+
+internal fun Map<Method, CoverMethod>.filterValues(
+    predicate: (Method) -> Boolean
+) = filter { predicate(it.key) }.values.toList()
 
 private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
     next()
