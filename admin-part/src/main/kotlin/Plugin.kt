@@ -27,6 +27,7 @@ import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
+import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
@@ -239,7 +240,7 @@ class Plugin(
             processInitialized()
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
-        is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
+        is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }.also { logPoolStats() }
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
         is SessionsCancelled -> message.run {
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
