@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 
 internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChanged, sessions ->
     if (sessionChanged) {
@@ -27,12 +28,12 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChang
     }
     sessions?.let {
         val context = state.coverContext()
-        val bundleCounters =  trackTime("bundleCounters") {
+        val bundleCounters = trackTime("bundleCounters") {
             sessions.calcBundleCounters(context, bundleByTestCache)
-        }
-        val coverageInfoSet =  trackTime("coverageInfoSet") {
+        }.also { logPoolStats() }
+        val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)
-        }
+        }.also { logPoolStats() }
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
         sendActiveScope()
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
@@ -53,14 +54,14 @@ internal suspend fun Plugin.changeActiveScope(
         sendActiveScope()
         if (scopeChange.savePrevScope) {
             if (prevScope.any()) {
-                logger.debug { "finish scope with id=${prevScope.id}" }
+                logger.debug { "finish scope with id=${prevScope.id}" }.also { logPoolStats() }
                 val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
                 state.scopeManager.store(finishedScope)
                 sendScopeSummary(finishedScope.summary)
-                logger.info { "$finishedScope has been saved." }
+                logger.info { "$finishedScope has been saved." }.also { logPoolStats() }
             } else {
                 cleanTopics(prevScope.id)
-                logger.info { "$prevScope is empty, it won't be added to the build." }
+                logger.info { "$prevScope is empty, it won't be added to the build." }.also { logPoolStats() }
             }
         } else cleanTopics(prevScope.id)
         InitActiveScope(
@@ -84,7 +85,7 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
             calculateAndSendBuildCoverage()
         }
         calculateAndSendScopeCoverage()
-        logger.info { "Current active scope - $activeScope" }
+        logger.info { "Current active scope - $activeScope" }.also { logPoolStats() }
     }
 }
 
