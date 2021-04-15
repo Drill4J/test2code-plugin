@@ -307,11 +307,14 @@ class Plugin(
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
-            val bundleCounters = scope.data.sessions.asSequence().calcBundleCounters(coverContext, storeClient.loadClassBytes(agentId))
+            val bundleCounters = scope.data.sessions.asSequence().calcBundleCounters(
+                coverContext,
+                storeClient.loadClassBytes(agentId)
+            )
             val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
             bundleCounters.assocTestsJob(scope)
-            bundleCounters.byTest.coveredMethodsJob(scope)
+            bundleCounters.byTest.coveredMethodsJob(scope.id)
         }
     }
 
@@ -521,7 +524,7 @@ class Plugin(
         }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         bundleCounters.assocTestsJob(scope)
-        bundleCounters.byTest.coveredMethodsJob(scope)
+        bundleCounters.byTest.coveredMethodsJob(scope.id)
     }
 
     private suspend fun sendScopeTree(
@@ -595,7 +598,7 @@ class Plugin(
     }
 
     internal suspend fun Map<TypedTest, BundleCounter>.coveredMethodsJob(
-        scope: Scope? = null,
+        scopeId: String? = null,
         context: CoverContext = state.coverContext(),
     ) = GlobalScope.launch {
         trackTime("coveredByTestJob") {
@@ -606,9 +609,8 @@ class Plugin(
                 val modified = coveredMethods.filterValues { it in context.methodChanges.modified }
                 val new = coveredMethods.filterValues { it in context.methodChanges.new }
                 val unaffected = coveredMethods.filterValues { it in context.methodChanges.unaffected }
-                scope?.let {
-                    val scopeRoute = scopeById(it.id)
-                    Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeRoute).let { test ->
+                scopeId?.let {
+                    Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeById(it)).let { test ->
                         send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), summary)
                         send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
                         send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
