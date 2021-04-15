@@ -305,7 +305,7 @@ class Plugin(
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
-            val bundleCounters = scope.data.bundleCounters
+            val bundleCounters = scope.data.sessions.asSequence().calcBundleCounters(coverContext)
             val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
             bundleCounters.assocTestsJob(scope)

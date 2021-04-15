@@ -107,7 +107,7 @@ class ActiveScope(
 
     fun rename(name: String): ScopeSummary = _summary.updateAndGet { it.copy(name = name) }
 
-    fun finish(enabled: Boolean, counterInitializer: () -> BundleCounters = { BundleCounters.empty }) = FinishedScope(
+    fun finish(enabled: Boolean) = FinishedScope(
         id = id,
         buildVersion = buildVersion,
         name = summary.name,
@@ -121,7 +121,6 @@ class ActiveScope(
             ScopeData(
                 sessions = sessions,
                 typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests),
-                bundleCounters = counterInitializer()
             )
         }
     )
@@ -222,7 +221,6 @@ data class ScopeData(
     @Transient
     val sessions: List<FinishedSession> = emptyList(),
     val typedTests: Set<TypedTest> = emptySet(),
-    val bundleCounters: BundleCounters = BundleCounters.empty,
 ) : java.io.Serializable {
     companion object {
         val empty = ScopeData()
