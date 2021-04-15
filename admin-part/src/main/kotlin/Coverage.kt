@@ -117,7 +117,7 @@ internal fun BundleCounters.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val buildMethods = context.calculateBundleMethods(bundle)
+    val buildMethods = trackTime("calculateBundleMethods") { context.calculateBundleMethods(bundle) }
 
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 

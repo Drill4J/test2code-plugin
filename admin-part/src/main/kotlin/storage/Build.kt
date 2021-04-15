@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.storage
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 
@@ -49,24 +50,34 @@ internal suspend fun StoreClient.loadClassData(
 }
 
 internal suspend fun ClassData.store(storage: StoreClient) {
-    storage.store(StoredClassData(buildVersion, this))
+    trackTime("Store class data") {
+        storage.store(StoredClassData(buildVersion, this))
+    }
 }
 
 internal suspend fun StoreClient.loadBuild(
     version: String,
 ): CachedBuild? = findById<BuildStats>(version)?.let { stats ->
-    CachedBuild(
-        version = version,
-        stats = stats,
-        bundleCounters = findById<StoredBundles>(version)?.data ?: BundleCounters.empty,
-        tests = findById<StoredBuildTests>(version)?.data ?: BuildTests()
-    )
+    trackTime("Load build") {
+        CachedBuild(
+            version = version,
+            stats = stats,
+            bundleCounters = findById<StoredBundles>(version)?.data ?: BundleCounters.empty,
+            tests = findById<StoredBuildTests>(version)?.data ?: BuildTests()
+        )
+    }
 }
 
 internal suspend fun CachedBuild.store(storage: StoreClient) {
     storage.executeInAsyncTransaction {
-        store(stats)
-        store(StoredBundles(version, bundleCounters))
-        store(StoredBuildTests(version, tests))
+        trackTime("Store build total") {
+            store(stats)
+            trackTime("Store build bundles") {
+                store(StoredBundles(version, bundleCounters))
+            }
+            trackTime("Store build tests") {
+                store(StoredBuildTests(version, tests))
+            }
+        }
     }
 }
