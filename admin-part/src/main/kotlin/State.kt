@@ -84,7 +84,7 @@ internal class AgentState(
     }
 
     suspend fun initialized(block: suspend () -> Unit = {}) {
-        logger.debug { "initialized by event from agent..." }
+        logger.debug { "initialized by event from agent..." }.also { logPoolStats() }
         _data.getAndUpdate {
             when (it) {
                 is ClassData -> it
@@ -217,9 +217,9 @@ internal class AgentState(
         sessionId: String
     ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
         if (it.any()) {
-            logger.debug { "FinishSession. size of probes = ${it.probes.size}" }
+            logger.debug { "FinishSession. size of probes = ${it.probes.size}" }.also { logPoolStats() }
             storeClient.storeSession(activeScope.id, it)
-            logger.debug { "Session $sessionId finished." }
+            logger.debug { "Session $sessionId finished." }.also { logPoolStats() }
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
     }
 
@@ -294,7 +294,7 @@ internal class AgentState(
     private suspend fun initActiveScope() {
         readActiveScopeInfo()?.run {
             val sessions = storeClient.loadSessions(id)
-            logger.debug { "load sessions for active scope with id=$id" }
+            logger.debug { "load sessions for active scope with id=$id" }.also { logPoolStats() }
             _activeScope.update {
                 ActiveScope(
                     id = id,
