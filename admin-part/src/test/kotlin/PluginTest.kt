@@ -48,7 +48,7 @@ class PluginTest {
     private val sender = EmptySender
 
     private val adminData = object : AdminData {
-        override val classBytes = emptyMap<String, ByteArray>()
+        override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
     }
 
     @AfterTest

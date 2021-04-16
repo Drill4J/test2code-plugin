@@ -43,7 +43,7 @@ class JsCoverageTest {
     @Test
     fun `coverageData for active scope with custom js probes`() = runBlocking {
         val adminData = object : AdminData {
-            override val classBytes = emptyMap<String, ByteArray>()
+            override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
         }
         val state = AgentState(
             storeClient, jsAgentInfo, adminData, emptyRuntimeConfig
@@ -62,7 +62,7 @@ class JsCoverageTest {
         }
         val finished = active.finish(enabled = true)
         val context = state.coverContext()
-        val bundleCounters = finished.calcBundleCounters(context)
+        val bundleCounters = finished.calcBundleCounters(context, emptyMap())
         val coverageData = bundleCounters.calculateCoverageData(context)
         coverageData.run {
             assertEquals(Count(3, 5), coverage.count)
