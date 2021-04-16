@@ -19,6 +19,7 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 
@@ -29,7 +30,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChang
     sessions?.let {
         val context = state.coverContext()
         val bundleCounters = trackTime("bundleCounters") {
-            sessions.calcBundleCounters(context, bundleByTestCache)
+            sessions.calcBundleCounters(context, storeClient.loadClassBytes(agentInfo.id), bundleByTestCache)
         }.also { logPoolStats() }
         val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)
