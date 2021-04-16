@@ -150,7 +150,7 @@ class Plugin(
         is ExportCoverage -> runCatching {
             val probesByteArray = ByteArrayOutputStream().use { outputStream ->
                 val executionDataWriter = ExecutionDataWriter(outputStream)
-                val classBytes = state.coverContext().classBytes
+                val classBytes = storeClient.loadClassBytes(agentId)
                 val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
                 allFinishedScopes.flatMap { finishedScope ->
                     finishedScope.data.sessions.flatMap { it.probes }
@@ -307,7 +307,7 @@ class Plugin(
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
-            val bundleCounters = scope.data.sessions.asSequence().calcBundleCounters(coverContext)
+            val bundleCounters = scope.data.sessions.asSequence().calcBundleCounters(coverContext, storeClient.loadClassBytes(agentId))
             val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
             bundleCounters.assocTestsJob(scope)
@@ -385,7 +385,7 @@ class Plugin(
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
-        val bundleCounters = flatten().calcBundleCounters(context)
+        val bundleCounters = flatten().calcBundleCounters(context, storeClient.loadClassBytes(agentId))
         state.updateBundleCounters(bundleCounters)
         logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())
@@ -514,7 +514,7 @@ class Plugin(
 
     internal suspend fun calculateAndSendScopeCoverage() = activeScope.let { scope ->
         val context = state.coverContext()
-        val bundleCounters = scope.calcBundleCounters(context)
+        val bundleCounters = scope.calcBundleCounters(context, storeClient.loadClassBytes(agentId))
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
         activeScope.updateSummary {
             it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage)

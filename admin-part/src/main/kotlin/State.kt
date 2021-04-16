@@ -145,12 +145,13 @@ internal class AgentState(
             classData.store(storeClient)
             initialized(classData)
             block()
-        } ?: _coverContext.update {
-            logger.debug { "update classes context, old count: ${it?.classBytes?.size} new ${adminData.classBytes.size}" }
+        } ?: apply {
+            val classBytes = adminData.classBytes
+            logger.debug { "update classes context, new size ${classBytes.size}" }
+            classBytes.storeDb(storeClient, agentInfo.id)
             activeScope.activeSessions.values.map { session ->
                 activeScope.finishSession(session.id)
             }
-            it?.copy(classBytes = adminData.classBytes)
         }
     }
 
@@ -162,11 +163,11 @@ internal class AgentState(
             packageTree = classData.packageTree,
             methods = classData.methods,
             probeIds = classData.probeIds,
-            classBytes = adminData.classBytes,
             build = build
         )
         _coverContext.value = coverContext
         val agentId = agentInfo.id
+        adminData.classBytes.storeDb(storeClient, agentId)
         logger.debug { "agent(id=$agentId, version=$buildVersion) initializing with classes count ${adminData.classBytes.size}..." }
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
             logger.debug { "(buildVersion=$buildVersion) Current baseline=$baseline." }

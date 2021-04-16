@@ -44,7 +44,6 @@ internal data class CoverContext(
     val methods: List<Method>,
     val methodChanges: DiffMethods = DiffMethods(),
     val probeIds: Map<String, Long> = emptyMap(),
-    val classBytes: Map<String, ByteArray> = emptyMap(),
     val build: CachedBuild,
     val parentBuild: CachedBuild? = null,
     val testsToRun: GroupedTests = emptyMap(),

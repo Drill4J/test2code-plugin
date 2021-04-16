@@ -62,7 +62,7 @@ class JsCoverageTest {
         }
         val finished = active.finish(enabled = true)
         val context = state.coverContext()
-        val bundleCounters = finished.calcBundleCounters(context)
+        val bundleCounters = finished.calcBundleCounters(context, emptyMap())
         val coverageData = bundleCounters.calculateCoverageData(context)
         coverageData.run {
             assertEquals(Count(3, 5), coverage.count)
