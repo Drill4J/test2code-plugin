@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 
@@ -24,24 +25,28 @@ internal class StoredSession(
     @Id val id: String,
     val scopeId: String,
     @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
-    val data: FinishedSession
+    val data: FinishedSession,
 ) : java.io.Serializable
 
 internal suspend fun StoreClient.loadSessions(
-    scopeId: String
-): List<FinishedSession> = findBy<StoredSession> {
-    StoredSession::scopeId eq scopeId
-}.map { it.data }
+    scopeId: String,
+): List<FinishedSession> = trackTime("Load session") {
+    findBy<StoredSession> {
+        StoredSession::scopeId eq scopeId
+    }.map { it.data }
+}
 
 internal suspend fun StoreClient.storeSession(
     scopeId: String,
-    session: FinishedSession
+    session: FinishedSession,
 ) {
-    store(
-        StoredSession(
-            id = session.id,
-            scopeId = scopeId,
-            data = session
+    trackTime("Store session") {
+        store(
+            StoredSession(
+                id = session.id,
+                scopeId = scopeId,
+                data = session
+            )
         )
-    )
+    }
 }

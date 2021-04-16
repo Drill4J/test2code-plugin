@@ -240,7 +240,8 @@ class Plugin(
             processInitialized()
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
-        is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }.also { logPoolStats() }
+        is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
+            .also { logPoolStats() }
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
         is SessionsCancelled -> message.run {
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
@@ -383,8 +384,10 @@ class Plugin(
 
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
+        logger.debug { "Start to calculate BundleCounters of build" }
         val bundleCounters = flatten().calcBundleCounters(context)
         state.updateBundleCounters(bundleCounters)
+        logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())
     }
 
@@ -577,23 +580,25 @@ class Plugin(
     internal fun BundleCounters.assocTestsJob(
         scope: Scope? = null,
     ) = GlobalScope.launch {
-        logger.debug { "Calculating all associated tests..." }
-        val assocTestsMap = byTest.associatedTests(onlyPackages = false)
-        val associatedTests: List<AssociatedTests> = measureTimedValue {
-            assocTestsMap.getAssociatedTests()
-        }.apply { logger.trace { "Calculated in ${duration.inSeconds}" } }.value
-        val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
-        logger.debug { "Sending all associated tests" }
-        scope?.let {
-            sendScopeTree(it.id, associatedTests, treeCoverage)
-        } ?: sendBuildTree(treeCoverage, associatedTests)
+        trackTime("assocTestsJob") {
+            logger.debug { "Calculating all associated tests..." }
+            val assocTestsMap = byTest.associatedTests(onlyPackages = false)
+            val associatedTests: List<AssociatedTests> = measureTimedValue {
+                assocTestsMap.getAssociatedTests()
+            }.apply { logger.trace { "Calculated in ${duration.inSeconds}" } }.value
+            val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
+            logger.debug { "Sending all associated tests" }
+            scope?.let {
+                sendScopeTree(it.id, associatedTests, treeCoverage)
+            } ?: sendBuildTree(treeCoverage, associatedTests)
+        }
     }
 
     internal suspend fun Map<TypedTest, BundleCounter>.coveredMethodsJob(
         scope: Scope? = null,
-        context: CoverContext = state.coverContext()
+        context: CoverContext = state.coverContext(),
     ) = GlobalScope.launch {
-        trackTime("coveredByTest") {
+        trackTime("coveredByTestJob") {
             map { (typedTest, bundle) ->
                 val coveredMethods = context.methods.toCoverMap(bundle, true)
                 val summary = coveredMethods.toSummary(typedTest, context)

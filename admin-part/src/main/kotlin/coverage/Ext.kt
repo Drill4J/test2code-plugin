@@ -142,7 +142,7 @@ internal fun Sequence<PackageCounter>.toCoveredMethods(
 
 internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?.run {
     mapTo(mutableSetOf()) { method ->
-        method.ownerClass.takeIf { '/' in it }?.substringBeforeLast('/').orEmpty()
+        method.ownerClass.takeIf { '/' in it }?.substringBeforeLast('/').orEmpty().weakIntern()
     }
 }.orEmpty()
 

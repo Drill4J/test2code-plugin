@@ -114,7 +114,7 @@ data class ClassCounter(
     override val count: Count,
     val methods: List<MethodCounter>,
 ) : NamedCounter(), java.io.Serializable {
-    val fullName = if (path.any()) "$path/$name" else name
+    val fullName = if (path.any()) "$path/$name".weakIntern() else name.weakIntern()
 }
 
 @Serializable
@@ -124,5 +124,5 @@ data class MethodCounter(
     val decl: String,
     override val count: Count,
 ) : NamedCounter(), java.io.Serializable {
-    val sign = "$name$desc"
+    val sign = "$name$desc".weakIntern()
 }

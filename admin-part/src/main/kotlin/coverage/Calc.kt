@@ -24,7 +24,7 @@ internal fun Sequence<ExecClassData>.bundle(
     tree: PackageTree
 ): BundleCounter = run {
     val probeCounts: Map<String, Int> = tree.packages.run {
-        flatMap { it.classes }.associateBy({ "${it.path}/${it.name}" }) { it.totalCount }
+        flatMap { it.classes }.associateBy({ "${it.path}/${it.name}".weakIntern() }) { it.totalCount }
     }
     val probesByClasses: Map<String, List<Boolean>> = filter {
         it.className in probeCounts

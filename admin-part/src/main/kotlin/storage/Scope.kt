@@ -16,6 +16,8 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 
@@ -32,7 +34,9 @@ class ScopeManager(private val storage: StoreClient) {
             FinishedScope::buildVersion eq buildVersion
         }.run {
             takeIf { withData }?.run {
-                findBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }.takeIf { it.any() }
+                trackTime("Loading scope") {
+                    findBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }.takeIf { it.any() }
+                }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
@@ -41,9 +45,11 @@ class ScopeManager(private val storage: StoreClient) {
 
     suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
-            store(scope.copy(data = ScopeData.empty))
-            scope.takeIf { it.any() }?.let {
-                store(ScopeDataEntity(it.id, it.buildVersion, it.data))
+            trackTime("Store FinishedScope") {
+                store(scope.copy(data = ScopeData.empty))
+                scope.takeIf { it.any() }?.let {
+                    store(ScopeDataEntity(it.id, it.buildVersion, it.data))
+                }
             }
         }
     }
