@@ -21,8 +21,6 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
 
-private val logger = logger {}
-
 @Serializable
 internal class StoredClassData(
     @Id val version: String,
@@ -42,13 +40,6 @@ class StoredBuildTests(
     @Id val version: String,
     @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
     val data: BuildTests,
-) : java.io.Serializable
-
-@Serializable
-internal class StoredClassBytes(
-    @Id val agentId: String,
-    @StreamSerialization(SerializationType.FST, CompressType.ZSTD)
-    val classBytes: Map<String, ByteArray>,
 ) : java.io.Serializable
 
 internal suspend fun StoreClient.loadClassData(
@@ -87,21 +78,5 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
                 store(StoredBuildTests(version, tests))
             }
         }
-    }
-}
-
-internal suspend fun Map<String, ByteArray>.storeDb(storage: StoreClient, id: String) {
-    logger.debug { "store class bytes ${this.size} for agent = $id" }
-    trackTime("storeClassBytes") {
-        storage.store(StoredClassBytes(id, this))
-    }
-}
-
-internal suspend fun StoreClient.loadClassBytes(
-    agentId: String,
-): Map<String, ByteArray> = trackTime("loadClassBytes") {
-    findById<StoredClassBytes>(agentId)?.classBytes ?: let {
-        logger.warn { "can not find classBytes for agentId $agentId" }
-        emptyMap()
     }
 }

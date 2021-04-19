@@ -111,7 +111,7 @@ internal class AgentState(
                     ).toClassData(methods = methods)
                 }
                 is NoData -> {
-                    val classBytes = adminData.classBytes
+                    val classBytes = adminData.loadClassBytes()
                     logger.info { "initializing noData with classBytes size ${classBytes.size}..." }
                     val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
                     val bundleCoverage = classBytes.keys.bundle(classBytes, probeIds)
@@ -146,9 +146,6 @@ internal class AgentState(
             initialized(classData)
             block()
         } ?: apply {
-            val classBytes = adminData.classBytes
-            logger.debug { "update classes context, new size ${classBytes.size}" }
-            classBytes.storeDb(storeClient, agentInfo.id)
             activeScope.activeSessions.values.map { session ->
                 activeScope.finishSession(session.id)
             }
@@ -167,8 +164,7 @@ internal class AgentState(
         )
         _coverContext.value = coverContext
         val agentId = agentInfo.id
-        adminData.classBytes.storeDb(storeClient, agentId)
-        logger.debug { "agent(id=$agentId, version=$buildVersion) initializing with classes count ${adminData.classBytes.size}..." }
+        logger.debug { "agent(id=$agentId, version=$buildVersion) initializing..." }
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
             logger.debug { "(buildVersion=$buildVersion) Current baseline=$baseline." }
             val parentVersion = when (baseline.version) {
