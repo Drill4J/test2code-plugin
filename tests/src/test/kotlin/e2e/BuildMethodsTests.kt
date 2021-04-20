@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.e2e
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.api.*
 import io.kotlintest.*
 import kotlinx.coroutines.*
 import kotlin.test.*
