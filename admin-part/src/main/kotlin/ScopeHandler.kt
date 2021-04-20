@@ -54,9 +54,7 @@ internal suspend fun Plugin.changeActiveScope(
         if (scopeChange.savePrevScope) {
             if (prevScope.any()) {
                 logger.debug { "finish scope with id=${prevScope.id}" }
-                val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled) {
-                    prevScope.calcBundleCounters(state.coverContext(), prevScope.bundleByTestCache)
-                }
+                val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
                 state.scopeManager.store(finishedScope)
                 sendScopeSummary(finishedScope.summary)
                 logger.info { "$finishedScope has been saved." }
