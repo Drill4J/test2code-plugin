@@ -20,6 +20,8 @@ import kotlinx.serialization.builtins.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import kotlinx.serialization.internal.*
+import java.lang.ref.*
+import java.util.*
 
 
 class StringInternDeserializationStrategy<T>(private val deserializationStrategy: KSerializer<T>) :
@@ -80,3 +82,5 @@ internal class DecodeAdapter(private val decoder: Decoder) : Decoder by decoder 
         return StringInternDecoder(decoder.beginStructure(descriptor))
     }
 }
+
+val s_manualCache = WeakHashMap<String, WeakReference<String>>(1000000)

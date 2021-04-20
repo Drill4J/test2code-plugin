@@ -31,10 +31,10 @@ internal fun <T> List<T>.slice(probeRange: ProbeRange): List<T> = slice(probeRan
 internal fun Count.percentage(): Double = covered percentOf total
 
 internal fun Count?.arrowType(other: Count): ArrowType = this?.run {
-    (this - other).first.sign.toArrowType()
+    (this.subtraction(other)).first.sign.toArrowType()
 } ?: ArrowType.UNCHANGED
 
-internal operator fun Count.minus(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
+internal infix fun Count.subtraction(other: Count): Pair<Long, Long> = takeIf { other.total > 0 }?.run {
     total.gcd(other.total).let { gcd ->
         val (totalLong, otherTotalLong) = total.toLong() to other.total.toLong()
         Pair(
@@ -67,7 +67,7 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
 }
 
 internal fun BundleCounter.coverageKeys(
-    onlyPackages: Boolean = true
+    onlyPackages: Boolean = true,
 ): Sequence<CoverageKey> = packages.asSequence().flatMap { p ->
     sequenceOf(p.coverageKey()) + (p.classes.takeIf { !onlyPackages }?.asSequence()?.flatMap { c ->
         sequenceOf(c.coverageKey()) + c.methods.asSequence().mapNotNull { m ->
@@ -77,18 +77,18 @@ internal fun BundleCounter.coverageKeys(
 }
 
 internal fun BundleCounter.toCoverDto(
-    tree: PackageTree
+    tree: PackageTree,
 ) = count.copy(total = tree.totalCount).let { count ->
     CoverDto(
         percentage = count.percentage(),
-        methodCount = methodCount.copy(total = tree.totalMethodCount),
-        count = count
+        methodCount = methodCount.copy(total = tree.totalMethodCount).toDto(),
+        count = count.toDto()
     )
 }
 
 internal fun List<Method>.toCoverMap(
     bundle: BundleCounter,
-    onlyCovered: Boolean
+    onlyCovered: Boolean,
 ): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
     val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
         c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
@@ -107,7 +107,7 @@ internal fun List<Method>.toCoverMap(
 }
 
 internal fun BundleCounter.coveredMethods(
-    methods: Iterable<Method>
+    methods: Iterable<Method>,
 ): Map<Method, Count> = packages.asSequence().takeIf { p ->
     p.any { it.classes.any() }
 }?.run {
@@ -119,7 +119,7 @@ internal fun BundleCounter.coveredMethods(
 
 internal fun Sequence<PackageCounter>.toCoveredMethods(
     methodMapPrv: () -> Map<String, List<Method>>,
-    packageSetPrv: () -> Set<String>
+    packageSetPrv: () -> Set<String>,
 ): Sequence<Pair<Method, Count>> = takeIf { it.any() }?.run {
     val packageSet = packageSetPrv()
     filter { it.name in packageSet && it.hasCoverage() }.run {

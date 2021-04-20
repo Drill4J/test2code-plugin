@@ -178,11 +178,11 @@ enum class ArrowType : JvmSerializable {
 
 @Serializable
 data class MethodsSummaryDto(
-    val all: Count,
-    val new: Count,
-    val modified: Count,
-    val unaffected: Count,
-    val deleted: Count,
+    val all: CountDto,
+    val new: CountDto,
+    val modified: CountDto,
+    val unaffected: CountDto,
+    val deleted: CountDto,
     val risks: RiskCounts = RiskCounts(),
 ) : JvmSerializable
 
@@ -360,6 +360,8 @@ data class ScopeSummary(
 
 val zeroCount = Count(covered = 0, total = 0)
 
+val zeroCountDto = Count(covered = 0, total = 0).toDto()
+
 @Serializable
 data class TestCountDto(
     val count: Int = 0,
@@ -451,14 +453,33 @@ data class ServiceGroupSummaryDto(
 @Serializable
 data class CoverDto(
     val percentage: Double = 0.0,
-    val methodCount: Count = zeroCount,
-    val count: Count = zeroCount,
+    val methodCount: CountDto = zeroCountDto,
+    val count: CountDto = zeroCountDto,
 ) : JvmSerializable
 
 @Serializable
-data class Count(
+data class CountDto(
     val covered: Int,
     val total: Int,
 ) : JvmSerializable
+
+fun Count.toDto() = CountDto(covered, total)
+
+typealias Count = Long
+
+val Count.covered
+    get() = (this shr 32).toInt()
+
+val Count.total
+    get() = this.toInt()
+
+
+fun Count.copy(covered: Int = (this shr 32).toInt(), total: Int = this.toInt()): Count {
+    return Count(covered, total)
+}
+
+fun Count(covered: Int, total: Int): Count {
+    return (covered.toLong() shl 32) or (total.toLong() and 0xFFFFFFFFL)
+}
 
 expect interface JvmSerializable
