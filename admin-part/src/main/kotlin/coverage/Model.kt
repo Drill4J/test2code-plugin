@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 import kotlinx.serialization.*
 
 internal data class DiffMethods(
@@ -89,7 +90,6 @@ sealed class NamedCounter : JvmSerializable {
 
 @Serializable
 data class BundleCounter(
-    @StringIntern
     override val name: String,
     override val count: Count = zeroCount,
     val methodCount: Count = zeroCount,
@@ -100,7 +100,6 @@ data class BundleCounter(
 
 @Serializable
 data class PackageCounter(
-    @StringIntern
     override val name: String,
     override val count: Count,
     val classCount: Count,
@@ -110,9 +109,7 @@ data class PackageCounter(
 
 @Serializable
 data class ClassCounter(
-    @StringIntern
     val path: String,
-    @StringIntern
     override val name: String,
     override val count: Count,
     val methods: List<MethodCounter>,
@@ -122,11 +119,8 @@ data class ClassCounter(
 
 @Serializable
 data class MethodCounter(
-    @StringIntern
     override val name: String,
-    @StringIntern
     val desc: String,
-    @StringIntern
     val decl: String,
     override val count: Count,
 ) : NamedCounter(), JvmSerializable {

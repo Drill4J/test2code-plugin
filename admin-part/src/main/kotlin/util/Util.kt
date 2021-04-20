@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.util
 
+import com.epam.kodux.util.*
 import kotlinx.coroutines.*
 import org.jacoco.core.internal.data.*
 import java.net.*
@@ -33,17 +34,17 @@ tailrec fun Int.gcd(other: Int): Int = takeIf { other == 0 } ?: other.gcd(rem(ot
 
 fun String.methodName(name: String): String = when (name) {
     "<init>" -> toShortClassName()
-    "<clinit>" -> "static ${toShortClassName()}"
-    else -> name
+    "<clinit>" -> "static ${toShortClassName()}".weakIntern()
+    else -> name.weakIntern()
 }
 
 internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {
     runCatching { URLDecoder.decode(this, "UTF-8") }.getOrNull()
 } ?: this
 
-internal fun String.toShortClassName(): String = substringAfterLast('/')
+internal fun String.toShortClassName(): String = substringAfterLast('/').weakIntern()
 
-val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
+val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX).weakIntern()
 
 internal fun String.crc64(): Long = CRC64.classId(toByteArray())
 

@@ -42,7 +42,7 @@ internal suspend fun StoreClient.storeSession(
         StoredSession(
             id = session.id,
             scopeId = scopeId,
-            data = session.copy(tests = HashSet(session.tests))
+            data = session
         )
     )
 }
