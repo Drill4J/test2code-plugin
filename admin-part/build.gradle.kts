@@ -21,7 +21,6 @@ dependencies {
 
     //plugin dependencies
     jarDeps(project(":api"))
-    jarDeps(project(":common"))
     jarDeps(project(":agent-api"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.apache.bcel:bcel")
@@ -38,7 +37,6 @@ dependencies {
     implementation("com.epam.drill:kodux")
     implementation("org.jetbrains.xodus:xodus-entity-store")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
-    implementation("com.github.luben:zstd-jni")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")

@@ -23,6 +23,7 @@ import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
+import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
 
@@ -95,10 +96,10 @@ internal class AgentState(
                     logger.debug { "initializing DataBuilder..." }
                     val methods = map { (e, m) ->
                         Method(
-                            ownerClass = "${e.path}/${e.name}",
-                            name = m.name,
+                            ownerClass = "${e.path}/${e.name}".weakIntern(),
+                            name = m.name.weakIntern(),
                             desc = m.toDesc(),
-                            hash = m.checksum
+                            hash = m.checksum.weakIntern()
                         )
                     }.sorted()
                     val packages = data.toPackages()

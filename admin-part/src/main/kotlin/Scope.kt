@@ -22,6 +22,7 @@ import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
+import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
@@ -44,7 +45,7 @@ class ActiveScope(
     override val id: String = genUuid(),
     override val buildVersion: String,
     val nth: Int = 1,
-    name: String = "$DEFAULT_SCOPE_NAME $nth",
+    name: String = "$DEFAULT_SCOPE_NAME $nth".weakIntern(),
     sessions: List<FinishedSession> = emptyList(),
     realtimeCalculationCache: Boolean,
 ) : Scope {
@@ -65,7 +66,7 @@ class ActiveScope(
 
     val bundleByTestCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
 
-    private val _sessions = atomic(sessions.toList())
+    private val _sessions = atomic(sessions.toMutableList())
 
     //TODO remove summary for this class
     private val _summary = atomic(
@@ -179,7 +180,7 @@ class ActiveScope(
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
-                val updatedSessions = _sessions.updateAndGet { list -> ArrayList(list).also { it.add(finished) } }
+                val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
                 _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
                 _change.value = Change.ALL
             } else sessionsChanged()

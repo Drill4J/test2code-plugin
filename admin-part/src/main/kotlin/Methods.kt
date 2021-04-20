@@ -22,13 +22,9 @@ import kotlinx.serialization.*
 
 @Serializable
 internal data class Method(
-    @StringIntern
     val ownerClass: String,
-    @StringIntern
     val name: String,
-    @StringIntern
     val desc: String,
-    @StringIntern
     val hash: String,
 ) : Comparable<Method>, JvmSerializable {
     override fun compareTo(

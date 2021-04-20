@@ -19,12 +19,13 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 
 internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
     groupBy(AstEntity::path).entries.map { (path, astEntities) ->
         JavaPackageCoverage(
             id = path.crc64,
-            name = path,
+            name = path.weakIntern(),
             totalClassesCount = astEntities.count(),
             totalMethodsCount = astEntities.flatMap(AstEntity::methodsWithProbes).count(),
             totalCount = astEntities.flatMap(AstEntity::methodsWithProbes).map(AstMethod::count).sum(),
@@ -32,15 +33,15 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
                 ast.methodsWithProbes().takeIf { it.any() }?.let { methods ->
                     JavaClassCoverage(
                         id = "$path.${ast.name}".crc64,
-                        name = ast.name,
-                        path = path,
+                        name = ast.name.weakIntern(),
+                        path = path.weakIntern(),
                         totalMethodsCount = methods.count(),
                         totalCount = methods.sumBy { it.count },
                         methods = methods.fold(listOf()) { acc, astMethod ->
                             val desc = astMethod.toDesc()
                             acc + JavaMethodCoverage(
                                 id = "$path.${ast.name}.${astMethod.name}".crc64,
-                                name = astMethod.name,
+                                name = astMethod.name.weakIntern(),
                                 desc = desc,
                                 count = astMethod.probes.size,
                                 decl = desc,
@@ -148,6 +149,6 @@ internal fun ClassCounter.toMethodCoverage(
 
 internal fun AstMethod.toDesc(): String = params.joinToString(
     prefix = "(", postfix = "):$returnType"
-)
+).weakIntern()
 
 private fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }

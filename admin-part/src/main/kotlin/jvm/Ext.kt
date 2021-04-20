@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.jvm
 import com.epam.drill.plugins.test2code.Method
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 import org.apache.bcel.classfile.*
 import java.io.*
 
@@ -29,9 +30,9 @@ internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = ru
     methods.map { m ->
         val method = parsedMethods[m.name to m.desc]
         Method(
-            ownerClass = fullName,
-            name = m.name,
-            desc = m.desc,
+            ownerClass = fullName.weakIntern(),
+            name = m.name.weakIntern(),
+            desc = m.desc.weakIntern(),
             hash = method.checksum()
         )
     }
@@ -39,4 +40,4 @@ internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = ru
 
 private fun org.apache.bcel.classfile.Method?.checksum(): String = (this?.code?.run {
     Utility.codeToString(code, constantPool, 0, length, false)
-} ?: "").crc64
+} ?: "").crc64.weakIntern()

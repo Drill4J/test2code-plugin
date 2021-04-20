@@ -26,7 +26,7 @@ private val logger = logger {}
 
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
-    cache: AtomicCache<TypedTest, BundleCounter>? = null
+    cache: AtomicCache<TypedTest, BundleCounter>? = null,
 ) = run {
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
@@ -50,7 +50,7 @@ internal fun Sequence<Session>.calcBundleCounters(
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context)
         },
-        byTest = bundlesByTests(context, cache),
+        byTest = trackTime("bundlesByTests") { bundlesByTests(context, cache) },
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -65,26 +65,28 @@ internal fun Sequence<Session>.calcBundleCounters(
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null,
-    cache: AtomicCache<TypedTest, MethodsCoveredByTest>? = null
+    cache: AtomicCache<TypedTest, MethodsCoveredByTest>? = null,
 ): CoverageInfoSet {
     val bundle = all
     val bundlesByTests = byTest
 
-    val assocTestsMap = bundlesByTests.associatedTests()
-    val associatedTests = assocTestsMap.getAssociatedTests()
+    val assocTestsMap = trackTime("assocTestsMap") { bundlesByTests.associatedTests() }
+    val associatedTests = trackTime("associatedTests") { assocTestsMap.getAssociatedTests() }
 
     val tree = context.packageTree
     val coverageCount = bundle.count.copy(total = tree.totalCount)
     val totalCoveragePercent = coverageCount.percentage()
 
-    val coverageByTests = CoverageByTests(
-        all = TestSummary(
-            coverage = bundle.toCoverDto(tree),
-            testCount = bundlesByTests.keys.count(),
-            duration = statsByTest.values.map { it.duration }.sum()
-        ),
-        byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
-    )
+    val coverageByTests = trackTime("coverageByTests") {
+        CoverageByTests(
+            all = TestSummary(
+                coverage = bundle.toCoverDto(tree),
+                testCount = bundlesByTests.keys.count(),
+                duration = statsByTest.values.map { it.duration }.sum()
+            ),
+            byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
+        )
+    }
     logger.info { coverageByTests.byType }
 
     val methodCount = bundle.methodCount.copy(total = tree.totalMethodCount)
@@ -122,7 +124,9 @@ internal fun BundleCounters.calculateCoverageData(
 
     val finalizedTests = (scope as? ActiveScope)?.flatMap { it.testStats.keys } ?: emptySequence()
 
-    val coveredByTest = bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests)
+    val coveredByTest = trackTime("coveredByTest") {
+        bundlesByTests.methodsCoveredByTest(context, cache, finalizedTests)
+    }
 
     val tests = bundlesByTests.map { (typedTest, bundle) ->
         TestCoverageDto(
@@ -148,7 +152,7 @@ internal fun BundleCounters.calculateCoverageData(
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     context: CoverContext,
-    statsByTest: Map<TypedTest, TestStats>
+    statsByTest: Map<TypedTest, TestStats>,
 ): List<TestTypeSummary> = map { (testType, bundle) ->
     TestTypeSummary(
         type = testType,
@@ -162,7 +166,7 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 
 private fun Sequence<Session>.bundlesByTests(
     context: CoverContext,
-    cache: AtomicCache<TypedTest, BundleCounter>?
+    cache: AtomicCache<TypedTest, BundleCounter>?,
 ): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
     val testsWithEmptyBundle = testsWithBundle(cache)
     groupBy(Session::testType).map { (testType, sessions) ->
@@ -181,7 +185,7 @@ private fun Sequence<Session>.bundlesByTests(
 
 private fun Sequence<Session>.testsWithBundle(
     cache: AtomicCache<TypedTest, BundleCounter>?,
-    bundle: BundleCounter = BundleCounter("")
+    bundle: BundleCounter = BundleCounter(""),
 ): MutableMap<TypedTest, BundleCounter> = flatMap { session ->
     session.tests.asSequence().filterNot { cache?.map?.containsKey(it) ?: false }
 }.associateWithTo(mutableMapOf()) {
@@ -190,13 +194,13 @@ private fun Sequence<Session>.testsWithBundle(
 
 
 internal fun Sequence<ExecClassData>.overlappingBundle(
-    context: CoverContext
+    context: CoverContext,
 ): BundleCounter = context.build.probes.intersect(this).run {
     values.asSequence()
 }.bundle(context)
 
 internal fun Sequence<ExecClassData>.bundle(
-    context: CoverContext
+    context: CoverContext,
 ): BundleCounter = when (context.agentType) {
     "JAVA" -> bundle(
         probeIds = context.probeIds,
@@ -206,7 +210,7 @@ internal fun Sequence<ExecClassData>.bundle(
 }
 
 internal fun Map<TypedTest, BundleCounter>.associatedTests(
-    onlyPackages: Boolean = true
+    onlyPackages: Boolean = true,
 ): Map<CoverageKey, List<TypedTest>> = entries.asSequence()
     .flatMap { (test, bundle) ->
         bundle.coverageKeys(onlyPackages).map { it to test }
