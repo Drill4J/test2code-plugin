@@ -265,18 +265,6 @@ data class TypedTest(
     val type: String,
 ) : JvmSerializable
 
-//TODO remove this from the api and refactor after changes on the frontend
-@Serializable
-data class MethodsCoveredByTest(
-    val id: String,
-    val testName: String,
-    val testType: String,
-    val allMethods: List<CoverMethod> = emptyList(),
-    val newMethods: List<CoverMethod> = emptyList(),
-    val modifiedMethods: List<CoverMethod> = emptyList(),
-    val unaffectedMethods: List<CoverMethod> = emptyList(),
-) : JvmSerializable
-
 @Serializable
 data class CoveredMethodCounts(
     val all: Int,
