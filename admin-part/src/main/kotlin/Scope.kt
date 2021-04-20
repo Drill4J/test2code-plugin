@@ -62,8 +62,6 @@ class ActiveScope(
 
     val activeSessions = AtomicCache<String, ActiveSession>()
 
-    val methodsCoveredByTestCache = getCache<TypedTest, MethodsCoveredByTest>(realtimeCalculationCache)
-
     val bundleByTestCache = getCache<TypedTest, BundleCounter>(realtimeCalculationCache)
 
     private val _sessions = atomic(sessions.toMutableList())
@@ -196,7 +194,6 @@ class ActiveScope(
     }
 
     fun resetCaches() {
-        methodsCoveredByTestCache?.clear()
         bundleByTestCache?.clear()
     }
 
