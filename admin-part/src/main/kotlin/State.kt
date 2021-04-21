@@ -147,7 +147,7 @@ internal class AgentState(
             block()
         } ?: apply {
             activeScope.activeSessions.values.map { session ->
-                activeScope.finishSession(session.id)
+                finishSession(session.id)
             }
         }
     }
