@@ -33,7 +33,6 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.jacoco.core.data.*
 import java.io.*
-import java.util.*
 import kotlin.time.*
 
 @Suppress("unused")
@@ -155,7 +154,9 @@ class Plugin(
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is ExportCoverage -> runCatching {
-            val probesByteArray = ByteArrayOutputStream().use { outputStream ->
+            val coverage = File(System.getProperty("java.io.tmpdir"))
+                .resolve("jacoco.exec")
+            coverage.outputStream().use { outputStream ->
                 val executionDataWriter = ExecutionDataWriter(outputStream)
                 val classBytes = adminData.loadClassBytes()
                 val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
@@ -179,10 +180,8 @@ class Plugin(
                         )
                     )
                 }
-                outputStream.toByteArray()
             }
-            val encodedProbes = Base64.getEncoder().encodeToString(probesByteArray)
-            ActionResult(StatusCodes.OK, encodedProbes)
+            ActionResult(StatusCodes.OK, coverage)
         }.getOrElse {
             logger.error(it) { "Can't get coverage. Reason:" }
             ActionResult(StatusCodes.BAD_REQUEST, "Can't get coverage.")
