@@ -81,7 +81,7 @@ class Plugin(
 
     override suspend fun applyPackagesChanges() {
         state.scopeManager.deleteByVersion(buildVersion)
-        storeClient.deleteById<ClassData>(buildVersion)
+        storeClient.removeClassData(buildVersion)
         changeState()
     }
 
@@ -96,6 +96,13 @@ class Plugin(
         is SwitchActiveScope -> changeActiveScope(action.payload)
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
+        is RemoveBuild -> {
+            val version = action.payload.version
+            if (version != buildVersion && version != state.coverContext().parentBuild?.version) {
+                storeClient.removeBuildData(version, state.scopeManager)
+                ActionResult(code = StatusCodes.OK, data = "")
+            } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Can not remove a current or baseline build")
+        }
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {

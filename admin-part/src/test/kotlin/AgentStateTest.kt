@@ -93,7 +93,6 @@ class AgentStateTest {
             assertEquals("", it.parentVersion)
         }
         assertEquals(version2, state2.toggleBaseline())
-        Unit
     }
 
     @Test
@@ -116,4 +115,5 @@ class AgentStateTest {
         }
         Unit
     }
+
 }
