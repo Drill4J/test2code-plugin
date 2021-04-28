@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.coverage
 
+import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.collections.immutable.*
 
@@ -61,3 +62,44 @@ internal fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndex
         b || other[i]
     } else b
 }
+
+
+operator fun Probes.contains(value: Boolean): Boolean {
+    return copy().let {
+        it.set(size, false)
+        if (value) {
+            !it.isEmpty
+        } else {
+            it.isEmpty  //fixme for false value
+        }
+    }
+}
+
+fun Probes.copy(): Probes {
+    return clone() as Probes
+}
+
+val Probes.size
+    get() = this.length() - 1 //bitcode magic
+
+fun Probes.merge(set: Probes): Probes {
+    return copy().apply {
+        (0 until length()).forEach {
+            set(it, get(it) or set.get(it))
+        }
+    }
+}
+
+inline fun Probes.any(predicate: (Boolean) -> Boolean): Boolean {
+    return !isEmpty //fixme for false value
+}
+
+fun Probes.intersect(set: Probes): Probes {
+    return copy().apply { and(set) }
+}
+
+fun Probes.covered(): Int {
+    return maxOf(0, cardinality() - 1)
+}
+
+internal fun Probes.toCount() = Count(maxOf(0, cardinality() - 1), size)

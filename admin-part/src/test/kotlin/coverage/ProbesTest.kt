@@ -25,7 +25,7 @@ class ProbesTest {
         val data = ExecClassData(
             id = 1L,
             className = "foo/Bar",
-            probes = listOf(true, true, false)
+            probes = probesOf(true, true, false)
         )
         val map = persistentMapOf(data.id() to data)
         val emptyMap = persistentHashMapOf<Long, ExecClassData>()
@@ -39,12 +39,12 @@ class ProbesTest {
         val data = ExecClassData(
             id = 1L,
             className = "foo/Bar",
-            probes = listOf(true, true, false)
+            probes = probesOf(true, true, false)
         )
         val data2 = data.copy(
             id = 2L,
             className = "bar/Baz",
-            probes = listOf(true, false, false)
+            probes = probesOf(true, false, false)
 
         )
         val map = listOf(
@@ -52,15 +52,49 @@ class ProbesTest {
             data2
         ).associateBy { it.id() }.toPersistentMap()
         val expected = data.run {
-            persistentMapOf(id() to copy(probes = listOf(false, true, false)))
+            persistentMapOf(id() to copy(probes = probesOf(false, true, false)))
         }
         val intersection = map.intersect(
             sequenceOf(
-                data.copy(probes = listOf(false, true, true)),
-                data.copy(probes = listOf(false, false, true)),
-                data2.copy(probes = listOf(false, true, true))
+                data.copy(probes = probesOf(false, true, true)),
+                data.copy(probes = probesOf(false, false, true)),
+                data2.copy(probes = probesOf(false, true, true))
             )
         )
         assertEquals(expected, intersection)
+    }
+
+    //todo move it to BitSet tests.
+    @Test
+    fun `merge - simple case`() {
+        (booleanArrayOf(true, true, false) to booleanArrayOf(false, true, true)).let { (fbs, sbs) ->
+            assertEquals(
+                probesOf(*fbs).merge(probesOf(*sbs)).toList(),
+                fbs.toList().merge(sbs.toList())
+            )
+        }
+        (booleanArrayOf(true, true, true) to booleanArrayOf(true, true, true)).let { (fbs, sbs) ->
+            assertEquals(
+                probesOf(*fbs).merge(probesOf(*sbs)).toList(),
+                fbs.toList().merge(sbs.toList())
+            )
+        }
+
+        (booleanArrayOf(false, false, false) to booleanArrayOf(false, false, false)).let { (fbs, sbs) ->
+            assertEquals(
+                probesOf(*fbs).merge(probesOf(*sbs)).toList(),
+                fbs.toList().merge(sbs.toList())
+            )
+        }
+    }
+
+    @Test
+    fun `merge - edge case`() {
+        val fbs = booleanArrayOf(true, true, false)
+        val sbs = booleanArrayOf(true, false, false, false, true)
+        assertEquals(
+            probesOf(*fbs).merge(probesOf(*sbs)).toList(),
+            fbs.toList().merge(sbs.toList())
+        )
     }
 }

@@ -158,7 +158,7 @@ class PluginTest {
         }
     }
 
-    private fun randomBoolean(n: Int = 100) = listOf(0 until n).flatten().map { true }
+    private fun randomBoolean(n: Int = 100) = listOf(0 until n).flatten().map { true }.toBitSet()
 
     @Test
     fun `cannot toggleBaseline initial build`() = runBlocking {

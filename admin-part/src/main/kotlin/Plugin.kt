@@ -138,7 +138,7 @@ class Plugin(
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 data.map { probes ->
-                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes)
+                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes.toBitSet())
                 }
             }?.run {
                 if (isRealtime) {
