@@ -31,7 +31,7 @@ internal fun Sequence<ExecClassData>.bundle(
     }.groupBy(ExecClassData::className).mapValues { (className, execDataList) ->
         val initialProbe = BooleanArray(probeCounts.getValue(className)) { false }.toList()
         execDataList.map(ExecClassData::probes).fold(initialProbe) { acc, probes ->
-            acc.merge(probes)
+            acc.merge(probes.toList())
         }
     }
     val classMethods = tree.packages.flatMap { it.classes }.associate {
@@ -61,7 +61,7 @@ internal fun Sequence<ExecClassData>.bundle(
                 classNames.size
             ),
             methodCount = Count(
-                classes.sumBy { c ->  c.methods.count { it.count.covered > 0 } },
+                classes.sumBy { c -> c.methods.count { it.count.covered > 0 } },
                 classes.sumBy { it.methods.count() }
             ),
             classes = classes

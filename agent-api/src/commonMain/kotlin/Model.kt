@@ -62,7 +62,7 @@ data class AgentSessionDataPayload(val sessionId: String, val data: String)
 data class ExecClassData(
     val id: Long? = null,
     val className: String,
-    val probes: List<Boolean>,
+    @Serializable(with = BitSetSerializer::class) val probes: Probes,
     val testName: String = ""
 ) : JvmSerializable
 

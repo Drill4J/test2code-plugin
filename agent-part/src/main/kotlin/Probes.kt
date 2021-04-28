@@ -57,7 +57,7 @@ class ExecDatum(
 fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
     className = name,
-    probes = probes.toList(),
+    probes = probes.toBitSet(),
     testName = testName
 )
 
