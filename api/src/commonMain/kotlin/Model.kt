@@ -98,6 +98,9 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "") : JvmSerializable
 
 @Serializable
+data class BuildPayload(val version: String) : JvmSerializable
+
+@Serializable
 data class BuildVersionDto(
     val version: String,
 )

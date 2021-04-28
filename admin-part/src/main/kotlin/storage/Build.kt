@@ -55,6 +55,8 @@ internal suspend fun ClassData.store(storage: StoreClient) {
     }
 }
 
+internal suspend fun StoreClient.removeClassData(version: String) = deleteById<StoredClassData>(version)
+
 internal suspend fun StoreClient.loadBuild(
     version: String,
 ): CachedBuild? = findById<BuildStats>(version)?.let { stats ->
@@ -81,3 +83,23 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
         }
     }
 }
+
+internal suspend fun StoreClient.removeBuild(
+    version: String,
+) = executeInAsyncTransaction {
+    deleteById<BuildStats>(version)
+    deleteById<StoredBundles>(version)
+    deleteById<StoredBuildTests>(version)
+}
+
+
+internal suspend fun StoreClient.removeBuildData(
+    buildVersion: String,
+    scopeManager: ScopeManager,
+) = executeInAsyncTransaction {
+    logger.debug { "starting to remove build '$buildVersion' data..." }
+    removeClassData(buildVersion)
+    removeBuild(buildVersion)
+    scopeManager.deleteByVersion(buildVersion)
+}
+
