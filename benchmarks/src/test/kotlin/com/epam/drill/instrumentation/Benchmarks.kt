@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com
+package com.epam.drill.instrumentation
 
-import com.data.*
+import com.epam.drill.instrumentation.data.*
 import com.epam.drill.plugins.test2code.*
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.annotations.Scope
@@ -42,7 +42,7 @@ class Benchmarks {
     }
 
     @Benchmark
-    @Measurement(iterations = 10)
+    @Measurement(iterations = 1)
     @BenchmarkMode(Mode.AverageTime)
     fun conditionsWithInstrument() {
         val instrumentation = InstrumentationForTest(InvokeConditions::class)
@@ -50,7 +50,7 @@ class Benchmarks {
     }
 
     @Benchmark
-    @Measurement(iterations = 10)
+    @Measurement(iterations = 1)
     @BenchmarkMode(Mode.AverageTime)
     fun conditionsWithoutInstrument() {
         val instrumentation = InstrumentationForTest(InvokeConditions::class)
