@@ -72,6 +72,10 @@ data class ToggleScope(val payload: ScopePayload) : Action()
 @Serializable
 data class DropScope(val payload: ScopePayload) : Action()
 
+@SerialName("REMOVE_BUILD")
+@Serializable
+data class RemoveBuild(val payload: BuildPayload) : Action()
+
 @Serializable
 @SerialName("UPDATE_SETTINGS")
 data class UpdateSettings(val payload: List<Setting>) : Action()
