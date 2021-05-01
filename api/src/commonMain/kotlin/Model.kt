@@ -24,38 +24,38 @@ data class StartPayload(
     val testName: String? = null,
     val isRealtime: Boolean = false,
     val isGlobal: Boolean = false,
-) : JvmSerializable
+)
 
 @Serializable
-data class SessionPayload(val sessionId: String) : JvmSerializable
+data class SessionPayload(val sessionId: String)
 
 @Serializable
-data class SessionDataPayload(val sessionId: String, val data: String) : JvmSerializable
+data class SessionDataPayload(val sessionId: String, val data: String)
 
 @Serializable
 data class CoverPayload(
     val sessionId: String,
     val data: List<EntityProbes>,
-) : JvmSerializable
+)
 
 @Serializable
 class EntityProbes(
     val name: String,
     val test: String = "",
     val probes: List<Boolean>,
-) : JvmSerializable
+)
 
 @Serializable
 data class StopSessionPayload(
     val sessionId: String,
     val testRun: TestRun? = null,
-) : JvmSerializable
+)
 
 @Serializable
 data class AddTestsPayload(
     val sessionId: String,
     val testRun: TestRun? = null,
-) : JvmSerializable
+)
 
 @Serializable
 data class TestRun(
@@ -63,7 +63,7 @@ data class TestRun(
     val startedAt: Long,
     val finishedAt: Long,
     val tests: List<TestInfo> = emptyList(),
-) : JvmSerializable
+)
 
 @Serializable
 data class TestInfo(
@@ -71,7 +71,7 @@ data class TestInfo(
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
-) : JvmSerializable
+)
 
 enum class TestResult : JvmSerializable {
     PASSED,
@@ -86,19 +86,19 @@ data class ActiveScopeChangePayload(
     val scopeName: String,
     val savePrevScope: Boolean = false,
     val prevScopeEnabled: Boolean = true,
-) : JvmSerializable
+)
 
 @Serializable
 data class RenameScopePayload(
     val scopeId: String,
     val scopeName: String,
-) : JvmSerializable
+)
 
 @Serializable
-data class ScopePayload(val scopeId: String = "") : JvmSerializable
+data class ScopePayload(val scopeId: String = "")
 
 @Serializable
-data class BuildPayload(val version: String) : JvmSerializable
+data class BuildPayload(val version: String)
 
 @Serializable
 data class BuildVersionDto(
@@ -113,9 +113,9 @@ data class CoverMethod(
     val hash: String = "",
     val count: Count,
     val coverageRate: CoverageRate = CoverageRate.MISSED,
-) : JvmSerializable
+)
 
-enum class CoverageRate : JvmSerializable {
+enum class CoverageRate {
     MISSED,
     PARTLY,
     FULL
@@ -126,13 +126,13 @@ data class RiskCounts(
     val new: Int = 0,
     val modified: Int = 0,
     val total: Int = 0,
-) : JvmSerializable
+)
 
 @Serializable
 data class TestTypeSummary(
     val type: String,
     val summary: TestSummary,
-) : JvmSerializable
+)
 
 interface Coverage {
     val percentage: Double
@@ -156,7 +156,7 @@ data class ScopeCoverage(
     override val riskCount: Count = zeroCount,
     override val testTypeOverlap: CoverDto = CoverDto(),
     override val byTestType: List<TestTypeSummary> = emptyList(),
-) : Coverage, JvmSerializable
+) : Coverage
 
 
 @Serializable
@@ -170,9 +170,9 @@ data class BuildCoverage(
     override val testTypeOverlap: CoverDto = CoverDto(),
     override val byTestType: List<TestTypeSummary> = emptyList(),
     val finishedScopesCount: Int = 0,
-) : Coverage, JvmSerializable
+) : Coverage
 
-enum class ArrowType : JvmSerializable {
+enum class ArrowType {
     INCREASE,
     DECREASE,
     UNCHANGED
@@ -186,7 +186,7 @@ data class MethodsSummaryDto(
     val unaffected: CountDto,
     val deleted: CountDto,
     val risks: RiskCounts = RiskCounts(),
-) : JvmSerializable
+)
 
 @Serializable
 data class MethodsInfo(
@@ -257,7 +257,7 @@ data class AssociatedTests(
     val className: String = "",
     val methodName: String = "",
     val tests: List<TypedTest> = emptyList(),
-) : JvmSerializable {
+) {
     override fun equals(other: Any?) = other is AssociatedTests && id == other.id && tests.containsAll(other.tests)
     override fun hashCode() = id.hashCode()
 }
@@ -274,13 +274,13 @@ data class CoveredMethodCounts(
     val new: Int,
     val modified: Int,
     val unaffected: Int,
-) : JvmSerializable
+)
 
 @Serializable
 data class CoverageByTests(
     val all: TestSummary,
     val byType: List<TestTypeSummary>,
-) : JvmSerializable
+)
 
 @Serializable
 data class TestedMethodsSummary(
@@ -288,7 +288,7 @@ data class TestedMethodsSummary(
     val testName: String,
     val testType: String,
     val methodCounts: CoveredMethodCounts,
-) : JvmSerializable
+)
 
 @Serializable
 data class TestCoverageDto(
@@ -298,7 +298,7 @@ data class TestCoverageDto(
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
     val stats: TestStats = TestStats(0, TestResult.PASSED),
-) : JvmSerializable
+)
 
 @Serializable
 data class TestStats(
@@ -310,7 +310,7 @@ data class TestStats(
 data class ActiveSessions(
     val count: Int,
     val testTypes: Set<String> = emptySet(),
-) : JvmSerializable
+)
 
 @Serializable
 data class ActiveSessionDto(
@@ -319,7 +319,7 @@ data class ActiveSessionDto(
     val testType: String,
     val isGlobal: Boolean,
     val isRealtime: Boolean,
-) : JvmSerializable
+)
 
 @Serializable
 data class ScopeSummary(
@@ -331,7 +331,7 @@ data class ScopeSummary(
     val active: Boolean = true,
     val sessionsFinished: Int = 0,
     val coverage: ScopeCoverage = ScopeCoverage(),
-) : JvmSerializable
+)
 
 val zeroCount = Count(covered = 0, total = 0)
 
@@ -341,21 +341,21 @@ val zeroCountDto = Count(covered = 0, total = 0).toDto()
 data class TestCountDto(
     val count: Int = 0,
     val byType: Map<String, Int> = emptyMap(),
-) : JvmSerializable
+)
 
 @Serializable
 data class TestSummary(
     val coverage: CoverDto,
     val testCount: Int = 0,
     val duration: Long = 0L,
-) : JvmSerializable
+)
 
 @Serializable
 data class TestsToRunSummaryDto(
     val buildVersion: String,
     val stats: TestsToRunStatsDto,
     val statsByType: Map<String, TestsToRunStatsDto> = emptyMap(),
-) : JvmSerializable
+)
 
 @Serializable
 data class TestsToRunStatsDto(
@@ -363,7 +363,7 @@ data class TestsToRunStatsDto(
     val completed: Int,
     val duration: Long,
     val parentDuration: Long,
-) : JvmSerializable
+)
 
 @Serializable
 data class RiskDto(
@@ -371,9 +371,9 @@ data class RiskDto(
     val name: String,
     val desc: String,
     val type: RiskType,
-) : JvmSerializable
+)
 
-enum class RiskType : JvmSerializable {
+enum class RiskType {
     NEW, MODIFIED
 }
 
@@ -383,7 +383,7 @@ typealias GroupedTests = Map<String, List<String>>
 data class GroupedTestsDto(
     val byType: GroupedTests = emptyMap(),
     val totalCount: Int = 0,
-) : JvmSerializable
+)
 
 @Serializable
 data class BuildStatsDto(
@@ -393,7 +393,7 @@ data class BuildStatsDto(
     val modified: Int = 0,
     val unaffected: Int = 0,
     val deleted: Int = 0,
-) : JvmSerializable
+)
 
 @Serializable
 data class SummaryDto(
@@ -408,7 +408,7 @@ data class SummaryDto(
     val tests: List<TestTypeSummary> = emptyList(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet(),
-) : JvmSerializable
+)
 
 @Serializable
 data class AgentSummaryDto(
@@ -416,27 +416,27 @@ data class AgentSummaryDto(
     val name: String,
     val buildVersion: String,
     val summary: SummaryDto,
-) : JvmSerializable
+)
 
 @Serializable
 data class ServiceGroupSummaryDto(
     val name: String,
     val aggregated: SummaryDto,
     val summaries: List<AgentSummaryDto> = emptyList(),
-) : JvmSerializable
+)
 
 @Serializable
 data class CoverDto(
     val percentage: Double = 0.0,
     val methodCount: CountDto = zeroCountDto,
     val count: CountDto = zeroCountDto,
-) : JvmSerializable
+)
 
 @Serializable
 data class CountDto(
     val covered: Int,
     val total: Int,
-) : JvmSerializable
+)
 
 fun Count.toDto() = CountDto(covered, total)
 
