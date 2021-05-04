@@ -75,7 +75,8 @@ class PluginTest {
     fun `should start & finish session and collect coverage`() = runBlocking {
         val plugin: Plugin = initPlugin("0.1.0")
         plugin.state.initialized()
-        val finishedSession = finishedSession(plugin, "sessionId", 1, 3, 5)
+        val finishedSession = finishedSession(plugin, "sessionId", 1, 3)
+        plugin.state.close()
         assertEquals(3, finishedSession?.probes?.size)
     }
 
@@ -87,6 +88,7 @@ class PluginTest {
         val plugin: Plugin = initPlugin("0.1.0")
         plugin.state.initialized()
         val finishedSession = finishedSession(plugin, "sessionId", 30)
+        plugin.state.close()
         assertEquals(3000, finishedSession?.probes?.size)
     }
 
@@ -141,16 +143,15 @@ class PluginTest {
     private fun addProbes(
         plugin: Plugin,
         sessionId: String,
-        countAddProbes: Int = 1_000,
-        sizeExec: Int = 100_000,
-        sizeProbes: Int = 100_000_000,
+        countAddProbes: Int,
+        sizeExec: Int,
+        sizeProbes: Int,
     ) {
         repeat(countAddProbes) { index ->
             index.takeIf { it % 10 == 0 }?.let { println("adding probes, index = $it...") }
             val execClassData = (0 until sizeExec).map {
                 ExecClassData(
-                    id = Random.nextLong(100_000_000),
-                    className = "foo/Bar",
+                    className = "foo/Bar/$index/$it",
                     probes = randomBoolean(sizeProbes)
                 )
             }
