@@ -24,7 +24,7 @@ internal fun Sequence<ExecClassData>.merge(): PersistentMap<Long, ExecClassData>
 }
 
 internal fun PersistentMap<Long, ExecClassData>.merge(
-    probes: Sequence<ExecClassData>
+    probes: Sequence<ExecClassData>,
 ): PersistentMap<Long, ExecClassData> = if (probes.any()) {
     mutate { map ->
         probes.forEach { data ->
@@ -34,7 +34,7 @@ internal fun PersistentMap<Long, ExecClassData>.merge(
 } else this
 
 internal fun PersistentMap<Long, ExecClassData>.intersect(
-    other: Sequence<ExecClassData>
+    other: Sequence<ExecClassData>,
 ): PersistentMap<Long, ExecClassData> = if (any() && other.any()) {
     other.merge().let { merged ->
         merged.mutate { map ->
@@ -57,7 +57,7 @@ internal fun List<Boolean>.intersect(other: List<Boolean>): List<Boolean> = mapI
     } else false
 }
 
-internal fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
+fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b ->
     if (i < other.size) {
         b || other[i]
     } else b

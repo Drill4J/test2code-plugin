@@ -26,7 +26,7 @@ import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
 import java.io.*
 import java.util.*
-import kotlin.random.Random.*
+import kotlin.random.Random
 import kotlin.test.*
 
 
@@ -97,7 +97,7 @@ class PluginTest {
 
     @Test
     fun `perf check! should finish scope with 2 session and takes probes`() = runBlocking {
-        switchScopeWithProbes(15)
+        switchScopeWithProbes(50)
     }
 
     private suspend fun switchScopeWithProbes(countAddProbes: Int = 1) {
@@ -147,9 +147,9 @@ class PluginTest {
     ) {
         repeat(countAddProbes) { index ->
             index.takeIf { it % 10 == 0 }?.let { println("adding probes, index = $it...") }
-            val execClassData = listOf(0 until sizeExec).flatten().map {
+            val execClassData = (0 until sizeExec).map {
                 ExecClassData(
-                    id = Default.nextLong(100_000_000),
+                    id = Random.nextLong(100_000_000),
                     className = "foo/Bar",
                     probes = randomBoolean(sizeProbes)
                 )
@@ -158,7 +158,7 @@ class PluginTest {
         }
     }
 
-    private fun randomBoolean(n: Int = 100) = listOf(0 until n).flatten().map { true }.toBitSet()
+    private fun randomBoolean(n: Int = 100) = (0 until n).map { Random.nextBoolean() }.toBitSet()
 
     @Test
     fun `cannot toggleBaseline initial build`() = runBlocking {

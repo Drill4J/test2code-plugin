@@ -4,6 +4,7 @@ plugins {
     `maven-publish`
     kotlin("jvm") apply false
     id("com.github.hierynomus.license")
+    id("org.jetbrains.kotlin.plugin.noarg")
 }
 
 val drillPluginId: String by project
@@ -38,6 +39,7 @@ allprojects {
 
 subprojects {
     apply<BasePlugin>()
+    apply(plugin = "org.jetbrains.kotlin.plugin.noarg")
 
     group = "${rootProject.group}.$drillPluginId"
 
@@ -62,6 +64,10 @@ subprojects {
 
     configurations.all {
         dependencyConstraints += constraints
+    }
+
+    noArg {
+        annotation("kotlinx.serialization.Serializable")
     }
 
     tasks {
