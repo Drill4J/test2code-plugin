@@ -625,8 +625,8 @@ class Plugin(
                         send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), summary)
                         send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), all)
                         send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), modified)
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), new)
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), unaffected)
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), new)
+                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), unaffected)
                     }
                 }
             }
