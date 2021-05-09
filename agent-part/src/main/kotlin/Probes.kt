@@ -26,7 +26,7 @@ import kotlin.coroutines.*
  * Provides boolean array for the probe.
  * Implementations must be kotlin singleton objects.
  */
-typealias ProbeArrayProvider = (Long, String, Int) -> BooleanArray
+typealias ProbeArrayProvider = (Long, String, Int) -> Probes
 
 typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
 
@@ -50,14 +50,14 @@ const val DRIlL_TEST_NAME = "drill-test-name"
 class ExecDatum(
     val id: Long,
     val name: String,
-    val probes: BooleanArray,
+    val probes: Probes,
     val testName: String = ""
 )
 
 fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
     className = name,
-    probes = probes.toBitSet(),
+    probes = probes,
     testName = testName
 )
 
@@ -75,7 +75,7 @@ internal object ProbeWorker : CoroutineScope {
  */
 class ExecRuntime(
     realtimeHandler: RealtimeHandler
-) : (Long, String, Int, String) -> BooleanArray {
+) : (Long, String, Int, String) -> Probes {
 
     private val _execData = atomic(persistentHashMapOf<String, ExecData>())
 
@@ -91,14 +91,14 @@ class ExecRuntime(
         name: String,
         probeCount: Int,
         testName: String
-    ): BooleanArray = _execData.updateAndGet { tests ->
+    ): Probes = _execData.updateAndGet { tests ->
         (tests[testName] ?: persistentHashMapOf()).let { execData ->
             if (id !in execData) {
                 val mutatedData = execData.put(
                     id, ExecDatum(
                         id = id,
                         name = name,
-                        probes = BooleanArray(probeCount),
+                        probes = Probes(probeCount),
                         testName = testName
                     )
                 )
@@ -141,25 +141,25 @@ open class SimpleSessionProbeArrayProvider(
 
     private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
 
-    private val _stubArray = atomic(BooleanArray(1024))
+    private val _stubProbes = atomic(Probes(1))
 
     override fun invoke(
         id: Long,
         name: String,
         probeCount: Int
-    ): BooleanArray = _context.value?.let {
+    ): Probes = _context.value?.let {
         it(id, name, probeCount)
     } ?: _globalContext.value?.let {
         it(id, name, probeCount)
-    } ?: stubArray(probeCount)
+    } ?: _stubProbes.value //todo EPMDJ-7164
 
     private operator fun AgentContext.invoke(
         id: Long,
         name: String,
         probeCount: Int
-    ): BooleanArray? = run {
+    ): Probes? = run {
         val sessionId = this()
-        runtimes[sessionId]?.let { sessionRuntime ->
+        runtimes[sessionId]?.let { sessionRuntime: ExecRuntime ->
             val testName = this[DRIlL_TEST_NAME] ?: "unspecified"
             sessionRuntime(id, name, probeCount, testName)
         }
@@ -202,16 +202,6 @@ open class SimpleSessionProbeArrayProvider(
     }.map { (id, runtime) ->
         runtime.close()
         id
-    }
-
-    private fun stubArray(probeCount: Int) = _stubArray.updateAndGet {
-        if (probeCount > it.size) {
-            var size = it.size shl 1
-            while (size <= probeCount) {
-                size = size shl 1
-            }
-            BooleanArray(size)
-        } else it
     }
 
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {

@@ -16,17 +16,12 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.sessionId
-import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
-import org.jacoco.core.analysis.*
-import org.jacoco.core.data.*
 import org.junit.jupiter.api.*
+import test.*
 import kotlin.test.*
 import kotlin.test.Test
 
 class InstrumentationTest {
-
-    private val _runtimeData = atomic(persistentListOf<ExecDatum>())
 
     @Test
     fun `instrumented class should be larger the the original`() {
@@ -36,27 +31,39 @@ class InstrumentationTest {
     }
 
     @Test
+    fun `should provide coverage with the instrumented class of empty body`() {
+        val counter = InstrumentationForTest(EmptyBody::class).collectCoverage()
+        assertEquals(4, counter?.coveredCount)
+        assertEquals(0, counter?.missedCount)
+    }
+
+    @Test
+    fun `should provide coverage with the instrumented class with loops`() {
+        val counter = InstrumentationForTest(ClassWithLoop::class).collectCoverage()
+        assertEquals(60, counter?.coveredCount)
+        assertEquals(0, counter?.missedCount)
+    }
+
+    @Test
     fun `should provide coverage for run with the instrumented class`() {
-        val instrumentation = InstrumentationForTest(TestTarget::class)
-        val instrumentedClass = instrumentation.instrumentedClass
-        InstrumentationForTest.TestProbeArrayProvider.start(sessionId, false) { dataSeq ->
-            _runtimeData.update { it + dataSeq }
-        }
-        @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
-        runnable.run()
-        val runtimeData = _runtimeData.updateAndGet {
-            it + (InstrumentationForTest.TestProbeArrayProvider.stop(sessionId)
-                ?: emptySequence())
-        }
-        val executionData = ExecutionDataStore()
-        runtimeData.forEach { executionData.put(ExecutionData(it.id, it.name, it.probes)) }
-        val coverageBuilder = CoverageBuilder()
-        val analyzer = Analyzer(executionData, coverageBuilder)
-        analyzer.analyzeClass(instrumentation.originalBytes, instrumentedClass.name)
-        val coverage = coverageBuilder.getBundle("all")
-        val counter = coverage.instructionCounter
-        assertEquals(27, counter.coveredCount)
-        assertEquals(2, counter.missedCount)
+        val counter = InstrumentationForTest(TestTarget::class).collectCoverage()
+        assertEquals(27, counter?.coveredCount)
+        assertEquals(2, counter?.missedCount)
+    }
+
+    @Test
+    fun `should provide coverage with the Java instrumented with empty methods`() {
+        val counter = InstrumentationForTest(ClassWithVoid::class).collectCoverage()
+        println("covered ${counter?.coveredCount} missed: ${counter?.missedCount}")
+        assertEquals(4, counter?.coveredCount)
+        assertEquals(5, counter?.missedCount)
+    }
+
+    @Test
+    fun `should provide coverage with the Java instrumented with timeout`() {
+        val counter = InstrumentationForTest(ClassWithTimeout::class).collectCoverage()
+        assertEquals(13, counter?.coveredCount)//todo why coveredCount=0 if set timeout on 2 sec?
+        assertEquals(3, counter?.missedCount)
     }
 
     @Test
@@ -71,6 +78,12 @@ class InstrumentationTest {
             { assertEquals("test", execDatum.testName) }
         }.toTypedArray()
         assertAll(*assertions)
+    }
+
+    @Test
+    fun `should create instance and invoke instrumented class`() {
+        val instrumentation = InstrumentationForTest(TestTarget::class)
+        instrumentation.runClass()
     }
 }
 

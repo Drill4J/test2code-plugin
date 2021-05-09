@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
+    id("kotlinx-atomicfu")
 }
 
 val testBuilds = listOf("build1", "build2")
@@ -61,6 +62,7 @@ dependencies {
     implementation("org.jacoco:org.jacoco.core")
     implementation("org.apache.bcel:bcel:6.3.1")
     implementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
+    implementation("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(project(":tests"))
     testImplementation(kotlin("test-junit5"))
