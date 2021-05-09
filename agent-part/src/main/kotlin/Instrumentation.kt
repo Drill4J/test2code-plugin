@@ -16,6 +16,8 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.logger.api.*
+import drill.jacoco.*
+import drill.jacoco.BitSetProbeInserter.*
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
@@ -62,7 +64,7 @@ private class CustomInstrumenter(
             override fun getCommonSuperClass(type1: String, type2: String): String = throw IllegalStateException()
         }
         val visitor = ClassProbesAdapter(
-            ClassInstrumenter(strategy, writer),
+            DrillClassInstrumenter(strategy, className, writer),
             InstrSupport.needsFrames(version)
         )
         reader.accept(visitor, ClassReader.EXPAND_FRAMES)
@@ -100,14 +102,57 @@ private class DrillProbeStrategy(
 
         visitLdcInsn(classId)
         visitLdcInsn(className)
-        visitLdcInsn(probeCount)
+        visitLdcInsn(probeCount + 1)//bitset magic
         visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL, drillClassName, "invoke", "(JLjava/lang/String;I)[Z",
+            Opcodes.INVOKEVIRTUAL, drillClassName, "invoke", "(JLjava/lang/String;I)L$PROBE_IMPL;",
             false
         )
         visitVarInsn(Opcodes.ASTORE, variable)
+        mv.setTrueToLastIndex(variable)//bitset magic
         5 //stack size
     }
 
+    private fun MethodVisitor.setTrueToLastIndex(variable: Int) {
+        visitVarInsn(Opcodes.ALOAD, variable)
+        InstrSupport.push(this, probeCount)
+        visitMethodInsn(
+            Opcodes.INVOKEVIRTUAL, PROBE_IMPL, "set", "(I)V",
+            false
+        )
+    }
+
     override fun addMembers(cv: ClassVisitor?, probeCount: Int) {}
+}
+
+class DrillClassInstrumenter(
+    private val probeArrayStrategy: IProbeArrayStrategy,
+    private val clazzName: String,
+    cv: ClassVisitor
+) : ClassInstrumenter(probeArrayStrategy, cv) {
+
+    override fun visitMethod(
+        access: Int,
+        name: String?,
+        desc: String?,
+        signature: String?,
+        exceptions: Array<out String>?
+    ): MethodProbesVisitor {
+        InstrSupport.assertNotInstrumented(name, clazzName)
+        val mv = cv.visitMethod(
+            access, name, desc, signature,
+            exceptions
+        )
+        val frameEliminator: MethodVisitor = DrillDuplicateFrameEliminator(mv)
+        val probeVariableInserter = BitSetProbeInserter(
+            access,
+            name,
+            desc,
+            frameEliminator,
+            this.probeArrayStrategy
+        )
+        return DrillMethodInstrumenter(
+            probeVariableInserter,
+            probeVariableInserter
+        )
+    }
 }

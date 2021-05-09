@@ -26,8 +26,12 @@ object BitSetSerializer : KSerializer<Probes> {
         get() = buildClassSerialDescriptor("BitSet")
 }
 
+/**
+ * for all BitSet it adds the true into last index.
+ * So it needs to remove the last element before converting
+ */
 fun Probes.toBooleanArray(): BooleanArray {
-    return BooleanArray(length() - 1) { // bitset magic
+    return BooleanArray(length() - 1) {// bitset magic
         get(it)
     }
 }
