@@ -33,3 +33,27 @@ class TestTarget : Runnable {
         return true
     }
 }
+
+class EmptyBody : Runnable {
+    override fun run() {
+    }
+}
+
+class ClassWithLoop : Runnable {
+
+    override fun run() {
+        printAnotherPlace(1)
+        printAnotherPlace(2)
+    }
+
+    private fun printAnotherPlace(count: Int) {
+        var i = 0
+        while (i < count) {
+            println("printAnotherPlace")
+            i++
+        }
+        val marks = arrayOf(80, 85)
+        for (item in marks)
+            println(item)
+    }
+}

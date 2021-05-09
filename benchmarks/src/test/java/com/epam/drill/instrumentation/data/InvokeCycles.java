@@ -18,12 +18,45 @@ package com.epam.drill.instrumentation.data;
 import java.util.Random;
 
 public class InvokeCycles implements Runnable {
-    BigClazz bigClazz = new BigClazz();
 
     @Override
     public void run() {
         Random random = new Random();
-        long i = bigClazz.manyForInFor(random.nextLong());
+        long i = manyForInFor(random.nextLong());
         System.out.println("res====" + i);
     }
+
+    public long manyForInFor(long start) {
+        long sum = start;
+        Random random = new Random();
+        int firstRange = 2;
+        int toMin = 9;
+        int toMax = 2;
+        for (int i10 = random.nextInt(firstRange); i10 <= random.nextInt(toMax) + toMin; i10++) {
+            sum += i10;
+            for (int i9 = random.nextInt(firstRange); i9 <= random.nextInt(toMax) + toMin; i9++) {
+                sum += i9;
+                for (int i8 = random.nextInt(firstRange); i8 <= random.nextInt(toMax) + toMin; i8++) {
+                    sum += i8;
+                    for (int i7 = random.nextInt(firstRange); i7 <= random.nextInt(toMax) + toMin; i7++) {
+                        sum += i7;
+                        for (int i6 = random.nextInt(firstRange); i6 <= random.nextInt(toMax) + toMin; i6++) {
+                            sum += i6;
+                            for (int i5 = random.nextInt(firstRange); i5 <= random.nextInt(toMax) + toMin; i5++) {
+                                sum += i5;
+                                for (int i4 = random.nextInt(firstRange); i4 <= random.nextInt(toMax) + toMin; i4++) {
+                                    sum += i4;
+                                    for (int i3 = random.nextInt(firstRange); i3 <= random.nextInt(toMax) + toMin; i3++) {
+                                        sum += i3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return sum;
+    }
+
 }

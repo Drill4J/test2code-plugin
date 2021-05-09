@@ -23,38 +23,50 @@ import java.util.concurrent.*
 
 @State(Scope.Benchmark)
 @Fork(1)
-@Warmup(iterations = 3)
-@Measurement(iterations = 5, timeUnit = TimeUnit.MILLISECONDS)
-class Benchmarks {
+@Warmup(iterations = 5)
+@Measurement(iterations = 15, timeUnit = TimeUnit.MILLISECONDS)
+class CoverageBenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    fun cyclesWithInstrument() {
+    fun cyclesWithoutInstrumentation() {
+        val instrumentation = InstrumentationForTest(InvokeCycles::class)
+        instrumentation.runNonInstrumentedClass()
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    fun cyclesWithInstrumentation() {
         val instrumentation = InstrumentationForTest(InvokeCycles::class)
         instrumentation.runClass()
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    fun cyclesWithoutInstrument() {
+    fun cyclesWithCollectCoverage() {
         val instrumentation = InstrumentationForTest(InvokeCycles::class)
+        instrumentation.collectCoverage()
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    fun conditionsWithoutInstrumentation() {
+        val instrumentation = InstrumentationForTest(InvokeBigConditions::class)
         instrumentation.runNonInstrumentedClass()
     }
 
     @Benchmark
-    @Measurement(iterations = 1)
     @BenchmarkMode(Mode.AverageTime)
-    fun conditionsWithInstrument() {
-        val instrumentation = InstrumentationForTest(InvokeConditions::class)
+    fun conditionsWithInstrumentation() {
+        val instrumentation = InstrumentationForTest(InvokeBigConditions::class)
         instrumentation.runClass()
     }
 
     @Benchmark
-    @Measurement(iterations = 1)
     @BenchmarkMode(Mode.AverageTime)
-    fun conditionsWithoutInstrument() {
-        val instrumentation = InstrumentationForTest(InvokeConditions::class)
-        instrumentation.runNonInstrumentedClass()
+    fun conditionsWithCollectCoverage() {
+        val instrumentation = InstrumentationForTest(InvokeBigConditions::class)
+        instrumentation.collectCoverage()
     }
 
 }
