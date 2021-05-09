@@ -41,7 +41,7 @@ class ScopeTest : E2EPluginTest() {
                     active shouldBe true
                 }
                 delay(100)
-            }.reconnect<Build2> { plugUi, _ ->
+            }.connectAgent<Build2> { plugUi, _ ->
 
                 val activeScope = plugUi.activeScope()
                 activeScope!!.apply {
