@@ -34,7 +34,7 @@ data class AddCoverage(val payload: CoverPayload) : Action()
 
 @SerialName("EXPORT_COVERAGE")
 @Serializable
-object ExportCoverage : Action()
+data class ExportCoverage(val payload: BuildPayload) : Action()
 
 @SerialName("CANCEL")
 @Serializable

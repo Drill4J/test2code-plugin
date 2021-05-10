@@ -24,10 +24,9 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
-import kotlinx.serialization.Transient
+import kotlin.jvm.Transient
 
 interface Scope : Sequence<FinishedSession> {
     val id: String

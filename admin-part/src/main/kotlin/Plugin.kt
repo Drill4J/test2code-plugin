@@ -31,7 +31,6 @@ import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
-import org.jacoco.core.data.*
 import java.io.*
 import kotlin.time.*
 
@@ -153,39 +152,7 @@ class Plugin(
                 ActionResult(StatusCodes.OK, "")
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
-        is ExportCoverage -> runCatching {
-            val coverage = File(System.getProperty("java.io.tmpdir"))
-                .resolve("jacoco.exec")
-            coverage.outputStream().use { outputStream ->
-                val executionDataWriter = ExecutionDataWriter(outputStream)
-                val classBytes = adminData.loadClassBytes()
-                val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
-                allFinishedScopes.flatMap { finishedScope ->
-                    finishedScope.data.sessions.flatMap { it.probes }
-                }.forEach { execClassData ->
-                    executionDataWriter.visitClassExecution(
-                        ExecutionData(
-                            classBytes[execClassData.className]?.crc64() ?: execClassData.id(),
-                            execClassData.className,
-                            execClassData.probes.toBooleanArray()
-                        )
-                    )
-                }
-                activeScope.iterator().asSequence().flatMap { it.probes }.forEach { execClassData ->
-                    executionDataWriter.visitClassExecution(
-                        ExecutionData(
-                            classBytes[execClassData.className]?.crc64() ?: execClassData.id(),
-                            execClassData.className,
-                            execClassData.probes.toBooleanArray()
-                        )
-                    )
-                }
-            }
-            ActionResult(StatusCodes.OK, coverage)
-        }.getOrElse {
-            logger.error(it) { "Can't get coverage. Reason:" }
-            ActionResult(StatusCodes.BAD_REQUEST, "Can't get coverage.")
-        }
+        is ExportCoverage -> exportCoverage(action.payload.version)
         is CancelSession -> action.payload.run {
             activeScope.cancelSession(action.payload.sessionId)?.let { session ->
                 CancelAgentSession(payload = AgentSessionPayload(session.id)).toActionResult()
@@ -582,6 +549,7 @@ class Plugin(
             )
         }?.close()
     }
+
 
     internal fun BundleCounters.assocTestsJob(
         scope: Scope? = null,

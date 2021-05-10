@@ -15,12 +15,15 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.collections.immutable.*
+import org.jacoco.core.data.*
+import java.io.*
 
 private val logger = logger {}
 
@@ -212,3 +215,38 @@ internal fun Map<TypedTest, BundleCounter>.associatedTests(
         bundle.coverageKeys(onlyPackages).map { it to test }
     }.distinct()
     .groupBy({ it.first }) { it.second }
+
+internal suspend fun Plugin.exportCoverage(buildVersion: String) = runCatching {
+    val coverage = File(System.getProperty("java.io.tmpdir"))
+        .resolve("jacoco.exec")
+    coverage.outputStream().use { outputStream ->
+        val executionDataWriter = ExecutionDataWriter(outputStream)
+        val classBytes = adminData.loadClassBytes()
+        val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
+        allFinishedScopes.filter { it.enabled }.flatMap { finishedScope ->
+            finishedScope.data.sessions.flatMap { it.probes }
+        }.writeCoverage(executionDataWriter, classBytes)
+        if (buildVersion == buildVersion) {
+            activeScope.flatMap {
+                it.probes
+            }.writeCoverage(executionDataWriter, classBytes)
+        }
+    }
+    ActionResult(StatusCodes.OK, coverage)
+}.getOrElse {
+    logger.error(it) { "Can't get coverage. Reason:" }
+    ActionResult(StatusCodes.BAD_REQUEST, "Can't get coverage.")
+}
+
+private fun Sequence<ExecClassData>.writeCoverage(
+    executionDataWriter: ExecutionDataWriter,
+    classBytes: Map<String, ByteArray>,
+) = forEach { execClassData ->
+    executionDataWriter.visitClassExecution(
+        ExecutionData(
+            classBytes[execClassData.className]?.crc64() ?: execClassData.id(),
+            execClassData.className,
+            execClassData.probes.toBooleanArray()
+        )
+    )
+}
