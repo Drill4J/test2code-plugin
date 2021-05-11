@@ -44,7 +44,7 @@ internal suspend fun StoreClient.storeSession(
     trackTime("Store session") {
         store(
             StoredSession(
-                id = session.id,
+                id = genUuid(),
                 scopeId = scopeId,
                 data = session
             )
