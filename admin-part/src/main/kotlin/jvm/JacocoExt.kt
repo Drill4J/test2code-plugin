@@ -34,7 +34,12 @@ internal fun Sequence<ExecClassData>.bundle(
 ): BundleCounter = bundle(probeIds) { analyzer ->
     contents.forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
-            analyzer.analyzeClass(classesBytes, execData.name)
+            runCatching { analyzer.analyzeClass(classesBytes, execData.name) }.onFailure {
+                logger.error {
+                    "Error while analyzing class ${execData.name}. " +
+                        "The number of probes received does not match the number of probes provided "
+                }
+            }
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
 }.toCounter()
