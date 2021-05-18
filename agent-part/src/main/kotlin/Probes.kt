@@ -141,7 +141,7 @@ open class SimpleSessionProbeArrayProvider(
 
     private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
 
-    private val _stubProbes = atomic(Probes(1))
+    private val _stubProbes = atomic(ProbesStub())
 
     override fun invoke(
         id: Long,
@@ -151,7 +151,7 @@ open class SimpleSessionProbeArrayProvider(
         it(id, name, probeCount)
     } ?: _globalContext.value?.let {
         it(id, name, probeCount)
-    } ?: _stubProbes.value //todo EPMDJ-7164
+    } ?: _stubProbes.value
 
     private operator fun AgentContext.invoke(
         id: Long,
