@@ -94,6 +94,7 @@ class Plugin(
 
     override suspend fun doAction(
         action: Action,
+        data: Any?
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
@@ -145,14 +146,14 @@ class Plugin(
                     code = StatusCodes.OK,
                     data = "Successfully received session data",
                     agentAction = AddAgentSessionData(
-                        payload = AgentSessionDataPayload(sessionId = session.id, data = data)
+                        payload = AgentSessionDataPayload(sessionId = session.id, data = this.data)
                     )
                 )
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
-                data.map { probes ->
+                this.data.map { probes ->
                     ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes.toBitSet())
                 }
             }?.run {
@@ -163,6 +164,9 @@ class Plugin(
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is ExportCoverage -> exportCoverage(action.payload.version)
+        is ImportCoverage -> (data as? InputStream)?.let {
+            importCoverage(it)
+        } ?: ActionResult(StatusCodes.BAD_REQUEST, "Error while parsing form-data parameters")
         is CancelSession -> action.payload.run {
             activeScope.cancelSession(action.payload.sessionId)?.let { session ->
                 CancelAgentSession(payload = AgentSessionPayload(session.id)).toActionResult()
