@@ -23,6 +23,7 @@ import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
+import org.jacoco.core.tools.*
 import java.io.*
 import java.util.stream.*
 
@@ -249,4 +250,22 @@ private fun Sequence<ExecClassData>.writeCoverage(
             execClassData.probes.toBooleanArray()
         )
     )
+}
+
+internal suspend fun Plugin.importCoverage(inputStream: InputStream) = runCatching {
+    activeScope.startSession(genUuid(), "UNIT")?.run {
+        val loader = inputStream.use {
+            ExecFileLoader().apply { load(it) }
+        }
+        activeScope.addProbes(id) {
+            loader.executionDataStore.contents.map {
+                ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "unspecified")
+            }
+        }
+        state.finishSession(id)
+        ActionResult(StatusCodes.OK, "Coverage successfully imported")
+    } ?: ActionResult(StatusCodes.ERROR, "Can't start session")
+}.getOrElse {
+    logger.error(it) { "Can't load coverage from file. Reason:" }
+    ActionResult(StatusCodes.ERROR, "Can't load coverage from file")
 }

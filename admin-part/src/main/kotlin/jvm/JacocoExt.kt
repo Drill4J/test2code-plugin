@@ -40,7 +40,7 @@ internal fun Sequence<ExecClassData>.bundle(
             runCatching {
                 analyzer.analyzeClass(classesBytes, execData.name)
             }.onFailure {
-                logger.error(it) { "Error while analyzing ${execData.name}." }
+                logger.error { "Error while analyzing ${execData.name}." }
             }
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
@@ -69,9 +69,10 @@ internal fun Sequence<ExecClassData>.execDataStore(
     it.toExecutionData(probeIds)
 }.fold(ExecutionDataStore()) { store, execData ->
     store.apply {
-        runCatching { put(execData) }.onFailure { e ->
-            logger.error(e) {
-                "Error adding ${execData}, probes=(${execData.probes?.size})${execData.probes?.contentToString()}"
+        runCatching { put(execData) }.onFailure {
+            val expected = store[execData.id]?.probes?.size
+            logger.error {
+                "Error adding ${execData}, probes=(${execData.probes?.size}), expected size $expected"
             }
         }
     }
