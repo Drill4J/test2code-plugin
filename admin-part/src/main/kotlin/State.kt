@@ -145,10 +145,6 @@ internal class AgentState(
             classData.store(storeClient)
             initialized(classData)
             block()
-        } ?: apply {
-            activeScope.activeSessions.values.map { session ->
-                finishSession(session.id)
-            }
         }
     }
 
