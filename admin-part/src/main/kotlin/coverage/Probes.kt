@@ -65,6 +65,7 @@ fun List<Boolean>.merge(other: List<Boolean>): List<Boolean> = mapIndexed { i, b
 
 
 operator fun Probes.contains(value: Boolean): Boolean {
+    if (size == 0) return false
     return copy().let {
         it.set(size, false)
         if (value) {
@@ -80,7 +81,7 @@ fun Probes.copy(): Probes {
 }
 
 val Probes.size
-    get() = this.length() - 1 //bitcode magic
+    get() = maxOf(0, this.length() - 1) //bitcode magic
 
 fun Probes.merge(set: Probes): Probes {
     return copy().apply {
