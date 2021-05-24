@@ -32,7 +32,12 @@ import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import java.io.*
-import kotlin.time.*
+import java.util.concurrent.*
+
+internal object AsyncJobDispatcher : CoroutineScope {
+    override val coroutineContext =
+        Executors.newFixedThreadPool(availableProcessors).asCoroutineDispatcher() + SupervisorJob()
+}
 
 @Suppress("unused")
 class Plugin(
@@ -440,12 +445,16 @@ class Plugin(
         val packages = treeCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
         packages.forEach {
-            send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
+            AsyncJobDispatcher.launch {
+                send(buildVersion, Routes.Build.Coverage.Packages.Package(it.name, pkgsRoute), it)
+            }
         }
         if (associatedTests.isNotEmpty()) {
             logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             associatedTests.forEach {
-                send(buildVersion, Routes.Build.AssociatedTests(it.id, Routes.Build()), it)
+                AsyncJobDispatcher.launch {
+                    send(buildVersion, Routes.Build.AssociatedTests(it.id, Routes.Build()), it)
+                }
             }
         }
     }
@@ -506,8 +515,10 @@ class Plugin(
         if (associatedTests.isNotEmpty()) {
             logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             associatedTests.forEach { assocTests ->
-                val assocTestsRoute = Routes.Build.Scopes.Scope.AssociatedTests(assocTests.id, scopeRoute)
-                send(buildVersion, assocTestsRoute, assocTests)
+                AsyncJobDispatcher.launch {
+                    val assocTestsRoute = Routes.Build.Scopes.Scope.AssociatedTests(assocTests.id, scopeRoute)
+                    send(buildVersion, assocTestsRoute, assocTests)
+                }
             }
         }
         val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scopeRoute)
@@ -515,7 +526,9 @@ class Plugin(
         val packages = treeCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) })
         packages.forEach {
-            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
+            AsyncJobDispatcher.launch {
+                send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute), it)
+            }
         }
     }
 
@@ -550,28 +563,29 @@ class Plugin(
         }?.close()
     }
 
-
-    internal fun BundleCounters.assocTestsJob(
+    internal suspend fun BundleCounters.assocTestsJob(
         scope: Scope? = null,
-    ) = GlobalScope.launch {
+    ) = AsyncJobDispatcher.launch {
         trackTime("assocTestsJob") {
             logger.debug { "Calculating all associated tests..." }
             val assocTestsMap = byTest.associatedTests(onlyPackages = false)
-            val associatedTests: List<AssociatedTests> = measureTimedValue {
+            val associatedTests = trackTime("assocTestsJob getAssociatedTests") {
                 assocTestsMap.getAssociatedTests()
-            }.apply { logger.trace { "Calculated in ${duration.inSeconds}" } }.value
+            }
             val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
             logger.debug { "Sending all associated tests" }
             scope?.let {
-                sendScopeTree(it.id, associatedTests, treeCoverage)
-            } ?: sendBuildTree(treeCoverage, associatedTests)
+                trackTime("assocTestsJob sendScopeTree") {
+                    sendScopeTree(it.id, associatedTests, treeCoverage)
+                }
+            } ?: trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
         }
     }
 
     internal suspend fun Map<TypedTest, BundleCounter>.coveredMethodsJob(
         scopeId: String? = null,
         context: CoverContext = state.coverContext(),
-    ) = GlobalScope.launch {
+    ) = AsyncJobDispatcher.launch {
         trackTime("coveredByTestJob") {
             map { (typedTest, bundle) ->
                 val coveredMethods = context.methods.toCoverMap(bundle, true)

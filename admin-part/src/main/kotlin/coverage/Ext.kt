@@ -87,24 +87,22 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal fun List<Method>.toCoverMap(
+internal suspend fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
 ): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
     val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
         c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
     }.toMap()
-    runBlocking(allAvailableProcessDispatcher) {
-        val subCollectionSize = (size / availableProcessors).takeIf { it > 0 } ?: 1
-        chunked(subCollectionSize).map { subList ->
-            async {
-                subList.mapNotNull { method ->
-                    val covered = method.toCovered(map[method.ownerClass to method.signature()])
-                    covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
-                }
+    val subCollectionSize = (size / availableProcessors).takeIf { it > 0 } ?: 1
+    chunked(subCollectionSize).map { subList ->
+        AsyncJobDispatcher.async {
+            subList.mapNotNull { method ->
+                val covered = method.toCovered(map[method.ownerClass to method.signature()])
+                covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
             }
-        }.flatMap { it.await() }.toMap()
-    }
+        }
+    }.flatMap { it.await() }.toMap()
 }
 
 internal fun BundleCounter.coveredMethods(
