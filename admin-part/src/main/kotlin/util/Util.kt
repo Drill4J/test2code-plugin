@@ -28,8 +28,6 @@ fun genUuid() = "${UUID.randomUUID()}"
 
 internal val availableProcessors = Runtime.getRuntime().availableProcessors()
 
-internal val allAvailableProcessDispatcher = Executors.newFixedThreadPool(availableProcessors).asCoroutineDispatcher()
-
 tailrec fun Int.gcd(other: Int): Int = takeIf { other == 0 } ?: other.gcd(rem(other))
 
 fun String.methodName(name: String): String = when (name) {

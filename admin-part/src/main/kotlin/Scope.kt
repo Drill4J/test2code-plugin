@@ -78,7 +78,7 @@ class ActiveScope(
 
     private val _change = atomic<Change?>(null)
 
-    private val changeJob = GlobalScope.launch {
+    private val changeJob = AsyncJobDispatcher.launch {
         while (true) {
             delay(250)
             _change.value?.let {
