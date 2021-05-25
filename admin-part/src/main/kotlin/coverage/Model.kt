@@ -17,7 +17,7 @@ package com.epam.drill.plugins.test2code.coverage
 
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.util.*
+import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.kodux.util.*
 import kotlinx.serialization.*
 
@@ -48,6 +48,7 @@ internal data class CoverContext(
     val parentBuild: CachedBuild? = null,
     val testsToRun: GroupedTests = emptyMap(),
     val testsToRunParentDurations: TestDurations = TestDurations(),
+    val analyzedClasses: List<ClassCoverage>,
 ) {
     override fun equals(other: Any?): Boolean = super.equals(other)
 

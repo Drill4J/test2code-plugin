@@ -24,6 +24,7 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
+import instrumentation.epam.drill.test2code.jacoco.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
 
@@ -151,12 +152,20 @@ internal class AgentState(
     private suspend fun initialized(classData: ClassData) {
         val buildVersion = agentInfo.buildVersion
         val build: CachedBuild = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
+
+        val analyzedClasses = trackTime("build analysis") {
+            adminData.loadClassBytes().values.mapNotNull {
+                JvmClassAnalyzer.analyzeClass(it)
+            }
+        }
+
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
             packageTree = classData.packageTree,
             methods = classData.methods,
             probeIds = classData.probeIds,
-            build = build
+            build = build,
+            analyzedClasses = analyzedClasses,
         )
         _coverContext.value = coverContext
         val agentId = agentInfo.id

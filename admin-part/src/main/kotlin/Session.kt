@@ -19,11 +19,12 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
+import java.util.*
+import kotlin.collections.HashSet
 
 @Serializable
 sealed class Session : Sequence<ExecClassData>, JvmSerializable {
@@ -55,6 +56,18 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
+    private val poolProbes = WeakHashMap<BitSet, BitSet>()
+
+    fun get(bt: BitSet): BitSet {
+        var bitSet = poolProbes[bt]
+        if (bitSet == null) {
+            poolProbes[bt] = bt
+            bitSet = bt
+        }
+        return bitSet
+    }
+
+
     private val _testRun = atomic<TestRun?>(null)
 
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
@@ -72,7 +85,12 @@ class ActiveSession(
                                 testData.put(probeId, copy(probes = merged))
                             }
                         }
-                    } else testData.put(probeId, probe.copy(testName = typedTest.name))
+                    } else testData.put(
+                        probeId, probe.copy(
+                            testName = typedTest.name,
+                            probes = get(probe.probes)
+                        )
+                    )
                 }?.let { map.put(typedTest, it) } ?: map
             }
         }
