@@ -24,6 +24,8 @@ import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
+import java.util.*
+import kotlin.collections.HashSet
 
 @Serializable
 sealed class Session : Sequence<ExecClassData>, JvmSerializable {
@@ -55,6 +57,18 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
+    val pool = mutableMapOf<BitSet, BitSet>()
+
+    fun get(bt: BitSet): BitSet {
+        var bitSet = pool[bt]
+        if (bitSet == null) {
+            pool[bt] = bt
+            bitSet = bt
+        }
+        return bitSet
+    }
+
+
     private val _testRun = atomic<TestRun?>(null)
 
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
@@ -72,7 +86,12 @@ class ActiveSession(
                                 testData.put(probeId, copy(probes = merged))
                             }
                         }
-                    } else testData.put(probeId, probe.copy(testName = typedTest.name))
+                    } else testData.put(
+                        probeId, probe.copy(
+                            testName = typedTest.name,
+                            probes = get(probe.probes)
+                        )
+                    )
                 }?.let { map.put(typedTest, it) } ?: map
             }
         }

@@ -31,7 +31,8 @@ internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
     cache: AtomicCache<TypedTest, BundleCounter>? = null,
-) = run {
+): BundleCounters = run {
+    val allProbes = flatten()
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
             this.toList().map { it.id + " " }
@@ -47,14 +48,15 @@ internal fun Sequence<Session>.calcBundleCounters(
         }.values.asSequence()
     } else emptySequence()
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
-    BundleCounters(
-        all = flatten().bundle(context, classBytes),
-        testTypeOverlap = testTypeOverlap.bundle(context, classBytes),
-        overlap = flatten().overlappingBundle(context, classBytes),
+    val bundleProcessor = BundleProcessor.bundleProcessor(context)
+     BundleCounters(
+        all = trackTime("bundlesAll") { bundleProcessor.bundle(allProbes) },
+        testTypeOverlap = bundleProcessor.bundle(testTypeOverlap),
+        overlap = allProbes.overlappingBundle(context, classBytes),
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context, classBytes)
         },
-        byTest = trackTime("bundlesByTests") { bundlesByTests(context, classBytes, cache) },
+        byTest = trackTime("bundlesByTests") { bundlesByTests(bundleProcessor, cache) },
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -171,6 +173,27 @@ private fun Sequence<Session>.bundlesByTests(
             .groupBy { TypedTest(it.testName, testType) }
             .filterNot { cache?.map?.containsKey(it.key) ?: false }
             .mapValuesTo(testsWithEmptyBundle) { it.value.asSequence().bundle(context, classBytes) }
+    }.reduce { m1, m2 ->
+        m1.apply { putAll(m2) }
+    }.let { mutableMap ->
+        val finalizedTests = flatMap { it.testStats.keys }
+        val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
+        mutableMap + (cache?.putAll(testsAddToCache) ?: emptyMap())
+    }
+} ?: emptyMap()
+
+private fun Sequence<Session>.bundlesByTests(
+    bundleProc: BundleProc,
+    cache: AtomicCache<TypedTest, BundleCounter>?,
+): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
+    val testsWithEmptyBundle = testsWithBundle(cache)
+    groupBy(Session::testType).map { (testType, sessions) ->
+        sessions.asSequence().flatten()
+            .groupBy { TypedTest(it.testName, testType) }
+            .filterNot { cache?.map?.containsKey(it.key) ?: false }
+            .mapValuesTo(testsWithEmptyBundle) {
+                bundleProc.bundle(it.value.asSequence())
+            }
     }.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
     }.let { mutableMap ->

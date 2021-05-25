@@ -12,6 +12,7 @@ import javassist.*
 import kotlinx.coroutines.*
 import org.junit.*
 import org.junit.jupiter.api.*
+import org.openjdk.jol.vm.*
 import java.io.*
 import java.util.*
 import kotlin.reflect.full.*
@@ -22,10 +23,10 @@ class LoadTest : E2EPluginTest() {
 
 
     companion object {
-        private const val CLASS_COUNT = 1000
-        private const val METHODS_COUNT = 5000
-        private const val PACKAGES_COUNT = 50
-        private const val PACKAGE_HIERARCHY_LEVEL = 4
+        private const val CLASS_COUNT = 100000
+        private const val METHODS_COUNT = 500000
+        private const val PACKAGES_COUNT = 1000
+        private const val PACKAGE_HIERARCHY_LEVEL = 10
     }
 
     @BeforeEach
@@ -80,8 +81,8 @@ class LoadTest : E2EPluginTest() {
 
     @Test
     fun `load test`() {
-
-        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 500) {
+        VM.current().details()
+        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 5000) {
             connectAgent<CustomBuild> { plugUi, build ->
                 plugUi.buildCoverage()
                 plugUi.coveragePackages()
@@ -97,7 +98,7 @@ class LoadTest : E2EPluginTest() {
 
                     plugUi.activeSessions()!!.run { count shouldBe 1 }
 
-                    repeat(10) { index ->
+                    repeat(1) { index ->
                         runWithSession(startSession.payload.sessionId, "test$index") {//todo change testName
                             val tests = build.tests
 
