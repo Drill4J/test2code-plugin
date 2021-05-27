@@ -157,7 +157,7 @@ internal class AgentState(
             adminData.loadClassBytes().values.mapNotNull {
                 JvmClassAnalyzer.analyzeClass(it)
             }
-        }
+        }.also { logger.debug { "count of analyzedClasses = ${it.size}" } }
 
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,

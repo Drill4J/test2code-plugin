@@ -2,6 +2,7 @@
 
 package instrumentation.epam.drill.test2code.jacoco
 
+import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.kodux.util.*
 import org.jacoco.core.analysis.*
@@ -12,10 +13,10 @@ import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.tree.*
-import java.lang.AssertionError
 import java.util.*
-import java.util.function.Consumer
+import java.util.function.*
 
+private val logger = logger {}
 
 class JvmClassAnalyzer {
     companion object {
@@ -27,15 +28,23 @@ class JvmClassAnalyzer {
             if (reader.access and Opcodes.ACC_SYNTHETIC != 0) {
                 return null
             }
+            if (reader.access and Opcodes.ACC_INTERFACE != 0) {
+                logger.trace { "skip interface with name: ${reader.className}"}
+                return null
+            }
             val classCoverage = ClassCoverage(reader.className.weakIntern())
             val classProbesAdapter = ClassProbesAdapter(ClassAnalyzer(classCoverage), false)
             reader.accept(classProbesAdapter, 0)
-            classCoverage.totalInstruction = classCoverage.methods.values.stream().map(MethodCoverage::totalInstruction)
+            classCoverage.analyzeByMethods()
+            return classCoverage
+        }
+
+        fun ClassCoverage.analyzeByMethods() {
+            totalInstruction = methods.values.stream().map(MethodCoverage::totalInstruction)
                 .reduce(0) { a: Int, b: Int -> Integer.sum(a, b) }
             val integers = HashMap<Int, Int>()
-            classCoverage.methods.values.forEach(Consumer { x: MethodCoverage -> integers.putAll(x.probRangeToInstruction) })
-            classCoverage.probRangeToInstruction = integers
-            return classCoverage
+            methods.values.forEach(Consumer { x: MethodCoverage -> integers.putAll(x.probRangeToInstruction) })
+            probRangeToInstruction = integers
         }
     }
 }

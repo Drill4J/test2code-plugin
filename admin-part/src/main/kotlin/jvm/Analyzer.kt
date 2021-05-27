@@ -1,8 +1,11 @@
 package com.epam.drill.plugins.test2code.jvm
 
+import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.coverage.bundle
+import com.epam.drill.plugins.test2code.logger
 import com.epam.kodux.util.*
 import java.util.*
 
@@ -45,6 +48,14 @@ class ClassCoverage(val jvmClassName: String) {
 }
 
 class MethodCoverage(val name: String, val desc: String) {
+    /**
+     * probRangeToInstruction
+     *     first=index; second=how many instructions
+     *         example:
+     *             0->3
+     *             1->2
+     *         totalInstruction=5
+     */
     var probRangeToInstruction = mutableMapOf<Int, Int>()
     var totalInstruction: Int = 0
     fun toCoverageUnit(ownerClass: String, probes: Probes): MethodCounter {
@@ -78,6 +89,8 @@ interface BundleProc {
     fun fastBundle(analyzedClasses: Map<ExecClassData, ClassCounter?>): BundleCounter
 }
 
+private val logger = logger {}
+
 internal class JavaBundleProc(val coverContext: CoverContext) : BundleProc {
     private val fullAnalyzedTree: Map<String, Pair<PackageCoverage, Map<String, ClassCoverage>>> =
         coverContext.analyzedClasses.groupBy { it.packageName }
@@ -99,16 +112,20 @@ internal class JavaBundleProc(val coverContext: CoverContext) : BundleProc {
             .mapValues {
                 it.value.groupBy { it.className }
                     .mapValues { it.value.reduce { acc, execClassData -> acc.merge(execClassData) } }
-            }.mapNotNull {
-                val packageName = it.key
+            }.mapNotNull { probesEntry ->
+                val packageName = probesEntry.key
                 fullAnalyzedTree[packageName]?.let { (packageCoverage, classesCoverage) ->
-                    val classes = it.value.map { classesCoverage[it.key]!!.toCoverageUnit(it.value.probes) }
+                    val classes = probesEntry.value.map { classesCoverage[it.key]!!.toCoverageUnit(it.value.probes) }
+                    logger.debug{ "for $packageName count probes = ${classes.sumOf { it.count.covered }}" }//todo remove
                     PackageCounter(
                         name = packageName,
                         classes = classes,
                         count = Count(classes.sumOf { it.count.covered }, packageCoverage.totalInstruction),
                         classCount = Count(classes.size, packageCoverage.totalClasses),
-                        methodCount = Count(classes.map { it.methods }.flatten().size, packageCoverage.totalMethods)
+                        methodCount = Count(
+                            classes.map { it.methods }.flatten().filter{ it.count.covered != 0 }.size,
+                            packageCoverage.totalMethods
+                        )
                     )
                 }
             }
@@ -151,7 +168,7 @@ internal class BundleProcessor {
 fun List<PackageCounter>.toBundle(totalCount: Int): BundleCounter {
     return BundleCounter(
         name = "",
-        count = Count(sumOf { it.count.covered }, sumOf { it.count.total }),//todo pass total probes,method, classes
+        count = Count(sumOf { it.count.covered }, sumOf { it.count.total }),
         methodCount = Count(
             sumOf { it.methodCount.covered },
             sumOf { it.methodCount.total }

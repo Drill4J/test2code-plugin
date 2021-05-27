@@ -32,6 +32,10 @@ internal fun Sequence<Session>.calcBundleCounters(
     classBytes: Map<String, ByteArray>,
     cache: AtomicCache<TypedTest, BundleCounter>? = null,
 ): BundleCounters = run {
+    //todo remove:
+    if (context.analyzedClasses.size != classBytes.size) {
+        logger.warn { "analyzed classes ${context.analyzedClasses.size} is not equal of ${classBytes.size}" }
+    }
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
             this.toList().map { it.id + " " }
