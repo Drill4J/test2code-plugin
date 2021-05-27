@@ -68,24 +68,7 @@ public class BitSetProbeInserter extends MethodVisitor {
     }
 
     public void insertProbe(final int id) {
-        // For a probe we set the corresponding position in the boolean[] array
-        // to true.
-
-        mv.visitVarInsn(Opcodes.ALOAD, variable);
-
-        // Stack[0]: $PROBE_IMPL
-
-        InstrSupport.push(mv, id);
-
-        // Stack[1]: I
-        // Stack[0]: $PROBE_IMPL
-
-//		mv.visitInsn(Opcodes.ICONST_1);
-
-        visitMethodInsn(
-                Opcodes.INVOKEVIRTUAL, PROBE_IMPL, "set", "(I)V",
-                false
-        );
+        // empty
     }
 
     /**
