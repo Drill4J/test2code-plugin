@@ -70,7 +70,8 @@ class ActiveScope(
         ScopeSummary(
             id = id,
             name = name,
-            started = currentTimeMillis()
+            started = currentTimeMillis(),
+            sessionsFinished = sessions.size,
         )
     )
 
