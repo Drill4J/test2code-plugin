@@ -5,11 +5,100 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
+import instrumentation.epam.drill.test2code.jacoco.*
 import instrumentation.epam.drill.test2code.jacoco.JvmClassAnalyzer.Companion.analyzeByMethods
+import java.io.*
 import kotlin.test.*
 
 class JavaBundleProcTest {
     //todo refactoring tests
+    @Test
+    fun `analyzeClass second constructor and method`() {
+        val className =
+            "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\admin-part\\build\\classes\\java\\test\\SmthSecond.class"
+        val bytes = File(className).readBytes()
+        val analyzeClass = JvmClassAnalyzer.analyzeClass(bytes)
+        if (analyzeClass != null) {
+            assertEquals(2, analyzeClass.methods.size)
+            assertEquals(22, analyzeClass.totalInstruction)
+//            val actual = analyzeClass.methods.
+            val methodCoverage = analyzeClass.methods["ifElseMethod"]
+            assertEquals(19, methodCoverage?.totalInstruction)
+            assertEquals(4, methodCoverage?.probRangeToInstruction?.size)//count of probes
+            val initMethod = analyzeClass.methods["<init>"]
+            assertEquals(3, initMethod?.totalInstruction)
+            assertEquals(1, initMethod?.probRangeToInstruction?.size)//count of probes
+        } else throw error("class is null")
+    }
+
+    @Test
+    fun `coverage method with branches`() {
+        val className =
+            "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\admin-part\\build\\classes\\java\\test\\SmthSecond.class"
+        val bytes = File(className).readBytes()
+        val analyzeClass = JvmClassAnalyzer.analyzeClass(bytes)
+        if (analyzeClass != null) {
+            val bundleProc = createProc(listOf(analyzeClass))
+            val execClassData = ExecClassData(
+                id = 1L,
+                className = analyzeClass.className,
+                probes = probesOf(false, false, false, true, true)
+            )
+            val bundle = bundleProc.bundle(sequenceOf(execClassData))
+            assertEquals(Count(1, 1).toDto(), bundle.classCount.toDto())
+            assertEquals(Count(1, 2).toDto(), bundle.methodCount.toDto())
+            assertEquals(Count(15, 22).toDto(), bundle.count.toDto())//todo wrong value
+        } else throw error("class is null")
+    }
+
+
+    @Test
+    fun `asd asd second`() {
+//        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\src\\test\\java\\org\\springframework\\samples\\petclinic\\owner\\OwnerController.class"
+//        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\src\\test\\java\\OwnerController.class"
+//        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\OwnerController.class"
+//        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\admin-part\\build\\classes\\java\\test\\SmthSecond.class"
+        val className =
+            "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\admin-part\\build\\classes\\java\\test\\Smth.class"
+        val bytes = File(className).readBytes()
+        val analyzeClass = JvmClassAnalyzer.analyzeClass(bytes)
+        //todo another case
+        println(analyzeClass)
+
+    }
+
+    /**
+     * CountDto(covered=23, total=48)
+     * new CountDto(covered=16, total=48)
+     * {1, 8, 11, 17, 25}
+     *
+    {Integer@10375} 8 -> {Integer@10371} 3 //todo
+    {Integer@10368} 9 -> {Integer@10365} 0
+    {Integer@10374} 10 -> {Integer@10371} 3
+    {Integer@10376} 11 -> {Integer@10366} 6 //todo
+    {Integer@10377} 12 -> {Integer@10371} 3
+    {Integer@10378} 13 -> {Integer@10372} 7
+    {Integer@10379} 14 -> {Integer@10370} 4
+    {Integer@10380} 15 -> {Integer@10373} 5
+    {Integer@10381} 16 -> {Integer@10374} 10
+    {Integer@10382} 17 -> {Integer@10372} 7 //todo
+    ????+3+6+7 = 16
+    sum = need to be = 23 ??
+
+     */
+    @Ignore
+    @Test
+    fun `case with petclinic`() {
+//        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\src\\test\\java\\org\\springframework\\samples\\petclinic\\owner\\OwnerController.class"
+//        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\src\\test\\java\\OwnerController.class"
+        val className =
+            "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\OwnerController.class"
+        val bytes = File(className).readBytes()
+        val analyzeClass = JvmClassAnalyzer.analyzeClass(bytes)
+        println(analyzeClass)
+        //todo
+    }
+
     @Test
     fun `calculate bundle 1 method`() {
         assertTrue(true)
@@ -21,19 +110,9 @@ class JavaBundleProcTest {
         }
         classCoverage.analyzeByMethods()
         val probes = probesOf(true)
-//        classCoverage.methods[0]?.toCoverageUnit("")
-        val toCoverageUnit: ClassCounter = classCoverage.toCoverageUnit(probes)//todo remove or add asserts
-        println("toCoverageUnit = $toCoverageUnit")
 
         val analyzedClasses = listOf(classCoverage)
-        val context = CoverContext(
-            agentType = "JAVA",//todo
-            packageTree = PackageTree(),
-            methods = emptyList(),
-            build = CachedBuild("build1"),
-            analyzedClasses = analyzedClasses,
-        )
-        val bundleProc = JavaBundleProc(context)
+        val bundleProc = createProc(analyzedClasses)
         val execClassData = ExecClassData(
             id = 1L,
             className = jvmClassName,
@@ -63,14 +142,7 @@ class JavaBundleProcTest {
 
         classCoverage.analyzeByMethods()
         val analyzedClasses = listOf(classCoverage)
-        val context = CoverContext(
-            agentType = "JAVA",//todo
-            packageTree = PackageTree(),
-            methods = emptyList(),
-            build = CachedBuild("build1"),
-            analyzedClasses = analyzedClasses,
-        )
-        val bundleProc = JavaBundleProc(context)
+        val bundleProc = createProc(analyzedClasses)
         val execClassData = ExecClassData(
             id = 1L,
             className = jvmClassName,
@@ -92,14 +164,7 @@ class JavaBundleProcTest {
         val classCoverage2 = classCoverage(jvmClassName2)
 
         val analyzedClasses = listOf(classCoverage, classCoverage2)
-        val context = CoverContext(
-            agentType = "JAVA",//todo
-            packageTree = PackageTree(),
-            methods = emptyList(),
-            build = CachedBuild("build1"),
-            analyzedClasses = analyzedClasses,
-        )
-        val bundleProc = JavaBundleProc(context)
+        val bundleProc = createProc(analyzedClasses)
         val execClassData = ExecClassData(
             id = 1L,
             className = jvmClassName,
@@ -115,6 +180,17 @@ class JavaBundleProcTest {
         assertEquals(Count(1, 2).toDto(), bundle.classCount.toDto())
         assertEquals(Count(2, 4).toDto(), bundle.methodCount.toDto())
         assertEquals(Count(5, 10).toDto(), bundle.count.toDto())
+    }
+
+    private fun createProc(analyzedClasses: List<ClassCoverage>): JavaBundleProc {
+        val context = CoverContext(
+            agentType = "JAVA",//todo
+            packageTree = PackageTree(),
+            methods = emptyList(),
+            build = CachedBuild("build1"),
+            analyzedClasses = analyzedClasses,
+        )
+        return JavaBundleProc(context)
     }
 
     private fun classCoverage(jvmClassName: String): ClassCoverage {
