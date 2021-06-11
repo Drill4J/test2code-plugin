@@ -75,7 +75,7 @@ public final class MethodProbesAdapter extends MethodVisitor {
             if (tryCatchProbeLabels.containsKey(label)) {
                 probesVisitor.visitLabel(tryCatchProbeLabels.get(label));
             }
-            probesVisitor.visitProbe(idGenerator.nextId());
+            probesVisitor.visitProbe(idGenerator.nextId());//
         }
         probesVisitor.visitLabel(label);
     }

@@ -5,6 +5,7 @@ package instrumentation.epam.drill.test2code.jacoco
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.kodux.util.*
+import org.jacoco.core.analysis.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
 import java.util.*
@@ -26,7 +27,9 @@ class JvmClassAnalyzer {
                 logger.trace { "skip interface with name: ${reader.className}"}
                 return null
             }
-            val classCoverage = ClassCoverage(reader.className.weakIntern())
+            val classCoverage = ClassCoverage(reader.className.weakIntern(),
+                ICoverageNode.ElementType.CLASS,
+                reader.className.weakIntern())//todo?
             val classProbesAdapter = ClassProbesAdapter(ClassAnalyzer(classCoverage), false)
             reader.accept(classProbesAdapter, 0)
             classCoverage.analyzeByMethods()

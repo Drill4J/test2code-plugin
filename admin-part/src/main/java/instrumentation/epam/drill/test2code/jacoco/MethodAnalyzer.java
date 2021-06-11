@@ -44,7 +44,7 @@ public class MethodAnalyzer extends MethodProbesVisitor {
         }
         for (final AbstractInsnNode i : methodNode.instructions) {
             currentNode = i;
-            i.accept(methodVisitor);
+            i.accept(methodVisitor);//analyze each instruction
         }
         methodVisitor.visitEnd();
     }
@@ -147,7 +147,7 @@ public class MethodAnalyzer extends MethodProbesVisitor {
 
     @Override
     public void visitProbe(final int probeId) {
-        builder.addProbe(probeId, 0);
+        builder.addProbe(probeId, 0, true);//first
         builder.noSuccessor();
     }
 
@@ -155,13 +155,13 @@ public class MethodAnalyzer extends MethodProbesVisitor {
     public void visitJumpInsnWithProbe(final int opcode, final Label label,
                                        final int probeId, final IFrame frame) {
         builder.addInstruction(currentNode);
-        builder.addProbe(probeId, 1);
+        builder.addProbe(probeId, 1, false);
     }
 
     @Override
     public void visitInsnWithProbe(final int opcode, final int probeId) {
         builder.addInstruction(currentNode);
-        builder.addProbe(probeId, 0);
+        builder.addProbe(probeId, 0, false);
     }
 
     @Override
@@ -195,7 +195,7 @@ public class MethodAnalyzer extends MethodProbesVisitor {
             if (id == LabelInfo.NO_PROBE) {
                 builder.addJump(label, branch);
             } else {
-                builder.addProbe(id, branch);
+                builder.addProbe(id, branch, false);
             }
             LabelInfo.setDone(label);
         }

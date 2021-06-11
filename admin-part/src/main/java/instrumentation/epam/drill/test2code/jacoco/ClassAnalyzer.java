@@ -20,10 +20,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.epam.drill.plugins.test2code.jvm.ClassCoverage;
+import com.epam.drill.plugins.test2code.jvm.MethodCoverage;
+import org.jacoco.core.analysis.ICoverageNode;
 import org.jacoco.core.internal.analysis.*;
 import org.jacoco.core.internal.analysis.filter.Filters;
 import org.jacoco.core.internal.analysis.filter.IFilter;
 import org.jacoco.core.internal.analysis.filter.IFilterContext;
+import org.jacoco.core.internal.instr.InstrSupport;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.FieldVisitor;
@@ -41,7 +44,7 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
     private final ClassCoverage classCoverage;
 
     public ClassAnalyzer(ClassCoverage classCoverage) {
-        this.classCoverage = classCoverage;
+        this.classCoverage = classCoverage;//ClassCoverageImpl
         this.filter = Filters.all();
     }
 
@@ -49,6 +52,9 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
     public void visit(final int version, final int access, final String name,
                       final String signature, final String superName,
                       final String[] interfaces) {
+//        coverage.setSignature(stringPool.get(signature));
+//        coverage.setSuperName(stringPool.get(superName));
+//        coverage.setInterfaces(stringPool.get(interfaces));
     }
 
     @Override
@@ -65,6 +71,8 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
 
     @Override
     public void visitSource(final String source, final String debug) {
+//        coverage.setSourceFileName(stringPool.get(source));
+//        sourceDebugExtension = debug;
     }
 
     @Override
@@ -74,7 +82,7 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
                                            final String signature,
                                            final String[] exceptions) {
 
-        final InstructionsBuilder builder = new InstructionsBuilder(classCoverage.method(name, desc));
+        final InstructionsBuilder builder = new InstructionsBuilder(classCoverage.method(name, desc, signature));
 
         return new MethodAnalyzer(builder) {
 
@@ -95,12 +103,15 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
         final MethodCoverageCalculator mcc = new MethodCoverageCalculator(
                 icc.getInstructions());
         filter.filter(methodNode, this, mcc);
-
-        final MethodCoverageImpl mc = new MethodCoverageImpl(name, desc,
-                signature);
+//signature
+        final MethodCoverage mc = new MethodCoverage(name, desc, signature, ICoverageNode.ElementType.METHOD);
         mcc.calculate(mc);
 
         if (mc.containsCode()) {
+            // Only consider methods that actually contain code
+            classCoverage.increment(mc);
+            classCoverage.addMethod(mc);
+            mc.fixRange();
         }
 
     }
@@ -108,6 +119,7 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
     @Override
     public FieldVisitor visitField(final int access, final String name,
                                    final String desc, final String signature, final Object value) {
+//        InstrSupport.assertNotInstrumented(name, coverage.getName());
         return super.visitField(access, name, desc, signature, value);
     }
 
@@ -119,10 +131,12 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
     // IFilterContext implementation
 
     public String getClassName() {
+//        coverage.getName()
         return "";
     }
 
     public String getSuperClassName() {
+//        coverage.getSuperName()
         return "";
     }
 
@@ -135,6 +149,7 @@ public class ClassAnalyzer extends ClassProbesVisitor implements IFilterContext 
     }
 
     public String getSourceFileName() {
+//        		return coverage.getSourceFileName();
         return "";
     }
 

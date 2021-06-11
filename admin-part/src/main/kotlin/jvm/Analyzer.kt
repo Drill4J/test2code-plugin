@@ -4,9 +4,9 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.coverage.bundle
-import com.epam.drill.plugins.test2code.logger
 import com.epam.kodux.util.*
+import org.jacoco.core.analysis.*
+import org.jacoco.core.internal.analysis.*
 import java.util.*
 
 
@@ -17,7 +17,9 @@ class PackageCoverage(val packageName: String) {
     var classes: List<ClassCoverage> = emptyList()
 }
 
-class ClassCoverage(val jvmClassName: String) {
+//class ClassCoverage(val jvmClassName: String) {
+class ClassCoverage(val jvmClassName: String, elementType: ICoverageNode.ElementType?, name: String?) :
+    SourceNodeImpl(elementType, name) {
     var totalInstruction = 0
     val methods = mutableMapOf<String, MethodCoverage>()
     var probRangeToInstruction = mutableMapOf<Int, Int>()
@@ -25,12 +27,15 @@ class ClassCoverage(val jvmClassName: String) {
     val packageName: String = jvmClassName.substringBeforeLast("/").weakIntern()
     val className: String = jvmClassName.substringAfterLast("/").weakIntern()
 
-    fun method(name: String, desc: String): MethodCoverage {
+    fun method(name: String, desc: String, signature: String?): MethodCoverage {
         val methodName = name.weakIntern()
         return methods[methodName] ?: MethodCoverage(
             methodName,
-            desc.weakIntern()
-        ).also { methods += (methodName to it) }
+            desc.weakIntern(),
+            signature,
+            ICoverageNode.ElementType.METHOD,
+//            methodName
+        ).also { it -> methods += (methodName to it) }
     }
 
     fun toCoverageUnit(probes: Probes): ClassCounter {
@@ -43,11 +48,28 @@ class ClassCoverage(val jvmClassName: String) {
             methods = coverageUnits,
             count = Count(coverageUnits.sumOf { it.count.covered }, totalInstruction)
         )
+    }
 
+    fun addMethod(mc: MethodCoverage) {
+        val methodCoverage = methods[mc.name]
+        methodCoverage?.apply {//todo fix this copy
+            mc.totalInstruction = methodCoverage.totalInstruction
+            mc.probRangeToInstruction = methodCoverage.probRangeToInstruction
+            mc.firstProbe = methodCoverage.firstProbe
+            mc.insrtuctionsForAllProbes = methodCoverage.insrtuctionsForAllProbes
+            mc.signature = methodCoverage.signature
+        }
+        methods[mc.name] = mc
     }
 }
 
-class MethodCoverage(val name: String, val desc: String) {
+class MethodCoverage(
+    name: String?,
+    val desc: String,
+    var signature: String?,
+    elementType: ICoverageNode.ElementType? = ICoverageNode.ElementType.METHOD
+) :
+    SourceNodeImpl(elementType, name) {
     /**
      * probRangeToInstruction
      *     first=index; second=how many instructions
@@ -58,19 +80,64 @@ class MethodCoverage(val name: String, val desc: String) {
      */
     var probRangeToInstruction = mutableMapOf<Int, Int>()
     var totalInstruction: Int = 0
+    var insrtuctionsForAllProbes: Int = 0
+    var firstProbe: Int = -1
     fun toCoverageUnit(ownerClass: String, probes: Probes): MethodCounter {
         var covered = 0
-        probRangeToInstruction.forEach { (probeId, v) -> if (probes[probeId]) covered += v }
-        return weakPool(
-            MethodCounter(
-                name = name,
-                desc = desc,
-                decl = desc,
-//            key = "$ownerClass:$name$desc".weakIntern(), todo what is the key?
-                Count(covered, totalInstruction)
-            )
+        var isAddInstructionsForAllProbes = true
+        probRangeToInstruction.forEach { (probeId, v) ->
+            if (probes[probeId]) {
+                covered += v
+                if (isAddInstructionsForAllProbes) {
+                    covered += insrtuctionsForAllProbes
+                    isAddInstructionsForAllProbes = false
+                }
+            }
+        }
+        return MethodCounter(
+            name = name,
+            desc = desc,
+            decl = desc,
+//            todo for cover method calculation algo. It will use for hashMap key
+//            key = "$ownerClass:$name$desc".weakIntern(),
+            Count(covered, totalInstruction)
         )
     }
+
+    override fun increment(
+        instructions: ICounter?, branches: ICounter,
+        line: Int
+    ) {
+        super.increment(instructions, branches, line)
+        // Additionally increment complexity counter:
+        if (branches.totalCount > 1) {
+            val c = Math.max(0, branches.coveredCount - 1)
+            val m = Math.max(0, branches.totalCount - c - 1)
+            complexityCounter = complexityCounter.increment(m, c)
+        }
+    }
+
+    fun incrementMethodCounter() {
+        val base: ICounter =
+            if (instructionCounter.coveredCount == 0) CounterImpl.COUNTER_1_0 else CounterImpl.COUNTER_0_1
+        methodCounter = methodCounter.increment(base)
+        complexityCounter = complexityCounter.increment(base)
+    }
+
+    fun fixRange() {
+        var sum = 0
+        var counter = firstLine
+        while (getLine(counter).instructionCounter.coveredCount != 0) {
+            sum += getLine(counter).instructionCounter.coveredCount
+            counter++
+        }
+        insrtuctionsForAllProbes = sum
+        if (firstProbe != -1) {
+            val i: Int = probRangeToInstruction[firstProbe]?: 0
+            probRangeToInstruction[firstProbe] = (probRangeToInstruction[firstProbe]?: 0) - insrtuctionsForAllProbes
+        }
+    }
+
 }
 
 val poolMethodCounter = WeakHashMap<MethodCounter, MethodCounter>()
@@ -109,21 +176,21 @@ internal class JavaBundleProc(val coverContext: CoverContext) : BundleProc {
     override fun bundle(execClassData: Sequence<ExecClassData>): BundleCounter {
         val bundleTree: List<PackageCounter> = execClassData.filter { !it.probes.isEmpty }
             .groupBy { it.className.substringBeforeLast("/").weakIntern() }
-            .mapValues {
-                it.value.groupBy { it.className }
+            .mapValues { entry: Map.Entry<String, List<ExecClassData>> ->
+                entry.value.groupBy { it.className }
                     .mapValues { it.value.reduce { acc, execClassData -> acc.merge(execClassData) } }
             }.mapNotNull { probesEntry ->
                 val packageName = probesEntry.key
                 fullAnalyzedTree[packageName]?.let { (packageCoverage, classesCoverage) ->
                     val classes = probesEntry.value.map { classesCoverage[it.key]!!.toCoverageUnit(it.value.probes) }
-                    logger.debug{ "for $packageName count probes = ${classes.sumOf { it.count.covered }}" }//todo remove
+                    logger.debug { "for $packageName count probes = ${classes.sumOf { it.count.covered }}" }//todo remove
                     PackageCounter(
                         name = packageName,
                         classes = classes,
-                        count = Count(classes.sumOf { it.count.covered }, packageCoverage.totalInstruction),
+                        count = Count(classes.sumOf { it.count.covered }, packageCoverage.totalInstruction),//todo here
                         classCount = Count(classes.size, packageCoverage.totalClasses),
                         methodCount = Count(
-                            classes.map { it.methods }.flatten().filter{ it.count.covered != 0 }.size,
+                            classes.map { it.methods }.flatten().filter { it.count.covered != 0 }.size,
                             packageCoverage.totalMethods
                         )
                     )

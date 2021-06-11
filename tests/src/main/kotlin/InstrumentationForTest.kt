@@ -20,6 +20,58 @@ import com.epam.drill.plugin.api.processing.*
 import org.jacoco.core.internal.data.*
 import kotlin.reflect.*
 
+class InstrumentationForTest22(kClass: Class<*>, bytes: ByteArray) {
+
+    companion object {
+        const val sessionId = "xxx"
+
+        val instrContextStub: AgentContext =
+            object : AgentContext {
+                override fun get(key: String): String? = when (key) {
+                    DRIlL_TEST_NAME -> "test"
+                    else -> null
+                }
+
+                override fun invoke(): String = sessionId
+
+            }
+    }
+
+    object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub)
+
+    val instrument = instrumenter(TestProbeArrayProvider, "".namedLogger(appender = NopLogAppender))
+
+    val memoryClassLoader = MemoryClassLoader()
+
+    val targetClass = kClass
+
+    val originalBytes = bytes
+
+    val originalClassId = CRC64.classId(originalBytes)
+
+    val instrumentedClass: Class<*> = loadClass()
+
+    fun runNonInstrumentedClass() {
+        runClass(targetClass)
+    }
+
+    private fun loadClass(): Class<*> {
+        addInstrumentedClass()
+        return memoryClassLoader.loadClass(targetClass.name)
+    }
+
+    private fun addInstrumentedClass() {
+        memoryClassLoader.addDefinition(targetClass.name, instrumentClass())
+    }
+
+    fun instrumentClass(name: String = targetClass.name) = instrument(name, originalClassId, originalBytes)!!
+
+    fun runClass(clazz: Class<*> = instrumentedClass) {
+        @Suppress("DEPRECATION") val runnable = clazz.newInstance() as Runnable
+        runnable.run()
+    }
+}
+
 class InstrumentationForTest(kClass: KClass<*>) {
 
     companion object {

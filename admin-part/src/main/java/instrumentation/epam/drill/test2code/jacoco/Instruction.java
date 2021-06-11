@@ -16,12 +16,12 @@
 package instrumentation.epam.drill.test2code.jacoco;
 
 
-import java.util.BitSet;
-import java.util.Collection;
-
 import com.epam.drill.plugins.test2code.jvm.MethodCoverage;
 import org.jacoco.core.analysis.ICounter;
 import org.jacoco.core.internal.analysis.CounterImpl;
+
+import java.util.BitSet;
+import java.util.Collection;
 
 public class Instruction {
 
@@ -34,13 +34,14 @@ public class Instruction {
     private Instruction predecessor;
 
     private int predecessorBranch;
-    private int currentProbe;
+    private final int currentProbe;
     MethodCoverage methodCoverage;
 
     public Instruction(final int line, MethodCoverage methodCoverage, int currentProbe) {
         this.line = line;
         this.branches = 0;
         this.coveredBranches = new BitSet();
+        //this is new:
         this.methodCoverage = methodCoverage;
         this.currentProbe = currentProbe;
     }
@@ -54,10 +55,27 @@ public class Instruction {
         }
     }
 
-    public boolean addBranch(int probeId, int instructionCounter) {
+// original:
+    public void addBranch(final boolean executed, final int branch) {
         branches++;
+        if (executed) {
+            propagateExecutedBranch(this, branch);
+        }
+    }
+
+    public boolean addBranch(int probeId, int instructionCounter, int branch, boolean b) {
+        branches++;
+        //todo !!!!!!!!!!!!!
+
+        //todo take first probe of the method?
         final Integer integer = methodCoverage.getProbRangeToInstruction().get(probeId);
+        if (methodCoverage.getFirstProbe() == -1) {
+            methodCoverage.setFirstProbe(probeId);
+            System.out.println();
+            propagateExecutedBranch(this, branch);
+        }
         if (integer == null) {
+            System.out.println("probeId=" + probeId + "; count=" + instructionCounter);
             methodCoverage.getProbRangeToInstruction().put(probeId, instructionCounter);
             return true;
         }
@@ -112,6 +130,8 @@ public class Instruction {
         if (branches < 2) {
             return CounterImpl.COUNTER_0_0;
         }
+//        todo
+//        final int covered = coveredBranches.cardinality();
         final int covered = Math.max(0, coveredBranches.cardinality() - 1);
         return CounterImpl.getInstance(branches - covered, covered);
     }

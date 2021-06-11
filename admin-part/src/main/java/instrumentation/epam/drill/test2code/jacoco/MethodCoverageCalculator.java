@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.epam.drill.plugins.test2code.jvm.MethodCoverage;
 import org.jacoco.core.analysis.ISourceNode;
-import org.jacoco.core.internal.analysis.MethodCoverageImpl;
 import org.jacoco.core.internal.analysis.filter.IFilterOutput;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -47,7 +47,7 @@ class MethodCoverageCalculator implements IFilterOutput {
     }
 
 
-    void calculate(final MethodCoverageImpl coverage) {
+    void calculate(final MethodCoverage coverage) {
         applyMerges();
         applyReplacements();
         ensureCapacity(coverage);
@@ -100,7 +100,7 @@ class MethodCoverageCalculator implements IFilterOutput {
         }
     }
 
-    private void ensureCapacity(final MethodCoverageImpl coverage) {
+    private void ensureCapacity(final MethodCoverage coverage) {
         // Determine line range:
         int firstLine = ISourceNode.UNKNOWN_LINE;
         int lastLine = ISourceNode.UNKNOWN_LINE;

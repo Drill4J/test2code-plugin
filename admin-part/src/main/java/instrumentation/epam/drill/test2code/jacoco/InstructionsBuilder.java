@@ -16,15 +16,15 @@
 package instrumentation.epam.drill.test2code.jacoco;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.epam.drill.plugins.test2code.jvm.MethodCoverage;
 import org.jacoco.core.analysis.ISourceNode;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.tree.AbstractInsnNode;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 class InstructionsBuilder {
 
@@ -33,11 +33,22 @@ class InstructionsBuilder {
     private final Map<AbstractInsnNode, Instruction> instructions;
     private final List<Label> currentLabel;
     private final List<Jump> jumps;
+    //new:
     MethodCoverage methodCoverage;
-
     int currentProbe = 0;
     int instructionCounter = 0;
+    int instructionCounter22 = 0;
+    int instructionCounter33 = 0;
 
+//original:
+//    InstructionsBuilder(final boolean[] probes) {
+//        this.probes = probes;
+//        this.currentLine = ISourceNode.UNKNOWN_LINE;
+//        this.currentInsn = null;
+//        this.instructions = new HashMap<AbstractInsnNode, Instruction>();
+//        this.currentLabel = new ArrayList<Label>(2);
+//        this.jumps = new ArrayList<Jump>();
+//    }
     InstructionsBuilder(MethodCoverage methodCoverage) {
         this.currentLine = ISourceNode.UNKNOWN_LINE;
         this.currentInsn = null;
@@ -59,16 +70,20 @@ class InstructionsBuilder {
     }
 
     void addInstruction(final AbstractInsnNode node) {
+        //todo it is a new: !!!!!!!!
         instructionCounter++;
+        System.out.println("line="+currentLine + "; currentProbe=" + currentProbe + "; node=" + node.getClass());
         final Instruction insn = new Instruction(currentLine, methodCoverage, currentProbe);
         final int labelCount = currentLabel.size();
         if (labelCount > 0) {
             for (int i = labelCount; --i >= 0; ) {
                 LabelInfo.setInstruction(currentLabel.get(i), insn);
             }
+//            instructionCounter22++;
             currentLabel.clear();
         }
         if (currentInsn != null) {
+//            instructionCounter33++;
             currentInsn.addBranch(insn, 0);
         }
         currentInsn = insn;
@@ -83,8 +98,16 @@ class InstructionsBuilder {
         jumps.add(new Jump(currentInsn, target, branch));
     }
 
-    void addProbe(final int probeId, final int branch) {
-        if (currentInsn.addBranch(probeId, instructionCounter)) {
+    void addProbeOrig(final int probeId, final int branch) {
+        //final boolean executed = probes != null && probes[probeId];
+        currentInsn.addBranch(true, branch);
+    }//todo
+
+    void addProbe(final int probeId, final int branch, boolean b) {
+        System.out.println("probeId=" + probeId + "; branch=" + branch);
+        if (currentInsn.addBranch(probeId, instructionCounter, branch, b)) {
+            System.out.println("instructionCounter=" + instructionCounter + ";instructionCounter22=" + instructionCounter22 + ";instructionCounter33=" + instructionCounter33);
+            System.out.println("probeId=" + probeId + "; set instructionCounter=0");
             instructionCounter = 0;
         }
     }
@@ -107,6 +130,10 @@ class InstructionsBuilder {
             this.source = source;
             this.target = target;
             this.branch = branch;
+        }
+
+        void wireOrig() {
+            source.addBranch(LabelInfo.getInstruction(target), branch);
         }
 
         void wire() {

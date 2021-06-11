@@ -441,6 +441,8 @@ data class CountDto(
 fun Count.toDto() = CountDto(covered, total)
 
 typealias Count = Long
+//todo remove it
+//fun Count.toString() = "(covered=$covered, total=$total)"
 
 val Count.covered
     get() = (this shr 32).toInt()

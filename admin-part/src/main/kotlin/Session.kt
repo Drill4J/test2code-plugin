@@ -88,7 +88,7 @@ class ActiveSession(
                     } else testData.put(
                         probeId, probe.copy(
                             testName = typedTest.name,
-                            probes = get(probe.probes)
+                            probes = probe.probes//get(probe.probes)
                         )
                     )
                 }?.let { map.put(typedTest, it) } ?: map

@@ -83,7 +83,8 @@ internal suspend fun BundleCounters.calculateCoverageData(
     val associatedTests = trackTime("associatedTests") { assocTestsMap.getAssociatedTests() }
 
     val tree = context.packageTree
-    val coverageCount = bundle.count.copy(total = tree.totalCount)
+    val coverageCount: Count = bundle.count.copy(total = tree.totalCount)
+    logger.warn { "coverageCount=${coverageCount.toDto()}" }
     val totalCoveragePercent = coverageCount.percentage()
 
     val coverageByTests = trackTime("coverageByTests") {
@@ -96,7 +97,7 @@ internal suspend fun BundleCounters.calculateCoverageData(
             byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
         )
     }
-    logger.info { coverageByTests.byType }
+    logger.info { "coverageByTests.byType ${coverageByTests.byType}" }
 
     val methodCount = bundle.methodCount.copy(total = tree.totalMethodCount)
     val classCount = bundle.classCount.copy(total = tree.totalClassCount)
@@ -125,7 +126,12 @@ internal suspend fun BundleCounters.calculateCoverageData(
             byTestType = coverageByTests.byType
         )
     }
-    logger.info { coverageBlock }
+    logger.info { "coverageBlock $coverageBlock\n" +
+            "count=${coverageBlock.count.toDto()};" +
+            "methodCount=${coverageBlock.methodCount.toDto()};" +
+            "classCount=${coverageBlock.classCount.toDto()};" +
+            "packageCount=${coverageBlock.packageCount.toDto()};" +
+            "" }
 
     val buildMethods = trackTime("calculateBundleMethods") { context.calculateBundleMethods(bundle) }
 
