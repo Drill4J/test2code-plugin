@@ -65,17 +65,25 @@ public class Instruction {
 
     public boolean addBranch(int probeId, int instructionCounter, int branch, boolean b) {
         branches++;
-        //todo !!!!!!!!!!!!!
 
-        //todo take first probe of the method?
         final Integer integer = methodCoverage.getProbRangeToInstruction().get(probeId);
         if (methodCoverage.getFirstProbe() == -1) {
+            //todo take first probe of the method?
             methodCoverage.setFirstProbe(probeId);
             System.out.println();
             propagateExecutedBranch(this, branch);
         }
+        System.out.println("addBranch probeId=" + probeId + "; count=" + instructionCounter + "; branch=" + branch + "; b=" + b);
+        if (branch == 0) {
+            System.out.println("branch==0");
+//            propagateExecutedBranch(this, branch);
+        }
+        if (b) { //todo can we send smth to add default coverage?
+            System.out.println("b==true");
+//            propagateExecutedBranch(this, branch);
+        }
         if (integer == null) {
-            System.out.println("probeId=" + probeId + "; count=" + instructionCounter);
+            System.out.println("probeId=" + probeId + "; count=" + instructionCounter +"\n");
             methodCoverage.getProbRangeToInstruction().put(probeId, instructionCounter);
             return true;
         }

@@ -52,7 +52,7 @@ class ClassCoverage(val jvmClassName: String, elementType: ICoverageNode.Element
 
     fun addMethod(mc: MethodCoverage) {
         val methodCoverage = methods[mc.name]
-        methodCoverage?.apply {//todo fix this copy
+        methodCoverage?.apply {//todo use copy or smth like that
             mc.totalInstruction = methodCoverage.totalInstruction
             mc.probRangeToInstruction = methodCoverage.probRangeToInstruction
             mc.firstProbe = methodCoverage.firstProbe
@@ -133,7 +133,6 @@ class MethodCoverage(
         }
         insrtuctionsForAllProbes = sum
         if (firstProbe != -1) {
-            val i: Int = probRangeToInstruction[firstProbe]?: 0
             probRangeToInstruction[firstProbe] = (probRangeToInstruction[firstProbe]?: 0) - insrtuctionsForAllProbes
         }
     }

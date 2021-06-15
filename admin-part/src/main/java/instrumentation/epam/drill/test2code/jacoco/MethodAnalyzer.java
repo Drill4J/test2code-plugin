@@ -147,7 +147,8 @@ public class MethodAnalyzer extends MethodProbesVisitor {
 
     @Override
     public void visitProbe(final int probeId) {
-        builder.addProbe(probeId, 0, true);//first
+        System.out.println("visitProbe probeId="+probeId);
+        builder.addProbe(probeId, 0, false);//first
         builder.noSuccessor();
     }
 
@@ -155,12 +156,14 @@ public class MethodAnalyzer extends MethodProbesVisitor {
     public void visitJumpInsnWithProbe(final int opcode, final Label label,
                                        final int probeId, final IFrame frame) {
         builder.addInstruction(currentNode);
-        builder.addProbe(probeId, 1, false);
+        System.out.println("visitJumpInsnWithProbe probeId=" + probeId + "; opcode=" + opcode);
+        builder.addProbe(probeId, 1, true);
     }
 
     @Override
     public void visitInsnWithProbe(final int opcode, final int probeId) {
         builder.addInstruction(currentNode);
+        System.out.println("visitInsnWithProbe probeId=" + probeId + "; opcode=" + opcode);
         builder.addProbe(probeId, 0, false);
     }
 

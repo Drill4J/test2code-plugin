@@ -104,7 +104,7 @@ class InstructionsBuilder {
     }//todo
 
     void addProbe(final int probeId, final int branch, boolean b) {
-        System.out.println("probeId=" + probeId + "; branch=" + branch);
+        System.out.println("addProbe probeId=" + probeId + "; branch=" + branch);
         if (currentInsn.addBranch(probeId, instructionCounter, branch, b)) {
             System.out.println("instructionCounter=" + instructionCounter + ";instructionCounter22=" + instructionCounter22 + ";instructionCounter33=" + instructionCounter33);
             System.out.println("probeId=" + probeId + "; set instructionCounter=0");

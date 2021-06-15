@@ -34,9 +34,42 @@ class InstrumentationTest {
 
     @Test
     fun `instrumented class should be larger the the original`() {
-        val nameClass = "SmthForth"
+        val instrumentation = InstrumentationForTest(TestTarget::class)
+        val instrumentedBytes = instrumentation.instrumentClass()
+        assertTrue { instrumentedBytes.count() > instrumentation.originalBytes.count() }
+    }
+
+    @Test
+    fun `should provide coverage for run with the instrumented class`() {
+        val instrumentation = InstrumentationForTest(TestTarget::class)
+        val instrumentedClass = instrumentation.instrumentedClass
+        InstrumentationForTest.TestProbeArrayProvider.start(sessionId, false) { dataSeq ->
+            _runtimeData.update { it + dataSeq }
+        }
+        @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
+        runnable.run()
+        val runtimeData = _runtimeData.updateAndGet {
+            it + (InstrumentationForTest.TestProbeArrayProvider.stop(sessionId)
+                ?: emptySequence())
+        }
+        val executionData = ExecutionDataStore()
+        runtimeData.forEach { executionData.put(ExecutionData(it.id, it.name, it.probes)) }
+        val coverageBuilder = CoverageBuilder()
+        val analyzer = Analyzer(executionData, coverageBuilder)
+        analyzer.analyzeClass(instrumentation.originalBytes, instrumentedClass.name)
+        val coverage = coverageBuilder.getBundle("all")
+        val counter = coverage.instructionCounter
+        assertEquals(27, counter.coveredCount)
+        assertEquals(2, counter.missedCount)
+    }
+
+    //todo remove test after investigations
+    @Test
+    fun `instrumented class coverage`() {
+        val nameClass = "MethodWithFewIf"
 //        val nameClass = "SmthSecond"
 //        val className = "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\agent-part\\OwnerController.class"
+//        val a = SmthSeven::class
         val absClassName =
             "C:\\Users\\Maksim_Likhanov\\IdeaProjects\\drill-repositories\\test2code-plugin\\admin-part\\build\\classes\\java\\test\\$nameClass.class"
 //        val name = "org.springframework.samples.petclinic.owner.OwnerController"
@@ -63,6 +96,7 @@ class InstrumentationTest {
         val executionData = ExecutionDataStore()
         runtimeData.forEach {
             executionData.put(ExecutionData(it.id, it.name, it.probes))
+            println("probes=${it.probes}")
         }
         val coverageBuilder = CoverageBuilder()
         val analyzer = Analyzer(executionData, coverageBuilder)
@@ -72,33 +106,6 @@ class InstrumentationTest {
         val forDebug = ((((coverage as BundleCoverageImpl).packages as java.util.ArrayList<*>)[0] as PackageCoverageImpl).classes as java.util.ArrayList<*>)[0]
         println(counter)
         println(forDebug)
-
-    }
-
-    @Test
-    fun `should provide coverage for run with the instrumented class`() {
-        val instrumentation = InstrumentationForTest(Smth::class)//todo here put?
-        val instrumentedClass = instrumentation.instrumentedClass
-        InstrumentationForTest.TestProbeArrayProvider.start(sessionId, false) { dataSeq ->
-            _runtimeData.update { it + dataSeq }
-        }
-        @Suppress("DEPRECATION") val runnable = instrumentedClass.newInstance() as Runnable
-        runnable.run()
-        val runtimeData = _runtimeData.updateAndGet {
-            it + (InstrumentationForTest.TestProbeArrayProvider.stop(sessionId)
-                ?: emptySequence())
-        }
-        val executionData = ExecutionDataStore()
-        runtimeData.forEach { executionData.put(ExecutionData(it.id, it.name, it.probes)) }
-        val coverageBuilder = CoverageBuilder()
-        val analyzer = Analyzer(executionData, coverageBuilder)
-        analyzer.analyzeClass(instrumentation.originalBytes, instrumentedClass.name)
-        val coverage = coverageBuilder.getBundle("all")
-        val counter = coverage.instructionCounter
-        println(counter)
-//        val instrumentedBytes = instrumentation.instrumentClass()
-//        val analyzeClass = JvmClassAnalyzer.analyzeClass(instrumentedBytes)
-//        println(analyzeClass)
     }
 
     @Test

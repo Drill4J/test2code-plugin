@@ -14,17 +14,27 @@
  * limitations under the License.
  */
 
-public class SmthSecond {
+public class MethodWithFewIf implements Runnable {
 
     private String owners;
 
     public void ifElseMethod(int a) {
-        System.out.println("111");
+        System.out.println("0000");
         if (20 * a > 999) {
-            System.out.println("111");
-        } else {
-            System.out.println("111");
+            System.out.println("1000");
         }
-        System.out.println("111");
+        if (30 * a > 999) {
+            System.out.println("222");
+        }
+        if (30 * a > 999) {
+            System.out.println("223");
+        }
+        System.out.println("4444");
     }
+
+    @Override
+    public void run() {
+        ifElseMethod(1);
+    }
+
 }
