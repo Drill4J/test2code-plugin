@@ -48,8 +48,10 @@ internal fun Sequence<ExecClassData>.bundle(
                 name = className.toShortClassName(),
                 count = probes.toCount(),
                 methods = classMethods.getValue(className).map {
-                    val methodProbes = probes.slice(it.probeRange)
-                    MethodCounter(it.name, it.desc, it.decl, methodProbes.toCount())
+                    val methodProbes = probes.toBooleanArray().toList().slice(it.probeRange)
+                    MethodCounter(it.name, it.desc, it.decl,
+                        "$className:${it.name}${it.desc}".weakIntern(),
+                        methodProbes.toCount())
                 }
             )
         }

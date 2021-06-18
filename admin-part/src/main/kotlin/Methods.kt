@@ -27,6 +27,8 @@ internal data class Method(
     val desc: String,
     val hash: String,
 ) : Comparable<Method>, JvmSerializable {
+    val signature = "$name$desc".intern()
+    val key = "$ownerClass:$signature".intern()
     override fun compareTo(
         other: Method,
     ): Int = ownerClass.compareTo(other.ownerClass).takeIf {

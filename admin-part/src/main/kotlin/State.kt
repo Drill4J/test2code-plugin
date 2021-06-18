@@ -210,8 +210,8 @@ internal class AgentState(
         sessionId: String
     ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
         if (it.any()) {
-            logger.debug { "FinishSession. size of probes = ${it.probes.size}" }.also { logPoolStats() }
-            storeClient.storeSession(activeScope.id, it)
+            logger.debug { "FinishSession. size of exec data = ${it.probes.size}" }.also { logPoolStats() }
+            trackTime("session storing") { storeClient.storeSession(activeScope.id, it) }
             logger.debug { "Session $sessionId finished." }.also { logPoolStats() }
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
     }
@@ -252,7 +252,7 @@ internal class AgentState(
     }!!.build
 
     suspend fun storeBuild() {
-        _coverContext.value?.build?.store(storeClient)
+        trackTime("storeBuild") { _coverContext.value?.build?.store(storeClient) }
     }
 
     suspend fun renameScope(id: String, newName: String): ScopeSummary? = when (id) {
@@ -316,17 +316,19 @@ internal class AgentState(
 
     private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentInfo.buildVersion)
 
-    suspend fun storeActiveScopeInfo() = scopeManager.storeCounter(
-        activeScope.run {
-            ActiveScopeInfo(
-                buildVersion = buildVersion,
-                id = id,
-                nth = nth,
-                name = name,
-                startedAt = summary.started
-            )
-        }
-    )
+    suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
+        scopeManager.storeCounter(
+            activeScope.run {
+                ActiveScopeInfo(
+                    buildVersion = buildVersion,
+                    id = id,
+                    nth = nth,
+                    name = name,
+                    startedAt = summary.started
+                )
+            }
+        )
+    }
 
     private fun scopeName(name: String) = when (val trimmed = name.trim()) {
         "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth + 1}"

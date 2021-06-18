@@ -65,7 +65,7 @@ class JsCoverageTest {
         val bundleCounters = finished.calcBundleCounters(context, emptyMap())
         val coverageData = bundleCounters.calculateCoverageData(context)
         coverageData.run {
-            assertEquals(Count(3, 5), coverage.count)
+            assertEquals(Count(3, 5).toDto(), coverage.count.toDto())
             assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
             assertEquals(1, packageCoverage[0].coveredClassesCount)
             assertEquals(1, packageCoverage[0].totalClassesCount)

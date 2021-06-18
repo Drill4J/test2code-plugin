@@ -104,6 +104,7 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
                                 name = m.name.weakIntern(),
                                 desc = m.desc.weakIntern(),
                                 decl = m.desc.weakIntern(),//declaration(m.desc), //TODO Regex has a big impact on performance
+                                key = m.desc.weakIntern(), //todo
                                 count = m.instructionCounter.toCount()
                             )
                         }
