@@ -47,10 +47,11 @@ internal fun Sequence<Session>.calcBundleCounters(
         }.values.asSequence()
     } else emptySequence()
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    val execClassData = flatten()
     BundleCounters(
-        all = flatten().bundle(context, classBytes),
+        all = execClassData.bundle(context, classBytes),
         testTypeOverlap = testTypeOverlap.bundle(context, classBytes),
-        overlap = flatten().overlappingBundle(context, classBytes),
+        overlap = execClassData.overlappingBundle(context, classBytes),
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context, classBytes)
         },

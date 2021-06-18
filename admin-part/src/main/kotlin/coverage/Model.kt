@@ -95,7 +95,11 @@ data class BundleCounter(
     val classCount: Count = zeroCount,
     val packageCount: Count = zeroCount,
     val packages: List<PackageCounter> = emptyList(),
-) : NamedCounter(), JvmSerializable
+) : NamedCounter(), JvmSerializable {
+    companion object {
+        val empty = BundleCounter("")
+    }
+}
 
 @Serializable
 data class PackageCounter(
@@ -121,6 +125,7 @@ data class MethodCounter(
     override val name: String,
     val desc: String,
     val decl: String,
+    val key: String, // todo
     override val count: Count,
 ) : NamedCounter(), JvmSerializable {
     val sign = "$name$desc".weakIntern()

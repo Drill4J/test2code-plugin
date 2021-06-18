@@ -19,11 +19,12 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
+
+private val logger = logger {}
 
 @Serializable
 sealed class Session : Sequence<ExecClassData>, JvmSerializable {
@@ -89,6 +90,7 @@ class ActiveSession(
     }.iterator()
 
     fun finish() = _probes.value.run {
+        logger.debug {"ActiveSession finish with size = ${_probes.value.size} "}
         FinishedSession(
             id = id,
             testType = testType,

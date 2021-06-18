@@ -49,7 +49,7 @@ internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
-        id = "${parent?.name}.$name$desc".crc64,
+        id = "${parent?.name}.$sign".crc64,
         packageName = (parent as? ClassCounter)?.path?.weakIntern() ?: "",
         className = (parent as? ClassCounter)?.name?.weakIntern() ?: "",
         methodName = name.weakIntern(),
@@ -87,6 +87,26 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
+internal fun Map<String, CoverMethod>.toCoverMap(
+    bundle: BundleCounter,
+    onlyCovered: Boolean
+): Map<String, CoverMethod> {
+    if (bundle == BundleCounter.empty)
+        return this
+    return bundle.packages.flatMap { it.classes }.flatMap { c ->
+        c.methods.mapNotNull { m ->
+            m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
+                m.key to get("${c.fullName}:${m.sign}")!!.copy(//todo use m.key com/epam/test/package00/package01/RandomClass138:method1380(ZZ)V
+                    count = it.count,
+
+                    coverageRate = it.count.coverageRate()
+                )
+            }
+
+        }
+    }.toMap()
+}
+//todo remove it
 internal suspend fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
@@ -104,7 +124,6 @@ internal suspend fun List<Method>.toCoverMap(
         }
     }.flatMap { it.await() }.toMap()
 }
-
 internal fun BundleCounter.coveredMethods(
     methods: Iterable<Method>,
 ): Map<Method, Count> = packages.asSequence().takeIf { p ->
@@ -130,9 +149,7 @@ internal fun Sequence<PackageCounter>.toCoveredMethods(
                 val covered: Map<String, MethodCounter> = c.methods.asSequence()
                     .filter(NamedCounter::hasCoverage)
                     .associateBy(MethodCounter::sign)
-                mapNotNull { m ->
-                    covered[m.signature()]?.let { m to it.count }
-                }.asSequence()
+                mapNotNull { m -> covered[m.signature]?.let { m to it.count } }.asSequence()
             }
         }.flatten()
     }
