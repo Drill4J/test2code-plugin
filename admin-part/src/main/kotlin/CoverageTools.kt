@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
+import java.util.stream.*
 
 //TODO Rewrite all of this, remove the file
 
@@ -29,7 +30,7 @@ internal data class BuildMethods(
     val modifiedBodyMethods: MethodsInfo = MethodsInfo(),
     val allModifiedMethods: MethodsInfo = MethodsInfo(),
     val unaffectedMethods: MethodsInfo = MethodsInfo(),
-    val deletedMethods: MethodsInfo = MethodsInfo()
+    val deletedMethods: MethodsInfo = MethodsInfo(),
 )
 
 internal data class CoverageInfoSet(
@@ -41,15 +42,15 @@ internal data class CoverageInfoSet(
     val coverageByTests: CoverageByTests,
 )
 
-fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests() = map { (key, tests) ->
-    AssociatedTests(
-        id = key.id,
-        packageName = key.packageName,
-        className = key.className,
-        methodName = key.className.methodName(key.methodName),
-        tests = tests.sortedBy { it.name }
-    )
-}.sortedBy { it.methodName }
+fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests> = entries.parallelStream().map { (key, tests) ->
+        AssociatedTests(
+            id = key.id,
+            packageName = key.packageName,
+            className = key.className,
+            methodName = key.className.methodName(key.methodName),
+            tests = tests.stream().sorted { o1, o2 -> o1.name.compareTo(o2.name) }.collect(Collectors.toList())
+        )
+    }.sorted { o1, o2 -> o1.methodName.compareTo(o2.methodName) }.collect(Collectors.toList())
 
 internal fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,
@@ -61,7 +62,7 @@ internal fun CoverContext.calculateBundleMethods(
 }
 
 private fun Iterable<Method>.toInfo(
-    covered: Map<String, CoverMethod>
+    covered: Map<String, CoverMethod>,
 ) = MethodsInfo(
     totalCount = count(),
     coveredCount = count { covered[it.key]?.count?.covered ?: 0 > 0 },

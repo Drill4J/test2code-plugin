@@ -568,11 +568,15 @@ class Plugin(
     ) = AsyncJobDispatcher.launch {
         trackTime("assocTestsJob") {
             logger.debug { "Calculating all associated tests..." }
-            val assocTestsMap = byTest.associatedTests(onlyPackages = false) // 80 секунд
-            val associatedTests = trackTime("assocTestsJob getAssociatedTests") {
-                assocTestsMap.getAssociatedTests() // 11 секунд
+            val assocTestsMap = trackTime("assocTestsJob getAssocTestsMap") {
+                byTest.associatedTests(onlyPackages = false)
             }
-            val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
+            val associatedTests = trackTime("assocTestsJob getAssociatedTests") {
+                assocTestsMap.getAssociatedTests()
+            }
+            val treeCoverage = trackTime("assocTestsJob getTreeCoverage") {
+                state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
+            }
             logger.debug { "Sending all associated tests" }
             scope?.let {
                 trackTime("assocTestsJob sendScopeTree") {
