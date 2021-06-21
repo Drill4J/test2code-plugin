@@ -47,11 +47,14 @@ internal fun Sequence<ExecClassData>.bundle(
                 path = pkgName.weakIntern(),
                 name = className.toShortClassName(),
                 count = probes.toCount(),
+                fullName = className,
                 methods = classMethods.getValue(className).map {
-                    val methodProbes = probes.toBooleanArray().toList().slice(it.probeRange)
+                    val methodProbes = probes.slice(it.probeRange)
+                    val sign = "${it.name}${it.desc}".weakIntern()
                     MethodCounter(it.name, it.desc, it.decl,
-                        "$className:${it.name}${it.desc}".weakIntern(),
-                        methodProbes.toCount())
+                        sign = sign,
+                        key = "$className:$sign".weakIntern(),
+                        count = methodProbes.toCount())
                 }
             )
         }

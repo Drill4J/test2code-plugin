@@ -96,9 +96,8 @@ internal fun Map<String, CoverMethod>.toCoverMap(
     return bundle.packages.flatMap { it.classes }.flatMap { c ->
         c.methods.mapNotNull { m ->
             m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
-                m.key to get("${c.fullName}:${m.sign}")!!.copy(//todo use m.key com/epam/test/package00/package01/RandomClass138:method1380(ZZ)V
+                m.key to get(m.key)!!.copy(
                     count = it.count,
-
                     coverageRate = it.count.coverageRate()
                 )
             }
