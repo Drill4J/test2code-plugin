@@ -577,7 +577,7 @@ class Plugin(
             val treeCoverage = trackTime("assocTestsJob getTreeCoverage") {
                 state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
             }
-            logger.debug { "Sending all associated tests" }
+            logger.debug { "Sending all associated tests..."}
             scope?.let {
                 trackTime("assocTestsJob sendScopeTree") {
                     sendScopeTree(it.id, associatedTests, treeCoverage)

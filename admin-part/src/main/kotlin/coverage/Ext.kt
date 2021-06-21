@@ -20,7 +20,6 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
-import kotlinx.coroutines.*
 import java.util.stream.*
 import kotlin.math.*
 
@@ -88,23 +87,23 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal fun Map<String, CoverMethod>.toCoverMap(
+//todo remove suspend
+internal suspend fun Map<String, CoverMethod>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean
 ): Map<String, CoverMethod> {
     if (bundle == BundleCounter.empty)
         return this
-    return bundle.packages.flatMap { it.classes }.flatMap { c ->
-        c.methods.mapNotNull { m ->
+    return trackTime("toCoverMap") {
+        bundle.packages.flatMap { it.classes }.flatMap { it.methods }.parallelStream().map { m ->
             m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
                 m.key to get(m.key)!!.copy(
                     count = it.count,
-                    coverageRate = it.count.coverageRate()
+                    coverageRate = it.count.coverageRate(),
                 )
-            }
-
-        }
-    }.toMap()
+            }//todo !!
+        }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
+    }
 }
 //todo remove it
 internal suspend fun List<Method>.toCoverMap(
