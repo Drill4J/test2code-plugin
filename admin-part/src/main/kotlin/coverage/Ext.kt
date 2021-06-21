@@ -21,6 +21,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.coroutines.*
+import java.util.stream.*
 import kotlin.math.*
 
 internal fun ExecClassData.id(): Long = id ?: className.crc64()
@@ -69,12 +70,12 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
 
 internal fun BundleCounter.coverageKeys(
     onlyPackages: Boolean = true,
-): Sequence<CoverageKey> = packages.asSequence().flatMap { p ->
-    sequenceOf(p.coverageKey()) + (p.classes.takeIf { !onlyPackages }?.asSequence()?.flatMap { c ->
-        sequenceOf(c.coverageKey()) + c.methods.asSequence().mapNotNull { m ->
+): Stream<CoverageKey> = packages.stream().flatMap { p ->
+    Stream.concat(Stream.of(p.coverageKey()), p.classes.takeIf { !onlyPackages }?.stream()?.flatMap { c ->
+        Stream.concat(Stream.of(c.coverageKey()), c.methods.stream().map { m ->
             m.takeIf { it.count.covered > 0 }?.coverageKey(c)
-        }
-    } ?: sequenceOf())
+        }.filter { it != null })
+    } ?: Stream.empty())
 }
 
 internal fun BundleCounter.toCoverDto(
