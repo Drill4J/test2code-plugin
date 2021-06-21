@@ -24,6 +24,8 @@ import com.epam.drill.plugins.test2code.util.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import java.io.*
+import java.util.stream.*
+import kotlin.streams.*
 
 private val logger = logger {}
 
@@ -211,11 +213,9 @@ internal fun Sequence<ExecClassData>.bundle(
 
 internal fun Map<TypedTest, BundleCounter>.associatedTests(
     onlyPackages: Boolean = true,
-): Map<CoverageKey, List<TypedTest>> = entries.asSequence()
-    .flatMap { (test, bundle) ->
-        bundle.coverageKeys(onlyPackages).map { it to test }
-    }.distinct()
-    .groupBy({ it.first }) { it.second }
+): Map<CoverageKey, List<TypedTest>> = entries.parallelStream().flatMap { (test, bundle) ->
+    bundle.coverageKeys(onlyPackages).map { it to test }.distinct()
+}.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
 internal suspend fun Plugin.exportCoverage(buildVersion: String) = runCatching {
     val coverage = File(System.getProperty("java.io.tmpdir"))

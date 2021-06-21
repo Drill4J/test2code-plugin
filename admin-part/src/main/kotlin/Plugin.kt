@@ -568,9 +568,9 @@ class Plugin(
     ) = AsyncJobDispatcher.launch {
         trackTime("assocTestsJob") {
             logger.debug { "Calculating all associated tests..." }
-            val assocTestsMap = byTest.associatedTests(onlyPackages = false)
+            val assocTestsMap = byTest.associatedTests(onlyPackages = false) // 80 секунд
             val associatedTests = trackTime("assocTestsJob getAssociatedTests") {
-                assocTestsMap.getAssociatedTests()
+                assocTestsMap.getAssociatedTests() // 11 секунд
             }
             val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
             logger.debug { "Sending all associated tests" }
