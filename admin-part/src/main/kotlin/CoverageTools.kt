@@ -52,7 +52,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests
         )
     }.sorted { o1, o2 -> o1.methodName.compareTo(o2.methodName) }.collect(Collectors.toList())
 
-internal fun CoverContext.calculateBundleMethods(
+internal suspend fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,
     onlyCovered: Boolean = false
 ): BuildMethods {
@@ -69,17 +69,18 @@ private fun Iterable<Method>.toInfo(
     methods = mapNotNull { covered[it.key] }
 )
 
-internal fun Pair<Map<String, CoverMethod>, DiffMethods>.calculateBundleMethods(
+internal suspend fun Pair<Map<String, CoverMethod>, DiffMethods>.calculateBundleMethods(
     bundleCoverage: BundleCounter,
     onlyCovered: Boolean = false
 ): BuildMethods = let { (methods, diffMethods) ->
     methods.toCoverMap(bundleCoverage, onlyCovered).let { covered: Map<String, CoverMethod> ->
         diffMethods.run {
+            val values = covered.values
             BuildMethods(
                 totalMethods = MethodsInfo(
-                    totalCount = covered.values.count(),
-                    coveredCount = covered.values.count { it.count.covered > 0 },
-                    methods = covered.values.toList()
+                    totalCount = values.count(),
+                    coveredCount = values.count { it.count.covered > 0 },
+                    methods = values.toList()
                 ),
                 newMethods = new.toInfo(covered),
                 allModifiedMethods = modified.toInfo(covered),
