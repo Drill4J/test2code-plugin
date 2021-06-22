@@ -30,9 +30,9 @@ internal typealias ClassBytes = Map<String, ByteArray>
 
 internal fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
-    classBytes: ClassBytes
+    classBytes: ClassBytes,
 ): BundleCounter = bundle(probeIds) { analyzer ->
-    contents.forEach { execData ->
+    contents.parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
             runCatching {
                 analyzer.analyzeClass(classesBytes, execData.name)
@@ -45,14 +45,14 @@ internal fun Sequence<ExecClassData>.bundle(
 
 internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,
-    probeIds: Map<String, Long>
+    probeIds: Map<String, Long>,
 ): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->
     forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
 }.toCounter(false)
 
 private fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
-    analyze: ExecutionDataStore.(Analyzer) -> Unit
+    analyze: ExecutionDataStore.(Analyzer) -> Unit,
 ): IBundleCoverage = CoverageBuilder().also { coverageBuilder ->
     val dataStore = execDataStore(probeIds)
     val analyzer = Analyzer(dataStore, coverageBuilder)
@@ -61,7 +61,7 @@ private fun Sequence<ExecClassData>.bundle(
 
 
 internal fun Sequence<ExecClassData>.execDataStore(
-    probeIds: Map<String, Long>
+    probeIds: Map<String, Long>,
 ): ExecutionDataStore = mapNotNull {
     it.toExecutionData(probeIds)
 }.fold(ExecutionDataStore()) { store, execData ->
