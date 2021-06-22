@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
+import kotlinx.coroutines.*
 import java.util.stream.*
 import kotlin.math.*
 
@@ -88,25 +89,24 @@ internal fun BundleCounter.toCoverDto(
 }
 
 //todo remove suspend
-internal suspend fun Map<String, CoverMethod>.toCoverMap(
+fun Map<String, CoverMethod>.toCoverMap(
     bundle: BundleCounter,
-    onlyCovered: Boolean
+    onlyCovered: Boolean,
 ): Map<String, CoverMethod> {
     if (bundle == BundleCounter.empty)
         return this
-    return trackTime("toCoverMap") {
-        bundle.packages.flatMap { it.classes }.flatMap { it.methods }.parallelStream().map { m ->
-            m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
-                m.key to get(m.key)!!.copy(
-                    count = it.count,
-                    coverageRate = it.count.coverageRate(),
-                )
-            }//todo !!
-        }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
-    }
+    return bundle.packages.parallelStream().flatMap { it.classes.stream() }.flatMap { it.methods.stream() }.map { m ->
+        m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
+            m.key to get(m.key)!!.copy(
+                count = it.count,
+                coverageRate = it.count.coverageRate(),
+            )
+        }//todo !!
+    }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
 }
+
 //todo remove it
-internal suspend fun List<Method>.toCoverMap(
+suspend fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
 ): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
@@ -117,12 +117,27 @@ internal suspend fun List<Method>.toCoverMap(
     chunked(subCollectionSize).map { subList ->
         AsyncJobDispatcher.async {
             subList.mapNotNull { method ->
-                val covered = method.toCovered(map[method.ownerClass to method.signature()])
+                val covered = method.toCovered(map[method.ownerClass to method.signature()])//(map[method.key])
                 covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
             }
         }
     }.flatMap { it.await() }.toMap()
+}//todo remove it
+
+fun List<Method>.toCoverMapStream(
+    bundle: BundleCounter,
+    onlyCovered: Boolean,
+): Map<Method, CoverMethod> = bundle.packages.let { packages ->
+    val map = packages.parallelStream().flatMap { it.classes.stream() }.flatMap { c ->
+        c.methods.stream().map { m -> m.key to m }
+    }.collect(Collectors.toMap({ it.first }, { it.second }))
+    parallelStream().map { method ->
+        val covered = method.toCovered(map[method.key])
+        covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
+    }.filter { it != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
 }
+
+
 internal fun BundleCounter.coveredMethods(
     methods: Iterable<Method>,
 ): Map<Method, Count> = packages.asSequence().takeIf { p ->
@@ -169,7 +184,7 @@ internal fun Method.toCovered(count: Count?) = CoverMethod(
     coverageRate = count?.coverageRate() ?: CoverageRate.MISSED
 )
 
-internal fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
+fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
 
 internal fun String.typedTest(type: String) = TypedTest(
     type = type.weakIntern(),

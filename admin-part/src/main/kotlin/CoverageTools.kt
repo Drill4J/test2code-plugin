@@ -42,7 +42,8 @@ internal data class CoverageInfoSet(
     val coverageByTests: CoverageByTests,
 )
 
-fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests> = entries.parallelStream().map { (key, tests) ->
+fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests> =
+    entries.parallelStream().map { (key, tests) ->
         AssociatedTests(
             id = key.id,
             packageName = key.packageName,
@@ -52,48 +53,32 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests
         )
     }.sorted { o1, o2 -> o1.methodName.compareTo(o2.methodName) }.collect(Collectors.toList())
 
-internal suspend fun CoverContext.calculateBundleMethods(
+internal fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,
-    onlyCovered: Boolean = false
-): BuildMethods {
-    val associate = methods.associate { it.key to it.toCovered() }
-    val pair = associate to methodChanges
-    return pair.calculateBundleMethods(bundleCoverage, onlyCovered)
+    onlyCovered: Boolean = false,
+): BuildMethods = methods.toCoverMapStream(bundleCoverage, onlyCovered).let { covered ->
+    methodChanges.run {
+        BuildMethods(
+            totalMethods = covered.keys.toInfo(covered),
+            newMethods = new.toInfo(covered),
+            allModifiedMethods = modified.toInfo(covered),
+            unaffectedMethods = unaffected.toInfo(covered),
+            deletedMethods = MethodsInfo(
+                totalCount = deleted.count(),
+                coveredCount = deletedWithCoverage.count(),
+                methods = deleted.map { it.toCovered(deletedWithCoverage[it]) }
+            )
+        )
+    }
 }
 
 private fun Iterable<Method>.toInfo(
-    covered: Map<String, CoverMethod>,
+    covered: Map<Method, CoverMethod>
 ) = MethodsInfo(
     totalCount = count(),
-    coveredCount = count { covered[it.key]?.count?.covered ?: 0 > 0 },
-    methods = mapNotNull { covered[it.key] }
+    coveredCount = count { covered[it]?.count?.covered ?: 0 > 0 },
+    methods = mapNotNull(covered::get)
 )
-
-internal suspend fun Pair<Map<String, CoverMethod>, DiffMethods>.calculateBundleMethods(
-    bundleCoverage: BundleCounter,
-    onlyCovered: Boolean = false
-): BuildMethods = let { (methods, diffMethods) ->
-    methods.toCoverMap(bundleCoverage, onlyCovered).let { covered: Map<String, CoverMethod> ->
-        diffMethods.run {
-            val values = covered.values
-            BuildMethods(
-                totalMethods = MethodsInfo(
-                    totalCount = values.count(),
-                    coveredCount = values.count { it.count.covered > 0 },
-                    methods = values.toList()
-                ),
-                newMethods = new.toInfo(covered),
-                allModifiedMethods = modified.toInfo(covered),
-                unaffectedMethods = unaffected.toInfo(covered),
-                deletedMethods = MethodsInfo(
-                    totalCount = deleted.count(),
-                    coveredCount = deletedWithCoverage.count(),
-                    methods = deleted.map { it.toCovered(deletedWithCoverage[it]) }
-                )
-            )
-        }
-    }
-}
 
 //todo what is it??
 //internal fun Map<TypedTest, BundleCounter>.methodsCoveredByTest(

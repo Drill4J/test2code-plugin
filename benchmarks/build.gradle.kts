@@ -65,7 +65,7 @@ kotlin {
     }
 }
 tasks.withType<JavaExec> {
-    maxHeapSize = "7g"
+    maxHeapSize = "9g"
 }
 
 

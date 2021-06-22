@@ -21,7 +21,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.serialization.*
 
-internal data class DiffMethods(
+data class DiffMethods(
     val new: List<Method> = emptyList(),
     val modified: List<Method> = emptyList(),
     val deleted: List<Method> = emptyList(),
