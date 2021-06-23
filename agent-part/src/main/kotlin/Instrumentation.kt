@@ -17,6 +17,8 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.logger.api.*
 import drill.jacoco.*
+import drill.jacoco.BooleanArrayProbeInserter.*
+import kotlinx.atomicfu.*
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
@@ -32,6 +34,8 @@ typealias DrillInstrumenter = (String, Long, ByteArray) -> ByteArray?
 fun instrumenter(probeArrayProvider: ProbeArrayProvider, logger: Logger): DrillInstrumenter {
     return CustomInstrumenter(probeArrayProvider, logger)
 }
+
+private val classCounter = atomic(0)
 
 private class CustomInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider,
@@ -55,11 +59,14 @@ private class CustomInstrumenter(
         if (tempFilter(className, superName)) return null
         reader.accept(DrillClassProbesAdapter(counter, false), 0)
 
+        val genId = classCounter.incrementAndGet()
+        val probeCount = counter.count
         val strategy = DrillProbeStrategy(
             probeArrayProvider,
             className,
             classId,
-            counter.count
+            genId,
+            probeCount
         )
         val writer = object : ClassWriter(reader, 0) {
             override fun getCommonSuperClass(type1: String, type2: String): String = throw IllegalStateException()
@@ -69,6 +76,21 @@ private class CustomInstrumenter(
             InstrSupport.needsFrames(version)
         )
         reader.accept(visitor, ClassReader.EXPAND_FRAMES)
+
+
+        (probeArrayProvider as? SimpleSessionProbeArrayProvider)?.run {
+            probeMetaContainer.addDescriptor(
+                genId,
+                ProbeDescriptor(
+                    id = classId,
+                    name = className,
+                    probeCount = probeCount
+                ),
+                global?.second,
+                runtimes.values
+            )
+        }
+
         return writer.toByteArray()
     }
 
@@ -107,6 +129,7 @@ private class DrillProbeStrategy(
     private val probeArrayProvider: ProbeArrayProvider,
     private val className: String,
     private val classId: Long,
+    private val number: Int,
     private val probeCount: Int
 ) : IProbeArrayStrategy {
     override fun storeInstance(mv: MethodVisitor?, clinit: Boolean, variable: Int): Int = mv!!.run {
@@ -115,14 +138,16 @@ private class DrillProbeStrategy(
         // Stack[0]: Lcom/epam/drill/jacoco/Stuff;
 
         visitLdcInsn(classId)
+        visitLdcInsn(number)
         visitLdcInsn(className)
         visitLdcInsn(probeCount)
         visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL, drillClassName, "invoke", "(JLjava/lang/String;I)[Z",
+            Opcodes.INVOKEVIRTUAL, drillClassName, "invoke", "(JILjava/lang/String;I)L$PROBE_IMPL;",
             false
         )
         visitVarInsn(Opcodes.ASTORE, variable)
-        5 //stack size
+
+        6 //stack size
     }
 
     override fun addMembers(cv: ClassVisitor?, probeCount: Int) {
@@ -151,7 +176,7 @@ class DrillClassInstrumenter(
             exceptions
         )
         val frameEliminator: MethodVisitor = DrillDuplicateFrameEliminator(mv)
-        val probeVariableInserter = ProbeInserter(
+        val probeVariableInserter = BooleanArrayProbeInserter(
             access,
             name,
             desc,

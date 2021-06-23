@@ -17,6 +17,10 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.processing.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
+import org.jacoco.core.analysis.*
+import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
 import kotlin.reflect.*
 
@@ -67,8 +71,50 @@ class InstrumentationForTest(kClass: KClass<*>) {
     fun instrumentClass(name: String = targetClass.name) = instrument(name, originalClassId, originalBytes)!!
 
     fun runClass(clazz: Class<*> = instrumentedClass) {
-        @Suppress("DEPRECATION") val runnable = clazz.newInstance() as Runnable
+        @Suppress("DEPRECATION")
+        val runnable = clazz.newInstance() as Runnable
         runnable.run()
+    }
+
+    private val _runtimeData = atomic(persistentListOf<ExecDatum>())
+
+    fun xx() {
+        @Suppress("DEPRECATION")
+        val runnable = instrumentedClass.newInstance() as Runnable
+        runnable.run()
+    }
+
+    private fun fillProbes() = TestProbeArrayProvider.run {
+        val testName = instrContextStub[DRIlL_TEST_NAME] ?: "unspecified"
+        val execRuntime = runtimes[sessionId]
+        if (execRuntime != null) {
+            val orPut = execRuntime.getOrPut(testName) {
+                arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
+            }
+            requestThreadLocal.set(orPut)
+        } else {
+            requestThreadLocal.remove()
+        }
+    }
+
+    fun collectCoverage(isInvokedRunnable: Boolean = true): ICounter? {
+        TestProbeArrayProvider.start(sessionId, false)
+        fillProbes()
+        if (isInvokedRunnable) {
+            @Suppress("DEPRECATION")
+            val runnable = instrumentedClass.newInstance() as Runnable
+            runnable.run()
+        }
+        val runtimeData = _runtimeData.updateAndGet {
+            it + (TestProbeArrayProvider.stop(sessionId) ?: emptySequence())
+        }
+        val executionData = ExecutionDataStore()
+        runtimeData.forEach { executionData.put(ExecutionData(it.id, it.name, it.probes.values)) }
+        val coverageBuilder = CoverageBuilder()
+        val analyzer = Analyzer(executionData, coverageBuilder)
+        analyzer.analyzeClass(originalBytes, instrumentedClass.name)
+        val coverage = coverageBuilder.getBundle("all")
+        return coverage.instructionCounter
     }
 }
 

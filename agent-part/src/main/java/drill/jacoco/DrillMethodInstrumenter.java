@@ -23,7 +23,7 @@ import org.objectweb.asm.*;
  */
 public class DrillMethodInstrumenter extends MethodProbesVisitor {
 
-    private final ProbeInserter probeInserter;
+    private final BooleanArrayProbeInserter probeInserter;
 
     /**
      * Create a new instrumenter instance for the given method.
@@ -32,7 +32,7 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
      * @param probeInserter call-back to insert probes where required
      */
     public DrillMethodInstrumenter(final MethodVisitor mv,
-                                   final ProbeInserter probeInserter) {
+                                   final BooleanArrayProbeInserter probeInserter) {
         super(mv);
         this.probeInserter = probeInserter;
     }
