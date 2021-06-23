@@ -21,7 +21,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.serialization.*
 
-internal data class DiffMethods(
+data class DiffMethods(
     val new: List<Method> = emptyList(),
     val modified: List<Method> = emptyList(),
     val deleted: List<Method> = emptyList(),
@@ -38,7 +38,7 @@ data class TestDurations(
     val byType: Map<String, Long> = emptyMap(),
 )
 
-internal data class CoverContext(
+data class CoverContext(
     val agentType: String,
     val packageTree: PackageTree,
     val methods: List<Method>,

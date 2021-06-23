@@ -34,7 +34,7 @@ import kotlinx.serialization.json.*
 import java.io.*
 import java.util.concurrent.*
 
-internal object AsyncJobDispatcher : CoroutineScope {
+object AsyncJobDispatcher : CoroutineScope {
     override val coroutineContext =
         Executors.newFixedThreadPool(availableProcessors).asCoroutineDispatcher() + SupervisorJob()
 }

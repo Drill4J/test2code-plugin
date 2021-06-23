@@ -64,6 +64,11 @@ kotlin {
         }
     }
 }
+tasks.withType<JavaExec> {
+    maxHeapSize = "9g"
+}
+
+
 tasks {
     test {
         useJUnitPlatform()
@@ -71,6 +76,7 @@ tasks {
     }
 }
 benchmark {
+
     configurations {
         named("main") {
             iterationTime = 5

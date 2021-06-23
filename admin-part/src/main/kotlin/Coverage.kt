@@ -160,7 +160,7 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
     )
 }
 
-private fun Sequence<Session>.bundlesByTests(
+fun Sequence<Session>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
     cache: AtomicCache<TypedTest, BundleCounter>?,
@@ -208,7 +208,7 @@ internal fun Sequence<ExecClassData>.bundle(
     else -> bundle(context.packageTree)
 }
 
-internal fun Map<TypedTest, BundleCounter>.associatedTests(
+fun Map<TypedTest, BundleCounter>.associatedTests(
     onlyPackages: Boolean = true,
 ): Map<CoverageKey, List<TypedTest>> = entries.asSequence()
     .flatMap { (test, bundle) ->

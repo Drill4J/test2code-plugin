@@ -21,7 +21,7 @@ import com.epam.drill.plugins.test2code.util.*
 import kotlinx.serialization.*
 
 @Serializable
-internal data class Method(
+data class Method(
     val ownerClass: String,
     val name: String,
     val desc: String,

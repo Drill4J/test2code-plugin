@@ -87,7 +87,7 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal suspend fun List<Method>.toCoverMap(
+suspend fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
 ): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->

@@ -24,7 +24,7 @@ import com.epam.kodux.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
-internal data class CachedBuild(
+data class CachedBuild(
     val version: String,
     val parentVersion: String = "",
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
