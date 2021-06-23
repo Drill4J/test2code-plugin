@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.logger.api.*
+import drill.jacoco.*
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
@@ -44,13 +45,15 @@ private class CustomInstrumenter(
         null
     }
 
-    fun instrument(className: String, classId: Long, classBody: ByteArray): ByteArray {
+    fun instrument(className: String, classId: Long, classBody: ByteArray): ByteArray? {
         val version = InstrSupport.getMajorVersion(classBody)
 
         //count probes before transformation
         val counter = ProbeCounter()
         val reader = InstrSupport.classReaderFor(classBody)
-        reader.accept(ClassProbesAdapter(counter, false), 0)
+        val superName = reader.superName
+        if (tempFilter(className, superName)) return null
+        reader.accept(DrillClassProbesAdapter(counter, false), 0)
 
         val strategy = DrillProbeStrategy(
             probeArrayProvider,
@@ -61,12 +64,26 @@ private class CustomInstrumenter(
         val writer = object : ClassWriter(reader, 0) {
             override fun getCommonSuperClass(type1: String, type2: String): String = throw IllegalStateException()
         }
-        val visitor = ClassProbesAdapter(
-            ClassInstrumenter(strategy, writer),
+        val visitor = DrillClassProbesAdapter(
+            DrillClassInstrumenter(strategy, className, writer),
             InstrSupport.needsFrames(version)
         )
         reader.accept(visitor, ClassReader.EXPAND_FRAMES)
         return writer.toByteArray()
+    }
+
+    private fun tempFilter(className: String, superName: String?): Boolean {
+        if (className.startsWith("zeyt/cache") ||
+            className.startsWith("zeyt/log") ||
+            className.startsWith("zeyt/sql") ||
+            className.startsWith("zeyt/web/menu") ||
+            superName == "zeyt/model/BaseObject" ||
+            superName == "zeyt/model/BaseCompanyObject"
+        ) {
+            logger.info { "skipped class transformation $className" }
+            return true
+        }
+        return false
     }
 }
 
@@ -85,7 +102,6 @@ private class ProbeCounter : ClassProbesVisitor() {
     }
 
 }
-
 
 private class DrillProbeStrategy(
     private val probeArrayProvider: ProbeArrayProvider,
@@ -109,5 +125,42 @@ private class DrillProbeStrategy(
         5 //stack size
     }
 
-    override fun addMembers(cv: ClassVisitor?, probeCount: Int) {}
+    override fun addMembers(cv: ClassVisitor?, probeCount: Int) {
+//        createDataField(cv)
+    }
+
+
+}
+
+class DrillClassInstrumenter(
+    private val probeArrayStrategy: IProbeArrayStrategy,
+    private val clazzName: String,
+    cv: ClassVisitor
+) : ClassInstrumenter(probeArrayStrategy, cv) {
+
+    override fun visitMethod(
+        access: Int,
+        name: String?,
+        desc: String?,
+        signature: String?,
+        exceptions: Array<out String>?
+    ): MethodProbesVisitor {
+        InstrSupport.assertNotInstrumented(name, clazzName)
+        val mv = cv.visitMethod(
+            access, name, desc, signature,
+            exceptions
+        )
+        val frameEliminator: MethodVisitor = DrillDuplicateFrameEliminator(mv)
+        val probeVariableInserter = ProbeInserter(
+            access,
+            name,
+            desc,
+            frameEliminator,
+            this.probeArrayStrategy
+        )
+        return DrillMethodInstrumenter(
+            probeVariableInserter,
+            probeVariableInserter
+        )
+    }
 }
