@@ -20,7 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
-import kotlinx.coroutines.*
+import java.util.stream.*
 import kotlin.math.*
 
 internal fun ExecClassData.id(): Long = id ?: className.crc64()
@@ -49,7 +49,7 @@ internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
-        id = "${parent?.name}.$name$desc".crc64,
+        id = "${parent?.name}.$sign".crc64,
         packageName = (parent as? ClassCounter)?.path?.weakIntern() ?: "",
         className = (parent as? ClassCounter)?.name?.weakIntern() ?: "",
         methodName = name.weakIntern(),
@@ -69,12 +69,12 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
 
 internal fun BundleCounter.coverageKeys(
     onlyPackages: Boolean = true,
-): Sequence<CoverageKey> = packages.asSequence().flatMap { p ->
-    sequenceOf(p.coverageKey()) + (p.classes.takeIf { !onlyPackages }?.asSequence()?.flatMap { c ->
-        sequenceOf(c.coverageKey()) + c.methods.asSequence().mapNotNull { m ->
+): Stream<CoverageKey> = packages.stream().flatMap { p ->
+    Stream.concat(Stream.of(p.coverageKey()), p.classes.takeIf { !onlyPackages }?.stream()?.flatMap { c ->
+        Stream.concat(Stream.of(c.coverageKey()), c.methods.stream().map { m ->
             m.takeIf { it.count.covered > 0 }?.coverageKey(c)
-        }
-    } ?: sequenceOf())
+        }.filter { it != null })
+    } ?: Stream.empty())
 }
 
 internal fun BundleCounter.toCoverDto(
@@ -87,22 +87,17 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal suspend fun List<Method>.toCoverMap(
+internal fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
-): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
-    val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
-        c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
-    }.toMap()
-    val subCollectionSize = (size / availableProcessors).takeIf { it > 0 } ?: 1
-    chunked(subCollectionSize).map { subList ->
-        AsyncJobDispatcher.async {
-            subList.mapNotNull { method ->
-                val covered = method.toCovered(map[method.ownerClass to method.signature()])
-                covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
-            }
-        }
-    }.flatMap { it.await() }.toMap()
+): Map<Method, CoverMethod> = bundle.packages.let { packages ->
+    val map = packages.parallelStream().flatMap { it.classes.stream() }.flatMap { c ->
+        c.methods.stream().map { m -> m.fullName to m }
+    }.collect(Collectors.toMap({ it.first }, { it.second }))
+    parallelStream().map { method ->
+        val covered = method.toCovered(map[method.key])
+        covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
+    }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
 }
 
 internal fun BundleCounter.coveredMethods(
@@ -130,9 +125,7 @@ internal fun Sequence<PackageCounter>.toCoveredMethods(
                 val covered: Map<String, MethodCounter> = c.methods.asSequence()
                     .filter(NamedCounter::hasCoverage)
                     .associateBy(MethodCounter::sign)
-                mapNotNull { m ->
-                    covered[m.signature()]?.let { m to it.count }
-                }.asSequence()
+                mapNotNull { m -> covered[m.signature]?.let { m to it.count } }.asSequence()
             }
         }.flatten()
     }
@@ -167,8 +160,6 @@ private fun Int.toArrowType(): ArrowType? = when (this) {
     in 1..Int.MAX_VALUE -> ArrowType.DECREASE
     else -> null
 }
-
-private fun Method.signature() = "$name$desc".weakIntern()
 
 //TODO remove
 internal fun Count.coverageRate() = when (covered) {

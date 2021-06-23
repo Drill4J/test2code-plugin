@@ -24,6 +24,8 @@ import com.epam.drill.plugins.test2code.util.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import java.io.*
+import java.util.stream.*
+import kotlin.streams.*
 
 private val logger = logger {}
 
@@ -47,14 +49,15 @@ internal fun Sequence<Session>.calcBundleCounters(
         }.values.asSequence()
     } else emptySequence()
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    val execClassData = flatten()
     BundleCounters(
-        all = flatten().bundle(context, classBytes),
+        all = execClassData.bundle(context, classBytes),
         testTypeOverlap = testTypeOverlap.bundle(context, classBytes),
-        overlap = flatten().overlappingBundle(context, classBytes),
+        overlap = execClassData.overlappingBundle(context, classBytes),
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context, classBytes)
         },
-        byTest = trackTime("bundlesByTests") { bundlesByTests(context, classBytes, cache) },
+        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -160,25 +163,31 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
     )
 }
 
-private fun Sequence<Session>.bundlesByTests(
+private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
     cache: AtomicCache<TypedTest, BundleCounter>?,
-): Map<TypedTest, BundleCounter> = takeIf { it.any() }?.run {
-    val testsWithEmptyBundle = testsWithBundle(cache)
-    groupBy(Session::testType).map { (testType, sessions) ->
-        sessions.asSequence().flatten()
-            .groupBy { TypedTest(it.testName, testType) }
-            .filterNot { cache?.map?.containsKey(it.key) ?: false }
-            .mapValuesTo(testsWithEmptyBundle) { it.value.asSequence().bundle(context, classBytes) }
-    }.reduce { m1, m2 ->
-        m1.apply { putAll(m2) }
-    }.let { mutableMap ->
-        val finalizedTests = flatMap { it.testStats.keys }
-        val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
-        mutableMap + (cache?.putAll(testsAddToCache) ?: emptyMap())
-    }
-} ?: emptyMap()
+): Map<TypedTest, BundleCounter> {
+    val flatten: Sequence<Session> = values.flatten().asSequence()
+    return takeIf { flatten.any() }?.run {
+        val testsWithEmptyBundle = flatten.testsWithBundle(cache)
+        map { (testType, sessions) ->
+            sessions.asSequence().flatten()
+                .groupBy { TypedTest(it.testName, testType) }
+                .filterNot { cache?.map?.containsKey(it.key) ?: false }
+                .mapValuesTo(testsWithEmptyBundle) { it.value.asSequence().bundle(context, classBytes) }
+        }.reduce { m1, m2 ->
+            m1.apply { putAll(m2) }
+        }.let { mutableMap ->
+            val cached = cache?.let {
+                val finalizedTests = flatten.flatMap { it.testStats.keys }
+                val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
+                it.putAll(testsAddToCache)
+            } ?: emptyMap()
+            mutableMap + cached
+        }
+    } ?: emptyMap()
+}
 
 private fun Sequence<Session>.testsWithBundle(
     cache: AtomicCache<TypedTest, BundleCounter>?,
@@ -210,11 +219,9 @@ internal fun Sequence<ExecClassData>.bundle(
 
 internal fun Map<TypedTest, BundleCounter>.associatedTests(
     onlyPackages: Boolean = true,
-): Map<CoverageKey, List<TypedTest>> = entries.asSequence()
-    .flatMap { (test, bundle) ->
-        bundle.coverageKeys(onlyPackages).map { it to test }
-    }.distinct()
-    .groupBy({ it.first }) { it.second }
+): Map<CoverageKey, List<TypedTest>> = entries.parallelStream().flatMap { (test, bundle) ->
+    bundle.coverageKeys(onlyPackages).map { it to test }.distinct()
+}.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
 internal suspend fun Plugin.exportCoverage(buildVersion: String) = runCatching {
     val coverage = File(System.getProperty("java.io.tmpdir"))

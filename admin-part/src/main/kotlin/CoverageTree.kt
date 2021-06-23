@@ -98,7 +98,7 @@ private fun Collection<ClassCounter>.classTree(
     parsedClasses[classCoverage.fullName]?.let { parsedMethods ->
         val classKey = classCoverage.coverageKey()
         val methods = classCoverage.toMethodCoverage { methodCov ->
-            parsedMethods.any { it.name == methodCov.name && it.desc == methodCov.desc }
+            parsedMethods.any { "${it.name}${it.desc}" == methodCov.sign }
         }
         JavaClassCoverage(
             id = classKey.id,
