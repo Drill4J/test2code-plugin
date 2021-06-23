@@ -566,12 +566,16 @@ class Plugin(
     ) = AsyncJobDispatcher.launch {
         trackTime("assocTestsJob") {
             logger.debug { "Calculating all associated tests..." }
-            val assocTestsMap = byTest.associatedTests(onlyPackages = false)
+            val assocTestsMap = trackTime("assocTestsJob getAssocTestsMap") {
+                byTest.associatedTests(onlyPackages = false)
+            }
             val associatedTests = trackTime("assocTestsJob getAssociatedTests") {
                 assocTestsMap.getAssociatedTests()
             }
-            val treeCoverage = state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
-            logger.debug { "Sending all associated tests" }
+            val treeCoverage = trackTime("assocTestsJob getTreeCoverage") {
+                state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
+            }
+            logger.debug { "Sending all associated tests..." }
             scope?.let {
                 trackTime("assocTestsJob sendScopeTree") {
                     sendScopeTree(it.id, associatedTests, treeCoverage)
@@ -585,28 +589,30 @@ class Plugin(
         context: CoverContext = state.coverContext(),
     ) = AsyncJobDispatcher.launch {
         trackTime("coveredByTestJob") {
-            map { (typedTest, bundle) ->
+            entries.parallelStream().forEach { (typedTest, bundle) ->
                 val coveredMethods = context.methods.toCoverMap(bundle, true)
                 val summary = coveredMethods.toSummary(typedTest, context)
                 val all = coveredMethods.values.toList()
                 val modified = coveredMethods.filterValues { it in context.methodChanges.modified }
                 val new = coveredMethods.filterValues { it in context.methodChanges.new }
                 val unaffected = coveredMethods.filterValues { it in context.methodChanges.unaffected }
-                scopeId?.let {
-                    Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeById(it)).let { test ->
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), summary)
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), unaffected)
-                    }
-                } ?: run {
-                    Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), summary)
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), all)
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), modified)
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), new)
-                        send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), unaffected)
+                AsyncJobDispatcher.launch {
+                    scopeId?.let {
+                        Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeById(it)).let { test ->
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), summary)
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), unaffected)
+                        }
+                    } ?: run {
+                        Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), summary)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), all)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), modified)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), new)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), unaffected)
+                        }
                     }
                 }
             }
