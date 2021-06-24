@@ -171,10 +171,15 @@ class Plugin(
                     arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
                 }
                 requestThreadLocal.set(execDatum)
-            } ?: requestThreadLocal.remove()
+            }
         }
     }
 
+    fun processServerResponse(){
+        (instrContext as DrillProbeArrayProvider).run {
+            requestThreadLocal.remove()
+        }
+    }
 
     override fun parseAction(
         rawAction: String
