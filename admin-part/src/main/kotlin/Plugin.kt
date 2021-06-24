@@ -73,9 +73,7 @@ class Plugin(
     override suspend fun initialize() {
         logger.debug { "agent(id=$id, version=$buildVersion) initializing from admin..." }
         changeState()
-        state.loadFromDb {
-            processInitialized()
-        }
+        state.loadFromDb()
     }
 
     override fun close() {
@@ -197,7 +195,7 @@ class Plugin(
             .let { "" } //TODO eliminate magic empty strings from API
     }
 
-    private suspend fun processData(
+    suspend fun processData(
         instanceId: String,
         message: CoverMessage,
     ) = when (message) {
