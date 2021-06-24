@@ -63,13 +63,12 @@ internal class AgentState(
         )
     )
 
-    suspend fun loadFromDb(block: suspend () -> Unit = {}) {
+    suspend fun loadFromDb() {
         logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
             logger.debug { "take from DB count methods ${classData.methods.size}" }
             _data.value = classData
             initialized(classData)
-            block()
         }
     }
 

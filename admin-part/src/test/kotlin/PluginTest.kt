@@ -66,15 +66,14 @@ class PluginTest {
         agentInfo.copy(buildVersion = buildVersion),
         "test2code"
     ).apply {
-        ClassData(buildVersion).store(storeClient)
         initialize()
+        processData("smth_$buildVersion", Initialized(""))
         return this
     }
 
     @Test
     fun `should start & finish session and collect coverage`() = runBlocking {
         val plugin: Plugin = initPlugin("0.1.0")
-        plugin.state.initialized()
         val finishedSession = finishedSession(plugin, "sessionId", 1, 3)
         plugin.state.close()
         assertEquals(3, finishedSession?.probes?.size)
@@ -86,7 +85,6 @@ class PluginTest {
     @Test
     fun `perf test! should start & finish session and collect coverage`() = runBlocking {
         val plugin: Plugin = initPlugin("0.1.0")
-        plugin.state.initialized()
         val finishedSession = finishedSession(plugin, "sessionId", 30)
         plugin.state.close()
         assertEquals(3000, finishedSession?.probes?.size)
@@ -105,7 +103,6 @@ class PluginTest {
     private suspend fun switchScopeWithProbes(countAddProbes: Int = 1) {
         val buildVersion = "0.1.0"
         val plugin: Plugin = initPlugin(buildVersion)
-        plugin.state.initialized()
         finishedSession(plugin, "sessionId", countAddProbes)
         finishedSession(plugin, "sessionId2", countAddProbes)
         val res = plugin.changeActiveScope(ActiveScopeChangePayload("new scope", true))
