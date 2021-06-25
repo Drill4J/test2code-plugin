@@ -20,8 +20,12 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import kotlinx.serialization.json.*
 import org.jacoco.core.internal.data.*
+import java.io.*
+import java.util.*
 
 @Suppress("unused")
 class Plugin(
@@ -30,7 +34,7 @@ class Plugin(
     sender: Sender,
     logging: LoggerFactory
 ) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter {
-    private val logger = logging.logger("Plugin $id")
+    internal val logger = logging.logger("Plugin $id")
 
     internal val json = Json { encodeDefaults = true }
 
@@ -119,7 +123,7 @@ class Plugin(
             }
             is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
-                val handler = probeSender(sessionId, isRealtime)
+                val handler = probeCollector(sessionId)
                 instrContext.start(sessionId, isGlobal, testName, handler)
                 sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
@@ -131,7 +135,7 @@ class Plugin(
                 logger.info { "End of recording for session $sessionId" }
                 val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
                 if (runtimeData.any()) {
-                    probeSender(sessionId)(runtimeData)
+                    probeCollector(sessionId)(runtimeData)
                 } else logger.info { "No data for session $sessionId" }
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
@@ -140,7 +144,7 @@ class Plugin(
                 logger.info { "End of recording for sessions $stopped" }
                 for ((sessionId, data) in stopped) {
                     if (data.any()) {
-                        probeSender(sessionId)(data)
+                        probeCollector(sessionId)(data)
                     }
                 }
                 val ids = stopped.map { it.first }
@@ -175,9 +179,18 @@ class Plugin(
         }
     }
 
-    fun processServerResponse(){
+    fun processServerResponse() {
         (instrContext as DrillProbeArrayProvider).run {
             requestThreadLocal.remove()
+        }
+    }
+
+    init {
+        ProbeWorker.launch {
+            for (her in queue) {
+                probeSender(her)
+                delay(5000)
+            }
         }
     }
 
@@ -186,19 +199,31 @@ class Plugin(
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 }
 
-fun Plugin.probeSender(
-    sessionId: String,
-    sendChanged: Boolean = false
-): RealtimeHandler = { execData ->
+val queue = Channel<String>()
+
+fun Plugin.probeSender(value: String) {
+    runCatching {
+        File(value).run {
+            send(readText())
+            delete()
+        }
+    }.onFailure {
+        logger.error { "Can't read data from file $value" }
+    }
+}
+
+fun Plugin.probeCollector(sessionId: String): RealtimeHandler = { execData ->
     execData
         .map(ExecDatum::toExecClassData)
         .chunked(0xffff)
-        .map { chunk -> CoverDataPart(sessionId, chunk) }
-        .sumBy { message ->
-            sendMessage(message)
-            message.data.count()
-        }.takeIf { sendChanged && it > 0 }?.let {
-            sendMessage(SessionChanged(sessionId, it))
+        .forEach { chunk ->
+            val coverDataPart = CoverDataPart(sessionId, chunk)
+            val element = "${CoverDataPart::class.simpleName}-${UUID.randomUUID()}.txt"
+            val tmp = System.getProperty("java.io.tmpdir")
+            val file = File(tmp).resolve(element).apply {
+                writeText(json.encodeToString(CoverMessage.serializer(), coverDataPart))
+            }
+            queue.send(file.absolutePath)
         }
 }
 

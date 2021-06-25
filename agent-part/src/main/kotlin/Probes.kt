@@ -28,7 +28,7 @@ import kotlin.coroutines.*
  */
 typealias ProbeArrayProvider = (Long, Int, String, Int) -> AgentProbes
 
-typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
+typealias RealtimeHandler = suspend (Sequence<ExecDatum>) -> Unit
 
 interface SessionProbeArrayProvider : ProbeArrayProvider {
 
