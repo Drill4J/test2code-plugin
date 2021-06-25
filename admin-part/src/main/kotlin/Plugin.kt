@@ -31,7 +31,9 @@ import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
+import kotlinx.serialization.protobuf.*
 import java.io.*
+import java.util.*
 import java.util.concurrent.*
 
 object AsyncJobDispatcher : CoroutineScope {
@@ -192,7 +194,12 @@ class Plugin(
         instanceId: String,
         content: String,
     ): Any = run {
-        val message = json.decodeFromString(CoverMessage.serializer(), content)
+        val message = if (content.startsWith("{"))
+            json.decodeFromString(CoverMessage.serializer(), content)
+        else {
+            val decode = Base64.getDecoder().decode(content)
+            ProtoBuf.decodeFromByteArray(CoverMessage.serializer(), decode)
+        }
         processData(instanceId, message)
             .let { "" } //TODO eliminate magic empty strings from API
     }
@@ -605,7 +612,11 @@ class Plugin(
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
-                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), unaffected)
+                            send(
+                                buildVersion,
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
+                                unaffected
+                            )
                         }
                     } ?: run {
                         Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->

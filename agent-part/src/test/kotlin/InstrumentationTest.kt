@@ -16,6 +16,10 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.sessionId
+import io.ktor.util.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
+import kotlinx.serialization.protobuf.*
 import org.junit.jupiter.api.*
 import test.*
 import java.io.*
@@ -24,8 +28,19 @@ import kotlin.test.Test
 
 class InstrumentationTest {
 
+
+    @Serializable
+    data class Asx(val booleanArray: BooleanArray)
+
     @Test
     fun `instrumented class should be larger the the original`() {
+
+
+        val xxssss = Json.encodeToString(Asx.serializer(), Asx(BooleanArray(100000)))
+        val encodeToByteArray = ProtoBuf.encodeToByteArray(Asx.serializer(), Asx(BooleanArray(100000)))
+        println()
+
+
         val instrumentation = InstrumentationForTest(TestTarget::class)
         val instrumentedBytes = instrumentation.instrumentClass()
         assertTrue { instrumentedBytes.count() > instrumentation.originalBytes.count() }

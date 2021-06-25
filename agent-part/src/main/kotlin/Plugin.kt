@@ -23,6 +23,7 @@ import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.serialization.json.*
+import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
 import java.io.*
 import java.util.*
@@ -186,11 +187,12 @@ class Plugin(
     }
 
     init {
+        println("[tmp] ${File(System.getProperty("java.io.tmpdir"))}")
         ProbeWorker.launch {
-            for (her in queue) {
-                probeSender(her)
-                delay(5000)
-            }
+//            for (her in queue) {
+//                probeSender(her)
+//                delay(5000)
+//            }
         }
     }
 
@@ -212,18 +214,17 @@ fun Plugin.probeSender(value: String) {
     }
 }
 
-fun Plugin.probeCollector(sessionId: String): RealtimeHandler = { execData ->
+fun Plugin.probeCollector(sessionId: String, sendChanged: Boolean = false): RealtimeHandler = { execData ->
     execData
         .map(ExecDatum::toExecClassData)
         .chunked(0xffff)
-        .forEach { chunk ->
-            val coverDataPart = CoverDataPart(sessionId, chunk)
-            val element = "${CoverDataPart::class.simpleName}-${UUID.randomUUID()}.txt"
-            val tmp = System.getProperty("java.io.tmpdir")
-            val file = File(tmp).resolve(element).apply {
-                writeText(json.encodeToString(CoverMessage.serializer(), coverDataPart))
-            }
-            queue.send(file.absolutePath)
+        .map { chunk -> CoverDataPart(sessionId, chunk) }
+        .sumBy { message ->
+            val encodeToByteArray = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
+            send(Base64.getEncoder().encodeToString(encodeToByteArray))
+            message.data.count()
+        }.takeIf { sendChanged && it > 0 }?.let {
+            sendMessage(SessionChanged(sessionId, it))
         }
 }
 
