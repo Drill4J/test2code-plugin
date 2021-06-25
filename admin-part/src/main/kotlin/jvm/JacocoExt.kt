@@ -67,8 +67,9 @@ internal fun Sequence<ExecClassData>.execDataStore(
 }.fold(ExecutionDataStore()) { store, execData ->
     store.apply {
         runCatching { put(execData) }.onFailure { e ->
-            logger.error(e) {
-                "Error adding ${execData}, probes=(${execData.probes?.size})${execData.probes?.contentToString()}"
+            val expected = store[execData.id]?.probes?.size
+            logger.error {
+                "Error adding ${execData}, probes=(${execData.probes?.size}), expected size $expected"
             }
         }
     }

@@ -99,6 +99,8 @@ private class CustomInstrumenter(
             className.startsWith("zeyt/log") ||
             className.startsWith("zeyt/sql") ||
             className.startsWith("zeyt/web/menu") ||
+            className.startsWith("zeyt/util/StringUtils") ||
+            className.startsWith("zeyt/model/ObjectHome") ||
             superName == "zeyt/model/BaseObject" ||
             superName == "zeyt/model/BaseCompanyObject"
         ) {
