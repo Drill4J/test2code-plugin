@@ -60,6 +60,10 @@ object StopAllSessions : Action()
 @Serializable
 data class SwitchActiveScope(val payload: ActiveScopeChangePayload) : Action()
 
+@SerialName("FORCE_SWITCH_ACTIVE_SCOPE")
+@Serializable
+data class ForceSwitchActiveScope(val payload: ActiveScopeChangePayload) : Action()
+
 @SerialName("RENAME_SCOPE")
 @Serializable
 data class RenameScope(val payload: RenameScopePayload) : Action()

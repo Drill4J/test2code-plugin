@@ -204,8 +204,9 @@ internal class AgentState(
     }
 
     internal suspend fun finishSession(
-        sessionId: String
-    ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
+        sessionId: String,
+        isForceFinished: Boolean = false,
+    ): FinishedSession? = activeScope.finishSession(sessionId, isForceFinished)?.also {
         if (it.any()) {
             logger.debug { "FinishSession. size of exec data = ${it.probes.size}" }.also { logPoolStats() }
             trackTime("session storing") { storeClient.storeSession(activeScope.id, it) }
@@ -214,7 +215,7 @@ internal class AgentState(
     }
 
     internal fun updateProbes(
-        buildScopes: Sequence<FinishedScope>
+        buildScopes: Sequence<FinishedScope>,
     ) {
         _coverContext.update {
             it?.copy(build = it.build.copy(probes = buildScopes.flatten().flatten().merge()))
@@ -222,7 +223,7 @@ internal class AgentState(
     }
 
     internal fun updateBundleCounters(
-        bundleCounters: BundleCounters
+        bundleCounters: BundleCounters,
     ): CachedBuild = updateBuild {
         copy(bundleCounters = bundleCounters)
     }
@@ -237,13 +238,13 @@ internal class AgentState(
 
     internal fun updateBuildStats(
         buildCoverage: BuildCoverage,
-        context: CoverContext
+        context: CoverContext,
     ): CachedBuild = updateBuild {
         copy(stats = buildCoverage.toCachedBuildStats(context))
     }
 
     private fun updateBuild(
-        updater: CachedBuild.() -> CachedBuild
+        updater: CachedBuild.() -> CachedBuild,
     ): CachedBuild = _coverContext.updateAndGet {
         it?.copy(build = it.build.updater())
     }!!.build
@@ -332,7 +333,7 @@ internal class AgentState(
 
     private fun PackageTree.toClassData(
         methods: List<Method>,
-        probeIds: Map<String, Long> = emptyMap()
+        probeIds: Map<String, Long> = emptyMap(),
     ) = ClassData(
         buildVersion = agentInfo.buildVersion,
         packageTree = this,

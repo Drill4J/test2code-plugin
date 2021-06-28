@@ -95,6 +95,10 @@ class Plugin(
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
+        is ForceSwitchActiveScope -> {
+
+            changeActiveScope(action.payload)
+        }
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
         is RemoveBuild -> {
@@ -235,7 +239,7 @@ class Plugin(
         }
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
-            message.ids.forEach { state.finishSession(it) }
+            message.ids.forEach { state.finishSession(it, message.isForceFinished) }
         }
         else -> logger.info { "$instanceId: Message is not supported! $message" }
     }

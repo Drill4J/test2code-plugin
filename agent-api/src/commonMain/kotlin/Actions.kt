@@ -25,6 +25,10 @@ sealed class AgentAction
 data class InitActiveScope(val payload: InitScopePayload) : AgentAction()
 
 @Serializable
+@SerialName("FORCE_INIT_ACTIVE_SCOPE")
+data class ForceInitActiveScope(val payload: InitScopePayload) : AgentAction()
+
+@Serializable
 @SerialName("START_AGENT_SESSION")
 data class StartAgentSession(val payload: StartSessionPayload) : AgentAction()
 

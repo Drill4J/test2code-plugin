@@ -183,12 +183,13 @@ class ActiveScope(
 
     suspend fun finishSession(
         sessionId: String,
+        isForceFinished: Boolean = false,
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
                 val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
                 _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
-                _change.value = Change.ALL
+                _change.value = if (!isForceFinished) Change.ALL else Change.ONLY_SESSIONS
             } else sessionsChanged()
         }
     }
