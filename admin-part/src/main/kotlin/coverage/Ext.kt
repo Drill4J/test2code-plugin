@@ -49,7 +49,7 @@ internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
-        id = "${parent?.name}.$name$desc".crc64,
+        id = "${(parent as? ClassCounter)?.path}.${parent?.name}.$name.$desc".crc64,
         packageName = (parent as? ClassCounter)?.path?.weakIntern() ?: "",
         className = (parent as? ClassCounter)?.name?.weakIntern() ?: "",
         methodName = name.weakIntern(),

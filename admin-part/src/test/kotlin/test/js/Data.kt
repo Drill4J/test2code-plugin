@@ -37,21 +37,21 @@ val ast = listOf(
                 params = listOf("one", "two"),
                 returnType = "number",
                 count = 2,
-                probes = listOf(1, 3)
+                probes = listOf(1, 2)
             ),
             AstMethod(
                 name = "bar",
                 params = listOf(),
                 returnType = "void",
                 count = 1,
-                probes = listOf(6)
+                probes = listOf(3)
             ),
             AstMethod(
                 name = "baz",
                 params = listOf(),
                 returnType = "void",
                 count = 2,
-                probes = listOf(7, 8)
+                probes = listOf(4, 5)
             )
 
         )
@@ -63,6 +63,13 @@ val probes = listOf(
         className = "foo/bar/baz.js",
         testName = "default",
         probes = probesOf(true, true, false, true, false)
+    )
+)
+val probes2 = listOf(
+    ExecClassData(
+        className = "foo/bar/baz.js",
+        testName = "default",
+        probes = probesOf(true, false, true, true, false)
     )
 )
 
