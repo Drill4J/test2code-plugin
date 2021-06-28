@@ -19,9 +19,13 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
@@ -39,6 +43,7 @@ class ActiveSession(
     override val testType: String,
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
+    activeSessionHandler: ActiveSessionHandler,
 ) : Session() {
 
     override val tests: Set<TypedTest>
@@ -56,9 +61,13 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
+    val classBytes = atomic<Map<String, ByteArray>?>(null)
+
+    private val _handler = atomic(activeSessionHandler)
+
     private val _testRun = atomic<TestRun?>(null)
 
-    fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
+    suspend fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
         if (true in probe.probes) {
@@ -77,7 +86,23 @@ class ActiveSession(
                 }?.let { map.put(typedTest, it) } ?: map
             }
         }
+    }.also {
+        channel.send(dataPart.asSequence().map { it.testName.weakIntern().typedTest(testType.weakIntern()) }.distinct())
     }
+
+    private val channel = Channel<Sequence<TypedTest>>()
+
+
+    private val activeSessionJob = AsyncJobDispatcher.launch {
+        for (tests in channel) {
+            _handler.value.let {
+                it(_probes.value.asSequence().filter { tests.contains(it.key) }
+                    .associate { it.key to it.value.values.asSequence() })
+            }
+        }
+    }
+
+    val bundleByTests = AtomicCache<TypedTest, BundleCounter>()
 
     fun setTestRun(testRun: TestRun) {
         _testRun.update { current ->
@@ -89,8 +114,12 @@ class ActiveSession(
         _probes.value.values.asSequence().flatMap { it.values.asSequence() }.iterator()
     }.iterator()
 
-    fun finish() = _probes.value.run {
-        logger.debug {"ActiveSession finish with size = ${_probes.value.size} "}
+    suspend fun finish() = _probes.value.run {
+        logger.debug { "ActiveSession finish with size = ${_probes.value.size} " }
+        channel.close()
+        activeSessionJob.join()
+        logger.debug { "BundleByTests in cache ${bundleByTests.map.keys.size}" }
+        classBytes.update { null }
         FinishedSession(
             id = id,
             testType = testType,
@@ -103,7 +132,8 @@ class ActiveSession(
                     result = it.result
                 )
             } ?: emptyMap(),
-            probes = values.flatMap { it.values }
+            probes = values.flatMap { it.values },
+            cached = bundleByTests.map
         )
     }
 }
@@ -115,6 +145,9 @@ data class FinishedSession(
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),
     val probes: List<ExecClassData>,
+    @Transient
+    @kotlin.jvm.Transient
+    val cached: Map<TypedTest, BundleCounter> = emptyMap(),
 ) : Session(), JvmSerializable {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
 

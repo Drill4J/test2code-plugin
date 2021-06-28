@@ -140,7 +140,7 @@ class PluginTest {
         return finishedSession
     }
 
-    private fun addProbes(
+    private suspend fun addProbes(
         plugin: Plugin,
         sessionId: String,
         countAddProbes: Int,

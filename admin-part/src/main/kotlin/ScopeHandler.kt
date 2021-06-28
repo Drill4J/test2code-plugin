@@ -19,10 +19,12 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
+import kotlinx.atomicfu.*
 
-internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChanged, sessions ->
+internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { sessionChanged, sessions ->
     if (sessionChanged) {
         sendActiveSessions()
     }
@@ -43,6 +45,19 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.init { sessionChang
         }
     }
 }
+
+fun Plugin.initSessionHandler(): ActiveSessionHandler = { map ->
+    val context = state.coverContext()
+    val bytes = classBytes.value ?: adminData.loadClassBytes().also { bytes -> classBytes.updateAndGet { bytes } }
+    val z = map.keys.associateWithTo(mutableMapOf()) {
+        BundleCounter.empty
+    }
+    val newBundle = map.mapValuesTo(z) {
+        it.value.bundle(context, bytes)
+    }
+    bundleByTests.putAll(newBundle)
+}
+
 
 internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload,

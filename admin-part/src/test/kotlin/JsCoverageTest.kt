@@ -88,7 +88,7 @@ class JsCoverageTest {
         }
     }
 
-    private fun ActiveScope.execSession(testType: String, block: ActiveScope.(String) -> Unit) {
+    private suspend fun ActiveScope.execSession(testType: String, block: suspend ActiveScope.(String) -> Unit) {
         val sessionId = genUuid()
         startSession(sessionId, testType)
         block(sessionId)

@@ -40,6 +40,8 @@ fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList
 
 typealias ActiveScopeHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) -> Unit
 
+typealias ActiveSessionHandler = suspend ActiveSession.(Map<TypedTest, Sequence<ExecClassData>>) -> Unit
+
 class ActiveScope(
     override val id: String = genUuid(),
     override val buildVersion: String,
@@ -77,6 +79,7 @@ class ActiveScope(
 
     private val _handler = atomic<ActiveScopeHandler?>(null)
 
+
     private val _change = atomic<Change?>(null)
 
     private val changeJob = AsyncJobDispatcher.launch {
@@ -97,9 +100,10 @@ class ActiveScope(
         }
     }
 
-    fun init(handler: ActiveScopeHandler): Boolean = _handler.getAndUpdate {
+    fun initScopeHandler(handler: ActiveScopeHandler): Boolean = _handler.getAndUpdate {
         it ?: handler.also { _change.value = Change.ALL }
     } == null
+
 
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
@@ -131,12 +135,15 @@ class ActiveScope(
         testType: String,
         isGlobal: Boolean = false,
         isRealtime: Boolean = false,
-    ) = ActiveSession(sessionId, testType, isGlobal, isRealtime).takeIf { newSession ->
+        activeSessionHandler: ActiveSessionHandler,
+    ) = ActiveSession(sessionId, testType, isGlobal, isRealtime, activeSessionHandler).takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
             existing ?: newSession.takeIf { activeSessionOrNull(it.id) == null }
         } === newSession
-    }?.also { sessionsChanged() }
+    }?.also {
+        sessionsChanged()
+    }
 
     fun activeSessionOrNull(id: String): ActiveSession? = activeSessions.run {
         this[""]?.takeIf { it.id == id } ?: this[id]
@@ -144,7 +151,7 @@ class ActiveScope(
 
     fun hasActiveGlobalSession(): Boolean = "" in activeSessions
 
-    fun addProbes(
+    suspend fun addProbes(
         sessionId: String,
         probeProvider: () -> Collection<ExecClassData>,
     ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
@@ -172,7 +179,7 @@ class ActiveScope(
         }
     }
 
-    fun finishSession(
+    suspend fun finishSession(
         sessionId: String,
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->

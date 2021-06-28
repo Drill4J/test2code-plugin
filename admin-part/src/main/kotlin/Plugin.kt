@@ -116,7 +116,8 @@ class Plugin(
                 newSessionId,
                 testType,
                 isGlobal,
-                runtimeConfig.realtime && isRealtime
+                runtimeConfig.realtime && isRealtime,
+                initSessionHandler()
             )?.run {
                 StartAgentSession(
                     payload = StartSessionPayload(
@@ -565,7 +566,7 @@ class Plugin(
                 storeClient = storeClient,
                 agentInfo = agentInfo,
                 adminData = adminData,
-                runtimeConfig = runtimeConfig
+                runtimeConfig = runtimeConfig,
             )
         }?.close()
     }
