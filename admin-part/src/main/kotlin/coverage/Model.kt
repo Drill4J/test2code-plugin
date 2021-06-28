@@ -112,6 +112,7 @@ data class ClassCounter(
     override val name: String,
     override val count: Count,
     val methods: List<MethodCounter>,
+    val probes: List<Boolean> = emptyList(),
 ) : NamedCounter(), JvmSerializable {
     val fullName = if (path.any()) "$path/$name".weakIntern() else name.weakIntern()
 }

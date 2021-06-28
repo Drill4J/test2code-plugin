@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.test.js.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
@@ -42,28 +43,16 @@ class JsCoverageTest {
 
     @Test
     fun `coverageData for active scope with custom js probes`() = runBlocking {
-        val adminData = object : AdminData {
-            override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
+        val coverageData = calculateCoverage() {
+            this.execSession("MANUAL") { sessionId ->
+                addProbes(sessionId) { probes }
+            }
+            this.execSession("AUTO") { sessionId ->
+                addProbes(sessionId) { IncorrectProbes.underCount }
+                addProbes(sessionId) { IncorrectProbes.overCount }
+                addProbes(sessionId) { IncorrectProbes.notExisting }
+            }
         }
-        val state = AgentState(
-            storeClient, jsAgentInfo, adminData, emptyRuntimeConfig
-        )
-        state.init()
-        (state.data as DataBuilder) += ast
-        state.initialized()
-        val active = state.activeScope
-        active.execSession("MANUAL") { sessionId ->
-            addProbes(sessionId) { probes }
-        }
-        active.execSession("AUTO") { sessionId ->
-            addProbes(sessionId) { IncorrectProbes.underCount }
-            addProbes(sessionId) { IncorrectProbes.overCount }
-            addProbes(sessionId) { IncorrectProbes.notExisting }
-        }
-        val finished = active.finish(enabled = true)
-        val context = state.coverContext()
-        val bundleCounters = finished.calcBundleCounters(context, emptyMap())
-        val coverageData = bundleCounters.calculateCoverageData(context)
         coverageData.run {
             assertEquals(Count(3, 5), coverage.count)
             assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
@@ -71,10 +60,27 @@ class JsCoverageTest {
             assertEquals(1, packageCoverage[0].totalClassesCount)
             assertEquals(2, packageCoverage[0].coveredMethodsCount)
             assertEquals(3, packageCoverage[0].totalMethodsCount)
+            val expectedProbes = probes[0].probes
             packageCoverage[0].classes.run {
                 assertEquals(listOf("foo/bar"), map { it.path })
                 assertEquals(listOf("baz.js"), map { it.name })
                 assertEquals(listOf(100.0, 0.0, 50.0), flatMap { it.methods }.map { it.coverage })
+                this[0].run {
+                    assertEquals(expectedProbes.toList(), probes)
+                    assertEquals(3, methods.size)
+                    methods[0].run {
+                        assertEquals(ProbeRange(0, 1), probeRange)
+                        assertEquals(2, probesCount)
+                    }
+                    methods[1].run {
+                        assertEquals(ProbeRange(2, 2), probeRange)
+                        assertEquals(1, probesCount)
+                    }
+                    methods[2].run {
+                        assertEquals(ProbeRange(3, 4), probeRange)
+                        assertEquals(2, probesCount)
+                    }
+                }
             }
             assertEquals(
                 setOf(TypedTest("default", "MANUAL"), TypedTest("default", "AUTO")),
@@ -86,6 +92,43 @@ class JsCoverageTest {
             }
 
         }
+    }
+
+    @Test
+    fun `should merge probes`() = runBlocking {
+        val coverageData = calculateCoverage() {
+            this.execSession("MANUAL") { sessionId ->
+                addProbes(sessionId) { probes }
+                addProbes(sessionId) { probes2 }
+            }
+        }
+        coverageData.run {
+            assertEquals(Count(4, 5), coverage.count)
+            packageCoverage[0].classes.run {
+                this[0].run {
+                    assertEquals(5, probes.size)
+                    assertEquals(listOf(true, true, true, true, false), probes)
+                }
+            }
+        }
+    }
+
+    private suspend fun calculateCoverage(addProbes: ActiveScope.() -> Unit): CoverageInfoSet {
+        val adminData = object : AdminData {
+            override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
+        }
+        val state = AgentState(
+            storeClient, jsAgentInfo, adminData, emptyRuntimeConfig
+        )
+        state.init()
+        (state.data as DataBuilder) += ast
+        state.initialized()
+        val active = state.activeScope
+        active.addProbes()
+        val finished = active.finish(enabled = true)
+        val context = state.coverContext()
+        val bundleCounters = finished.calcBundleCounters(context, emptyMap())
+        return bundleCounters.calculateCoverageData(context)
     }
 
     private fun ActiveScope.execSession(testType: String, block: ActiveScope.(String) -> Unit) {
