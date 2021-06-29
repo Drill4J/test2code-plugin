@@ -19,6 +19,7 @@ import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
@@ -220,8 +221,9 @@ fun Plugin.probeCollector(sessionId: String, sendChanged: Boolean = false): Real
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
-            val encodeToByteArray = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
-            send(Base64.getEncoder().encodeToString(encodeToByteArray))
+            val encoded = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
+            val compressed = Zstd.compress(encoded)
+            send(Base64.getEncoder().encodeToString(compressed))
             message.data.count()
         }.takeIf { sendChanged && it > 0 }?.let {
             sendMessage(SessionChanged(sessionId, it))

@@ -14,16 +14,12 @@ expect class Probes(size: Int) {
 object BitSetSerializer : KSerializer<Probes> {
 
     override fun serialize(encoder: Encoder, value: Probes) {
-        val booleanArray = value.toBooleanArray()
-        println("Serialize probes with size ${value.length()}. Result size: ${booleanArray.size}")
-        encoder.encodeSerializableValue(BooleanArraySerializer(), booleanArray)
+        encoder.encodeSerializableValue(BooleanArraySerializer(), value.toBooleanArray())
     }
 
     override fun deserialize(decoder: Decoder): Probes {
         val decodeSerializableValue = decoder.decodeSerializableValue(BooleanArraySerializer())
-        val bitSet = decodeSerializableValue.toBitSet()
-        println("Deserialize boolean array with size ${decodeSerializableValue.size}. Result size: ${bitSet.length()}")
-        return bitSet
+        return decodeSerializableValue.toBitSet()
     }
 
     override val descriptor: SerialDescriptor

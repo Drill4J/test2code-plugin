@@ -87,11 +87,6 @@ val Probes.size
     get() = maxOf(0, this.length() - 1) //bitcode magic
 
 fun Probes.merge(set: Probes): Probes {
-    val currentLength = length()
-    val receivingLength = set.length()
-    if (currentLength != receivingLength) {
-        logger.error { "Merging of incompatible probes: receiving probe size - $receivingLength, current probe size - $currentLength  " }
-    }
     return copy().apply {
         (0 until length()).forEach {
             set(it, get(it) or set.get(it))
@@ -104,11 +99,6 @@ inline fun Probes.any(predicate: (Boolean) -> Boolean): Boolean {
 }
 
 fun Probes.intersect(set: Probes): Probes {
-    val currentLength = length()
-    val receivingLength = set.length()
-    if (currentLength != receivingLength) {
-        logger.error { "Intersection of incompatible probes: receiving probe size - $receivingLength, current probe size - $currentLength " }
-    }
     return copy().apply { and(set) }
 }
 

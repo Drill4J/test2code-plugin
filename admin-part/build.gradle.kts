@@ -14,6 +14,7 @@ configurations.implementation {
 
 kotlin.sourceSets.all {
     languageSettings.useExperimentalAnnotation("kotlinx.coroutines.ExperimentalCoroutinesApi")
+    languageSettings.useExperimentalAnnotation("kotlinx.serialization.ExperimentalSerializationApi")
 }
 
 dependencies {
@@ -30,6 +31,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
+    compileOnly("com.github.luben:zstd-jni:1.4.8-1")
 
     //provided by admin
     //TODO create a platform for admin dependencies

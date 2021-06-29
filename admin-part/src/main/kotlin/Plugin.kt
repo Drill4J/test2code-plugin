@@ -28,6 +28,7 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
+import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
@@ -199,7 +200,8 @@ class Plugin(
             json.decodeFromString(CoverMessage.serializer(), content)
         else {
             val decode = Base64.getDecoder().decode(content)
-            ProtoBuf.decodeFromByteArray(CoverMessage.serializer(), decode)
+            val decompress = Zstd.decompress(decode, Zstd.decompressedSize(decode).toInt())
+            ProtoBuf.decodeFromByteArray(CoverMessage.serializer(), decompress)
         }
         processData(instanceId, message)
             .let { "" } //TODO eliminate magic empty strings from API
