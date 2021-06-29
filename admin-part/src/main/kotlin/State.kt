@@ -59,7 +59,6 @@ internal class AgentState(
     private val _activeScope = atomic(
         ActiveScope(
             buildVersion = agentInfo.buildVersion,
-            realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
         )
     )
 
@@ -295,7 +294,6 @@ internal class AgentState(
                     buildVersion = agentInfo.buildVersion,
                     name = name,
                     sessions = sessions,
-                    realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
                 ).apply {
                     updateSummary {
                         it.copy(started = startedAt)
@@ -310,7 +308,6 @@ internal class AgentState(
             nth = it.nth.inc(),
             name = scopeName(name),
             buildVersion = agentInfo.buildVersion,
-            realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
         )
     }.apply { close() }
 

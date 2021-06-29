@@ -31,7 +31,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { 
     sessions?.let {
         val context = state.coverContext()
         val bundleCounters = trackTime("bundleCounters") {
-            sessions.calcBundleCounters(context, adminData.loadClassBytes(), bundleByTestCache)
+            sessions.calcBundleCounters(context, adminData.loadClassBytes())
         }.also { logPoolStats() }
         val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)

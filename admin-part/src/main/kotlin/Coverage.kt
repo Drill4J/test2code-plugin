@@ -32,7 +32,6 @@ private val logger = logger {}
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
-    cache: AtomicCache<TypedTest, BundleCounter>? = null,
 ) = run {
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
@@ -57,7 +56,7 @@ internal fun Sequence<Session>.calcBundleCounters(
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context, classBytes)
         },
-        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
+        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes) },
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -166,11 +165,10 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
-    cache: AtomicCache<TypedTest, BundleCounter>?,
 ): Map<TypedTest, BundleCounter> {
     val flatten: Sequence<Session> = values.flatten().asSequence()
     return takeIf { flatten.any() }?.run {
-        val testsWithEmptyBundle = flatten.testsWithBundle(cache)
+        val testsWithEmptyBundle = flatten.testsWithBundle()
         forEach { (testType, sessions) ->
             sessions.forEach { session ->
                 if (session is FinishedSession && !session.cached.isNullOrEmpty()) {
@@ -178,7 +176,6 @@ private fun Map<String, List<Session>>.bundlesByTests(
                 } else {
                     session.asSequence()
                         .groupBy { TypedTest(it.testName, testType) }
-                        .filterNot { cache?.map?.containsKey(it.key) ?: false }
                         .mapValuesTo(testsWithEmptyBundle) {
                             it.value.asSequence().bundle(context, classBytes)
                         }
@@ -192,12 +189,10 @@ private fun Map<String, List<Session>>.bundlesByTests(
 
 
 private fun Sequence<Session>.testsWithBundle(
-    cache: AtomicCache<TypedTest, BundleCounter>?,
-    bundle: BundleCounter = BundleCounter(""),
 ): MutableMap<TypedTest, BundleCounter> = flatMap { session ->
-    session.tests.asSequence().filterNot { cache?.map?.containsKey(it) ?: false }
+    session.tests.asSequence()
 }.associateWithTo(mutableMapOf()) {
-    bundle
+    BundleCounter.empty
 }
 
 
