@@ -43,7 +43,7 @@ class ActiveSession(
     override val testType: String,
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
-    activeSessionHandler: ActiveSessionHandler,
+    activeSessionHandler: ActiveSessionHandler?,
 ) : Session() {
 
     override val tests: Set<TypedTest>
@@ -95,7 +95,7 @@ class ActiveSession(
 
     private val activeSessionJob = AsyncJobDispatcher.launch {
         for (tests in channel) {
-            _handler.value.let {
+            _handler.value?.let {
                 it(_probes.value.asSequence().filter { tests.contains(it.key) }
                     .associate { it.key to it.value.values.asSequence() })
             }

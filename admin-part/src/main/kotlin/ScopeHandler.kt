@@ -49,13 +49,13 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { 
 fun Plugin.initSessionHandler(): ActiveSessionHandler = { map ->
     val context = state.coverContext()
     val bytes = classBytes.value ?: adminData.loadClassBytes().also { bytes -> classBytes.updateAndGet { bytes } }
-    val z = map.keys.associateWithTo(mutableMapOf()) {
+    val preparedBundle = map.keys.associateWithTo(mutableMapOf()) {
         BundleCounter.empty
     }
-    val newBundle = map.mapValuesTo(z) {
+    val calculated = map.mapValuesTo(preparedBundle) {
         it.value.bundle(context, bytes)
     }
-    bundleByTests.putAll(newBundle)
+    bundleByTests.putAll(calculated)
 }
 
 
