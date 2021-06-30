@@ -34,7 +34,7 @@ internal fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     classBytes: ClassBytes,
 ): BundleCounter = bundle(probeIds) { analyzer ->
-    contents.forEach { execData ->
+    contents.parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
             runCatching {
                 analyzer.analyzeClass(classesBytes, execData.name)

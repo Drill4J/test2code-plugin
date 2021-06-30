@@ -568,7 +568,6 @@ class Plugin(
                 storeClient = storeClient,
                 agentInfo = agentInfo,
                 adminData = adminData,
-                runtimeConfig = runtimeConfig,
             )
         }?.close()
     }

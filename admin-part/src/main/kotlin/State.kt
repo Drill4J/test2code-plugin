@@ -40,7 +40,6 @@ internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
     val adminData: AdminData,
-    val runtimeConfig: RuntimeConfig,
 ) {
     private val logger = logger(agentInfo.id)
 
