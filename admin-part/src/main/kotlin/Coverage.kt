@@ -25,7 +25,6 @@ import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import java.io.*
 import java.util.stream.*
-import kotlin.streams.*
 
 private val logger = logger {}
 
@@ -165,14 +164,13 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
-): Map<TypedTest, BundleCounter> {
-    val flatten: Sequence<Session> = values.flatten().asSequence()
-    return takeIf { flatten.any() }?.run {
-        val testsWithEmptyBundle = flatten.testsWithBundle()
+): Map<TypedTest, BundleCounter> = values.flatten().asSequence().let { sessions ->
+    takeIf { sessions.any() }?.run {
+        val testsWithEmptyBundle = sessions.testsWithBundle()
         forEach { (testType, sessions) ->
             sessions.forEach { session ->
-                if (session is FinishedSession && !session.cached.isNullOrEmpty()) {
-                    testsWithEmptyBundle.putAll(session.cached)
+                if (session is FinishedSession && !session.sessionData.bundleByTest.isNullOrEmpty()) {
+                    testsWithEmptyBundle.putAll(session.sessionData.bundleByTest)
                 } else {
                     session.asSequence()
                         .groupBy { TypedTest(it.testName, testType) }

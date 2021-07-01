@@ -32,7 +32,6 @@ class JsCoverageTest {
 
     private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
 
-    private val emptyRuntimeConfig = RuntimeConfig("")
 
     @AfterTest
     fun cleanStore() {
@@ -46,7 +45,7 @@ class JsCoverageTest {
             override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
         }
         val state = AgentState(
-            storeClient, jsAgentInfo, adminData, emptyRuntimeConfig
+            storeClient, jsAgentInfo, adminData
         )
         state.init()
         (state.data as DataBuilder) += ast

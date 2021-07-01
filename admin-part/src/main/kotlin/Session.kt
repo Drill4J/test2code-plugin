@@ -19,7 +19,6 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.logger
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
@@ -133,7 +132,7 @@ class ActiveSession(
                 )
             } ?: emptyMap(),
             probes = values.flatMap { it.values },
-            cached = bundleByTests.map
+            sessionData = SessionData(bundleByTests.map)
         )
     }
 }
@@ -147,7 +146,7 @@ data class FinishedSession(
     val probes: List<ExecClassData>,
     @Transient
     @kotlin.jvm.Transient
-    val cached: Map<TypedTest, BundleCounter> = emptyMap(),
+    val sessionData: SessionData = SessionData(),
 ) : Session(), JvmSerializable {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
 
@@ -155,6 +154,12 @@ data class FinishedSession(
 
     override fun hashCode(): Int = id.hashCode()
 }
+
+@Serializable
+data class SessionData(
+    val bundleByTest: Map<TypedTest, BundleCounter> = emptyMap(),
+)
+
 
 private operator fun TestRun.plus(other: TestRun) = copy(
     startedAt = startedAt.takeIf { it < other.startedAt } ?: other.startedAt,

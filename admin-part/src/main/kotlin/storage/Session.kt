@@ -16,7 +16,9 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.JvmSerializable
+import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
@@ -29,24 +31,49 @@ internal class StoredSession(
     val data: FinishedSession,
 ) : JvmSerializable
 
+@Serializable
+data class StoredSessionData(
+    @Id val id: String,
+    val bundleByTest: Map<TypedTest, BundleCounter> = emptyMap(),
+)
+
 internal suspend fun StoreClient.loadSessions(
     scopeId: String,
+    withData: Boolean = false,
 ): List<FinishedSession> = trackTime("Load session") {
     findBy<StoredSession> {
         StoredSession::scopeId eq scopeId
-    }.map { it.data }
+    }.map { storedSession ->
+        storedSession.data.let { session ->
+            session.takeIf { withData }?.copy(
+                sessionData = findById<StoredSessionData>(storedSession.id)?.let {
+                    SessionData(it.bundleByTest)
+                } ?: session.sessionData
+            ) ?: session
+        }
+    }
 }
 
 internal suspend fun StoreClient.storeSession(
     scopeId: String,
     session: FinishedSession,
 ) {
+    val sessionUUID = genUuid()
     trackTime("Store session") {
         store(
             StoredSession(
-                id = genUuid(),
+                id = sessionUUID,
                 scopeId = scopeId,
                 data = session
+            )
+        )
+    }
+    trackTime("Store session data") {
+        val sessionData = session.sessionData
+        store(
+            StoredSessionData(
+                id = sessionUUID,
+                bundleByTest = sessionData.bundleByTest
             )
         )
     }
