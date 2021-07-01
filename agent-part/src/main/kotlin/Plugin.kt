@@ -19,9 +19,12 @@ import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.json.*
+import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
+import java.util.*
 
 @Suppress("unused")
 class Plugin(
@@ -161,6 +164,26 @@ class Plugin(
         }
     }
 
+
+    fun processServerRequest() {
+        (instrContext as DrillProbeArrayProvider).run {
+            val sessionId = context()
+            val testName = context[DRIlL_TEST_NAME] ?: "unspecified"
+            runtimes[sessionId]?.run {
+                val execDatum = getOrPut(testName) {
+                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
+                }
+                requestThreadLocal.set(execDatum)
+            }
+        }
+    }
+
+    fun processServerResponse(){
+        (instrContext as DrillProbeArrayProvider).run {
+            requestThreadLocal.remove()
+        }
+    }
+
     override fun parseAction(
         rawAction: String
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
@@ -170,11 +193,14 @@ fun Plugin.probeSender(
     sessionId: String,
     sendChanged: Boolean = false
 ): RealtimeHandler = { execData ->
-    execData.map(ExecDatum::toExecClassData)
+    execData
+        .map(ExecDatum::toExecClassData)
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
-            sendMessage(message)
+            val encoded = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
+            val compressed = Zstd.compress(encoded)
+            send(Base64.getEncoder().encodeToString(compressed))
             message.data.count()
         }.takeIf { sendChanged && it > 0 }?.let {
             sendMessage(SessionChanged(sessionId, it))

@@ -18,15 +18,15 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
+import java.util.concurrent.*
 import kotlin.coroutines.*
 
 /**
  * Provides boolean array for the probe.
  * Implementations must be kotlin singleton objects.
  */
-typealias ProbeArrayProvider = (Long, String, Int) -> BooleanArray
+typealias ProbeArrayProvider = (Long, Int, String, Int) -> AgentProbes
 
 typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
 
@@ -50,22 +50,47 @@ const val DRIlL_TEST_NAME = "drill-test-name"
 class ExecDatum(
     val id: Long,
     val name: String,
-    val probes: BooleanArray,
+    val probes: AgentProbes,
     val testName: String = ""
+)
+
+class ProbeDescriptor(
+    val id: Long,
+    val name: String,
+    val probeCount: Int
 )
 
 fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
     className = name,
-    probes = probes.toBitSet(),
+    probes = probes.values.toBitSet(),
     testName = testName
 )
 
-typealias ExecData = PersistentMap<Long, ExecDatum>
+typealias ExecData = Array<ExecDatum?>
+
+const val MAX_CLASS_COUNT = 50_000
 
 internal object ProbeWorker : CoroutineScope {
     override val coroutineContext: CoroutineContext = run {
-        java.util.concurrent.Executors.newFixedThreadPool(4).asCoroutineDispatcher() + SupervisorJob()
+        Executors.newFixedThreadPool(2).asCoroutineDispatcher() + SupervisorJob()
+    }
+}
+
+abstract class Runtime(
+    realtimeHandler: RealtimeHandler
+) {
+    private val job = ProbeWorker.launch {
+        while (true) {
+            delay(2000L)
+            realtimeHandler(collect())
+        }
+    }
+
+    abstract fun collect(): Sequence<ExecDatum>
+
+    fun close() {
+        job.cancel()
     }
 }
 
@@ -75,46 +100,79 @@ internal object ProbeWorker : CoroutineScope {
  */
 class ExecRuntime(
     realtimeHandler: RealtimeHandler
-) : (Long, String, Int, String) -> BooleanArray {
+) : Runtime(realtimeHandler) {
+    private val _execData = ConcurrentHashMap<String, ExecData>()
 
-    private val _execData = atomic(persistentHashMapOf<String, ExecData>())
+    override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
+        data.filterNotNull().filter { datum -> datum.probes.values.any { it } }
+    }.asSequence().also { _execData.clear() }
 
-    private val job = ProbeWorker.launch {
-        while (true) {
-            delay(2000L)
-            realtimeHandler(collect())
-        }
-    }
+    fun getOrPut(
+        testName: String,
+        updater: () -> ExecData
+    ): Array<ExecDatum?> = _execData.getOrPut(testName) { updater() }
 
-    override fun invoke(
-        id: Long,
-        name: String,
-        probeCount: Int,
-        testName: String
-    ): BooleanArray = _execData.updateAndGet { tests ->
-        (tests[testName] ?: persistentHashMapOf()).let { execData ->
-            if (id !in execData) {
-                val mutatedData = execData.put(
-                    id, ExecDatum(
-                        id = id,
-                        name = name,
-                        probes = BooleanArray(probeCount),
-                        testName = testName
-                    )
-                )
-                tests.put(testName, mutatedData)
-            } else tests
-        }
-    }.getValue(testName).getValue(id).probes
-
-    fun collect(): Sequence<ExecDatum> = _execData.getAndUpdate { it.clear() }.values.asSequence().run {
-        flatMap { it.values.asSequence() }
-    }
-
-    fun close() {
-        job.cancel()
+    fun putIndex(
+        indx: Int,
+        updater: (String) -> ExecDatum
+    ) = _execData.forEach { (testName, v) ->
+        v[indx] = updater(testName)
     }
 }
+
+class GlobalExecRuntime(
+    val testName: String?,
+    realtimeHandler: RealtimeHandler
+) : Runtime(realtimeHandler) {
+    val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
+
+    override fun collect(): Sequence<ExecDatum> = execDatum.copyOf().asSequence().filterNotNull().filter { datum ->
+        datum.probes.values.any { it }
+    }
+
+    fun checkGlobalProbes(num: Int) = execDatum[num]?.probes
+}
+
+
+class ProbeMetaContainer {
+    private val probesDescriptor = arrayOfNulls<ProbeDescriptor?>(MAX_CLASS_COUNT)
+
+
+    fun addDescriptor(
+        inx: Int,
+        probeDescriptor: ProbeDescriptor,
+        globalRuntime: GlobalExecRuntime?,
+        runtimes: Collection<ExecRuntime>
+    ) {
+        probesDescriptor[inx] = probeDescriptor
+
+        globalRuntime?.run {
+            execDatum[inx] = probeDescriptor.toExecDatum(testName)
+        }
+
+        runtimes.forEach {
+            it.putIndex(inx) { testName ->
+                probeDescriptor.toExecDatum(testName)
+            }
+        }
+    }
+
+    fun forEachIndexed(
+        action: (Int, ProbeDescriptor?) -> Unit
+    ) {
+        probesDescriptor.forEachIndexed { index, probeDescriptor ->
+            action(index, probeDescriptor)
+        }
+    }
+
+    private fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
+        id = id,
+        name = name,
+        probes = AgentProbes(probeCount),
+        testName = testName ?: "undefined"
+    )
+}
+
 
 /**
  * Simple probe array provider that employs a lock-free map for runtime data storage.
@@ -125,45 +183,38 @@ open class SimpleSessionProbeArrayProvider(
     defaultContext: AgentContext? = null
 ) : SessionProbeArrayProvider {
 
+    var requestThreadLocal = ThreadLocal<Array<ExecDatum?>>() //todo TTL
+
+    val probeMetaContainer = ProbeMetaContainer()
+
+    val runtimes = mutableMapOf<String, ExecRuntime>()
+
+    var global: Pair<String, GlobalExecRuntime>? = null
+
     var defaultContext: AgentContext?
         get() = _defaultContext.value
         set(value) {
             _defaultContext.value = value
         }
 
-    private val runtimes get() = _runtimes.value
-
     private val _defaultContext = atomic(defaultContext)
 
-    private val _context = atomic<AgentContext?>(null)
+    private var _context: AgentContext? = null
 
-    private val _globalContext = atomic<AgentContext?>(null)
+    private var _globalContext: AgentContext? = null
 
-    private val _runtimes = atomic(persistentHashMapOf<String, ExecRuntime>())
-
-    private val _stubArray = atomic(BooleanArray(1024))
+    private val stubProbes = StubAgentProbes()
 
     override fun invoke(
         id: Long,
+        num: Int,
         name: String,
         probeCount: Int
-    ): BooleanArray = _context.value?.let {
-        it(id, name, probeCount)
-    } ?: _globalContext.value?.let {
-        it(id, name, probeCount)
-    } ?: stubArray(probeCount)
+    ): AgentProbes = global?.second?.checkGlobalProbes(num)
+        ?: checkLocalProbes(num)
+        ?: stubProbes
 
-    private operator fun AgentContext.invoke(
-        id: Long,
-        name: String,
-        probeCount: Int
-    ): BooleanArray? = run {
-        val sessionId = this()
-        runtimes[sessionId]?.let { sessionRuntime ->
-            val testName = this[DRIlL_TEST_NAME] ?: "unspecified"
-            sessionRuntime(id, name, probeCount, testName)
-        }
-    }
+    private fun checkLocalProbes(num: Int) = requestThreadLocal.get()?.get(num)?.probes
 
     override fun start(
         sessionId: String,
@@ -172,73 +223,89 @@ open class SimpleSessionProbeArrayProvider(
         realtimeHandler: RealtimeHandler
     ) {
         if (isGlobal) {
-            _globalContext.value = GlobalContext(sessionId, testName)
-            add(sessionId, realtimeHandler)
+            _globalContext = GlobalContext(sessionId, testName)
+            addGlobal(sessionId, testName, realtimeHandler)
         } else {
-            _context.update { it ?: defaultContext }
+            _context = _context ?: defaultContext
             add(sessionId, realtimeHandler)
         }
     }
 
-    override fun stop(sessionId: String): Sequence<ExecDatum>? = remove(sessionId)?.collect()
+    override fun stop(sessionId: String): Sequence<ExecDatum>? {
+        return if (sessionId !in runtimes) {
+            removeGlobal()?.collect()
+        } else {
+            remove(sessionId)?.collect()
+        }
+    }
 
-    override fun stopAll(): List<Pair<String, Sequence<ExecDatum>>> = _runtimes.getAndUpdate {
-        _context.value = null
-        _globalContext.value = null
-        it.clear()
+    override fun stopAll(): List<Pair<String, Sequence<ExecDatum>>> = (global?.let {
+        runtimes + it
+    } ?: runtimes.toMap()).apply {
+        _context = null
+        _globalContext = null
+        runtimes.clear()
+        global = null
     }.map { (id, runtime) ->
         runtime.close()
         id to runtime.collect()
     }
 
     override fun cancel(sessionId: String) {
-        remove(sessionId)
+        if (sessionId !in runtimes) {
+            removeGlobal()
+        } else {
+            remove(sessionId)
+        }
     }
 
-    override fun cancelAll(): List<String> = _runtimes.getAndUpdate {
-        _context.value = null
-        _globalContext.value = null
-        it.clear()
+    override fun cancelAll(): List<String> = (global?.let { runtimes + it } ?: runtimes.toMap()).apply {
+        _context = null
+        _globalContext = null
+        runtimes.clear()
+        global = null
     }.map { (id, runtime) ->
         runtime.close()
         id
     }
 
-    private fun stubArray(probeCount: Int) = _stubArray.updateAndGet {
-        if (probeCount > it.size) {
-            var size = it.size shl 1
-            while (size <= probeCount) {
-                size = size shl 1
-            }
-            BooleanArray(size)
-        } else it
-    }
-
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
-        _runtimes.update {
-            if (sessionId !in it) {
-                it.put(sessionId, ExecRuntime(realtimeHandler))
-            } else it
-        }
+        if (sessionId !in runtimes) {
+            val value = ExecRuntime(realtimeHandler)
+            runtimes[sessionId] = value
+        } else runtimes
     }
 
-    private fun remove(sessionId: String): ExecRuntime? = (_runtimes.getAndUpdate { runtimes ->
-        (runtimes - sessionId).also { map ->
-            if (map.none()) {
-                _context.value = null
-                _globalContext.value = null
-            } else {
-                val globalSessionId = _globalContext.value?.invoke()
-                if (map.size == 1 && globalSessionId in map) {
-                    _context.value = null
-                }
-                if (globalSessionId == sessionId) {
-                    _globalContext.value = null
-                }
-            }
+    private fun addGlobal(sessionId: String, testName: String?, realtimeHandler: RealtimeHandler) {
+        val runtime = GlobalExecRuntime(testName, realtimeHandler).apply {
+            execDatum.fillFromMeta(testName)
         }
-    }[sessionId])?.also(ExecRuntime::close)
+        global = sessionId to runtime
+    }
 
+    private fun removeGlobal(): GlobalExecRuntime? = global?.copy()?.second?.apply {
+        _globalContext = null
+        global = null
+        close()
+    }
+
+    private fun remove(sessionId: String): ExecRuntime? = runtimes.remove(sessionId).also {
+        if (runtimes.none()) {
+            _context = null
+        }
+    }?.also(ExecRuntime::close)
+
+    fun ExecData.fillFromMeta(testName: String?) {
+        probeMetaContainer.forEachIndexed { inx, probeDescriptor ->
+            if (probeDescriptor != null)
+                this[inx] = ExecDatum(
+                    id = probeDescriptor.id,
+                    name = probeDescriptor.name,
+                    probes = AgentProbes(probeDescriptor.probeCount),
+                    testName = testName ?: "undefined"
+                )
+        }
+    }
 }
 
 private class GlobalContext(
