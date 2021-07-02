@@ -32,7 +32,6 @@ class JsCoverageTest {
 
     private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
 
-
     @AfterTest
     fun cleanStore() {
         storeClient.close()
@@ -87,9 +86,46 @@ class JsCoverageTest {
         }
     }
 
+    @Test
+    fun `should merge probes`() = runBlocking {
+        val coverageData = calculateCoverage() {
+            this.execSession("MANUAL") { sessionId ->
+                addProbes(sessionId) { probes }
+                addProbes(sessionId) { probes }
+            }
+        }
+        coverageData.run {
+            assertEquals(Count(4, 5), coverage.count)
+            packageCoverage[0].classes.run {
+                this[0].run {
+                    assertEquals(5, probes.size)
+                    assertEquals(listOf(true, true, true, true, false), probes)
+                }
+            }
+        }
+    }
+
+    private suspend fun calculateCoverage(addProbes: suspend ActiveScope.() -> Unit): CoverageInfoSet {
+        val adminData = object : AdminData {
+            override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
+        }
+        val state = AgentState(
+            storeClient, jsAgentInfo, adminData
+        )
+        state.init()
+        (state.data as DataBuilder) += ast
+        state.initialized()
+        val active = state.activeScope
+        active.addProbes()
+        val finished = active.finish(enabled = true)
+        val context = state.coverContext()
+        val bundleCounters = finished.calcBundleCounters(context, emptyMap())
+        return bundleCounters.calculateCoverageData(context)
+    }
+
     private suspend fun ActiveScope.execSession(testType: String, block: suspend ActiveScope.(String) -> Unit) {
         val sessionId = genUuid()
-        startSession(sessionId = sessionId, testType = testType, activeSessionHandler = {})
+        startSession(sessionId = sessionId, testType = testType)
         block(sessionId)
         finishSession(sessionId)
     }

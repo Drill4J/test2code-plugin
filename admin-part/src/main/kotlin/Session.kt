@@ -91,7 +91,7 @@ class ActiveSession(
 
     private val channel = Channel<Sequence<TypedTest>>()
 
-
+    //TODO rewrite
     private val activeSessionJob = AsyncJobDispatcher.launch {
         for (tests in channel) {
             _handler.value?.let {
@@ -146,7 +146,7 @@ data class FinishedSession(
     val probes: List<ExecClassData>,
     @Transient
     @kotlin.jvm.Transient
-    val sessionData: SessionData = SessionData(),
+    val sessionData: SessionData = SessionData.emptySessionData,
 ) : Session(), JvmSerializable {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
 
@@ -158,7 +158,11 @@ data class FinishedSession(
 @Serializable
 data class SessionData(
     val bundleByTest: Map<TypedTest, BundleCounter> = emptyMap(),
-)
+) {
+    companion object {
+        val emptySessionData = SessionData()
+    }
+}
 
 
 private operator fun TestRun.plus(other: TestRun) = copy(

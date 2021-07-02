@@ -113,12 +113,13 @@ class Plugin(
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
+            val isRealtimeSession = runtimeConfig.realtime && isRealtime
             activeScope.startSession(
                 newSessionId,
                 testType,
                 isGlobal,
-                runtimeConfig.realtime && isRealtime,
-                initSessionHandler()
+                isRealtimeSession,
+                initSessionHandler().takeIf { !isRealtimeSession }
             )?.run {
                 StartAgentSession(
                     payload = StartSessionPayload(
@@ -601,7 +602,7 @@ class Plugin(
     ) = AsyncJobDispatcher.launch {
         trackTime("coveredByTestJob") {
             entries.parallelStream().forEach { (typedTest, bundle) ->
-                val coveredMethods = context.methods.toCoverMapStream(bundle, true)
+                val coveredMethods = context.methods.toCoverMap(bundle, true)
                 val summary = coveredMethods.toSummary(typedTest, context)
                 val all = coveredMethods.values.toList()
                 val modified = coveredMethods.filterValues { it in context.methodChanges.modified }
@@ -614,11 +615,7 @@ class Plugin(
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
-                            send(
-                                buildVersion,
-                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
-                                unaffected
-                            )
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), unaffected)
                         }
                     } ?: run {
                         Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->

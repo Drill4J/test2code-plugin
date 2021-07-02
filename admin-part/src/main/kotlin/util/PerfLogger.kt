@@ -20,6 +20,7 @@ import kotlin.time.*
 
 val logger = logger {}
 
+//TODO set "debug" flag based on System Property
 inline fun <T> trackTime(tag: String = "", debug: Boolean = true, block: () -> T) =
     measureTimedValue { block() }.apply {
         when {

@@ -20,7 +20,6 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
-import kotlinx.coroutines.*
 import java.util.stream.*
 import kotlin.math.*
 
@@ -88,53 +87,17 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-//todo remove suspend
-fun Map<String, CoverMethod>.toCoverMap(
-    bundle: BundleCounter,
-    onlyCovered: Boolean,
-): Map<String, CoverMethod> {
-    if (bundle == BundleCounter.empty)
-        return this
-    return bundle.packages.parallelStream().flatMap { it.classes.stream() }.flatMap { it.methods.stream() }.map { m ->
-        m.takeIf { !onlyCovered || it.count.covered > 0 }?.let {
-            m.key to get(m.key)!!.copy(
-                count = it.count,
-                coverageRate = it.count.coverageRate(),
-            )
-        }//todo !!
-    }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
-}
-
-//todo remove it
-suspend fun List<Method>.toCoverMap(
-    bundle: BundleCounter,
-    onlyCovered: Boolean,
-): Map<Method, CoverMethod> = bundle.packages.asSequence().let { packages ->
-    val map = packages.flatMap { it.classes.asSequence() }.flatMap { c ->
-        c.methods.asSequence().map { m -> Pair(c.fullName, m.sign) to m }
-    }.toMap()
-    val subCollectionSize = (size / availableProcessors).takeIf { it > 0 } ?: 1
-    chunked(subCollectionSize).map { subList ->
-        AsyncJobDispatcher.async {
-            subList.mapNotNull { method ->
-                val covered = method.toCovered(map[method.ownerClass to method.signature()])//(map[method.key])
-                covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
-            }
-        }
-    }.flatMap { it.await() }.toMap()
-}//todo remove it
-
-fun List<Method>.toCoverMapStream(
+internal fun List<Method>.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
 ): Map<Method, CoverMethod> = bundle.packages.let { packages ->
     val map = packages.parallelStream().flatMap { it.classes.stream() }.flatMap { c ->
-        c.methods.stream().map { m -> m.key to m }
+        c.methods.stream().map { m -> m.fullName to m }
     }.collect(Collectors.toMap({ it.first }, { it.second }))
     parallelStream().map { method ->
         val covered = method.toCovered(map[method.key])
         covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
-    }.filter { it != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
+    }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
 }
 
 
@@ -198,8 +161,6 @@ private fun Int.toArrowType(): ArrowType? = when (this) {
     in 1..Int.MAX_VALUE -> ArrowType.DECREASE
     else -> null
 }
-
-private fun Method.signature() = "$name$desc".weakIntern()
 
 //TODO remove
 internal fun Count.coverageRate() = when (covered) {

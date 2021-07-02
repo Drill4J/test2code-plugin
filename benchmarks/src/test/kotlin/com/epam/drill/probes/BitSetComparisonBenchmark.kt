@@ -37,7 +37,6 @@ class BitSetComparisonBenchmark {
         probeBitSet1 = probe1.toBitSet()
         probeBitSet2 = probe2.toBitSet()
     }
-
     @Benchmark
     fun boolListMerge() {
         probe1.merge(probe2)

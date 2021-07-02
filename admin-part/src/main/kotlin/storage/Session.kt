@@ -48,7 +48,7 @@ internal suspend fun StoreClient.loadSessions(
             session.takeIf { withData }?.copy(
                 sessionData = findById<StoredSessionData>(storedSession.id)?.let {
                     SessionData(it.bundleByTest)
-                } ?: session.sessionData
+                } ?: SessionData.emptySessionData
             ) ?: session
         }
     }

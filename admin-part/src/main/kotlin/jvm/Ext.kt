@@ -28,7 +28,7 @@ internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = ru
         methods.associateBy { "${it.name}${it.signature}".weakIntern() }
     }
     methods.map { m ->
-        val method = parsedMethods[m.sign.weakIntern()]//todo check is it faster?
+        val method = parsedMethods[m.sign.weakIntern()]
         Method(
             ownerClass = fullName.weakIntern(),
             name = m.name.weakIntern(),

@@ -19,14 +19,12 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
-import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
-import kotlin.jvm.Transient
 
 interface Scope : Sequence<FinishedSession> {
     val id: String
@@ -132,12 +130,12 @@ class ActiveScope(
         testType: String,
         isGlobal: Boolean = false,
         isRealtime: Boolean = false,
-        activeSessionHandler: ActiveSessionHandler,
+        activeSessionHandler: ActiveSessionHandler? = null,
     ) = ActiveSession(sessionId,
         testType,
         isGlobal,
         isRealtime,
-        activeSessionHandler.takeIf { !isRealtime }
+        activeSessionHandler
     ).takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
@@ -221,6 +219,7 @@ class ActiveScope(
 @Serializable
 data class ScopeData(
     @Transient
+    @kotlin.jvm.Transient
     val sessions: List<FinishedSession> = emptyList(),
     val typedTests: Set<TypedTest> = emptySet(),
 ) : JvmSerializable {

@@ -117,6 +117,7 @@ data class ClassCounter(
     override val count: Count,
     val methods: List<MethodCounter>,
     val fullName: String,
+    val probes: List<Boolean> = emptyList(),
 ) : NamedCounter(), JvmSerializable
 
 @Serializable
@@ -125,6 +126,6 @@ data class MethodCounter(
     val desc: String,
     val decl: String,
     val sign: String,
-    val key: String,
+    val fullName: String,
     override val count: Count,
 ) : NamedCounter(), JvmSerializable

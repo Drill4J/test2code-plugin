@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.jvm
 
+import com.epam.drill.jacoco.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -111,7 +112,7 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
                                 desc = m.desc.weakIntern(),
                                 decl = m.desc.weakIntern(),//declaration(m.desc), //TODO Regex has a big impact on performance
                                 sign = sign,
-                                key = "$classFullName:$sign".weakIntern(),
+                                fullName = "$classFullName:$sign".weakIntern(),
                                 count = m.instructionCounter.toCount()
                             )
                         }
