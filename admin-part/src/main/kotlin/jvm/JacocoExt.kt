@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.jvm
 
+import com.epam.drill.jacoco.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -23,6 +24,8 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
+import org.jacoco.core.internal.analysis.*
+import java.util.concurrent.*
 
 private val logger = logger {}
 
@@ -32,12 +35,12 @@ internal fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     classBytes: ClassBytes
 ): BundleCounter = bundle(probeIds) { analyzer ->
-    contents.forEach { execData ->
+    contents.parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
             runCatching {
                 analyzer.analyzeClass(classesBytes, execData.name)
             }.onFailure {
-                logger.error { "Error while analyzing ${execData.name}." }
+                logger.error(it) { "Error while analyzing ${execData.name}." }
             }
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
@@ -52,10 +55,10 @@ internal fun Iterable<String>.bundle(
 
 private fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
-    analyze: ExecutionDataStore.(Analyzer) -> Unit
-): IBundleCoverage = CoverageBuilder().also { coverageBuilder ->
+    analyze: ExecutionDataStore.(Analyzer) -> Unit,
+): IBundleCoverage = CustomCoverageBuilder().also { coverageBuilder ->
     val dataStore = execDataStore(probeIds)
-    val analyzer = Analyzer(dataStore, coverageBuilder)
+    val analyzer = Analyzer(dataStore, coverageBuilder).fixConcurrencyIssues()
     dataStore.analyze(analyzer)
 }.getBundle("")
 
@@ -180,4 +183,19 @@ fun parseDescType(char: Char, charIterator: CharIterator): String = when (char) 
 
 private fun ExecClassData.toExecutionData(probeIds: Map<String, Long>): ExecutionData? = probeIds[className]?.let {
     ExecutionData(it, className, probes.toBooleanArray())
+}
+
+private fun Analyzer.fixConcurrencyIssues() = also { analyzer ->
+    val newPool = StringPool()
+    StringPool::class.java.getDeclaredField("pool").apply {
+        isAccessible = true
+        set(newPool, ConcurrentHashMap<String, String>())
+        isAccessible = false
+    }
+    Analyzer::class.java.getDeclaredField("stringPool").apply {
+        isAccessible = true
+        set(analyzer, newPool)
+        isAccessible = false
+    }
+
 }
