@@ -113,7 +113,7 @@ class JsCoverageTest {
         }
     }
 
-    private suspend fun calculateCoverage(addProbes: ActiveScope.() -> Unit): CoverageInfoSet {
+    private suspend fun calculateCoverage(addProbes: suspend ActiveScope.() -> Unit): CoverageInfoSet {
         val adminData = object : AdminData {
             override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
         }
@@ -131,7 +131,7 @@ class JsCoverageTest {
         return bundleCounters.calculateCoverageData(context)
     }
 
-    private fun ActiveScope.execSession(testType: String, block: ActiveScope.(String) -> Unit) {
+    private suspend fun ActiveScope.execSession(testType: String, block: suspend ActiveScope.(String) -> Unit) {
         val sessionId = genUuid()
         startSession(sessionId, testType)
         block(sessionId)
