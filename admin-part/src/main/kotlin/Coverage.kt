@@ -171,23 +171,25 @@ private fun Map<String, List<Session>>.bundlesByTests(
     val flatten: Sequence<Session> = values.flatten().asSequence()
     return takeIf { flatten.any() }?.run {
         val testsWithEmptyBundle = flatten.testsWithBundle(cache)
-        map { (testType, sessions) ->
-            sessions.asSequence().flatten()
-                .groupBy { TypedTest(it.testName, testType) }
-                .filterNot { cache?.map?.containsKey(it.key) ?: false }
-                .mapValuesTo(testsWithEmptyBundle) { it.value.asSequence().bundle(context, classBytes) }
-        }.reduce { m1, m2 ->
-            m1.apply { putAll(m2) }
-        }.let { mutableMap ->
-            val cached = cache?.let {
-                val finalizedTests = flatten.flatMap { it.testStats.keys }
-                val testsAddToCache = mutableMap.filterKeys { finalizedTests.contains(it) }
-                it.putAll(testsAddToCache)
-            } ?: emptyMap()
-            mutableMap + cached
+        forEach { (testType, sessions) ->
+            sessions.forEach { session ->
+                if (session is FinishedSession && !session.cached.isNullOrEmpty()) {
+                    testsWithEmptyBundle.putAll(session.cached)
+                } else {
+                    session.asSequence()
+                        .groupBy { TypedTest(it.testName, testType) }
+                        .filterNot { cache?.map?.containsKey(it.key) ?: false }
+                        .mapValuesTo(testsWithEmptyBundle) {
+                            it.value.asSequence().bundle(context, classBytes)
+                        }
+                }
+            }
         }
+        testsWithEmptyBundle
     } ?: emptyMap()
+
 }
+
 
 private fun Sequence<Session>.testsWithBundle(
     cache: AtomicCache<TypedTest, BundleCounter>?,
