@@ -108,12 +108,13 @@ class Plugin(
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
+            val isRealtimeSession = runtimeConfig.realtime && isRealtime
             activeScope.startSession(
                 newSessionId,
                 testType,
                 isGlobal,
-                runtimeConfig.realtime && isRealtime,
-                initSessionHandler()
+                isRealtimeSession,
+                initSessionHandler().takeIf { !isRealtimeSession }
             )?.run {
                 StartAgentSession(
                     payload = StartSessionPayload(
@@ -557,7 +558,6 @@ class Plugin(
                 storeClient = storeClient,
                 agentInfo = agentInfo,
                 adminData = adminData,
-                runtimeConfig = runtimeConfig,
             )
         }?.close()
     }

@@ -33,7 +33,7 @@ internal typealias ClassBytes = Map<String, ByteArray>
 
 internal fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
-    classBytes: ClassBytes
+    classBytes: ClassBytes,
 ): BundleCounter = bundle(probeIds) { analyzer ->
     contents.parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
@@ -48,7 +48,7 @@ internal fun Sequence<ExecClassData>.bundle(
 
 internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,
-    probeIds: Map<String, Long>
+    probeIds: Map<String, Long>,
 ): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->
     forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
 }.toCounter(false)
@@ -58,13 +58,13 @@ private fun Sequence<ExecClassData>.bundle(
     analyze: ExecutionDataStore.(Analyzer) -> Unit,
 ): IBundleCoverage = CustomCoverageBuilder().also { coverageBuilder ->
     val dataStore = execDataStore(probeIds)
-    val analyzer = Analyzer(dataStore, coverageBuilder).fixConcurrencyIssues()
+    val analyzer = threadSafeAnalyzer(dataStore, coverageBuilder)
     dataStore.analyze(analyzer)
 }.getBundle("")
 
 
 internal fun Sequence<ExecClassData>.execDataStore(
-    probeIds: Map<String, Long>
+    probeIds: Map<String, Long>,
 ): ExecutionDataStore = mapNotNull {
     it.toExecutionData(probeIds)
 }.fold(ExecutionDataStore()) { store, execData ->
@@ -185,7 +185,10 @@ private fun ExecClassData.toExecutionData(probeIds: Map<String, Long>): Executio
     ExecutionData(it, className, probes.toBooleanArray())
 }
 
-private fun Analyzer.fixConcurrencyIssues() = also { analyzer ->
+private fun threadSafeAnalyzer(
+    dataStore: ExecutionDataStore,
+    coverageBuilder: CustomCoverageBuilder,
+): Analyzer = Analyzer(dataStore, coverageBuilder).also { analyzer ->
     val newPool = StringPool()
     StringPool::class.java.getDeclaredField("pool").apply {
         isAccessible = true
@@ -197,5 +200,4 @@ private fun Analyzer.fixConcurrencyIssues() = also { analyzer ->
         set(analyzer, newPool)
         isAccessible = false
     }
-
 }

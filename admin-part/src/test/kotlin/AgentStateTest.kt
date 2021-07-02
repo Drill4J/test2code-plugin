@@ -29,9 +29,7 @@ class AgentStateTest {
     private val storageDir = File("build/tmp/test/storages/${this::class.simpleName}-${UUID.randomUUID()}")
 
     private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
-
-    private val emptyRuntimeConfig = RuntimeConfig("")
-
+    
     private val agentInfo = AgentInfo(
         id = "ag",
         name = "ag",
@@ -53,7 +51,7 @@ class AgentStateTest {
 
     @Test
     fun `set initial build as baseline`() = runBlocking {
-        val state = AgentState(storeClient, agentInfo, adminData, emptyRuntimeConfig)
+        val state = AgentState(storeClient, agentInfo, adminData)
         state.initialized()
         storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
             assertEquals(agentInfo.buildVersion, it.version)
@@ -63,14 +61,14 @@ class AgentStateTest {
 
     @Test
     fun `toggleBaseline - no toggling on initial version`() = runBlocking {
-        val state = AgentState(storeClient, agentInfo, adminData, emptyRuntimeConfig)
+        val state = AgentState(storeClient, agentInfo, adminData)
         state.initialized()
         assertNull(state.toggleBaseline())
     }
 
     @Test
     fun `toggleBaseline - 2 builds`() = runBlocking {
-        AgentState(storeClient, agentInfo, adminData, emptyRuntimeConfig).apply {
+        AgentState(storeClient, agentInfo, adminData).apply {
             initialized()
             storeBuild()
         }
@@ -80,7 +78,7 @@ class AgentStateTest {
             assertEquals("", it.parentVersion)
         }
         val version2 = "0.2.0"
-        val state2 = AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData, emptyRuntimeConfig)
+        val state2 = AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData)
         state2.initialized()
         assertEquals(version2, state2.toggleBaseline())
         storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
@@ -97,19 +95,19 @@ class AgentStateTest {
 
     @Test
     fun `initialized - preserve parent version after restart`() = runBlocking {
-        AgentState(storeClient, agentInfo, adminData, emptyRuntimeConfig).apply {
+        AgentState(storeClient, agentInfo, adminData).apply {
             initialized()
             storeBuild()
         }
         val version1 = agentInfo.buildVersion
         val version2 = "0.2.0"
-        AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData, emptyRuntimeConfig).apply {
+        AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData).apply {
             initialized()
             storeBuild()
             assertEquals(version2, toggleBaseline())
             assertEquals(version1, coverContext().parentBuild?.version)
         }
-        AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData, emptyRuntimeConfig).apply {
+        AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData).apply {
             initialized()
             assertEquals(version1, coverContext().parentBuild?.version)
         }

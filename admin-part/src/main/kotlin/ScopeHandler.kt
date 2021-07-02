@@ -31,7 +31,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { 
     sessions?.let {
         val context = state.coverContext()
         val bundleCounters = trackTime("bundleCounters") {
-            sessions.calcBundleCounters(context, adminData.loadClassBytes(), bundleByTestCache)
+            sessions.calcBundleCounters(context, adminData.loadClassBytes())
         }.also { logPoolStats() }
         val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)
@@ -46,13 +46,13 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { 
     }
 }
 
-fun Plugin.initSessionHandler(): ActiveSessionHandler = { map ->
+fun Plugin.initSessionHandler(): ActiveSessionHandler = { tests ->
     val context = state.coverContext()
     val bytes = classBytes.value ?: adminData.loadClassBytes().also { bytes -> classBytes.updateAndGet { bytes } }
-    val preparedBundle = map.keys.associateWithTo(mutableMapOf()) {
+    val preparedBundle = tests.keys.associateWithTo(mutableMapOf()) {
         BundleCounter.empty
     }
-    val calculated = map.mapValuesTo(preparedBundle) {
+    val calculated = tests.mapValuesTo(preparedBundle) {
         it.value.bundle(context, bytes)
     }
     bundleByTests.putAll(calculated)
