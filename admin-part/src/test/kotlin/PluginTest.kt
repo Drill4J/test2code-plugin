@@ -121,8 +121,9 @@ class PluginTest {
         sizeProbes: Int = 10_000,
     ): FinishedSession? {
         plugin.activeScope.startSession(
-            sessionId,
-            "MANUAL"
+            sessionId = sessionId,
+            testType = "MANUAL",
+            activeSessionHandler = {}
         )
         addProbes(
             plugin,

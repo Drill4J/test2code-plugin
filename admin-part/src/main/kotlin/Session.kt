@@ -19,7 +19,6 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.logger
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
@@ -67,6 +66,10 @@ class ActiveSession(
 
     private val _testRun = atomic<TestRun?>(null)
 
+    private val testForRecalculation = Channel<Sequence<TypedTest>>()
+
+    val bundleByTests = AtomicCache<TypedTest, BundleCounter>()
+
     suspend fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
@@ -87,22 +90,17 @@ class ActiveSession(
             }
         }
     }.also {
-        channel.send(dataPart.asSequence().map { it.testName.weakIntern().typedTest(testType.weakIntern()) }.distinct())
+        testForRecalculation.send(dataPart.asSequence().map { it.testName.weakIntern().typedTest(testType.weakIntern()) }.distinct())
     }
 
-    private val channel = Channel<Sequence<TypedTest>>()
-
-
     private val activeSessionJob = AsyncJobDispatcher.launch {
-        for (tests in channel) {
+        for (tests in testForRecalculation) {
             _handler.value?.let {
                 it(_probes.value.asSequence().filter { tests.contains(it.key) }
                     .associate { it.key to it.value.values.asSequence() })
             }
         }
     }
-
-    val bundleByTests = AtomicCache<TypedTest, BundleCounter>()
 
     fun setTestRun(testRun: TestRun) {
         _testRun.update { current ->
@@ -116,7 +114,7 @@ class ActiveSession(
 
     suspend fun finish() = _probes.value.run {
         logger.debug { "ActiveSession finish with size = ${_probes.value.size} " }
-        channel.close()
+        testForRecalculation.close()
         activeSessionJob.join()
         logger.debug { "BundleByTests in cache ${bundleByTests.map.keys.size}" }
         classBytes.update { null }
@@ -145,7 +143,6 @@ data class FinishedSession(
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),
     val probes: List<ExecClassData>,
-    @Transient
     @kotlin.jvm.Transient
     val cached: Map<TypedTest, BundleCounter> = emptyMap(),
 ) : Session(), JvmSerializable {

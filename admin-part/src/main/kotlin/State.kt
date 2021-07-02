@@ -40,7 +40,6 @@ internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
     val adminData: AdminData,
-    val runtimeConfig: RuntimeConfig,
 ) {
     private val logger = logger(agentInfo.id)
 
@@ -59,7 +58,6 @@ internal class AgentState(
     private val _activeScope = atomic(
         ActiveScope(
             buildVersion = agentInfo.buildVersion,
-            realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
         )
     )
 
@@ -294,7 +292,6 @@ internal class AgentState(
                     buildVersion = agentInfo.buildVersion,
                     name = name,
                     sessions = sessions,
-                    realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
                 ).apply {
                     updateSummary {
                         it.copy(started = startedAt)
@@ -309,7 +306,6 @@ internal class AgentState(
             nth = it.nth.inc(),
             name = scopeName(name),
             buildVersion = agentInfo.buildVersion,
-            realtimeCalculationCache = runtimeConfig.realtimeCalculationCache
         )
     }.apply { close() }
 
