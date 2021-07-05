@@ -20,8 +20,12 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
+import kotlinx.coroutines.*
+import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import org.jacoco.core.internal.data.*
+import org.mapdb.*
+import org.mapdb.Serializer
 
 @Suppress("unused")
 class Plugin(
@@ -45,6 +49,44 @@ class Plugin(
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
 
     private val _retransformed = atomic(false)
+
+    private var db: DB// = DBMaker.fileDB("test2code.db").make()
+
+    var probesDb: HTreeMap.KeySet<Any>
+    // = db.hashSet("probes")
+    //  .serializer(Serializer.JAVA)
+    //.createOrOpen()
+
+    init {
+        Thread.currentThread().contextClassLoader = ClassLoader.getSystemClassLoader()
+        db = DBMaker.fileDB("test2code.db").closeOnJvmShutdown().make()
+        probesDb = db.hashSet("probes")
+            .serializer(Serializer.JAVA)
+            .createOrOpen()
+
+        ProbeWorker.launch {
+            while (true) {
+                //todo if the size of probesDb >= N then delay longer or need to chunk send??
+                probesDb.map {
+                    val coverDataPartJava = it as CoverDataPartJava
+                    probesDb.remove(coverDataPartJava)
+                    coverDataPartJava
+                }.forEach {
+                    sendMessage(it.toCover())
+                    val count = it.data.count()
+                    if (it.sendChanged && count > 0) {
+                        //todo it not need so often
+                        sendMessage(SessionChanged(it.sessionId, count))
+                    }
+                }//todo SessionChanged for what sent count?
+                //.takeIf { sendChanged && it > 0 }?.let {
+//                    sendMessage(SessionChanged(sessionId, it))
+//                }
+                logger.trace { "probesDb sent done" }
+                delay(3000L)//todo need to custom
+            }
+        }
+    }
 
     //TODO remove
     override fun setEnabled(enabled: Boolean) {
@@ -166,18 +208,30 @@ class Plugin(
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 }
 
+//todo store serial
+@SerialName("COVERAGE_DATA_PART_DB")
+@Serializable
+data class CoverDataPartJava(
+    val sessionId: String,
+    val data: List<ExecClassData>,
+    val sendChanged: Boolean,
+) : JvmSerializable
+
+private fun CoverDataPartJava.toCover(): CoverDataPart {
+    return CoverDataPart(sessionId, data)
+}
+
+private fun CoverDataPart.toJava(sendChanged: Boolean) = CoverDataPartJava(sessionId, data, sendChanged)
+
 fun Plugin.probeSender(
     sessionId: String,
     sendChanged: Boolean = false
-): RealtimeHandler = { execData ->
+): RealtimeHandler = { execData: Sequence<ExecDatum> ->
     execData.map(ExecDatum::toExecClassData)
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
-        .sumBy { message ->
-            sendMessage(message)
-            message.data.count()
-        }.takeIf { sendChanged && it > 0 }?.let {
-            sendMessage(SessionChanged(sessionId, it))
+        .forEach { message ->
+            probesDb.add(message.toJava(sendChanged))
         }
 }
 
