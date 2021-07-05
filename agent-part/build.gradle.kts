@@ -11,18 +11,24 @@ val jarDeps by configurations.creating {
 configurations.implementation {
     extendsFrom(jarDeps)
 }
+//todo
+val cacheMapDB: String = "3.0.8"//by extra
 
 dependencies {
     jarDeps(project(":agent-api"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm") { isTransitive = false }
-
+    jarDeps("org.mapdb:mapdb:$cacheMapDB")// { isTransitive = false }
+//    jarDeps("org.mapdb:mapdb:$cacheMapDB") { isTransitive = false }
+//    jarDeps("org.eclipse.collections:eclipse-collections:11.0.0.M2") //{ isTransitive = false }
+    //todo what if app will use eclipse?
     implementation(kotlin("stdlib"))
 
     //provided by drill runtime
     implementation("com.epam.drill:drill-agent-part")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+    implementation("org.mapdb:mapdb:$cacheMapDB")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(project(":tests"))
