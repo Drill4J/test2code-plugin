@@ -26,6 +26,8 @@ import kotlinx.coroutines.channels.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
+import org.mapdb.*
+import org.mapdb.Serializer
 import java.io.*
 import java.util.*
 
@@ -51,7 +53,39 @@ class Plugin(
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
 
     private val _retransformed = atomic(false)
+    private var db: DB
+    var probesDb: HTreeMap.KeySet<Any>
 
+    init {
+        Thread.currentThread().contextClassLoader = ClassLoader.getSystemClassLoader()
+        db = DBMaker.fileDB("test2code.db").closeOnJvmShutdown().make()
+        probesDb = db.hashSet("probes")
+            .serializer(Serializer.JAVA)
+            .createOrOpen()
+        ProbeWorker.launch {
+            while (true) {
+                //todo if the size of probesDb >= N then delay longer or need to chunk send??
+                probesDb.map {
+                    val coverDataPartJava = it as CoverageInfo
+                    probesDb.remove(coverDataPartJava)
+                    coverDataPartJava
+                }.forEach { storageElement: CoverageInfo ->
+                    val coverMessage = storageElement.coverMessage
+                    send(Base64.getEncoder().encodeToString(coverMessage))
+                    val count = storageElement.count
+                    if (storageElement.sendChanged && count > 0) {
+                        //todo it not need so often
+                        sendMessage(SessionChanged(storageElement.sessionId, count))
+                    }
+                }//todo SessionChanged for what sent count?
+                //.takeIf { sendChanged && it > 0 }?.let {
+//                    sendMessage(SessionChanged(sessionId, it))
+//                }
+                logger.trace { "probes from database were sent" }
+                delay(3000L)//todo need to custom
+            }
+        }
+    }
     //TODO remove
     override fun setEnabled(enabled: Boolean) {
         _enabled.value = enabled
@@ -220,17 +254,45 @@ fun Plugin.probeCollector(sessionId: String, sendChanged: Boolean = false): Real
         .map(ExecDatum::toExecClassData)
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
-        .sumBy { message ->
+        .forEach { message ->
             val encoded = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
             val compressed = Zstd.compress(encoded)
-            send(Base64.getEncoder().encodeToString(compressed))
-            message.data.count()
-        }.takeIf { sendChanged && it > 0 }?.let {
-            sendMessage(SessionChanged(sessionId, it))
+            probesDb.add(compressed.toCoverageInfo(sessionId, sendChanged, message.data.count()))
         }
 }
 
 fun Plugin.sendMessage(message: CoverMessage) {
     val messageStr = json.encodeToString(CoverMessage.serializer(), message)
     send(messageStr)
+}
+
+private fun ByteArray.toCoverageInfo(sessionId: String, sendChanged: Boolean, count: Int) = CoverageInfo(sessionId, this, sendChanged, count)
+
+data class CoverageInfo(
+    val sessionId: String,
+    val coverMessage: ByteArray,
+    val sendChanged: Boolean,
+    val count: Int,
+) : JvmSerializable {
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CoverageInfo
+
+        if (sessionId != other.sessionId) return false
+        if (!coverMessage.contentEquals(other.coverMessage)) return false
+        if (sendChanged != other.sendChanged) return false
+        if (count != other.count) return false
+
+        return true
+    }
+    override fun hashCode(): Int {
+        var result = sessionId.hashCode()
+        result = 31 * result + coverMessage.contentHashCode()
+        result = 31 * result + sendChanged.hashCode()
+        result = 31 * result + count
+        return result
+    }
 }

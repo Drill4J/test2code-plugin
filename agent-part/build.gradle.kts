@@ -11,12 +11,14 @@ val jarDeps by configurations.creating {
 configurations.implementation {
     extendsFrom(jarDeps)
 }
+val cacheMapDB: String = "3.0.8"//todo by extra
 
 dependencies {
     jarDeps(project(":agent-api"))
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm") { isTransitive = false }
     jarDeps("com.github.luben:zstd-jni:1.4.8-1")
+    jarDeps("org.mapdb:mapdb:$cacheMapDB")
 
     implementation(kotlin("stdlib"))
 
@@ -25,6 +27,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
+    implementation("org.mapdb:mapdb:$cacheMapDB")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(project(":tests"))
