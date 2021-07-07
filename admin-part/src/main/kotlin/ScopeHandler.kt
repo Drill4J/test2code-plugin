@@ -61,38 +61,60 @@ fun Plugin.initSessionHandler(): ActiveSessionHandler = { tests ->
 
 internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload,
-): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
-    trackTime("changeActiveScope") {
-        val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
-        state.storeActiveScopeInfo()
-        sendActiveSessions()
-        sendActiveScope()
-        if (scopeChange.savePrevScope) {
-            if (prevScope.any()) {
-                logger.debug { "finish scope with id=${prevScope.id}" }.also { logPoolStats() }
-                val finishedScope = prevScope.finish(scopeChange.prevScopeEnabled)
-                state.scopeManager.store(finishedScope)
-                sendScopeSummary(finishedScope.summary)
-                logger.info { "$finishedScope has been saved." }.also { logPoolStats() }
-            } else {
-                cleanTopics(prevScope.id)
-                logger.info { "$prevScope is empty, it won't be added to the build." }.also { logPoolStats() }
+): ActionResult = scopeChange.run {
+    if (state.scopeByName(scopeName) == null) {
+        if (!scopeChange.isForceSwitchActiveScope) {
+            trackTime("changeActiveScope") {
+                val prevScope = state.changeActiveScope(scopeName.trim())
+                finishActiveScope(prevScope, savePrevScope, prevScopeEnabled)
+                InitActiveScope(
+                    payload = InitScopePayload(
+                        id = activeScope.id,
+                        name = activeScope.name,
+                        prevId = prevScope.id
+                    )
+                ).toActionResult()
             }
-        } else cleanTopics(prevScope.id)
-        InitActiveScope(
-            payload = InitScopePayload(
-                id = activeScope.id,
-                name = activeScope.name,
-                prevId = prevScope.id
-            )
-        ).toActionResult()
-    }
-} else ActionResult(
-    code = StatusCodes.CONFLICT,
-    data = "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
-)
+        } else {
+            ForceInitActiveScope(
+                ForceInitScopePayload(
+                    scopeName = scopeName,
+                    savePrevScope = savePrevScope,
+                    prevScopeEnabled = prevScopeEnabled,
+                )
+            ).toActionResult()
+        }
+    } else ActionResult(
+        code = StatusCodes.CONFLICT,
+        data = "Failed to switch to a new scope: name $scopeName is already in use"
+    )
+}
 
-internal suspend fun Plugin.scopeInitialized(prevId: String) {
+private suspend fun Plugin.finishActiveScope(
+    prevScope: ActiveScope,
+    savePrevScope: Boolean,
+    prevScopeEnabled: Boolean,
+): FinishedScope? = run {
+    state.storeActiveScopeInfo()
+    sendActiveSessions()
+    sendActiveScope()
+    if (savePrevScope) {
+        if (prevScope.any()) {
+            logger.debug { "finish scope with id=${prevScope.id}" }.also { logPoolStats() }
+            val finishedScope = prevScope.finish(prevScopeEnabled)
+            state.scopeManager.store(finishedScope)
+            sendScopeSummary(finishedScope.summary)
+            logger.info { "$finishedScope has been saved." }.also { logPoolStats() }
+            return finishedScope
+        } else {
+            cleanTopics(prevScope.id)
+            logger.info { "$prevScope is empty, it won't be added to the build." }.also { logPoolStats() }
+        }
+    } else cleanTopics(prevScope.id)
+    null
+}
+
+suspend fun Plugin.scopeInitialized(prevId: String) {
     if (initActiveScope()) {
         sendScopes()
         val prevScope = state.scopeManager.byId(prevId)
@@ -101,6 +123,21 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
         }
         calculateAndSendScopeCoverage()
         logger.info { "Current active scope - $activeScope" }.also { logPoolStats() }
+    }
+}
+
+internal suspend fun Plugin.scopeForceInitialization(message: ScopeForceInitialized) {
+    trackTime("changeActiveScope") {
+        val prevScope = state.changeActiveScope(message.scopeName.trim())
+        val finishedScope = finishActiveScope(prevScope, message.savePrevScope, message.prevScopeEnabled)
+        if (initActiveScope()) {
+            sendScopes()
+            finishedScope?.takeIf { it.enabled }.apply {
+                calculateAndSendBuildCoverage()
+            }
+            calculateAndSendScopeCoverage()
+            logger.info { "Current active scope - $activeScope" }.also { logPoolStats() }
+        }
     }
 }
 

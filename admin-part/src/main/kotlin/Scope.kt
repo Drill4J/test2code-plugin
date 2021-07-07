@@ -189,7 +189,8 @@ class ActiveScope(
             if (finished.probes.any()) {
                 val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
                 _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
-                _change.value = if (!isForceFinished) Change.ALL else Change.ONLY_SESSIONS
+                val change = if (!isForceFinished) Change.ALL else Change.ONLY_SESSIONS
+                _change.update { change }
             } else sessionsChanged()
         }
     }

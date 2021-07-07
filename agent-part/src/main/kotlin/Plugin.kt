@@ -118,14 +118,13 @@ class Plugin(
                 )
             }
             is ForceInitActiveScope -> action.payload.apply {
-                logger.info { "Initializing scope $id, $name, prevId=$prevId" }
+                logger.info { "Finishing session and initializing new scope" }
                 finishAllSessions(true)
                 sendMessage(
-                    ScopeInitialized(
-                        id = id,
-                        name = name,
-                        prevId = prevId,
-                        ts = currentTimeMillis()
+                    ScopeForceInitialized(
+                        scopeName = scopeName,
+                        savePrevScope = savePrevScope,
+                        prevScopeEnabled = prevScopeEnabled,
                     )
                 )
             }

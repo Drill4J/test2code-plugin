@@ -327,7 +327,7 @@ internal class AgentState(
     }
 
     private fun scopeName(name: String) = when (val trimmed = name.trim()) {
-        "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth + 1}"
+        "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth}"
         else -> trimmed
     }
 

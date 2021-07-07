@@ -222,6 +222,7 @@ class Plugin(
             processInitialized()
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
+        is ScopeForceInitialized -> scopeForceInitialization(message)
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
             .also { logPoolStats() }
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }

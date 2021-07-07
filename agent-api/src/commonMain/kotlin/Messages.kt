@@ -45,6 +45,14 @@ data class ScopeInitialized(
     val ts: Long,
 ) : CoverMessage()
 
+@SerialName("SCOPE_FORCE_INITIALIZED")
+@Serializable
+data class ScopeForceInitialized(
+    val scopeName: String,
+    val savePrevScope: Boolean = false,
+    val prevScopeEnabled: Boolean = true,
+) : CoverMessage()
+
 @SerialName("SESSION_STARTED")
 @Serializable
 data class SessionStarted(
