@@ -82,10 +82,11 @@ class Plugin(
 //                    sendMessage(SessionChanged(sessionId, it))
 //                }
                 logger.trace { "probes from database were sent" }
-                delay(3000L)//todo need to custom
+                delay(1000L)//todo need to custom
             }
         }
     }
+
     //TODO remove
     override fun setEnabled(enabled: Boolean) {
         _enabled.value = enabled
@@ -221,16 +222,6 @@ class Plugin(
         }
     }
 
-    init {
-        println("[tmp] ${File(System.getProperty("java.io.tmpdir"))}")
-        ProbeWorker.launch {
-//            for (her in queue) {
-//                probeSender(her)
-//                delay(5000)
-//            }
-        }
-    }
-
     override fun parseAction(
         rawAction: String
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
@@ -255,9 +246,22 @@ fun Plugin.probeCollector(sessionId: String, sendChanged: Boolean = false): Real
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .forEach { message ->
-            val encoded = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
-            val compressed = Zstd.compress(encoded)
-            probesDb.add(compressed.toCoverageInfo(sessionId, sendChanged, message.data.count()))
+            runBlocking(Dispatchers.IO) {
+                repeat(4) {
+                    launch {
+                        while (true) {
+                            val new = message.data.map {
+                                it.copy(testName = UUID.randomUUID().toString())
+                            }
+                            val encoded =
+                                ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message.copy(data = new))
+                            val compressed = Zstd.compress(encoded)
+                            probesDb.add(compressed.toCoverageInfo(sessionId, sendChanged, message.data.count()))
+                            delay(200)
+                        }
+                    }
+                }
+            }
         }
 }
 
@@ -266,7 +270,11 @@ fun Plugin.sendMessage(message: CoverMessage) {
     send(messageStr)
 }
 
-private fun ByteArray.toCoverageInfo(sessionId: String, sendChanged: Boolean, count: Int) = CoverageInfo(sessionId, this, sendChanged, count)
+private fun ByteArray.toCoverageInfo(
+    sessionId: String,
+    sendChanged: Boolean,
+    count: Int
+) = CoverageInfo(sessionId, this, sendChanged, count)
 
 data class CoverageInfo(
     val sessionId: String,
@@ -288,6 +296,7 @@ data class CoverageInfo(
 
         return true
     }
+
     override fun hashCode(): Int {
         var result = sessionId.hashCode()
         result = 31 * result + coverMessage.contentHashCode()
