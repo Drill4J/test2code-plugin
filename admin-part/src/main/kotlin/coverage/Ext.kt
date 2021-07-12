@@ -93,11 +93,11 @@ internal fun List<Method>.toCoverMap(
 ): Map<Method, CoverMethod> = bundle.packages.let { packages ->
     val map = packages.parallelStream().flatMap { it.classes.stream() }.flatMap { c ->
         c.methods.stream().map { m -> m.fullName to m }
-    }.collect(Collectors.toMap({ it.first }, { it.second }))
+    }.collect(Collectors.toMap({ it.first }, { it.second }, { first, _ -> first }))
     parallelStream().map { method ->
         val covered = method.toCovered(map[method.key])
         covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
-    }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }))
+    }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }, { first, _ -> first }))
 }
 
 internal fun BundleCounter.coveredMethods(
