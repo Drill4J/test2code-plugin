@@ -73,7 +73,9 @@ class Plugin(
     override suspend fun initialize() {
         logger.debug { "agent(id=$id, version=$buildVersion) initializing from admin..." }
         changeState()
-        state.loadFromDb()
+        state.loadFromDb {
+            processInitialized()
+        }
     }
 
     override fun close() {
@@ -220,7 +222,7 @@ class Plugin(
         }
         is Initialized -> state.initialized {
             processInitialized()
-        }
+        }.also { calculateAndSendCachedCoverage() }
         is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
             .also { logPoolStats() }
@@ -252,7 +254,6 @@ class Plugin(
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes(buildVersion)
-        calculateAndSendCachedCoverage()
         return initActiveScope()
     }
 
