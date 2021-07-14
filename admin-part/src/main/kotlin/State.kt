@@ -61,12 +61,13 @@ internal class AgentState(
         )
     )
 
-    suspend fun loadFromDb() {
+    suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
             logger.debug { "take from DB count methods ${classData.methods.size}" }
             _data.value = classData
             initialized(classData)
+            block()
         }
     }
 
@@ -148,6 +149,7 @@ internal class AgentState(
     private suspend fun initialized(classData: ClassData) {
         val buildVersion = agentInfo.buildVersion
         val build: CachedBuild = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
+        val probes = scopeManager.byVersion(buildVersion, withData = true)
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
             packageTree = classData.packageTree,
@@ -156,6 +158,7 @@ internal class AgentState(
             build = build
         )
         _coverContext.value = coverContext
+        updateProbes(probes)
         val agentId = agentInfo.id
         logger.debug { "agent(id=$agentId, version=$buildVersion) initializing..." }
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
