@@ -140,9 +140,13 @@ class Plugin(
         }
         is AddSessionData -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
-                AddAgentSessionData(
-                    payload = AgentSessionDataPayload(sessionId = session.id, data = data)
-                ).toActionResult()
+                ActionResult(
+                    code = StatusCodes.OK,
+                    data = "Successfully received session data",
+                    agentAction = AddAgentSessionData(
+                        payload = AgentSessionDataPayload(sessionId = session.id, data = data)
+                    )
+                )
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is AddCoverage -> action.payload.run {
