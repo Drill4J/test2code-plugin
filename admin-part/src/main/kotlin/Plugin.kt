@@ -115,8 +115,7 @@ class Plugin(
                 newSessionId,
                 testType,
                 isGlobal,
-                isRealtimeSession,
-                initSessionHandler().takeIf { !isRealtimeSession }
+                isRealtimeSession
             )?.run {
                 StartAgentSession(
                     payload = StartSessionPayload(
@@ -254,7 +253,7 @@ class Plugin(
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes(buildVersion)
-        return initActiveScope()
+        return initActiveScope() && initBundleHandler()
     }
 
     private suspend fun sendParentBuild() = send(
@@ -609,7 +608,11 @@ class Plugin(
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
-                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test), unaffected)
+                            send(
+                                buildVersion,
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
+                                unaffected
+                            )
                         }
                     } ?: run {
                         Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->

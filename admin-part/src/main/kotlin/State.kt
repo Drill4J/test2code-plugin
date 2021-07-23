@@ -61,6 +61,14 @@ internal class AgentState(
         )
     )
 
+    private val _classBytes = atomic<Map<String, ByteArray>>(emptyMap())
+
+    suspend fun classBytes() = _classBytes.value.takeIf {
+        it.isNotEmpty()
+    } ?: adminData.loadClassBytes().also { loaded ->
+        _classBytes.update { loaded }
+    }
+
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
@@ -214,6 +222,10 @@ internal class AgentState(
             trackTime("session storing") { storeClient.storeSession(activeScope.id, it) }
             logger.debug { "Session $sessionId finished." }.also { logPoolStats() }
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
+        if (activeScope.activeSessions.isEmpty()) {
+            _classBytes.update { emptyMap() }
+            logger.trace { "Class bytes have been cleared" }
+        }
     }
 
     internal fun updateProbes(

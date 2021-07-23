@@ -42,7 +42,6 @@ class ActiveSession(
     override val testType: String,
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
-    activeSessionHandler: ActiveSessionHandler?,
 ) : Session() {
 
     override val tests: Set<TypedTest>
@@ -60,17 +59,9 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
-    val classBytes = atomic<Map<String, ByteArray>?>(null)
-
-    private val _handler = atomic(activeSessionHandler)
-
     private val _testRun = atomic<TestRun?>(null)
 
-    private val testForRecalculation = Channel<Sequence<TypedTest>>()
-
-    val bundleByTests = AtomicCache<TypedTest, BundleCounter>()
-
-    suspend fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
+    fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
         if (true in probe.probes) {
@@ -89,17 +80,6 @@ class ActiveSession(
                 }?.let { map.put(typedTest, it) } ?: map
             }
         }
-    }.also {
-        testForRecalculation.send(dataPart.asSequence().map { it.testName.weakIntern().typedTest(testType.weakIntern()) }.distinct())
-    }
-
-    private val activeSessionJob = AsyncJobDispatcher.launch {
-        for (tests in testForRecalculation) {
-            _handler.value?.let {
-                it(_probes.value.asSequence().filter { tests.contains(it.key) }
-                    .associate { it.key to it.value.values.asSequence() })
-            }
-        }
     }
 
     fun setTestRun(testRun: TestRun) {
@@ -112,12 +92,8 @@ class ActiveSession(
         _probes.value.values.asSequence().flatMap { it.values.asSequence() }.iterator()
     }.iterator()
 
-    suspend fun finish() = _probes.value.run {
+    fun finish() = _probes.value.run {
         logger.debug { "ActiveSession finish with size = ${_probes.value.size} " }
-        testForRecalculation.close()
-        activeSessionJob.join()
-        logger.debug { "BundleByTests in cache ${bundleByTests.map.keys.size}" }
-        classBytes.update { null }
         FinishedSession(
             id = id,
             testType = testType,
@@ -131,7 +107,6 @@ class ActiveSession(
                 )
             } ?: emptyMap(),
             probes = values.flatMap { it.values },
-            cached = bundleByTests.map
         )
     }
 }
@@ -143,8 +118,6 @@ data class FinishedSession(
     override val tests: Set<TypedTest>,
     override val testStats: Map<TypedTest, TestStats> = emptyMap(),
     val probes: List<ExecClassData>,
-    @kotlin.jvm.Transient
-    val cached: Map<TypedTest, BundleCounter> = emptyMap(),
 ) : Session(), JvmSerializable {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
 
