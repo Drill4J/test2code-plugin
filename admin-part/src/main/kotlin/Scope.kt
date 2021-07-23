@@ -24,8 +24,10 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
+import java.lang.ref.*
 import kotlin.jvm.Transient
 
 interface Scope : Sequence<FinishedSession> {
@@ -37,10 +39,11 @@ interface Scope : Sequence<FinishedSession> {
 
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
+typealias SoftBundleByTests = SoftReference<PersistentMap<TypedTest, BundleCounter>>
 
-typealias ActiveScopeHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) -> Unit
+typealias CoverageHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) -> Unit
 
-typealias ActiveSessionHandler = suspend ActiveSession.(Map<TypedTest, Sequence<ExecClassData>>) -> Unit
+typealias BundleCacheHandler = suspend ActiveScope.(Map<TypedTest, Sequence<ExecClassData>>) -> Unit
 
 class ActiveScope(
     override val id: String = genUuid(),
@@ -49,6 +52,10 @@ class ActiveScope(
     name: String = "$DEFAULT_SCOPE_NAME $nth".weakIntern(),
     sessions: List<FinishedSession> = emptyList(),
 ) : Scope {
+    private val _bundleByTests = atomic<SoftBundleByTests>(SoftReference(persistentMapOf()))
+
+    val bundleByTests: PersistentMap<TypedTest, BundleCounter>
+        get() = _bundleByTests.value.get() ?: persistentMapOf()
 
     private enum class Change(val sessions: Boolean, val probes: Boolean) {
         ONLY_SESSIONS(true, false),
@@ -74,19 +81,20 @@ class ActiveScope(
         )
     )
 
-    private val _handler = atomic<ActiveScopeHandler?>(null)
+    private val _realtimeCoverageHandler = atomic<CoverageHandler?>(null)
+    private val _bundleCacheHandler = atomic<BundleCacheHandler?>(null)
 
 
     private val _change = atomic<Change?>(null)
 
-    private val changeJob = AsyncJobDispatcher.launch {
+    private val realtimeCoverageJob = AsyncJobDispatcher.launch {
         while (true) {
             delay(250)
             _change.value?.let {
                 delay(250)
                 _change.getAndUpdate { null }?.let { change ->
-                    _handler.value?.let { handler ->
-                        val probes: Sequence<Session>? = if (change.probes) {
+                    _realtimeCoverageHandler.value?.let { handler ->
+                        val probes = if (change.probes) {
                             this@ActiveScope + activeSessions.values.filter { it.isRealtime }
                         } else null
                         handler(change.sessions, probes)
@@ -97,10 +105,32 @@ class ActiveScope(
         }
     }
 
-    fun initScopeHandler(handler: ActiveScopeHandler): Boolean = _handler.getAndUpdate {
+    private val bundleCacheJob = AsyncJobDispatcher.launch {
+        while (true) {
+            _bundleCacheHandler.value?.let {
+                val probes = this@ActiveScope + activeSessions.values
+                val tests = activeSessions.values.flatMap { it.testStats.keys }
+                val probesByTests = probes.groupBy { it.testType }.map { (testType, sessions) ->
+                    sessions.asSequence().flatten()
+                        .groupBy { it.testName.typedTest(testType) }
+                        .filter { it.key in tests }
+                        .mapValuesTo(mutableMapOf()) { it.value.asSequence() }
+                }.takeIf { it.isNotEmpty() }?.reduce { m1, m2 ->
+                    m1.apply { putAll(m2) }
+                } ?: emptyMap()
+                it(probesByTests)
+            }
+            delay(3000)
+        }
+    }
+
+    fun initRealtimeHandler(handler: CoverageHandler): Boolean = _realtimeCoverageHandler.getAndUpdate {
         it ?: handler.also { _change.value = Change.ALL }
     } == null
 
+    fun initBundleHandler(handler: BundleCacheHandler): Boolean = _bundleCacheHandler.getAndUpdate {
+        it ?: handler
+    } == null
 
     //TODO remove summary related stuff from the active scope
     fun updateSummary(updater: (ScopeSummary) -> ScopeSummary) = _summary.updateAndGet(updater)
@@ -132,12 +162,11 @@ class ActiveScope(
         testType: String,
         isGlobal: Boolean = false,
         isRealtime: Boolean = false,
-        activeSessionHandler: ActiveSessionHandler? = null,
-    ) = ActiveSession(sessionId,
+    ) = ActiveSession(
+        sessionId,
         testType,
         isGlobal,
-        isRealtime,
-        activeSessionHandler
+        isRealtime
     ).takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
@@ -153,10 +182,17 @@ class ActiveScope(
 
     fun hasActiveGlobalSession(): Boolean = "" in activeSessions
 
-    suspend fun addProbes(
+    fun addProbes(
         sessionId: String,
         probeProvider: () -> Collection<ExecClassData>,
     ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
+
+    fun addBundleCache(bundleByTests: Map<TypedTest, BundleCounter>) {
+        _bundleByTests.update {
+            val bundles = (it.get() ?: persistentMapOf()).putAll(bundleByTests)
+            SoftReference(bundles)
+        }
+    }
 
     fun probesChanged() = _change.update {
         when (it) {
@@ -181,7 +217,7 @@ class ActiveScope(
         }
     }
 
-    suspend fun finishSession(
+    fun finishSession(
         sessionId: String,
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
@@ -197,7 +233,8 @@ class ActiveScope(
     fun close() {
         _change.value = null
         activeSessions.clear()
-        changeJob.cancel()
+        realtimeCoverageJob.cancel()
+        bundleCacheJob.cancel()
     }
 
     override fun toString() = "act-scope($id, $name)"

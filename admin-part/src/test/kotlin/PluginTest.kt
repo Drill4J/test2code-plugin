@@ -123,7 +123,6 @@ class PluginTest {
         plugin.activeScope.startSession(
             sessionId = sessionId,
             testType = "MANUAL",
-            activeSessionHandler = {}
         )
         addProbes(
             plugin,

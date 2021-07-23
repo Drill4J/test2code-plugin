@@ -25,13 +25,13 @@ import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import java.io.*
 import java.util.stream.*
-import kotlin.streams.*
 
 private val logger = logger {}
 
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
+    cache: Map<TypedTest, BundleCounter> = emptyMap(),
 ) = run {
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
@@ -56,7 +56,7 @@ internal fun Sequence<Session>.calcBundleCounters(
         byTestType = probesByTestType.mapValues {
             it.value.asSequence().flatten().bundle(context, classBytes)
         },
-        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes) },
+        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
         statsByTest = fold(mutableMapOf()) { map, session ->
             session.testStats.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
@@ -165,26 +165,24 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
-): Map<TypedTest, BundleCounter> = values.flatten().asSequence().let { sessions ->
-    takeIf { sessions.any() }?.run {
-        val testsWithEmptyBundle = sessions.testsWithBundle()
-        forEach { (testType, sessions) ->
-            sessions.forEach { session ->
-                if (session is FinishedSession && !session.cached.isNullOrEmpty()) {
-                    testsWithEmptyBundle.putAll(session.cached)
-                } else {
-                    session.asSequence()
-                        .groupBy { TypedTest(it.testName, testType) }
-                        .mapValuesTo(testsWithEmptyBundle) {
-                            it.value.asSequence().bundle(context, classBytes)
-                        }
-                }
+    cache: Map<TypedTest, BundleCounter>,
+): Map<TypedTest, BundleCounter> = run {
+    val bundleByTests = values.asSequence().flatten().testsWithBundle()
+    bundleByTests.putAll(cache)
+    map { (testType, sessions: List<Session>) ->
+        sessions.asSequence().flatten()
+            .mapNotNull { execData ->
+                execData.testName.typedTest(testType).takeIf { it !in cache }?.to(execData)
             }
-        }
-        testsWithEmptyBundle
-    } ?: emptyMap()
+            .groupBy(Pair<TypedTest, ExecClassData>::first) { it.second }
+            .mapValuesTo(bundleByTests) {
+                it.value.asSequence().bundle(context, classBytes)
+            }
+    }.takeIf { it.isNotEmpty() }?.reduce { m1, m2 ->
+        m1.apply { putAll(m2) }
+    }
+    bundleByTests
 }
-
 
 private fun Sequence<Session>.testsWithBundle(
 ): MutableMap<TypedTest, BundleCounter> = flatMap { session ->

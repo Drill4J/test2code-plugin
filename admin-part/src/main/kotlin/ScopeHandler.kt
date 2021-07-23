@@ -22,16 +22,15 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
-import kotlinx.atomicfu.*
 
-internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { sessionChanged, sessions ->
+internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler { sessionChanged, sessions ->
     if (sessionChanged) {
         sendActiveSessions()
     }
     sessions?.let {
         val context = state.coverContext()
         val bundleCounters = trackTime("bundleCounters") {
-            sessions.calcBundleCounters(context, adminData.loadClassBytes())
+            sessions.calcBundleCounters(context, state.classBytes(), bundleByTests)
         }.also { logPoolStats() }
         val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)
@@ -46,16 +45,15 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initScopeHandler { 
     }
 }
 
-fun Plugin.initSessionHandler(): ActiveSessionHandler = { tests ->
+internal fun Plugin.initBundleHandler(): Boolean = activeScope.initBundleHandler { tests ->
     val context = state.coverContext()
-    val bytes = classBytes.value ?: adminData.loadClassBytes().also { bytes -> classBytes.updateAndGet { bytes } }
     val preparedBundle = tests.keys.associateWithTo(mutableMapOf()) {
         BundleCounter.empty
     }
     val calculated = tests.mapValuesTo(preparedBundle) {
-        it.value.bundle(context, bytes)
+        it.value.bundle(context, state.classBytes())
     }
-    bundleByTests.putAll(calculated)
+    addBundleCache(calculated)
 }
 
 
@@ -93,7 +91,7 @@ internal suspend fun Plugin.changeActiveScope(
 )
 
 internal suspend fun Plugin.scopeInitialized(prevId: String) {
-    if (initActiveScope()) {
+    if (initActiveScope() && initBundleHandler()) {
         sendScopes()
         val prevScope = state.scopeManager.byId(prevId)
         prevScope?.takeIf { it.enabled }.apply {
