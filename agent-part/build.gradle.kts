@@ -14,6 +14,7 @@ configurations.implementation {
 
 dependencies {
     jarDeps(project(":agent-api"))
+    jarDeps(project(":jacoco")) { isTransitive = false }
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm") { isTransitive = false }
 
