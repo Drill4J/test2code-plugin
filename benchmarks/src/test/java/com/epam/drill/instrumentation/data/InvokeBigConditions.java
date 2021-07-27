@@ -1,12 +1,12 @@
 /**
  * Copyright 2020 EPAM Systems
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,55 +15,21 @@
  */
 package com.epam.drill.instrumentation.data;
 
-import java.util.Random;
+import java.util.*;
 
-public class BigClazz {
+public class InvokeBigConditions implements Runnable {
 
-    public long manyForInFor(long start) {
-        long sum = start;
-        Random random = new Random();
-        int firstRange = 2;
-        int toMin = 7;
-        int toMax = 2;
-        for (int i10 = random.nextInt(firstRange); i10 <= random.nextInt(toMax) + toMin; i10++) {
-            sum += i10;
-            for (int i9 = random.nextInt(firstRange); i9 <= random.nextInt(toMax) + toMin; i9++) {
-                sum += i9;
-                for (int i8 = random.nextInt(firstRange); i8 <= random.nextInt(toMax) + toMin; i8++) {
-                    sum += i8;
-                    for (int i7 = random.nextInt(firstRange); i7 <= random.nextInt(toMax) + toMin; i7++) {
-                        sum += i7;
-                        for (int i6 = random.nextInt(firstRange); i6 <= random.nextInt(toMax) + toMin; i6++) {
-                            sum += i6;
-                            for (int i5 = random.nextInt(firstRange); i5 <= random.nextInt(toMax) + toMin; i5++) {
-                                sum += i5;
-                                for (int i4 = random.nextInt(firstRange); i4 <= random.nextInt(toMax) + toMin; i4++) {
-                                    sum += i4;
-                                    for (int i3 = random.nextInt(firstRange); i3 <= random.nextInt(toMax) + toMin; i3++) {
-                                        sum += i3;
-                                        for (int i2 = random.nextInt(firstRange); i2 <= random.nextInt(toMax) + toMin; i2++) {
-                                            sum += i2;
-                                            for (int i1 = random.nextInt(firstRange); i1 <= random.nextInt(toMax) + toMin; i1++) {
-                                                sum += i1;
-
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return sum;
+    @Override
+    public void run() {
+        Random random = new Random(50);
+        methodIfAndInFor(random.nextInt());
     }
 
     public int methodIfAndInFor(int s) {
         int sum = s;
-        Random random = new Random();
+        Random random = new Random(50);
         int firstRange = 3;
-        int toMin = 100_000;
+        int toMin = 10_000;
         int toMax = 100;
         for (int i = random.nextInt(firstRange); i <= random.nextInt(toMax) + toMin; i++) {
             sum += methodIfWithAnd(s);
@@ -77,7 +43,7 @@ public class BigClazz {
 
     int methodWithCondition() {
         int sum = 0;
-        Random random = new Random();
+        Random random = new Random(50);
         if (isaBoolean(random)) {
             sum += 110;
             if ((int) (Math.random() * 10000) % 2 == 0 | random.nextInt(100) + 1 > random.nextInt(200) | random.nextInt(100) + 2 > random.nextInt(200) | random.nextInt(100) + 3 > random.nextInt(200) | random.nextInt(100) + 4 > random.nextInt(200) | random.nextInt(100) + 5 > random.nextInt(200) | random.nextInt(100) + 6 > random.nextInt(200) | random.nextInt(100) + 7 > random.nextInt(200) | random.nextInt(100) + 8 > random.nextInt(200) | random.nextInt(100) + 9 > random.nextInt(200) | random.nextInt(100) + 10 > random.nextInt(200) | random.nextInt(100) + 11 > random.nextInt(200) | random.nextInt(100) + 12 > random.nextInt(200) | random.nextInt(100) + 13 > random.nextInt(200) | random.nextInt(100) + 14 > random.nextInt(200) | random.nextInt(100) + 15 > random.nextInt(200) | random.nextInt(100) + 16 > random.nextInt(200) | random.nextInt(100) + 17 > random.nextInt(200) | random.nextInt(100) + 18 > random.nextInt(200) | random.nextInt(100) >= random.nextInt(200)) {
@@ -148,7 +114,7 @@ public class BigClazz {
 
     int methodIfWithAnd(int s) {
         int sum = s;
-        Random random = new Random();
+        Random random = new Random(50);
         if (isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random) & isaBoolean(random)) {
             sum += 1000;
         } else {
@@ -159,7 +125,7 @@ public class BigClazz {
 
     int methodIfAndAndOrOr(int s) {
         int sum = s;
-        Random random = new Random();
+        Random random = new Random(50);
         if (((int) (Math.random() * 10000) % 2 == 0 || random.nextInt(100) + 1 > random.nextInt(200) || random.nextInt(100) + 2 > random.nextInt(200))
                 && ((int) (Math.random() * 10000) % 2 == 0 || random.nextInt(100) + 1 > random.nextInt(200) || random.nextInt(100) + 2 > random.nextInt(200))
                 && ((int) (Math.random() * 10000) % 2 == 0 || random.nextInt(100) + 1 > random.nextInt(200) || random.nextInt(100) + 2 > random.nextInt(200))
@@ -218,5 +184,4 @@ public class BigClazz {
 
         return sum;
     }
-
 }
