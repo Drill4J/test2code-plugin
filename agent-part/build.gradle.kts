@@ -17,6 +17,7 @@ dependencies {
     jarDeps(project(":jacoco")) { isTransitive = false }
     jarDeps("org.jacoco:org.jacoco.core")
     jarDeps("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm") { isTransitive = false }
+    jarDeps("com.github.luben:zstd-jni")
 
     implementation(kotlin("stdlib"))
 
@@ -24,6 +25,7 @@ dependencies {
     implementation("com.epam.drill:drill-agent-part")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
     compileOnly("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(project(":tests"))
@@ -74,6 +76,7 @@ tasks {
         kotlinOptions.freeCompilerArgs = listOf(
             "-Xuse-experimental=kotlin.ExperimentalStdlibApi",
             "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi",
             "-Xuse-experimental=kotlinx.coroutines.FlowPreview",
             "-Xuse-experimental=kotlinx.coroutines.InternalCoroutinesApi",
             "-Xuse-experimental=kotlinx.coroutines.ObsoleteCoroutinesApi"

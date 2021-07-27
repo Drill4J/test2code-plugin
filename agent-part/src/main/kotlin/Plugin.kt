@@ -19,9 +19,12 @@ import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.json.*
+import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
+import java.util.*
 
 @Suppress("unused")
 class Plugin(
@@ -198,7 +201,9 @@ fun Plugin.probeSender(
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
-            sendMessage(message)
+            val encoded = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
+            val compressed = Zstd.compress(encoded)
+            send(Base64.getEncoder().encodeToString(compressed))
             message.data.count()
         }.takeIf { sendChanged && it > 0 }?.let {
             sendMessage(SessionChanged(sessionId, it))
