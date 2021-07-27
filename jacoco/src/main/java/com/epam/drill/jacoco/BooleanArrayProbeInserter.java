@@ -16,7 +16,16 @@ import org.jacoco.core.internal.instr.IProbeArrayStrategy;
 import org.jacoco.core.internal.instr.InstrSupport;
 import org.objectweb.asm.*;
 
-public class ProbeInserter extends MethodVisitor {
+/**
+ * It is based on {@link ProbeInserter}, but use wrapper behind BooleanArray.
+ * Internal utility to add probes into the control flow of a method. The code
+ * for a probe simply sets a certain slot of a booleanArray to true. In
+ * addition the probe array has to be retrieved at the beginning of the method
+ * and stored in a local variable.
+ */
+public class BooleanArrayProbeInserter extends MethodVisitor {
+
+    public final static String PROBE_IMPL = AgentProbes.class.getCanonicalName().replace(".", "/");
 
     private final IProbeArrayStrategy arrayStrategy;
 
@@ -37,7 +46,7 @@ public class ProbeInserter extends MethodVisitor {
     private int accessorStackSize;
 
     /**
-     * Creates a new {@link ProbeInserter}.
+     * Creates a new {@link BooleanArrayProbeInserter}.
      *
      * @param access        access flags of the adapted method
      * @param name          the method's name
@@ -46,8 +55,8 @@ public class ProbeInserter extends MethodVisitor {
      * @param arrayStrategy callback to create the code that retrieves the reference to
      *                      the probe array
      */
-    public ProbeInserter(final int access, final String name, final String desc,
-                         final MethodVisitor mv, final IProbeArrayStrategy arrayStrategy) {
+    public BooleanArrayProbeInserter(final int access, final String name, final String desc,
+                                     final MethodVisitor mv, final IProbeArrayStrategy arrayStrategy) {
         super(InstrSupport.ASM_API_VERSION, mv);
         //todo use const:
 //		this.clinit = InstrSupport.CLINIT_NAME.equals(name);
@@ -73,9 +82,12 @@ public class ProbeInserter extends MethodVisitor {
         // Stack[1]: I
         // Stack[0]: $PROBE_IMPL
 
-		mv.visitInsn(Opcodes.ICONST_1);
+//		mv.visitInsn(Opcodes.ICONST_1);
 
-        mv.visitInsn(Opcodes.BASTORE);
+        visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL, PROBE_IMPL, "set", "(I)V",
+                false
+        );
     }
 
     /**
@@ -155,7 +167,11 @@ public class ProbeInserter extends MethodVisitor {
         int pos = 0; // Current variable position
         while (idx < nLocal || pos <= variable) {
             if (pos == variable) {
-				newLocal[newIdx++] = InstrSupport.DATAFIELD_DESC;
+//				newLocal[newIdx++] = InstrSupport.DATAFIELD_DESC;
+                newLocal[newIdx++] = PROBE_IMPL;
+                //TODO InstrSupport change value of constants to bitSet:
+//				InstrSupport.DATAFIELD_DESC;
+//  			InstrSupport.INITMETHOD_DESC
                 pos++;
             } else {
                 if (idx < nLocal) {

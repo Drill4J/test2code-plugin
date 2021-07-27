@@ -164,6 +164,21 @@ class Plugin(
         }
     }
 
+
+    fun processServerRequest() {
+        (instrContext as DrillProbeArrayProvider).run {
+            val sessionId = context()
+            val testName = context[DRIlL_TEST_NAME] ?: "unspecified"
+            runtimes[sessionId]?.run {
+                val execDatum = getOrPut(testName) {
+                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
+                }
+                requestThreadLocal.set(execDatum)
+            } ?: requestThreadLocal.remove()
+        }
+    }
+
+
     override fun parseAction(
         rawAction: String,
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
@@ -173,7 +188,8 @@ fun Plugin.probeSender(
     sessionId: String,
     sendChanged: Boolean = false,
 ): RealtimeHandler = { execData ->
-    execData.map(ExecDatum::toExecClassData)
+    execData
+        .map(ExecDatum::toExecClassData)
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
