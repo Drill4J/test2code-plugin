@@ -32,6 +32,10 @@ data class StartAgentSession(val payload: StartSessionPayload) : AgentAction()
 @SerialName("ADD_SESSION_DATA")
 data class AddAgentSessionData(val payload: AgentSessionDataPayload) : AgentAction()
 
+@Serializable
+@SerialName("ADD_SESSION_TESTS")
+data class AddAgentSessionTests(val payload: AgentSessionTestsPayload) : AgentAction()
+
 @SerialName("STOP")
 @Serializable
 data class StopAgentSession(val payload: AgentSessionPayload) : AgentAction()
