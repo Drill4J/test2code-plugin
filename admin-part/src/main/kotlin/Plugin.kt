@@ -94,7 +94,7 @@ class Plugin(
 
     override suspend fun doAction(
         action: Action,
-        data: Any?
+        data: Any?,
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
@@ -179,7 +179,11 @@ class Plugin(
         is AddTests -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 testRun?.let { session.setTestRun(it) }
-                ActionResult(StatusCodes.OK, "")
+                AddAgentSessionTests(
+                    AgentSessionTestsPayload(
+                        sessionId,
+                        testRun?.tests?.map { it.name.urlEncode() } ?: emptyList()
+                    )).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is StopSession -> action.payload.run {

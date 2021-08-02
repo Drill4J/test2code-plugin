@@ -40,6 +40,8 @@ internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {
     runCatching { URLDecoder.decode(this, "UTF-8") }.getOrNull()
 } ?: this
 
+internal fun String.urlEncode() : String =  runCatching { URLEncoder.encode(this, "UTF-8") }.getOrNull() ?: this
+
 internal fun String.toShortClassName(): String = substringAfterLast('/').weakIntern()
 
 val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX).weakIntern()

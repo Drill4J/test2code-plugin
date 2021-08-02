@@ -36,13 +36,15 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
         sessionId: String,
         isGlobal: Boolean,
         testName: String? = null,
-        realtimeHandler: RealtimeHandler = {}
+        realtimeHandler: RealtimeHandler = {},
     )
 
     fun stop(sessionId: String): Sequence<ExecDatum>?
     fun stopAll(): List<Pair<String, Sequence<ExecDatum>>>
     fun cancel(sessionId: String)
     fun cancelAll(): List<String>
+    fun addCompletedTests(sessionId: String, tests: List<String>)
+
 }
 
 const val DRIlL_TEST_NAME = "drill-test-name"
@@ -51,7 +53,7 @@ class ExecDatum(
     val id: Long,
     val name: String,
     val probes: BooleanArray,
-    val testName: String = ""
+    val testName: String = "",
 )
 
 fun ExecDatum.toExecClassData() = ExecClassData(
@@ -74,10 +76,14 @@ internal object ProbeWorker : CoroutineScope {
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    realtimeHandler: RealtimeHandler
+    realtimeHandler: RealtimeHandler,
 ) : (Long, String, Int, String) -> BooleanArray {
 
     private val _execData = atomic(persistentHashMapOf<String, ExecData>())
+
+    private val _completedTests = atomic(persistentListOf<String>())
+
+    private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
     private val job = ProbeWorker.launch {
         while (true) {
@@ -90,7 +96,7 @@ class ExecRuntime(
         id: Long,
         name: String,
         probeCount: Int,
-        testName: String
+        testName: String,
     ): BooleanArray = _execData.updateAndGet { tests ->
         (tests[testName] ?: persistentHashMapOf()).let { execData ->
             if (id !in execData) {
@@ -107,9 +113,20 @@ class ExecRuntime(
         }
     }.getValue(testName).getValue(id).probes
 
-    fun collect(): Sequence<ExecDatum> = _execData.getAndUpdate { it.clear() }.values.asSequence().run {
-        flatMap { it.values.asSequence() }
+    fun collect(): Sequence<ExecDatum> {
+        val passedTest = _completedTests.getAndUpdate { it.clear() }
+        return _execData.getAndUpdate { execData ->
+            if (isPerformanceMode) {
+                execData.clear()
+            } else {
+                execData.filter { !passedTest.contains(it.key) }.toPersistentMap()
+            }
+        }.values.asSequence().run {
+            flatMap { it.values.asSequence() }
+        }
     }
+
+    fun addCompletedTests(tests: List<String>) = _completedTests.update { it + tests }
 
     fun close() {
         job.cancel()
@@ -122,7 +139,7 @@ class ExecRuntime(
  * The provider must be a Kotlin singleton object, otherwise the instrumented probe calls will fail.
  */
 open class SimpleSessionProbeArrayProvider(
-    defaultContext: AgentContext? = null
+    defaultContext: AgentContext? = null,
 ) : SessionProbeArrayProvider {
 
     var defaultContext: AgentContext?
@@ -146,7 +163,7 @@ open class SimpleSessionProbeArrayProvider(
     override fun invoke(
         id: Long,
         name: String,
-        probeCount: Int
+        probeCount: Int,
     ): BooleanArray = _context.value?.let {
         it(id, name, probeCount)
     } ?: _globalContext.value?.let {
@@ -156,7 +173,7 @@ open class SimpleSessionProbeArrayProvider(
     private operator fun AgentContext.invoke(
         id: Long,
         name: String,
-        probeCount: Int
+        probeCount: Int,
     ): BooleanArray? = run {
         val sessionId = this()
         runtimes[sessionId]?.let { sessionRuntime ->
@@ -169,7 +186,7 @@ open class SimpleSessionProbeArrayProvider(
         sessionId: String,
         isGlobal: Boolean,
         testName: String?,
-        realtimeHandler: RealtimeHandler
+        realtimeHandler: RealtimeHandler,
     ) {
         if (isGlobal) {
             _globalContext.value = GlobalContext(sessionId, testName)
@@ -203,6 +220,11 @@ open class SimpleSessionProbeArrayProvider(
         runtime.close()
         id
     }
+
+    override fun addCompletedTests(sessionId: String, tests: List<String>) {
+        _runtimes.value[sessionId]?.addCompletedTests(tests)
+    }
+
 
     private fun stubArray(probeCount: Int) = _stubArray.updateAndGet {
         if (probeCount > it.size) {
@@ -243,7 +265,7 @@ open class SimpleSessionProbeArrayProvider(
 
 private class GlobalContext(
     private val sessionId: String,
-    private val testName: String?
+    private val testName: String?,
 ) : AgentContext {
     override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME }
 

@@ -28,7 +28,7 @@ class Plugin(
     id: String,
     agentContext: AgentContext,
     sender: Sender,
-    logging: LoggerFactory
+    logging: LoggerFactory,
 ) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter {
     private val logger = logging.logger("Plugin $id")
 
@@ -89,7 +89,7 @@ class Plugin(
 
     override fun instrument(
         className: String,
-        initialBytes: ByteArray
+        initialBytes: ByteArray,
     ): ByteArray? = takeIf { enabled }?.run {
         val idFromClassName = CRC64.classId(className.encodeToByteArray())
         instrumenter(className, idFromClassName, initialBytes)
@@ -125,6 +125,9 @@ class Plugin(
             }
             is AddAgentSessionData -> {
                 //ignored
+            }
+            is AddAgentSessionTests -> action.payload.run {
+                instrContext.addCompletedTests(sessionId, tests)
             }
             is StopAgentSession -> {
                 val sessionId = action.payload.sessionId
@@ -162,13 +165,13 @@ class Plugin(
     }
 
     override fun parseAction(
-        rawAction: String
+        rawAction: String,
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 }
 
 fun Plugin.probeSender(
     sessionId: String,
-    sendChanged: Boolean = false
+    sendChanged: Boolean = false,
 ): RealtimeHandler = { execData ->
     execData.map(ExecDatum::toExecClassData)
         .chunked(0xffff)
