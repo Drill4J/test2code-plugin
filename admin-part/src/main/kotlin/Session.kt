@@ -19,12 +19,8 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
@@ -34,7 +30,7 @@ sealed class Session : Sequence<ExecClassData>, JvmSerializable {
     abstract val id: String
     abstract val testType: String
     abstract val tests: Set<TypedTest>
-    abstract val testStats: Map<TypedTest, TestStats>
+    abstract val testDetails: Map<TypedTest, TestDetails>
 }
 
 class ActiveSession(
@@ -47,9 +43,9 @@ class ActiveSession(
     override val tests: Set<TypedTest>
         get() = _probes.value.keys
 
-    override val testStats: Map<TypedTest, TestStats>
+    override val testDetails: Map<TypedTest, TestDetails>
         get() = _testRun.value?.tests?.associate {
-            TypedTest(type = testType, name = it.name) to TestStats(
+            TypedTest(type = testType, name = it.name) to TestDetails(
                 duration = it.finishedAt - it.startedAt,
                 result = it.result
             )
@@ -65,7 +61,7 @@ class ActiveSession(
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
         if (true in probe.probes) {
-            val typedTest = probe.testName.weakIntern().typedTest(testType.weakIntern())
+            val typedTest = probe.testName.typedTest(testType)
             _probes.update { map ->
                 (map[typedTest] ?: persistentHashMapOf()).let { testData ->
                     val probeId = probe.id()
@@ -100,10 +96,11 @@ class ActiveSession(
             tests = HashSet(_testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
                 keys + tests.map { it.name.typedTest(testType) }
             } ?: keys),
-            testStats = _testRun.value?.tests?.associate {
-                TypedTest(type = testType, name = it.name) to TestStats(
+            testDetails = _testRun.value?.tests?.associate {
+                TypedTest(type = testType, name = it.name) to TestDetails(
                     duration = it.finishedAt - it.startedAt,
-                    result = it.result
+                    result = it.result,
+                    metadata = it.metadata
                 )
             } ?: emptyMap(),
             probes = values.flatMap { it.values },
@@ -116,7 +113,7 @@ data class FinishedSession(
     override val id: String,
     override val testType: String,
     override val tests: Set<TypedTest>,
-    override val testStats: Map<TypedTest, TestStats> = emptyMap(),
+    override val testDetails: Map<TypedTest, TestDetails> = emptyMap(),
     val probes: List<ExecClassData>,
 ) : Session(), JvmSerializable {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()

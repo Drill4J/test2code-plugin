@@ -191,9 +191,9 @@ internal class AgentState(
                 }.orEmpty()
                 val testsToRunParentDurations = parentBuild?.let {
                     TestDurations(
-                        all = testsToRun.totalDuration(it.bundleCounters.statsByTest),
+                        all = testsToRun.totalDuration(it.bundleCounters.detailsByTest),
                         byType = testsToRun.mapValues { (type, tests) ->
-                            mapOf(type to tests).totalDuration(it.bundleCounters.statsByTest)
+                            mapOf(type to tests).totalDuration(it.bundleCounters.detailsByTest)
                         }
                     )
                 } ?: TestDurations(all = 0L, byType = emptyMap())

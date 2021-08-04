@@ -109,7 +109,7 @@ class ActiveScope(
         while (true) {
             _bundleCacheHandler.value?.let {
                 val probes = this@ActiveScope + activeSessions.values
-                val tests = activeSessions.values.flatMap { it.testStats.keys }
+                val tests = activeSessions.values.flatMap { it.testDetails.keys }
                 val probesByTests = probes.groupBy { it.testType }.map { (testType, sessions) ->
                     sessions.asSequence().flatten()
                         .groupBy { it.testName.typedTest(testType) }

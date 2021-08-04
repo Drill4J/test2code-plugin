@@ -77,12 +77,12 @@ class ScopeCoverageTest : E2EPluginTest() {
                             testWithCoverageName -> {
                                 it.coverage.percentage shouldBeGreaterThan 46.6
                                 it.type shouldBe testType
-                                it.stats.result shouldBe TestResult.PASSED
+                                it.details.result shouldBe TestResult.PASSED
                             }
                             testWithoutCoverageName -> {
                                 it.coverage.percentage shouldBe 0.0
                                 it.type shouldBe testType
-                                it.stats.result shouldBe TestResult.PASSED
+                                it.details.result shouldBe TestResult.PASSED
                             }
                             else -> fail("Unknown test in collection")
                         }

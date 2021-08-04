@@ -71,6 +71,7 @@ data class TestInfo(
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
+    val metadata: TestMetadata = TestMetadata.emptyMetadata,
 )
 
 enum class TestResult : JvmSerializable {
@@ -297,14 +298,31 @@ data class TestCoverageDto(
     val name: String,
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
-    val stats: TestStats = TestStats(0, TestResult.PASSED),
+    val details: TestDetails = TestDetails(0, TestResult.PASSED),
 )
 
 @Serializable
-data class TestStats(
+data class TestDetails(
     val duration: Long,
     val result: TestResult,
+    val metadata: TestMetadata = TestMetadata.emptyMetadata,
 ) : JvmSerializable
+
+@Serializable
+data class TestMetadata(
+    val hash: String = "",
+    val data: Map<String, String> = emptyMap(),
+){
+    companion object {
+        val emptyMetadata = TestMetadata()
+    }
+}
+
+@Serializable
+data class TestData(
+    val name: String,
+    val metadata: TestMetadata,
+)
 
 @Serializable
 data class ActiveSessions(
@@ -377,7 +395,7 @@ enum class RiskType {
     NEW, MODIFIED
 }
 
-typealias GroupedTests = Map<String, List<String>>
+typealias GroupedTests = Map<String, List<TestData>>
 
 @Serializable
 data class GroupedTestsDto(

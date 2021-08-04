@@ -21,6 +21,7 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.util.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import org.jacoco.core.tools.*
@@ -58,14 +59,14 @@ internal fun Sequence<Session>.calcBundleCounters(
             it.value.asSequence().flatten().bundle(context, classBytes)
         },
         byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
-        statsByTest = fold(mutableMapOf()) { map, session ->
-            session.testStats.forEach { (test, stats) ->
+        detailsByTest = fold(mutableMapOf()) { map, session ->
+            session.testDetails.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
-                    copy(duration = duration + stats.duration, result = stats.result)
+                    copy(duration = duration + stats.duration, result = stats.result, metadata = stats.metadata)
                 } ?: stats
             }
             map
-        }
+        },
     )
 }
 
@@ -88,9 +89,9 @@ internal fun BundleCounters.calculateCoverageData(
             all = TestSummary(
                 coverage = bundle.toCoverDto(tree),
                 testCount = bundlesByTests.keys.count(),
-                duration = statsByTest.values.sumOf { it.duration }
+                duration = detailsByTest.values.sumOf { it.duration }
             ),
-            byType = byTestType.coveragesByTestType(byTest, context, statsByTest)
+            byType = byTestType.coveragesByTestType(byTest, context, detailsByTest)
         )
     }
     logger.info { coverageByTests.byType }
@@ -134,7 +135,7 @@ internal fun BundleCounters.calculateCoverageData(
             type = typedTest.type,
             name = typedTest.name,
             coverage = bundle.toCoverDto(tree),
-            stats = statsByTest[typedTest] ?: TestStats(0, TestResult.PASSED)
+            details = detailsByTest[typedTest] ?: TestDetails(0, TestResult.PASSED)
         )
     }.sortedBy { it.type }
 
@@ -151,14 +152,14 @@ internal fun BundleCounters.calculateCoverageData(
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     context: CoverContext,
-    statsByTest: Map<TypedTest, TestStats>,
+    detailsByTest: Map<TypedTest, TestDetails>,
 ): List<TestTypeSummary> = map { (testType, bundle) ->
     TestTypeSummary(
         type = testType,
         summary = TestSummary(
             coverage = bundle.toCoverDto(context.packageTree),
             testCount = bundleMap.keys.filter { it.type == testType }.distinct().count(),
-            duration = statsByTest.filter { it.key.type == testType }.map { it.value.duration }.sum()
+            duration = detailsByTest.filter { it.key.type == testType }.map { it.value.duration }.sum()
         )
     )
 }
