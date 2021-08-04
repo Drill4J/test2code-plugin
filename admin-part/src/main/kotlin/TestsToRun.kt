@@ -26,7 +26,7 @@ data class TestsToRunStats(
     val total: Int = 0,
     val completed: Int = 0,
     val duration: Long = 0L,
-    val parentDuration: Long = 0L
+    val parentDuration: Long = 0L,
 )
 
 @Serializable
@@ -35,16 +35,16 @@ internal data class TestsToRunSummary(
     val parentVersion: String = "",
     val lastModifiedAt: Long = 0L,
     val stats: TestsToRunStats = TestsToRunStats(),
-    val statsByType: Map<String, TestsToRunStats> = emptyMap()
+    val statsByType: Map<String, TestsToRunStats> = emptyMap(),
 )
 
 private fun CoverContext.toTestsToRunStats(
     parentDuration: Long,
-    curTestsToRun: GroupedTests = testsToRun
+    curTestsToRun: GroupedTests = testsToRun,
 ): TestsToRunStats = TestsToRunStats(
     total = curTestsToRun.totalCount(),
     completed = curTestsToRun.withCoverage(build.bundleCounters).totalCount(),
-    duration = curTestsToRun.totalDuration(build.bundleCounters.statsByTest),
+    duration = curTestsToRun.totalDuration(build.bundleCounters.detailsByTest),
     parentDuration = parentDuration
 )
 
@@ -76,7 +76,7 @@ internal fun TestsToRunSummary.toTestsToRunSummaryDto() = TestsToRunSummaryDto(
 
 internal suspend fun StoreClient.loadTestsToRunSummary(
     buildVersion: String,
-    parentVersion: String = ""
+    parentVersion: String = "",
 ): List<TestsToRunSummary> = getAll<TestsToRunSummary>()
     .filter { it.parentVersion == parentVersion && it.buildVersion != buildVersion }
     .sortedBy { it.lastModifiedAt }

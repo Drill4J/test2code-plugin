@@ -36,7 +36,7 @@ internal data class AgentSummary(
     val tests: GroupedTests,
     val testDuration: Long,
     val testsToRun: GroupedTests,
-    val durationByType: GroupedDuration
+    val durationByType: GroupedDuration,
 )
 internal typealias GroupedDuration = Map<String, Long>
 
@@ -52,7 +52,7 @@ internal class SummaryAggregator : (String, String, AgentSummary) -> AgentSummar
     override operator fun invoke(
         serviceGroup: String,
         agentId: String,
-        agentSummary: AgentSummary
+        agentSummary: AgentSummary,
     ): AgentSummary = run {
         val cache = _summaryCache.updateAndGet {
             val curAgentSummary = it[serviceGroup] ?: persistentHashMapOf()
@@ -71,7 +71,7 @@ internal fun CachedBuild.toSummary(
     testsToRun: GroupedTests,
     risks: TypedRisks,
     coverageByTests: CoverageByTests? = null,
-    parentCoverageCount: Count? = null
+    parentCoverageCount: Count? = null,
 ): AgentSummary = AgentSummary(
     name = agentName,
     buildVersion = version,
@@ -111,7 +111,7 @@ internal fun AgentSummary.toDto() = SummaryDto(
 )
 
 internal operator fun AgentSummary.plus(
-    other: AgentSummary
+    other: AgentSummary,
 ): AgentSummary = copy(
     coverage = coverage + other.coverage,
     methodCount = methodCount + other.methodCount,
@@ -164,7 +164,7 @@ private fun AgentSummary.toTestTypeSummary() = coverageByType.map { (type, count
 
 private fun <K, V> Map<K, V>.merge(
     other: Map<K, V>,
-    operation: (V, V) -> V
+    operation: (V, V) -> V,
 ): Map<K, V> = mapValuesTo(mutableMapOf<K, V>()) { (k, v) ->
     other[k]?.let { operation(v, it) } ?: v
 }.also { map ->
@@ -175,7 +175,7 @@ private fun <K, V> Map<K, V>.merge(
     }
 }
 
-private fun mergeDistinct(
-    list1: List<String>,
-    list2: List<String>
-): List<String> = sequenceOf(list1, list2).map { it.asSequence() }.flatten().distinct().toList()
+private fun <T> mergeDistinct(
+    list1: List<T>,
+    list2: List<T>,
+): List<T> = sequenceOf(list1, list2).map { it.asSequence() }.flatten().distinct().toList()

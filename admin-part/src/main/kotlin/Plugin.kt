@@ -94,7 +94,7 @@ class Plugin(
 
     override suspend fun doAction(
         action: Action,
-        data: Any?
+        data: Any?,
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
@@ -393,7 +393,12 @@ class Plugin(
         )
         state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
-            byTest.keys.groupBy(TypedTest::type, TypedTest::name),
+            byTest.keys.groupBy(TypedTest::type) {
+                TestData(
+                    it.name,
+                    detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata,
+                )
+            },
         )
         val summary = cachedBuild.toSummary(
             agentInfo.name,
