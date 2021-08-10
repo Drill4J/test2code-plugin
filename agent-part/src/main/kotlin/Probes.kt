@@ -19,6 +19,7 @@ import com.epam.drill.jacoco.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import java.util.concurrent.*
 import kotlin.coroutines.*
@@ -54,13 +55,13 @@ class ExecDatum(
     val id: Long,
     val name: String,
     val probes: AgentProbes,
-    val testName: String = ""
+    val testName: String = "",
 )
 
 class ProbeDescriptor(
     val id: Long,
     val name: String,
-    val probeCount: Int
+    val probeCount: Int,
 )
 
 fun ExecDatum.toExecClassData() = ExecClassData(
@@ -81,7 +82,7 @@ internal object ProbeWorker : CoroutineScope {
 }
 
 abstract class Runtime(
-    realtimeHandler: RealtimeHandler
+    realtimeHandler: RealtimeHandler,
 ) {
     private val job = ProbeWorker.launch {
         while (true) {
@@ -102,31 +103,42 @@ abstract class Runtime(
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    realtimeHandler: RealtimeHandler
+    realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
     private val _execData = ConcurrentHashMap<String, ExecData>()
 
+    private val _completedTests = atomic(persistentListOf<String>())
+    private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
+
     override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
         data.filterNotNull().filter { datum -> datum.probes.values.any { it } }
-    }.asSequence().also { _execData.clear() }
+    }.asSequence().also {
+        val passedTest = _completedTests.getAndUpdate { it.clear() }
+        if (isPerformanceMode) {
+            _execData.clear()
+        } else {
+            passedTest.forEach { _execData.remove(it) }
+        }
+    }
 
     fun getOrPut(
         testName: String,
-        updater: () -> ExecData
+        updater: () -> ExecData,
     ): Array<ExecDatum?> = _execData.getOrPut(testName) { updater() }
 
     fun putIndex(
         indx: Int,
-        updater: (String) -> ExecDatum
+        updater: (String) -> ExecDatum,
     ) = _execData.forEach { (testName, v) ->
         v[indx] = updater(testName)
-    private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
     }
+
+    fun addCompletedTests(tests: List<String>) = _completedTests.update { it + tests }
 }
 
 class GlobalExecRuntime(
     val testName: String?,
-    realtimeHandler: RealtimeHandler
+    realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
     val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
 
@@ -146,7 +158,7 @@ class ProbeMetaContainer {
         inx: Int,
         probeDescriptor: ProbeDescriptor,
         globalRuntime: GlobalExecRuntime?,
-        runtimes: Collection<ExecRuntime>
+        runtimes: Collection<ExecRuntime>,
     ) {
         probesDescriptor[inx] = probeDescriptor
 
@@ -162,7 +174,7 @@ class ProbeMetaContainer {
     }
 
     fun forEachIndexed(
-        action: (Int, ProbeDescriptor?) -> Unit
+        action: (Int, ProbeDescriptor?) -> Unit,
     ) {
         probesDescriptor.forEachIndexed { index, probeDescriptor ->
             action(index, probeDescriptor)
@@ -213,7 +225,7 @@ open class SimpleSessionProbeArrayProvider(
         id: Long,
         num: Int,
         name: String,
-        probeCount: Int
+        probeCount: Int,
     ): AgentProbes = global?.second?.checkGlobalProbes(num)
         ?: checkLocalProbes(num)
         ?: stubProbes
@@ -273,14 +285,16 @@ open class SimpleSessionProbeArrayProvider(
         id
     }
 
+    override fun addCompletedTests(sessionId: String, tests: List<String>) {
+        runtimes[sessionId]?.addCompletedTests(tests)
+    }
+
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         if (sessionId !in runtimes) {
             val value = ExecRuntime(realtimeHandler)
             runtimes[sessionId] = value
         } else runtimes
-    override fun addCompletedTests(sessionId: String, tests: List<String>) {
-        _runtimes.value[sessionId]?.addCompletedTests(tests)
-    }
+
     }
 
     private fun addGlobal(sessionId: String, testName: String?, realtimeHandler: RealtimeHandler) {
