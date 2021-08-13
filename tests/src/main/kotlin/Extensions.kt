@@ -19,6 +19,7 @@ import com.epam.drill.admin.common.*
 import com.epam.drill.admin.common.serialization.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.util.*
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
@@ -43,7 +44,7 @@ fun Application.resolve(destination: String): Any {
     val filter = pathToCallBackMapping.filter { it.key.count { c -> c == '/' } + 1 == urlTokens.size }.filter {
         var matche = true
         it.key.split("/").forEachIndexed { x, y ->
-            if (!(y == urlTokens[x] || y.startsWith("{"))) {
+            if (!(y == urlTokens[x] || y.isJson())) {
                 matche = false
             }
         }

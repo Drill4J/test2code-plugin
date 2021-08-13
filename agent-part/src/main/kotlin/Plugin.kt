@@ -167,7 +167,9 @@ class Plugin(
         }
     }
 
-
+    /**
+     * For each request we fill the thread local variable with an array of [ExecDatum]
+     */
     fun processServerRequest() {
         (instrContext as DrillProbeArrayProvider).run {
             val sessionId = context()

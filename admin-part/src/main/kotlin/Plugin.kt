@@ -208,7 +208,7 @@ class Plugin(
         instanceId: String,
         content: String,
     ): Any = run {
-        val message = if (content.startsWith("{"))
+        val message = if (content.isJson())
             json.decodeFromString(CoverMessage.serializer(), content)
         else {
             val decode = Base64.getDecoder().decode(content)

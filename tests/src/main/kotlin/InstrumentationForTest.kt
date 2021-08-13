@@ -78,7 +78,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
 
     private val _runtimeData = atomic(persistentListOf<ExecDatum>())
 
-    fun xx() {
+    fun runInstrumentedClass() {
         @Suppress("DEPRECATION")
         val runnable = instrumentedClass.newInstance() as Runnable
         runnable.run()
