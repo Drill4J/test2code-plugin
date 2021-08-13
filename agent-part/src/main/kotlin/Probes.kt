@@ -64,15 +64,23 @@ class ProbeDescriptor(
     val probeCount: Int,
 )
 
-fun ExecDatum.toExecClassData() = ExecClassData(
+internal fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
     className = name,
     probes = probes.values.toBitSet(),
     testName = testName
 )
 
+internal fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
+    id = id,
+    name = name,
+    probes = AgentProbes(probeCount),
+    testName = testName ?: "undefined"
+)
+
 typealias ExecData = Array<ExecDatum?>
 
+//TODO EPMDJ-8255 Replace this "magic number" with a calculated value
 const val MAX_CLASS_COUNT = 50_000
 
 internal object ProbeWorker : CoroutineScope {
@@ -127,10 +135,10 @@ class ExecRuntime(
     ): Array<ExecDatum?> = _execData.getOrPut(testName) { updater() }
 
     fun putIndex(
-        indx: Int,
+        index: Int,
         updater: (String) -> ExecDatum,
-    ) = _execData.forEach { (testName, v) ->
-        v[indx] = updater(testName)
+    ) = _execData.forEach { (testName, execDataset) ->
+        execDataset[index] = updater(testName)
     }
 
     fun addCompletedTests(tests: List<String>) = _completedTests.update { it + tests }
@@ -155,19 +163,19 @@ class ProbeMetaContainer {
 
 
     fun addDescriptor(
-        inx: Int,
+        index: Int,
         probeDescriptor: ProbeDescriptor,
         globalRuntime: GlobalExecRuntime?,
         runtimes: Collection<ExecRuntime>,
     ) {
-        probesDescriptor[inx] = probeDescriptor
+        probesDescriptor[index] = probeDescriptor
 
         globalRuntime?.run {
-            execDatum[inx] = probeDescriptor.toExecDatum(testName)
+            execDatum[index] = probeDescriptor.toExecDatum(testName)
         }
 
         runtimes.forEach {
-            it.putIndex(inx) { testName ->
+            it.putIndex(index) { testName ->
                 probeDescriptor.toExecDatum(testName)
             }
         }
@@ -180,13 +188,6 @@ class ProbeMetaContainer {
             action(index, probeDescriptor)
         }
     }
-
-    private fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
-        id = id,
-        name = name,
-        probes = AgentProbes(probeCount),
-        testName = testName ?: "undefined"
-    )
 }
 
 
@@ -199,12 +200,14 @@ open class SimpleSessionProbeArrayProvider(
     defaultContext: AgentContext? = null,
 ) : SessionProbeArrayProvider {
 
-    var requestThreadLocal = ThreadLocal<Array<ExecDatum?>>() //todo TTL
+    // TODO EPMDJ-8256 When application is async we must use this implementation «com.alibaba.ttl.TransmittableThreadLocal»
+    val requestThreadLocal = ThreadLocal<Array<ExecDatum?>>()
 
     val probeMetaContainer = ProbeMetaContainer()
 
     val runtimes = mutableMapOf<String, ExecRuntime>()
 
+    @Volatile
     var global: Pair<String, GlobalExecRuntime>? = null
 
     var defaultContext: AgentContext?
@@ -215,8 +218,10 @@ open class SimpleSessionProbeArrayProvider(
 
     private val _defaultContext = atomic(defaultContext)
 
+    @Volatile
     private var _context: AgentContext? = null
 
+    @Volatile
     private var _globalContext: AgentContext? = null
 
     private val stubProbes = StubAgentProbes()
@@ -319,12 +324,7 @@ open class SimpleSessionProbeArrayProvider(
     fun ExecData.fillFromMeta(testName: String?) {
         probeMetaContainer.forEachIndexed { inx, probeDescriptor ->
             if (probeDescriptor != null)
-                this[inx] = ExecDatum(
-                    id = probeDescriptor.id,
-                    name = probeDescriptor.name,
-                    probes = AgentProbes(probeDescriptor.probeCount),
-                    testName = testName ?: "undefined"
-                )
+                this[inx] = probeDescriptor.toExecDatum(testName)
         }
     }
 }

@@ -40,7 +40,7 @@ internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {
     runCatching { URLDecoder.decode(this, "UTF-8") }.getOrNull()
 } ?: this
 
-internal fun String.urlEncode() : String =  runCatching { URLEncoder.encode(this, "UTF-8") }.getOrNull() ?: this
+internal fun String.urlEncode(): String = runCatching { URLEncoder.encode(this, "UTF-8") }.getOrNull() ?: this
 
 internal fun String.toShortClassName(): String = substringAfterLast('/').weakIntern()
 
@@ -54,3 +54,5 @@ infix fun Number.percentOf(other: Number): Double = when (val dOther = other.toD
     0.0 -> 0.0
     else -> toDouble() * 100.0 / dOther
 }
+
+fun String.isJson() = startsWith("{")

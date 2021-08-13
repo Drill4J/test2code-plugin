@@ -47,7 +47,7 @@ class CoverageBenchmark {
     @Threads(Threads.MAX)
     fun instrumentedClassTest() {
         repeat(times) {
-            instrumentation.xx()
+            instrumentation.runInstrumentedClass()
         }
     }
 
