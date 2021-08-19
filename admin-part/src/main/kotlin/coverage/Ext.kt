@@ -139,7 +139,7 @@ internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?
 
 internal fun Method.toCovered(count: Count?) = CoverMethod(
     ownerClass = ownerClass.weakIntern(),
-    name = ownerClass.methodName(name),
+    name = name.weakIntern(),
     desc = desc.weakIntern(),//.takeIf { "):" in it } ?: declaration(desc), //TODO js methods //Regex has a big impact on performance
     hash = hash.weakIntern(),
     count = count ?: zeroCount,

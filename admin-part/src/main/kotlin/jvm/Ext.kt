@@ -31,7 +31,7 @@ internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = ru
         val method = parsedMethods[m.sign.weakIntern()]
         Method(
             ownerClass = fullName.weakIntern(),
-            name = m.name.weakIntern(),
+            name = fullName.methodName(m.name),
             desc = m.desc.weakIntern(),
             hash = method.checksum()
         )

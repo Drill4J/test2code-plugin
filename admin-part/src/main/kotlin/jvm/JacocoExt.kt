@@ -106,9 +106,10 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
                         count = c.instructionCounter.toCount(),
                         fullName = classFullName,
                         methods = c.methods.map { m ->
-                            val sign = "${m.name}${m.desc}".weakIntern()
+                            val name = classFullName.methodName(m.name)
+                            val sign = "$name${m.desc}".weakIntern()
                             MethodCounter(
-                                name = m.name.weakIntern(),
+                                name = name,
                                 desc = m.desc.weakIntern(),
                                 decl = m.desc.weakIntern(),//declaration(m.desc), //TODO Regex has a big impact on performance
                                 sign = sign,
