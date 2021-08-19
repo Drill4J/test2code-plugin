@@ -138,7 +138,7 @@ internal fun ClassCounter.toMethodCoverage(
         val methodKey = methodCoverage.coverageKey(this)
         JavaMethodCoverage(
             id = methodKey.id,
-            name = name.methodName(methodCoverage.name),
+            name = methodCoverage.name,
             desc = methodCoverage.desc,
             decl = methodCoverage.decl,
             coverage = methodCoverage.count.percentage(),
