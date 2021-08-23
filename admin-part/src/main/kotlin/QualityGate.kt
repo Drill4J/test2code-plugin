@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
@@ -29,13 +30,13 @@ private object QualityGateData {
     @Serializable
     data class IdByAgent(
         val agentId: String,
-        val conditionType: String
+        val conditionType: String,
     )
 
     @Serializable
     data class AgentSetting(
         @Id val id: IdByAgent,
-        val setting: ConditionSetting
+        val setting: ConditionSetting,
     )
 
     private val pairs: List<Pair<KProperty1<StatsDto, Number>, QualityGateCondition>> = listOf(
@@ -64,7 +65,7 @@ internal suspend fun Plugin.initGateSettings() {
 }
 
 internal suspend fun Plugin.updateGateConditions(
-    conditionSettings: List<ConditionSetting>
+    conditionSettings: List<ConditionSetting>,
 ): ActionResult = run {
     val settings = state.qualityGateSettings
     val unknownMeasures = conditionSettings.filter { it.condition.measure !in settings.map }
@@ -107,8 +108,12 @@ internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
     )
 }
 
-private fun AgentState.toStatsDto(): StatsDto = coverContext().run {
-    build.toSummary(agentInfo.name, testsToRun, risks)
+private suspend fun AgentState.toStatsDto(): StatsDto = coverContext().run {
+    build.toSummary(
+        agentInfo.name,
+        testsToRun,
+        coverContext().calculateRisks(storeClient)
+    )
 }.toStatsDto()
 
 internal fun AgentSummary.toStatsDto() = StatsDto(
@@ -119,7 +124,7 @@ internal fun AgentSummary.toStatsDto() = StatsDto(
 
 private fun <T : Number> KProperty1<StatsDto, T>.toCondition(
     operator: ConditionOp,
-    value: Number
+    value: Number,
 ): QualityGateCondition = QualityGateCondition(
     measure = name,
     operator = operator,

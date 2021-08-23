@@ -58,6 +58,7 @@ class Plugin(
     companion object {
         val json = Json { encodeDefaults = true }
     }
+
     val agentId = agentInfo.id
     val buildVersion = agentInfo.buildVersion
 
@@ -418,10 +419,10 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.stats.coverage } ?: zeroCount
-        val risks = context.risks
+        val risks = context.calculateRisks(storeClient)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            riskCount = Count(risks.notCovered(all).count(), risks.count())
+            riskCount = Count(risks.notCovered(buildVersion).count(), risks.count())
         )
         state.updateBuildStats(buildCoverage, context)
 
@@ -469,7 +470,7 @@ class Plugin(
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
         }
         val context = state.coverContext() //TODO remove context from this method
-        send(buildVersion, Routes.Build.Risks(buildRoute), context.risksDto())
+        send(buildVersion, Routes.Build.Risks(buildRoute), context.risksDto(storeClient))
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
         val testsToRunSummary = context.toTestsToRunSummary()
         testsToRunSummary.sendTotalSavedTime()
@@ -638,7 +639,9 @@ class Plugin(
                     sendScopeTree(it.id, associatedTests, treeCoverage)
                 }
             } ?: run {
-                send(buildVersion, Routes.Build.Risks(Routes.Build()), state.coverContext().risksDto(assocTestsMap))
+                send(buildVersion,
+                    Routes.Build.Risks(Routes.Build()),
+                    state.coverContext().risksDto(storeClient, assocTestsMap))
                 trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
             }
         }

@@ -420,9 +420,16 @@ data class RiskDto(
     val type: RiskType,
     val count: CountDto,
     val coverage: Double = 0.0,
+    val status: Map<String, RiskStatus> = emptyMap(),
     val coverageRate: CoverageRate = CoverageRate.MISSED,
     val assocTestsCount: Int = 0,
 )
+
+enum class RiskStatus {
+    COVERED,
+    NOT_COVERED
+    //TODO half covered or smt like this
+}
 
 enum class RiskType {
     NEW, MODIFIED

@@ -82,7 +82,7 @@ internal fun CachedBuild.toSummary(
     coverageByType = stats.coverageByType,
     scopeCount = stats.scopeCount,
     arrow = parentCoverageCount.arrowType(stats.coverage),
-    risks = risks.notCovered(bundleCounters.all),
+    risks = risks.notCovered(agentKey.buildVersion),
     testDuration = coverageByTests?.all?.duration ?: 0L,
     durationByType = coverageByTests?.byType?.groupBy { it.type }
         ?.mapValues { (_, values) -> values.sumOf { it.summary.duration } }
