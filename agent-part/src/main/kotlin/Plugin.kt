@@ -43,6 +43,7 @@ class Plugin(
 
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider.apply {
         defaultContext = agentContext
+        logger = this@Plugin.logger
     }
 
     private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
@@ -175,10 +176,9 @@ class Plugin(
             val sessionId = context()
             val testName = context[DRIlL_TEST_NAME] ?: "unspecified"
             runtimes[sessionId]?.run {
-                val execDatum = getOrPut(testName) {
-                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
-                }
-                logger.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testName '$testName'" }
+                val execDatum = getOrPut(testName) { arrayOfNulls(MAX_CLASS_COUNT) }
+                fillFromMeta(testName)
+                logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testName '$testName'" }
                 requestThreadLocal.set(execDatum)
             }
         }
