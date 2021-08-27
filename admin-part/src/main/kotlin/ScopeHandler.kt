@@ -61,6 +61,14 @@ internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload,
 ): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
     trackTime("changeActiveScope") {
+        if (scopeChange.forceFinish) {
+            val activeScope = state.activeScope
+            logger.warn { "Active sessions count ${activeScope.activeSessions.count()}. Probes may be lost." }
+            val probes = activeScope.activeSessions.map.mapNotNull { (sessionId, _) ->
+                state.finishSession(sessionId)
+            }.asSequence().flatten()
+            if (probes.any()) calculateAndSendScopeCoverage()
+        }
         val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
         state.storeActiveScopeInfo()
         sendActiveSessions()
