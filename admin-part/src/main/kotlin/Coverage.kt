@@ -260,7 +260,7 @@ internal suspend fun Plugin.importCoverage(inputStream: InputStream) = runCatchi
         }
         activeScope.addProbes(id) {
             loader.executionDataStore.contents.map {
-                ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "unspecified")
+                ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
             }
         }
         state.finishSession(id)
