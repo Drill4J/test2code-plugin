@@ -33,7 +33,7 @@ class Plugin(
     sender: Sender,
     logging: LoggerFactory,
 ) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter {
-    private val logger = logging.logger("Plugin $id")
+    internal val logger = logging.logger("Plugin $id")
 
     internal val json = Json { encodeDefaults = true }
 
@@ -178,6 +178,7 @@ class Plugin(
                 val execDatum = getOrPut(testName) {
                     arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
                 }
+                logger.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testName '$testName'" }
                 requestThreadLocal.set(execDatum)
             }
         }
@@ -203,6 +204,7 @@ fun Plugin.probeSender(
         .chunked(0xffff)
         .map { chunk -> CoverDataPart(sessionId, chunk) }
         .sumBy { message ->
+            logger.trace { "send to admin-part '$message'..." }
             val encoded = ProtoBuf.encodeToByteArray(CoverMessage.serializer(), message)
             val compressed = Zstd.compress(encoded)
             send(Base64.getEncoder().encodeToString(compressed))
