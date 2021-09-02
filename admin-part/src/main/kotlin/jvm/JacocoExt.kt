@@ -88,7 +88,8 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
         val classesWithMethods = p.classes.filter { c ->
             c.methods.any().also {
                 if (!it) {
-                    logger.warn { "Class without methods - ${c.name}." }
+                    logger.debug { "Class without methods - ${c.name}." }
+                    //todo return warn level after EPMDJ-8487
                 }
             } && c.methods.takeIf { filter }?.any { it.instructionCounter.coveredCount > 0 } ?: true
         }
