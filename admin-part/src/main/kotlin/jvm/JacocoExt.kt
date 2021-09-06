@@ -31,20 +31,26 @@ private val logger = logger {}
 
 internal typealias ClassBytes = Map<String, ByteArray>
 
-internal fun Sequence<ExecClassData>.bundle(
+internal inline fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     classBytes: ClassBytes,
+    crossinline analyze: Analyzer.(ByteArray, ExecutionData) -> Unit? = Analyzer::analyze
 ): BundleCounter = bundle(probeIds) { analyzer ->
     contents.parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
-            runCatching {
-                analyzer.analyzeClass(classesBytes, execData.name)
-            }.onFailure {
-                logger.error { "Error while analyzing ${execData.name}." }
-            }
+            analyzer.analyze(classesBytes, execData)
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
 }.toCounter()
+
+private fun Analyzer.analyze(
+    classesBytes: ByteArray,
+    execData: ExecutionData
+): Unit? = runCatching {
+    analyzeClass(classesBytes, execData.name)
+}.onFailure {
+    logger.error { "Error while analyzing ${execData.name}." }
+}.getOrNull()
 
 internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,

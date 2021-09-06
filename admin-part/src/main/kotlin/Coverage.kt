@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.jacoco.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -253,20 +254,24 @@ private fun Sequence<ExecClassData>.writeCoverage(
     )
 }
 
-internal suspend fun Plugin.importCoverage(inputStream: InputStream) = runCatching {
-    activeScope.startSession(genUuid(), "UNIT")?.run {
-        val loader = inputStream.use {
-            ExecFileLoader().apply { load(it) }
-        }
-        activeScope.addProbes(id) {
-            loader.executionDataStore.contents.map {
-                ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
-            }
-        }
-        state.finishSession(id)
-        ActionResult(StatusCodes.OK, "Coverage successfully imported")
-    } ?: ActionResult(StatusCodes.ERROR, "Can't start session")
+internal suspend fun Plugin.importCoverage(
+    inputStream: InputStream,
+    sessionId: String = genUuid()
+) = activeScope.startSession(sessionId, "UNIT").runCatching {
+    val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
+    val classBytes = adminData.loadClassBytes()
+    val probeIds = state.coverContext().probeIds
+    val execDatum = jacocoFile.executionDataStore.contents.map {
+        ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
+    }.asSequence()
+    execDatum.bundle(probeIds, classBytes) { bytes, execData ->
+        analyzeClass(bytes, execData.name)
+    }
+    activeScope.addProbes(sessionId) { execDatum.toList() }
+    state.finishSession(sessionId)
+    ActionResult(StatusCodes.OK, "Coverage successfully imported")
 }.getOrElse {
-    logger.error(it) { "Can't load coverage from file. Reason:" }
-    ActionResult(StatusCodes.ERROR, "Can't load coverage from file")
+    state.activeScope.cancelSession(sessionId)
+    logger.error { "Can't import coverage. Session was cancelled." }
+    ActionResult(StatusCodes.ERROR, "Can't import coverage. An error occurred: ${it.message}")
 }
