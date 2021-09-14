@@ -88,8 +88,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
         val testName = instrContextStub[DRIlL_TEST_NAME] ?: "unspecified"
         val execRuntime = runtimes[sessionId]
         if (execRuntime != null) {
-            val execDatum = execRuntime.getOrPut(testName) { arrayOfNulls(MAX_CLASS_COUNT) }
-            execRuntime.fillFromMeta(testName)
+            val execDatum = execRuntime.getOrPut(testName) { arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) } }
             requestThreadLocal.set(execDatum)
         } else {
             requestThreadLocal.remove()
