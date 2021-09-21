@@ -393,10 +393,15 @@ data class TestsToRunStatsDto(
 
 @Serializable
 data class RiskDto(
+    val id: String,
     val ownerClass: String,
     val name: String,
     val desc: String,
     val type: RiskType,
+    val count: CountDto,
+    val coverage: Double = 0.0,
+    val coverageRate: CoverageRate = CoverageRate.MISSED,
+    val assocTestsCount: Int = 0,
 )
 
 enum class RiskType {

@@ -27,8 +27,8 @@ internal data class Method(
     val desc: String,
     val hash: String,
 ) : Comparable<Method>, JvmSerializable {
-    val signature = "$name$desc".intern()
-    val key = "$ownerClass:$signature".intern()
+    val signature = signature(ownerClass, name, desc).intern()
+    val key = fullMethodName(ownerClass, name, desc).intern()
     override fun compareTo(
         other: Method,
     ): Int = ownerClass.compareTo(other.ownerClass).takeIf {
@@ -98,28 +98,53 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     deleted = deletedMethods.run { Count(coveredCount, totalCount).toDto() }
 )
 
-internal fun DiffMethods.risks(
-    bundleCounter: BundleCounter,
-): TypedRisks = bundleCounter.coveredMethods(new + modified).let { covered ->
-    mapOf(
-        RiskType.NEW to new.filter { it !in covered },
-        RiskType.MODIFIED to modified.filter { it !in covered }
-    )
-}
+internal val CoverContext.risks: TypedRisks
+    get() = methodChanges.run {
+        mapOf(
+            RiskType.NEW to new,
+            RiskType.MODIFIED to modified
+        )
+    }
 
 internal fun TypedRisks.toCounts() = RiskCounts(
     new = this[RiskType.NEW]?.count() ?: 0,
     modified = this[RiskType.MODIFIED]?.count() ?: 0
 ).run { copy(total = new + modified) }
 
-internal fun TypedRisks.toListDto(): List<RiskDto> = flatMap { (type, methods) ->
-    methods.map { method ->
-        RiskDto(
-            type = type,
-            ownerClass = method.ownerClass,
-            name = method.name,
-            desc = method.desc
-        )
+internal fun TypedRisks.filter(
+    predicate: (Method) -> Boolean,
+): TypedRisks = asSequence().mapNotNull { (type, testData) ->
+    val filtered = testData.filter { predicate(it) }
+    filtered.takeIf { it.any() }?.let { type to it }
+}.toMap()
+
+internal fun TypedRisks.notCovered(
+    bundleCounter: BundleCounter,
+) = bundleCounter.coveredMethods(values.flatten()).let { covered ->
+    filter { method -> method !in covered }
+}
+
+internal fun TypedRisks.count() = values.sumBy { it.count() }
+
+internal fun CoverContext.risksDto(
+    associatedTests: Map<CoverageKey, List<TypedTest>> = emptyMap()
+): List<RiskDto> = build.bundleCounters.all.coveredMethods(risks.values.flatten()).let { covered ->
+    risks.flatMap { (type, methods) ->
+        methods.map { method ->
+            val count = covered[method] ?: zeroCount
+            val id = method.key.crc64
+            RiskDto(
+                id = id,
+                type = type,
+                ownerClass = method.ownerClass,
+                name = method.name,
+                desc = method.desc,
+                coverage = count.percentage(),
+                count = count.toDto(),
+                coverageRate = count.coverageRate(),
+                assocTestsCount = associatedTests[CoverageKey(id)]?.count() ?: 0,
+            )
+        }
     }
 }
 

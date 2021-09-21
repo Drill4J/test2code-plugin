@@ -24,7 +24,7 @@ internal fun Sequence<ExecClassData>.bundle(
     tree: PackageTree
 ): BundleCounter = run {
     val probeCounts: Map<String, Int> = tree.packages.run {
-        flatMap { it.classes }.associateBy({ "${it.path}/${it.name}".weakIntern() }) { it.totalCount }
+        flatMap { it.classes }.associateBy({ fullClassname(it.path, it.name) }) { it.totalCount }
     }
     val probesByClasses: Map<String, List<Boolean>> = filter {
         it.className in probeCounts
@@ -35,27 +35,27 @@ internal fun Sequence<ExecClassData>.bundle(
         }
     }
     val classMethods = tree.packages.flatMap { it.classes }.associate {
-        "${it.path}/${it.name}" to it.methods
+        fullClassname(it.path, it.name) to it.methods
     }
     val covered = probesByClasses.values.sumBy { probes -> probes.count { it } }
-    val packages = probesByClasses.keys.groupBy {
-        it.substringBeforeLast("/").weakIntern()
-    }.map { (pkgName, classNames) ->
-        val classes = classNames.map { className ->
-            val probes = probesByClasses.getValue(className)
+    val packages = probesByClasses.keys.groupBy { classPath(it) }.map { (pkgName, classNames) ->
+        val classes = classNames.map { fullClassname ->
+            val probes = probesByClasses.getValue(fullClassname)
             ClassCounter(
                 path = pkgName.weakIntern(),
-                name = className.toShortClassName(),
+                name = classname(fullClassname),
                 count = probes.toCount(),
-                fullName = className,
+                fullName = fullClassname,
                 probes = probes,
-                methods = classMethods.getValue(className).map {
+                methods = classMethods.getValue(fullClassname).map {
                     val methodProbes = probes.slice(it.probeRange)
-                    val sign = "${it.name}${it.desc}".weakIntern()
-                    MethodCounter(it.name, it.desc, it.decl,
+                    val sign = signature(fullClassname, it.name, it.desc)
+                    MethodCounter(
+                        it.name, it.desc, it.decl,
                         sign = sign,
-                        fullName = "$className:$sign".weakIntern(),
-                        count = methodProbes.toCount())
+                        fullName = fullMethodName(fullClassname, it.name, it.desc),
+                        count = methodProbes.toCount()
+                    )
                 }
             )
         }

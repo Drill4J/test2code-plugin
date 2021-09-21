@@ -34,7 +34,7 @@ internal data class BuildMethods(
 )
 
 internal data class CoverageInfoSet(
-    val associatedTests: List<AssociatedTests>,
+    val associatedTests: Map<CoverageKey, List<TypedTest>>,
     val coverage: Coverage,
     val buildMethods: BuildMethods = BuildMethods(),
     val packageCoverage: List<JavaPackageCoverage> = emptyList(),
@@ -42,7 +42,7 @@ internal data class CoverageInfoSet(
     val coverageByTests: CoverageByTests,
 )
 
-fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests> =
+fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests> = trackTime("associatedTests") {
     entries.parallelStream().map { (key, tests) ->
         AssociatedTests(
             id = key.id,
@@ -52,6 +52,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests
             tests = tests.stream().sorted { o1, o2 -> o1.name.compareTo(o2.name) }.collect(Collectors.toList())
         )
     }.sorted { o1, o2 -> o1.methodName.compareTo(o2.methodName) }.collect(Collectors.toList())
+}
 
 internal fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,

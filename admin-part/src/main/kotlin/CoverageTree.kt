@@ -31,8 +31,9 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
             totalCount = astEntities.flatMap(AstEntity::methodsWithProbes).sumOf(AstMethod::count),
             classes = astEntities.mapNotNull { ast ->
                 ast.methodsWithProbes().takeIf { it.any() }?.let { methods ->
+                    val className = fullClassname(path, ast.name)
                     JavaClassCoverage(
-                        id = "$path.${ast.name}".crc64,
+                        id = className.crc64,
                         name = ast.name.weakIntern(),
                         path = path.weakIntern(),
                         totalMethodsCount = methods.count(),
@@ -40,7 +41,7 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
                         methods = methods.fold(listOf()) { acc, astMethod ->
                             val desc = astMethod.toDesc()
                             acc + JavaMethodCoverage(
-                                id = "$path.${ast.name}.${astMethod.name}.$desc".crc64,
+                                id = fullMethodName(className, astMethod.name, desc).crc64,
                                 name = astMethod.name.weakIntern(),
                                 desc = desc,
                                 probesCount = astMethod.probes.size,
@@ -97,12 +98,12 @@ private fun Collection<ClassCounter>.classTree(
     parsedClasses[classCoverage.fullName]?.let { parsedMethods ->
         val classKey = classCoverage.coverageKey()
         val methods = classCoverage.toMethodCoverage { methodCov ->
-            parsedMethods.any { "${it.name}${it.desc}" == methodCov.sign }
+            parsedMethods.any { it.signature == methodCov.sign }
         }
         JavaClassCoverage(
             id = classKey.id,
-            name = classCoverage.name.toShortClassName(),
-            path = classCoverage.name,
+            name = classname(classCoverage.name),
+            path = classCoverage.path,
             totalMethodsCount = methods.count(),
             totalCount = methods.sumBy { it.probesCount },
             methods = methods,
@@ -130,7 +131,7 @@ private fun List<JavaClassCoverage>.classCoverage(
 
 internal fun ClassCounter.toMethodCoverage(
     assocTestsMap: Map<CoverageKey, List<TypedTest>> = emptyMap(),
-    astMethods : List<JavaMethodCoverage> = emptyList(),
+    astMethods: List<JavaMethodCoverage> = emptyList(),
     filter: (MethodCounter) -> Boolean = { true }
 ): List<JavaMethodCoverage> {
     val astMethodsMap = astMethods.associateBy { it.id }

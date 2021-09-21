@@ -82,7 +82,7 @@ class JsCoverageTest {
             }
             assertEquals(
                 setOf(TypedTest("default", "MANUAL"), TypedTest("default", "AUTO")),
-                associatedTests.flatMap { it.tests }.toSet()
+                associatedTests.getAssociatedTests().flatMap { it.tests }.toSet()
             )
             buildMethods.run {
                 assertEquals(2, totalMethods.coveredCount)

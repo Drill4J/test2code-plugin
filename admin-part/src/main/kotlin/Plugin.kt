@@ -396,13 +396,10 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.stats.coverage } ?: zeroCount
-        val risks = context.methodChanges.risks(all)
+        val risks = context.risks
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            riskCount = Count(
-                risks.values.sumBy { it.count() },
-                context.methodChanges.run { new.count() + modified.count() }
-            )
+            riskCount = Count(risks.notCovered(all).count(), risks.count())
         )
         state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
@@ -447,14 +444,14 @@ class Plugin(
         send(buildVersion, coverageRoute, buildCoverage)
         val methodSummaryDto = buildMethods.toSummaryDto().copy(risks = summary.riskCounts)
         send(buildVersion, Routes.Build.Methods(buildRoute), methodSummaryDto)
-        sendBuildTree(packageCoverage, associatedTests)
+        sendBuildTree(packageCoverage, associatedTests.getAssociatedTests())
         send(buildVersion, Routes.Build.Tests(buildRoute), tests)
         Routes.Build.Summary.Tests(Routes.Build.Summary(buildRoute)).let {
             send(buildVersion, Routes.Build.Summary.Tests.All(it), coverageByTests.all)
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
         }
-        send(buildVersion, Routes.Build.Risks(buildRoute), summary.risks.toListDto())
         val context = state.coverContext() //TODO remove context from this method
+        send(buildVersion, Routes.Build.Risks(buildRoute), context.risksDto())
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
         val testsToRunSummary = context.toTestsToRunSummary()
         state.storeClient.store(testsToRunSummary)
@@ -571,7 +568,7 @@ class Plugin(
         val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
         send(buildVersion, Routes.Build.Scopes.Scope.Methods(scope), buildMethods.toSummaryDto())
-        sendScopeTree(scopeId, associatedTests, packageCoverage)
+        sendScopeTree(scopeId, associatedTests.getAssociatedTests(), packageCoverage)
         send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), tests)
         Routes.Build.Scopes.Scope.Summary.Tests(Routes.Build.Scopes.Scope.Summary(scope)).let {
             send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
@@ -613,7 +610,10 @@ class Plugin(
                 trackTime("assocTestsJob sendScopeTree") {
                     sendScopeTree(it.id, associatedTests, treeCoverage)
                 }
-            } ?: trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
+            } ?: run {
+                send(buildVersion, Routes.Build.Risks(Routes.Build()), state.coverContext().risksDto(assocTestsMap))
+                trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
+            }
         }
     }
 
