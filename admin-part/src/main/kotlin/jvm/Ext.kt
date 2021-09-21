@@ -25,13 +25,13 @@ import java.io.*
 internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = run {
     val classParser = ClassParser(ByteArrayInputStream(classBytes), fullName)
     val parsedMethods = classParser.parse().run {
-        methods.associateBy { "${fullName.methodName(it.name)}${it.signature}".weakIntern() }
+        methods.associateBy { signature(fullName, it.name, it.signature) }
     }
     methods.map { m ->
         val method = parsedMethods[m.sign.weakIntern()]
         Method(
             ownerClass = fullName.weakIntern(),
-            name = fullName.methodName(m.name),
+            name = methodName(m.name, fullName),
             desc = m.desc.weakIntern(),
             hash = method.checksum()
         )

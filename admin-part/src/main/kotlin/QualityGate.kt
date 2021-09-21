@@ -71,7 +71,7 @@ internal suspend fun Plugin.updateGateConditions(
     if (unknownMeasures.none()) {
         conditionSettings.forEach { settings[it.condition.measure] = it }
         sendGateSettings()
-        state.toStatsDto()?.let { stats ->
+        state.toStatsDto().let { stats ->
             val qualityGate = checkQualityGate(stats)
             send(buildVersion, Routes.Data().let(Routes.Data::QualityGate), qualityGate)
         }
@@ -107,12 +107,8 @@ internal fun Plugin.checkQualityGate(stats: StatsDto): QualityGate = run {
     )
 }
 
-private fun AgentState.toStatsDto(): StatsDto? = coverContext().run {
-    build.toSummary(
-        agentInfo.name,
-        testsToRun,
-        methodChanges.risks(build.bundleCounters.all)
-    )
+private fun AgentState.toStatsDto(): StatsDto = coverContext().run {
+    build.toSummary(agentInfo.name, testsToRun, risks)
 }.toStatsDto()
 
 internal fun AgentSummary.toStatsDto() = StatsDto(

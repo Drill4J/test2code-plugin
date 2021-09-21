@@ -80,14 +80,14 @@ internal fun CachedBuild.toSummary(
     coverageByType = stats.coverageByType,
     scopeCount = stats.scopeCount,
     arrow = parentCoverageCount.arrowType(stats.coverage),
-    risks = risks,
+    risks = risks.notCovered(bundleCounters.all),
     testDuration = coverageByTests?.all?.duration ?: 0L,
     durationByType = coverageByTests?.byType?.groupBy { it.type }
-        ?.mapValues { (_, values) -> values.map { it.summary.duration }.sum() }
+        ?.mapValues { (_, values) -> values.sumOf { it.summary.duration } }
         ?: emptyMap(),
     tests = tests.tests,
     testsToRun = testsToRun.withoutCoverage(bundleCounters)
-).run { copy(riskCounts = risks.toCounts()) }
+).let { it.copy(riskCounts = it.risks.toCounts()) }
 
 internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
     id = agentId,

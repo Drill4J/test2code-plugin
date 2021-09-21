@@ -102,7 +102,7 @@ internal class AgentState(
                     logger.debug { "initializing DataBuilder..." }
                     val methods = map { (e, m) ->
                         Method(
-                            ownerClass = "${e.path}/${e.name}".weakIntern(),
+                            ownerClass = fullClassname(e.path, e.name),
                             name = m.name.weakIntern(),
                             desc = m.toDesc(),
                             hash = m.checksum.weakIntern()

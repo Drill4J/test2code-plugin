@@ -79,7 +79,6 @@ internal fun BundleCounters.calculateCoverageData(
     val bundlesByTests = byTest
 
     val assocTestsMap = trackTime("assocTestsMap") { bundlesByTests.associatedTests() }
-    val associatedTests = trackTime("associatedTests") { assocTestsMap.getAssociatedTests() }
 
     val tree = context.packageTree
     val coverageCount = bundle.count.copy(total = tree.totalCount)
@@ -141,7 +140,7 @@ internal fun BundleCounters.calculateCoverageData(
     }.sortedBy { it.type }
 
     return CoverageInfoSet(
-        associatedTests,
+        assocTestsMap,
         coverageBlock,
         buildMethods,
         packageCoverage,
