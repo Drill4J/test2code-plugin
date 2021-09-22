@@ -29,7 +29,7 @@ class AgentStateTest {
     private val storageDir = File("build/tmp/test/storages/${this::class.simpleName}-${UUID.randomUUID()}")
 
     private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
-    
+
     private val agentInfo = AgentInfo(
         id = "ag",
         name = "ag",
@@ -41,6 +41,7 @@ class AgentStateTest {
 
     private val adminData = object : AdminData {
         override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
+        override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
     }
 
     @AfterTest

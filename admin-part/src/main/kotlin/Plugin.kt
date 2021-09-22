@@ -306,7 +306,7 @@ class Plugin(
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
-            val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes())
+            val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
             val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
             bundleCounters.assocTestsJob(scope)
@@ -384,7 +384,7 @@ class Plugin(
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
-        val bundleCounters = flatten().calcBundleCounters(context, adminData.loadClassBytes())
+        val bundleCounters = flatten().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         state.updateBundleCounters(bundleCounters)
         logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())
@@ -522,7 +522,7 @@ class Plugin(
 
     internal suspend fun calculateAndSendScopeCoverage() = activeScope.let { scope ->
         val context = state.coverContext()
-        val bundleCounters = scope.calcBundleCounters(context, adminData.loadClassBytes())
+        val bundleCounters = scope.calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
         activeScope.updateSummary {
             it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage)

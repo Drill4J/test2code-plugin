@@ -63,9 +63,9 @@ internal class AgentState(
 
     private val _classBytes = atomic<Map<String, ByteArray>>(emptyMap())
 
-    suspend fun classBytes() = _classBytes.value.takeIf {
+    suspend fun classBytes(buildVersion: String) = _classBytes.value.takeIf {
         it.isNotEmpty()
-    } ?: adminData.loadClassBytes().also { loaded ->
+    } ?: adminData.loadClassBytes(buildVersion).also { loaded ->
         _classBytes.update { loaded }
     }
 
@@ -117,7 +117,7 @@ internal class AgentState(
                     ).toClassData(methods = methods)
                 }
                 is NoData -> {
-                    val classBytes = adminData.loadClassBytes()
+                    val classBytes = adminData.loadClassBytes(agentInfo.buildVersion)
                     logger.info { "initializing noData with classBytes size ${classBytes.size}..." }
                     val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
                     val bundleCoverage = classBytes.keys.bundle(classBytes, probeIds)

@@ -223,7 +223,7 @@ internal suspend fun Plugin.exportCoverage(buildVersion: String) = runCatching {
         .resolve("jacoco.exec")
     coverage.outputStream().use { outputStream ->
         val executionDataWriter = ExecutionDataWriter(outputStream)
-        val classBytes = adminData.loadClassBytes()
+        val classBytes = adminData.loadClassBytes(buildVersion)
         val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
         allFinishedScopes.filter { it.enabled }.flatMap { finishedScope ->
             finishedScope.data.sessions.flatMap { it.probes }
