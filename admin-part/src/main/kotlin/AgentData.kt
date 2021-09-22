@@ -40,6 +40,9 @@ internal sealed class AgentData
 
 internal object NoData : AgentData()
 
+/**
+ * Data for js or .Net agent
+ */
 internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 
     private val _data = atomic(persistentListOf<AstEntity>())
@@ -49,6 +52,9 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
     override fun iterator() = _data.value.iterator()
 }
 
+/**
+ * Data for java-agent
+ */
 @Serializable
 internal data class ClassData(
     @Id val buildVersion: String,

@@ -49,6 +49,7 @@ class PluginTest {
 
     private val adminData = object : AdminData {
         override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
+        override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
     }
 
     @AfterTest
