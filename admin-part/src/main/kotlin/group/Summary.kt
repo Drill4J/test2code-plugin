@@ -34,6 +34,7 @@ internal data class AgentSummary(
     val riskCounts: RiskCounts = RiskCounts(),
     val risks: TypedRisks,
     val tests: GroupedTests,
+    val testsCoverage: List<TestCoverageDto>,
     val testDuration: Long,
     val testsToRun: GroupedTests,
     val durationByType: GroupedDuration,
@@ -71,6 +72,7 @@ internal fun CachedBuild.toSummary(
     testsToRun: GroupedTests,
     risks: TypedRisks,
     coverageByTests: CoverageByTests? = null,
+    testsCoverage: List<TestCoverageDto>? = null,
     parentCoverageCount: Count? = null,
 ): AgentSummary = AgentSummary(
     name = agentName,
@@ -83,9 +85,10 @@ internal fun CachedBuild.toSummary(
     risks = risks,
     testDuration = coverageByTests?.all?.duration ?: 0L,
     durationByType = coverageByTests?.byType?.groupBy { it.type }
-        ?.mapValues { (_, values) -> values.map { it.summary.duration }.sum() }
+        ?.mapValues { (_, values) -> values.sumOf { it.summary.duration } }
         ?: emptyMap(),
     tests = tests.tests,
+    testsCoverage = testsCoverage ?: emptyList(),
     testsToRun = testsToRun.withoutCoverage(bundleCounters)
 ).run { copy(riskCounts = risks.toCounts()) }
 

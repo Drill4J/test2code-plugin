@@ -145,7 +145,7 @@ class Routes {
 
                 @Location("/tests")
                 class Tests(val scope: Scope)
-                
+
                 @Location("/tests/{testId}/methods")
                 class MethodsCoveredByTest(val testId: String, val scope: Scope) {
                     @Location("/summary")
@@ -210,6 +210,9 @@ class Routes {
         class Data(val group: Group) {
             @Location("/tests")
             class Tests(val parent: Data)
+
+            @Location("/tests-summaries")
+            class TestsSummaries(val parent: Data)
 
             @Location("/tests-to-run")
             class TestsToRun(val parent: Data)

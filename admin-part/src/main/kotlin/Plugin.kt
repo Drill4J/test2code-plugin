@@ -418,6 +418,7 @@ class Plugin(
             context.testsToRun,
             risks,
             coverageInfoSet.coverageByTests,
+            coverageInfoSet.tests,
             parentCoverageCount
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary)
@@ -496,12 +497,17 @@ class Plugin(
                     message = ServiceGroupSummaryDto(
                         name = serviceGroup,
                         aggregated = aggregated.toDto(),
-                        summaries = summaries.map { (id, summary) ->
-                            summary.toDto(id)
+                        summaries = summaries.map { (agentId, summary) ->
+                            summary.toDto(agentId)
                         }
                     )
                 )
                 Routes.Group.Data(groupParent).let {
+                    sendToGroup(
+                        destination = Routes.Group.Data.TestsSummaries(it),
+                        message = summaries.map { (agentId, summary) -> summary.testsCoverage.toDto(agentId) }
+                    )
+
                     sendToGroup(
                         destination = Routes.Group.Data.Tests(it),
                         message = aggregated.tests.toDto()
