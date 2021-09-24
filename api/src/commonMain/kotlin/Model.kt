@@ -303,6 +303,13 @@ data class TestCoverageDto(
 )
 
 @Serializable
+data class TestsSummaryDto(
+    val agentId: String,
+    val tests: List<TestCoverageDto> = emptyList(),
+    val totalCount: Int = 0,
+)
+
+@Serializable
 data class TestDetails(
     val duration: Long,
     val result: TestResult,
@@ -313,7 +320,7 @@ data class TestDetails(
 data class TestMetadata(
     val hash: String = "",
     val data: Map<String, String> = emptyMap(),
-){
+) {
     companion object {
         val emptyMetadata = TestMetadata()
     }

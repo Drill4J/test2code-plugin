@@ -76,6 +76,12 @@ internal fun CoverContext.testsToRunDto(
     }
 }
 
+internal fun List<TestCoverageDto>.toDto(agentId: String) = TestsSummaryDto(
+    agentId = agentId,
+    tests = this,
+    totalCount = this.size
+)
+
 internal fun GroupedTests.totalDuration(
     detailsByTest: Map<TypedTest, TestDetails>,
 ): Long = this.flatMap { (type, testData) ->
