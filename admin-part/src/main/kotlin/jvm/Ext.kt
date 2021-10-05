@@ -19,25 +19,40 @@ import com.epam.drill.plugins.test2code.Method
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
+import kotlinx.collections.immutable.*
 import org.apache.bcel.classfile.*
 import java.io.*
+import java.util.concurrent.*
+
+val lambdas = ConcurrentHashMap<String, PersistentSet<String>>()
 
 internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = run {
+//    ClassReader(classBytes).accept(
+//        LambdaClassVisitor(fullName, Opcodes.ASM7),
+//        ClassReader.EXPAND_FRAMES
+//    )
     val classParser = ClassParser(ByteArrayInputStream(classBytes), fullName)
     val parsedMethods = classParser.parse().run {
         methods.associateBy { signature(fullName, it.name, it.signature) }
     }
+    val lambdas = parsedMethods.filter { "lambda" in it.key }
     methods.map { m ->
         val method = parsedMethods[m.sign.weakIntern()]
+        val parser = LambdaParser(m.name, lambdas)
+        val hash = parser.checksum(method)
         Method(
             ownerClass = fullName.weakIntern(),
             name = methodName(m.name, fullName),
             desc = m.desc.weakIntern(),
-            hash = method.checksum()
+            hash = hash.first,
+            lambdasHash = parser.lambdaHash,
+            hashWithoutLambda = hash.second
         )
     }
-}
+}.also { lambdas.clear() }
 
-private fun org.apache.bcel.classfile.Method?.checksum(): String = (this?.code?.run {
-    Utility.codeToString(code, constantPool, 0, length, false)
-} ?: "").crc64.weakIntern()
+private fun LambdaParser.checksum(
+    method: org.apache.bcel.classfile.Method?
+): Pair<String, String> = (method?.code?.run {
+    codeToString(code, constantPool, 0, length, false)
+} ?: "" to "").run { first.crc64.weakIntern() to second.crc64.weakIntern() }
