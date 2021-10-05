@@ -26,6 +26,7 @@ import com.epam.kodux.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*
+import java.util.stream.*
 
 /**
  * Agent state.
@@ -129,15 +130,15 @@ internal class AgentState(
                             } else null
                         }.sortedBy(PackageCounter::name)
                     }.toList()
-                    val classCounters = sortedPackages.asSequence().flatMap {
-                        it.classes.asSequence()
+                    val classCounters = sortedPackages.flatMap { it.classes.asSequence() }
+                    val groupedMethods = trackTime("parsing classes") {
+                        classCounters.parallelStream().map { classCounter ->
+                            val name = classCounter.fullName
+                            val bytes = classBytes.getValue(name)
+                            name to classCounter.parseMethods(bytes)
+                        }.collect(Collectors.toMap({ it.first }, { it.second }, { first, _ -> first }))
                     }
-                    val groupedMethods = classCounters.associate { classCounter ->
-                        val name = classCounter.fullName
-                        val bytes = classBytes.getValue(name)
-                        name to classCounter.parseMethods(bytes).sorted()
-                    }
-                    val methods = groupedMethods.flatMap { it.value }
+                    val methods = groupedMethods.flatMap { it.value }.sorted()
                     val packages = sortedPackages.toPackages(groupedMethods)
                     PackageTree(
                         totalCount = packages.sumBy { it.totalCount },

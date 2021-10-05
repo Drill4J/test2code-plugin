@@ -17,15 +17,21 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.jvm.*
+import com.epam.drill.plugins.test2code.jvm.LAMBDA
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.kodux.*
 import kotlinx.serialization.*
+import kotlin.jvm.Transient
 
 @Serializable
-internal data class Method(
+data class Method(
     val ownerClass: String,
     val name: String,
     val desc: String,
     val hash: String,
+    @Transient
+    val lambdasHash: Map<String, String> = emptyMap(),
 ) : Comparable<Method> {
     val signature = signature(ownerClass, name, desc).intern()
     val key = fullMethodName(ownerClass, name, desc).intern()
@@ -37,6 +43,12 @@ internal data class Method(
         it != 0
     } ?: desc.compareTo(other.desc)
 }
+
+@Serializable
+internal data class LambdaHash(
+    @Id val buildVersion: String,
+    val hash: Map<String, Map<String, String>> = emptyMap(),
+)
 
 internal typealias TypedRisks = Map<RiskType, List<Method>>
 
@@ -52,7 +64,7 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
             while (hasNext()) {
                 val left = next()
                 if (lastRight == null) {
-                    new.add(left)
+                    new.addMethod(left)
                 }
                 while (lastRight != null) {
                     val right = lastRight
@@ -60,25 +72,28 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
                     if (cmp <= 0) {
                         when {
                             cmp == 0 -> {
-                                (unaffected.takeIf { left.hash == right.hash } ?: modified).add(left)
+                                (unaffected.takeIf {
+                                    left.hash == right.hash
+                                            && left.lambdasHash.all { right.lambdasHash.containsValue(it.value) }
+                                } ?: modified).add(left)
                                 lastRight = otherItr.nextOrNull()
                             }
                             cmp < 0 -> {
-                                new.add(left)
+                                new.addMethod(left)
                             }
                         }
                         break
                     }
-                    deleted.add(right)
+                    deleted.addMethod(right)
                     lastRight = otherItr.nextOrNull()
                     if (lastRight == null) {
-                        new.add(left)
+                        new.addMethod(left)
                     }
                 }
             }
-            lastRight?.let { deleted.add(it) }
+            lastRight?.let { deleted.addMethod(it) }
             while (otherItr.hasNext()) {
-                deleted.add(otherItr.next())
+                deleted.addMethod(otherItr.next())
             }
         }
         DiffMethods(
@@ -89,6 +104,10 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
         )
     } else DiffMethods(new = this)
 } else DiffMethods(deleted = otherMethods)
+
+private fun MutableList<Method>.addMethod(value: Method) {
+    if (LAMBDA !in value.name) add(value)
+}
 
 internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     all = totalMethods.run { Count(coveredCount, totalCount).toDto() },
