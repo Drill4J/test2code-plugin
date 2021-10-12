@@ -502,7 +502,9 @@ class Plugin(
                 Routes.Group.Data(groupParent).let {
                     sendToGroup(
                         destination = Routes.Group.Data.TestsSummaries(it),
-                        message = summaries.map { (agentId, summary) -> summary.testsCoverage.toDto(agentId) }
+                        message = summaries.map { (agentId, summary) -> summary.testsCoverage
+                            .filter { tests -> tests.coverage.percentage != 0.0 }
+                            .toDto(agentId) }
                     )
 
                     sendToGroup(
