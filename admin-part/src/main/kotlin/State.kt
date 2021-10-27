@@ -25,6 +25,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
+import kotlinx.serialization.json.*
 import org.jacoco.core.internal.data.*
 
 /**
@@ -184,6 +185,10 @@ internal class AgentState(
                     } ?: this
                 }
                 val testsToRun = parentBuild?.run {
+                    logger.debug { "json New Build: ${json.encodeToJsonElement(classData)}" }
+                    logger.debug { "json Parent Build: ${json.encodeToJsonElement(parentClassData)}" }
+                    logger.debug { "json Parent BundleCountersDto: ${json.encodeToJsonElement(bundleCounters.toDto())}" }
+                    logger.debug { "json Diff ModifiedMethods: ${json.encodeToJsonElement(methodChanges.modified)}" }
                     bundleCounters.testsWith(methodChanges.modified)
                 }.orEmpty()
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
@@ -380,3 +385,52 @@ internal class AgentState(
         }?.version
     }
 }
+
+private fun BundleCounters.toDto() = BundleCountersDto(
+    all = all.toDto(),
+    testTypeOverlap = testTypeOverlap.toDto(),
+    overlap = overlap.toDto(),
+    byTestType = byTestType.map {
+        it.key to it.value.toDto()
+    }.toMap(),
+    byTest = byTest.map {
+        it.key to it.value.toDto()
+    }.toMap(),
+    detailsByTest = detailsByTest,
+)
+
+private fun BundleCounter.toDto() = BundleCounterDto(
+    name = name,
+    count = count.toDto(),
+    methodCount = methodCount.toDto(),
+    classCount = classCount.toDto(),
+    packageCount = packageCount.toDto(),
+    packages = packages.map {
+        PackageCounterDto(
+            name = it.name,
+            count = it.count.toDto(),
+            classCount = it.classCount.toDto(),
+            methodCount = it.methodCount.toDto(),
+            classes = it.classes.map { classCounter ->
+                ClassCounterDto(
+                    path = classCounter.path,
+                    name = classCounter.name,
+                    count = classCounter.count.toDto(),
+                    fullName = classCounter.fullName,
+                    probes = classCounter.probes,
+                    methods = classCounter.methods.map { methodCounter ->
+                        MethodCounterDto(
+                            name = methodCounter.name,
+                            count = methodCounter.count.toDto(),
+                            desc = methodCounter.desc,
+                            decl = methodCounter.decl,
+                            sign = methodCounter.sign,
+                            fullName = methodCounter.fullName,
+                        )
+                    }
+                )
+            },
+        )
+    },
+)
+
