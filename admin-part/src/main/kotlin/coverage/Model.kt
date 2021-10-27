@@ -64,6 +64,10 @@ data class CoverageKey(
     override fun hashCode() = id.hashCode()
 }
 
+/**
+ * BundleCounters показывает ковередж с разных разрезов.
+ * for example, all - shows all coverage of a build
+ */
 @Serializable
 class BundleCounters(
     val all: BundleCounter,
@@ -85,6 +89,11 @@ sealed class NamedCounter : JvmSerializable {
     abstract val count: Count
 }
 
+/**
+ * BundleCounter - it is for mapping coverage by smth
+ * показывает ковередж относительно от общего кол-ва.
+ * Structure: overview vision -> packages -> classes -> methods.
+ */
 @Serializable
 data class BundleCounter(
     override val name: String,
@@ -127,3 +136,67 @@ data class MethodCounter(
     val fullName: String,
     override val count: Count,
 ) : NamedCounter(), JvmSerializable
+
+@Serializable
+class BundleCountersDto(
+    val all: BundleCounterDto,
+    val testTypeOverlap: BundleCounterDto,
+    val overlap: BundleCounterDto,
+    val byTestType: Map<String, BundleCounterDto> = emptyMap(),
+    val byTest: Map<TypedTest, BundleCounterDto> = emptyMap(),
+    val detailsByTest: Map<TypedTest, TestDetails> = emptyMap(),
+) : JvmSerializable {
+    companion object {
+        val empty = BundleCounterDto("").let {
+            BundleCountersDto(all = it, testTypeOverlap = it, overlap = it)
+        }
+    }
+}
+
+sealed class NamedCounterDto : JvmSerializable {
+    abstract val name: String
+    abstract val count: CountDto
+}
+
+@Serializable
+data class BundleCounterDto(
+    override val name: String,
+    override val count: CountDto = zeroCountDto,
+    val methodCount: CountDto = zeroCountDto,
+    val classCount: CountDto = zeroCountDto,
+    val packageCount: CountDto = zeroCountDto,
+    val packages: List<PackageCounterDto> = emptyList(),
+) : NamedCounterDto(), JvmSerializable {
+    companion object {
+        val empty = BundleCounterDto("")
+    }
+}
+
+@Serializable
+data class PackageCounterDto(
+    override val name: String,
+    override val count: CountDto,
+    val classCount: CountDto,
+    val methodCount: CountDto,
+    val classes: List<ClassCounterDto>,
+) : NamedCounterDto(), JvmSerializable
+
+@Serializable
+data class ClassCounterDto(
+    val path: String,
+    override val name: String,
+    override val count: CountDto,
+    val methods: List<MethodCounterDto>,
+    val fullName: String,
+    val probes: List<Boolean> = emptyList(),
+) : NamedCounterDto(), JvmSerializable
+
+@Serializable
+data class MethodCounterDto(
+    override val name: String,
+    val desc: String,
+    val decl: String,
+    val sign: String,
+    val fullName: String,
+    override val count: CountDto,
+) : NamedCounterDto(), JvmSerializable
