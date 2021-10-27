@@ -43,30 +43,6 @@ internal typealias GroupedDuration = Map<String, Long>
 
 internal typealias AgentSummaries = PersistentMap<String, AgentSummary>
 
-internal val summaryAggregator = SummaryAggregator()
-
-internal class SummaryAggregator : (String, String, AgentSummary) -> AgentSummary {
-    private val _summaryCache = atomic(
-        persistentHashMapOf<String, AgentSummaries>()
-    )
-
-    override operator fun invoke(
-        serviceGroup: String,
-        agentId: String,
-        agentSummary: AgentSummary,
-    ): AgentSummary = run {
-        val cache = _summaryCache.updateAndGet {
-            val curAgentSummary = it[serviceGroup] ?: persistentHashMapOf()
-            it.put(serviceGroup, curAgentSummary.put(agentId, agentSummary))
-        }
-        cache[serviceGroup]?.values?.reduce { acc, element ->
-            acc + element
-        } ?: agentSummary
-    }
-
-    fun getSummaries(serviceGroup: String): Map<String, AgentSummary> = _summaryCache.value[serviceGroup] ?: emptyMap()
-}
-
 internal fun CachedBuild.toSummary(
     agentName: String,
     testsToRun: GroupedTests,
@@ -113,40 +89,9 @@ internal fun AgentSummary.toDto() = SummaryDto(
     recommendations = recommendations()
 )
 
-internal operator fun AgentSummary.plus(
-    other: AgentSummary,
-): AgentSummary = copy(
-    coverage = coverage + other.coverage,
-    methodCount = methodCount + other.methodCount,
-    coverageByType = coverageByType.merge(other.coverageByType) { count1, count2 ->
-        count1 + count2
-    },
-    scopeCount = scopeCount + other.scopeCount,
-    arrow = ArrowType.UNCHANGED,
-    risks = emptyMap(),
-    riskCounts = riskCounts + other.riskCounts,
-    testDuration = testDuration + other.testDuration,
-    tests = tests.merge(other.tests, ::mergeDistinct),
-    testsToRun = testsToRun.merge(other.testsToRun, ::mergeDistinct),
-    durationByType = durationByType.merge(other.durationByType) { duration1, duration2 ->
-        duration1 + duration2
-    }
-)
-
-operator fun Count.plus(other: Count): Count = copy(
-    covered = covered + other.covered,
-    total = total + other.total
-)
-
 private fun GroupedTests.toTestCountDto() = TestCountDto(
     count = totalCount(),
     byType = mapValues { it.value.count() }
-)
-
-private operator fun RiskCounts.plus(other: RiskCounts) = RiskCounts(
-    new = new + other.new,
-    modified = modified + other.modified,
-    total = total + other.total
 )
 
 private fun AgentSummary.toTestTypeSummary() = coverageByType.map { (type, count) ->

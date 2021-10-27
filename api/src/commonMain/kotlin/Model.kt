@@ -435,7 +435,7 @@ data class SummaryDto(
     val arrow: ArrowType = ArrowType.UNCHANGED,
     val risks: Int = 0, //TODO remove after changes on frontend
     val riskCounts: RiskCounts = RiskCounts(),
-    val testDuration: Long,
+    val testDuration: Long = 0L,
     val tests: List<TestTypeSummary> = emptyList(),
     val testsToRun: TestCountDto = TestCountDto(),
     val recommendations: Set<String> = emptySet(),
@@ -446,7 +446,7 @@ data class AgentSummaryDto(
     val id: String,
     val name: String,
     val buildVersion: String,
-    val summary: SummaryDto,
+    val summary: SummaryDto = SummaryDto(),
 )
 
 @Serializable

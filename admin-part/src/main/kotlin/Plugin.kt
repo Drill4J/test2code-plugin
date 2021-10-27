@@ -432,7 +432,6 @@ class Plugin(
             send(buildVersion, Routes.Data.Tests(it), summary.tests.toDto())
             send(buildVersion, Routes.Data.TestsToRun(it), summary.testsToRun.toDto())
         }
-        sendGroupSummary(summary)
     }
 
     private suspend fun CoverageInfoSet.sendBuildCoverage(
@@ -478,48 +477,6 @@ class Plugin(
             associatedTests.forEach {
                 AsyncJobDispatcher.launch {
                     send(buildVersion, Routes.Build.AssociatedTests(it.id, Routes.Build()), it)
-                }
-            }
-        }
-    }
-
-    private suspend fun Plugin.sendGroupSummary(summary: AgentSummary) {
-        val serviceGroup = agentInfo.serviceGroup
-        if (serviceGroup.any()) {
-            val aggregated = summaryAggregator(serviceGroup, agentId, summary)
-            val summaries = summaryAggregator.getSummaries(serviceGroup)
-            Routes.Group().let { groupParent ->
-                sendToGroup(
-                    destination = Routes.Group.Summary(groupParent),
-                    message = ServiceGroupSummaryDto(
-                        name = serviceGroup,
-                        aggregated = aggregated.toDto(),
-                        summaries = summaries.map { (agentId, summary) ->
-                            summary.toDto(agentId)
-                        }
-                    )
-                )
-                Routes.Group.Data(groupParent).let {
-                    sendToGroup(
-                        destination = Routes.Group.Data.TestsSummaries(it),
-                        message = summaries.map { (agentId, summary) -> summary.testsCoverage
-                            .filter { tests -> tests.coverage.percentage != 0.0 }
-                            .toDto(agentId) }
-                    )
-
-                    sendToGroup(
-                        destination = Routes.Group.Data.Tests(it),
-                        message = aggregated.tests.toDto()
-                    )
-
-                    sendToGroup(
-                        destination = Routes.Group.Data.TestsToRun(it),
-                        message = aggregated.testsToRun.toDto()
-                    )
-                    sendToGroup(
-                        destination = Routes.Group.Data.Recommendations(it),
-                        message = aggregated.recommendations()
-                    )
                 }
             }
         }
