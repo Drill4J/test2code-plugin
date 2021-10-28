@@ -247,8 +247,12 @@ class Plugin(
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
-        is CoverDataPart -> activeScope.addProbes(message.sessionId) { message.data }
-        is SessionChanged -> activeScope.probesChanged()
+        is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
+            activeScope.addProbes(message.sessionId) { message.data }
+        } ?: logger.error { "Attempting to add coverage in non-existent active session" }
+        is SessionChanged -> activeScope.takeIf { scope ->
+            scope.activeSessions.values.any { it.isRealtime }
+        }?.apply { probesChanged() }
         is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             state.finishSession(message.sessionId) ?: logger.info {
@@ -502,9 +506,11 @@ class Plugin(
                 Routes.Group.Data(groupParent).let {
                     sendToGroup(
                         destination = Routes.Group.Data.TestsSummaries(it),
-                        message = summaries.map { (agentId, summary) -> summary.testsCoverage
-                            .filter { tests -> tests.coverage.percentage != 0.0 }
-                            .toDto(agentId) }
+                        message = summaries.map { (agentId, summary) ->
+                            summary.testsCoverage
+                                .filter { tests -> tests.coverage.percentage != 0.0 }
+                                .toDto(agentId)
+                        }
                     )
 
                     sendToGroup(
