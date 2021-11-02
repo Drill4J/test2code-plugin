@@ -186,7 +186,7 @@ class Plugin(
                     AgentSessionTestsPayload(
                         sessionId,
                         testRun?.tests?.map { it.name.urlEncode() } ?: emptyList()
-                    )).toActionResult()
+                    )).toActionResult(false)
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is StopSession -> action.payload.run {

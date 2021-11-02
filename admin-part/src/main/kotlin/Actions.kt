@@ -27,10 +27,11 @@ internal object StatusCodes {
     const val ERROR = 500
 }
 
-internal fun AgentAction.toActionResult() = ActionResult(
+internal fun AgentAction.toActionResult(needAwait: Boolean = true) = ActionResult(
     code = StatusCodes.OK,
     agentAction = this,
-    data = this
+    data = this,
+    needAwait = needAwait
 )
 
 internal fun FieldErrorDto.toActionResult(code: Int) = listOf(this).toActionResult(code)
