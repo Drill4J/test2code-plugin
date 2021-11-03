@@ -76,7 +76,7 @@ class Plugin(
     override suspend fun initialize() {
         logger.debug { "agent(id=$id, version=$buildVersion) initializing from admin..." }
         changeState()
-        state.loadFromDb {
+        state.loadFromDb(sender) {
             processInitialized()
         }
     }
@@ -236,7 +236,7 @@ class Plugin(
                 it += message.astEntities
             }
         }
-        is Initialized -> state.initialized {
+        is Initialized -> state.initialized(sender) {
             processInitialized()
         }.also { calculateAndSendCachedCoverage() }
         is ScopeInitialized -> scopeInitialized(message.prevId)

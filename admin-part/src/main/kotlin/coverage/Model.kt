@@ -143,8 +143,8 @@ class BundleCountersDto(
     val testTypeOverlap: BundleCounterDto,
     val overlap: BundleCounterDto,
     val byTestType: Map<String, BundleCounterDto> = emptyMap(),
-    val byTest: Map<TypedTest, BundleCounterDto> = emptyMap(),
-    val detailsByTest: Map<TypedTest, TestDetails> = emptyMap(),
+    val byTest: Map<String, BundleCounterDto> = emptyMap(),
+    val detailsByTest: Map<String, TestDetails> = emptyMap(),
 ) : JvmSerializable {
     companion object {
         val empty = BundleCounterDto("").let {

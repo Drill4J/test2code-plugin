@@ -17,7 +17,9 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
+import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
@@ -70,12 +72,12 @@ internal class AgentState(
         _classBytes.update { loaded }
     }
 
-    suspend fun loadFromDb(block: suspend () -> Unit = {}) {
+    suspend fun loadFromDb(sender: Sender, block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
             logger.debug { "take from DB count methods ${classData.methods.size}" }
             _data.value = classData
-            initialized(classData)
+            initialized(sender, classData)
             block()
         }
     }
@@ -90,7 +92,7 @@ internal class AgentState(
         activeScope.close()
     }
 
-    suspend fun initialized(block: suspend () -> Unit = {}) {
+    suspend fun initialized(sender: Sender, block: suspend () -> Unit = {}) {
         logger.debug { "initialized by event from agent..." }.also { logPoolStats() }
         _data.getAndUpdate {
             when (it) {
@@ -150,12 +152,12 @@ internal class AgentState(
                 else -> data
             } as ClassData
             classData.store(storeClient)
-            initialized(classData)
+            initialized(sender, classData)
             block()
         }
     }
 
-    private suspend fun initialized(classData: ClassData) {
+    private suspend fun initialized(sender: Sender, classData: ClassData) {
         val buildVersion = agentInfo.buildVersion
         val build: CachedBuild = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
         val probes = scopeManager.byVersion(buildVersion, withData = true)
@@ -185,10 +187,12 @@ internal class AgentState(
                     } ?: this
                 }
                 val testsToRun = parentBuild?.run {
-                    logger.debug { "json New Build: ${json.encodeToJsonElement(classData)}" }
-                    logger.debug { "json Parent Build: ${json.encodeToJsonElement(parentClassData)}" }
-                    logger.debug { "json Parent BundleCountersDto: ${json.encodeToJsonElement(bundleCounters.toDto())}" }
-                    logger.debug { "json Diff ModifiedMethods: ${json.encodeToJsonElement(methodChanges.modified)}" }
+                    val context = AgentSendContext(agentInfo.id, buildVersion)
+                    logger.debug { "sending data to '$context'..." }
+                    sender.send(context, "/json-new-build", classData)
+                    sender.send(context, "/parent-build", parentClassData)
+                    sender.send(context, "/parent-bundle-counters", bundleCounters.toDto())
+                    sender.send(context, "/build/diff-modified", methodChanges.modified)
                     bundleCounters.testsWith(methodChanges.modified)
                 }.orEmpty()
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
@@ -394,9 +398,11 @@ private fun BundleCounters.toDto() = BundleCountersDto(
         it.key to it.value.toDto()
     }.toMap(),
     byTest = byTest.map {
-        it.key to it.value.toDto()
+        "${it.key.type}:${it.key.name}" to it.value.toDto()
     }.toMap(),
-    detailsByTest = detailsByTest,
+    detailsByTest = detailsByTest.map {
+        "${it.key.type}:${it.key.name}" to it.value
+    }.toMap(),
 )
 
 private fun BundleCounter.toDto() = BundleCounterDto(
