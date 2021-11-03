@@ -91,7 +91,7 @@ internal class ScopeDataEntity(
     val buildVersion: String,
     @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val bytes: ScopeData,
-) : JvmSerializable
+)
 
 private suspend fun FinishedScope.withProbes(
     data: ScopeDataEntity?,

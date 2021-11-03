@@ -71,10 +71,23 @@ data class TestInfo(
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
+    val testName: TestName? = null,
     val metadata: TestMetadata = TestMetadata.emptyMetadata,
 )
 
-enum class TestResult : JvmSerializable {
+@Serializable
+data class TestName(
+    val engine: String,
+    val className: String,
+    val method: String,
+    val classParams: String = "",
+    val methodParams: String = "()",
+) {
+    val fullName
+        get() = "[${TestName::engine.name}:$engine]/[class:$className$classParams]/[${TestName::method.name}:$method$methodParams]"
+}
+
+enum class TestResult {
     PASSED,
     FAILED,
     ERROR,
@@ -203,7 +216,7 @@ data class PackageTree(
     val totalMethodCount: Int = 0,
     val totalClassCount: Int = 0,
     val packages: List<JavaPackageCoverage> = emptyList(),
-) : JvmSerializable
+)
 
 @Serializable
 data class JavaPackageCoverage(
@@ -217,7 +230,7 @@ data class JavaPackageCoverage(
     val coveredMethodsCount: Int = 0,
     val assocTestsCount: Int = 0,
     val classes: List<JavaClassCoverage> = emptyList(),
-) : JvmSerializable
+)
 
 @Serializable
 data class JavaClassCoverage(
@@ -231,7 +244,7 @@ data class JavaClassCoverage(
     val assocTestsCount: Int = 0,
     val methods: List<JavaMethodCoverage> = emptyList(),
     val probes: List<Boolean> = emptyList(),
-) : JvmSerializable
+)
 
 @Serializable
 data class JavaMethodCoverage(
@@ -243,10 +256,10 @@ data class JavaMethodCoverage(
     val coverage: Double = 0.0,
     val assocTestsCount: Int = 0,
     val probeRange: ProbeRange = ProbeRange.EMPTY,
-) : JvmSerializable
+)
 
 @Serializable
-data class ProbeRange(val first: Int, val last: Int) : JvmSerializable {
+data class ProbeRange(val first: Int, val last: Int) {
     companion object {
         val EMPTY = ProbeRange(1, 0)
     }
@@ -268,7 +281,7 @@ data class AssociatedTests(
 data class TypedTest(
     val name: String,
     val type: String,
-) : JvmSerializable
+)
 
 @Serializable
 data class CoveredMethodCounts(
@@ -313,8 +326,9 @@ data class TestsSummaryDto(
 data class TestDetails(
     val duration: Long,
     val result: TestResult,
+    val testName: TestName? = null,
     val metadata: TestMetadata = TestMetadata.emptyMetadata,
-) : JvmSerializable
+)
 
 @Serializable
 data class TestMetadata(
@@ -488,4 +502,3 @@ fun Count(covered: Int, total: Int): Count {
     return (covered.toLong() shl 32) or (total.toLong() and 0xFFFFFFFFL)
 }
 
-expect interface JvmSerializable

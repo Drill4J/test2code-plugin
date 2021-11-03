@@ -67,7 +67,6 @@ data class ExecClassData(
     val className: String,
     @Serializable(with = BitSetSerializer::class) val probes: Probes,
     val testName: String = ""
-) : JvmSerializable
+)
 
-expect interface JvmSerializable
 

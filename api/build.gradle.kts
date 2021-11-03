@@ -5,22 +5,31 @@ plugins {
 }
 
 kotlin {
-    sourceSets.commonMain {
-        dependencies {
-            //provided by drill runtime or clients
-            compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
-        }
-    }
 
-    jvm {
-        val main by compilations
-        main.defaultSourceSet {
-            dependencies {
-                //provided by drill runtime or clients
-                compileOnly("io.ktor:ktor-locations") { isTransitive = false }
+    targets {
+        linuxX64()
+        mingwX64()
+        macosX64()
+        jvm {
+            val main by compilations
+            main.defaultSourceSet {
+                dependencies {
+                    //provided by drill runtime or clients
+                    compileOnly("io.ktor:ktor-locations") { isTransitive = false }
+                }
             }
         }
     }
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                //provided by drill runtime or clients
+                compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
+            }
+        }
+    }
+
 }
 
 val kt2dts by configurations.creating

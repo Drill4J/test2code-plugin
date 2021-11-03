@@ -22,7 +22,7 @@ import kotlinx.serialization.*
 @Serializable
 data class BuildTests(
     val tests: GroupedTests = emptyMap(),
-) : JvmSerializable
+)
 
 internal fun BundleCounters.testsWith(
     methods: Iterable<Method>,
@@ -71,7 +71,10 @@ internal fun CoverContext.testsToRunDto(
             name = test.name,
             toRun = typedTest !in bundleCounters.byTest,
             coverage = bundleCounters.byTest[typedTest]?.toCoverDto(packageTree) ?: CoverDto(),
-            details = bundleCounters.detailsByTest[typedTest] ?: TestDetails(0, TestResult.PASSED, test.metadata)
+            details = bundleCounters.detailsByTest[typedTest] ?: TestDetails(
+                duration = 0,
+                result = TestResult.PASSED,
+                metadata = test.metadata)
         )
     }
 }
