@@ -27,7 +27,7 @@ internal class StoredSession(
     val scopeId: String,
     @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val data: FinishedSession,
-) : JvmSerializable
+)
 
 internal suspend fun StoreClient.loadSessions(
     scopeId: String,

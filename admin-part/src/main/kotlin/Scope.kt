@@ -18,7 +18,6 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.common.api.JvmSerializable
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
@@ -260,7 +259,7 @@ data class ScopeData(
     @Transient
     val sessions: List<FinishedSession> = emptyList(),
     val typedTests: Set<TypedTest> = emptySet(),
-) : JvmSerializable {
+) {
     companion object {
         val empty = ScopeData()
     }
@@ -274,7 +273,7 @@ data class FinishedScope(
     override val summary: ScopeSummary,
     val enabled: Boolean,
     val data: ScopeData,
-) : Scope, JvmSerializable {
+) : Scope {
     override fun iterator() = data.sessions.iterator()
 
     override fun toString() = "fin-scope($id, $name)"
@@ -287,7 +286,7 @@ internal data class ActiveScopeInfo(
     val nth: Int = 1,
     val name: String = "",
     val startedAt: Long = 0L,
-) : JvmSerializable
+)
 
 internal fun ActiveScopeInfo.inc() = copy(nth = nth.inc())
 

@@ -72,7 +72,7 @@ class BundleCounters(
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
     val detailsByTest: Map<TypedTest, TestDetails> = emptyMap(),
-) : JvmSerializable {
+) {
     companion object {
         val empty = BundleCounter("").let {
             BundleCounters(all = it, testTypeOverlap = it, overlap = it)
@@ -80,7 +80,7 @@ class BundleCounters(
     }
 }
 
-sealed class NamedCounter : JvmSerializable {
+sealed class NamedCounter {
     abstract val name: String
     abstract val count: Count
 }
@@ -93,7 +93,7 @@ data class BundleCounter(
     val classCount: Count = zeroCount,
     val packageCount: Count = zeroCount,
     val packages: List<PackageCounter> = emptyList(),
-) : NamedCounter(), JvmSerializable {
+) : NamedCounter() {
     companion object {
         val empty = BundleCounter("")
     }
@@ -106,7 +106,7 @@ data class PackageCounter(
     val classCount: Count,
     val methodCount: Count,
     val classes: List<ClassCounter>,
-) : NamedCounter(), JvmSerializable
+) : NamedCounter()
 
 @Serializable
 data class ClassCounter(
@@ -116,7 +116,7 @@ data class ClassCounter(
     val methods: List<MethodCounter>,
     val fullName: String,
     val probes: List<Boolean> = emptyList(),
-) : NamedCounter(), JvmSerializable
+) : NamedCounter()
 
 @Serializable
 data class MethodCounter(
@@ -126,4 +126,4 @@ data class MethodCounter(
     val sign: String,
     val fullName: String,
     override val count: Count,
-) : NamedCounter(), JvmSerializable
+) : NamedCounter()

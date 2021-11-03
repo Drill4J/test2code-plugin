@@ -27,21 +27,21 @@ internal class StoredClassData(
     @Id val version: String,
     @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [Method::class])
     val data: ClassData,
-) : JvmSerializable
+)
 
 @Serializable
 internal class StoredBundles(
     @Id val version: String,
     @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [MethodCounter::class])
     val data: BundleCounters,
-) : JvmSerializable
+)
 
 @Serializable
 class StoredBuildTests(
     @Id val version: String,
     @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val data: BuildTests,
-) : JvmSerializable
+)
 
 internal suspend fun StoreClient.loadClassData(
     version: String,
