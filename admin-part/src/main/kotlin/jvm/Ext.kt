@@ -27,10 +27,8 @@ import java.util.concurrent.*
 val lambdas = ConcurrentHashMap<String, PersistentSet<String>>()
 
 internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = run {
-//    ClassReader(classBytes).accept(
-//        LambdaClassVisitor(fullName, Opcodes.ASM7),
-//        ClassReader.EXPAND_FRAMES
-//    )
+    val newBytes = transform(fullName, classBytes)
+    println(newBytes.size)
     val classParser = ClassParser(ByteArrayInputStream(classBytes), fullName)
     val parsedMethods = classParser.parse().run {
         methods.associateBy { signature(fullName, it.name, it.signature) }

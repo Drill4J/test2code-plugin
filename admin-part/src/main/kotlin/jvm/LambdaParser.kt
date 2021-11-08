@@ -198,7 +198,7 @@ class LambdaParser(private val methodName: String, private val lambdas: Map<Stri
                     lambdas.entries.find { "lambda\$$methodName\$$lambdaIndex" in it.key }?.let { (sign, method) ->
                         lambdaHash[sign] = Utility.codeToString(
                             method.code.code,
-                            constant_pool,
+                            method.constantPool,
                             0,
                             method.code.length,
                             verbose

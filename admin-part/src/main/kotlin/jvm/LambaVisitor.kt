@@ -4,6 +4,13 @@ import com.epam.drill.plugins.test2code.util.*
 import kotlinx.collections.immutable.*
 import org.objectweb.asm.*
 
+fun transform(className: String, byteArray: ByteArray) = run {
+    val classReader = ClassReader(byteArray)
+    val classWriter = ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES)
+    classReader.accept(LambdaClassVisitor(className, Opcodes.ASM7), ClassReader.EXPAND_FRAMES)
+    classWriter.toByteArray()
+}
+
 class LambdaClassVisitor(private val className: String, api: Int) : ClassVisitor(api) {
 
     override fun visitMethod(
@@ -24,9 +31,8 @@ class LambdaMethodVisitor(private val fullMethodName: String, api: Int) : Method
         handle: Handle?,
         vararg arguments: Any?
     ) {
-        arguments.filterIsInstance(Handle::class.java).firstOrNull()?.let {
-            val existing = lambdas[fullMethodName] ?: persistentSetOf()
-            lambdas.put(fullMethodName, existing + signature(it.owner, it.name, it.desc))
-        }
+        //if full method name contains "lambda" then modify bytecode and add it to collection
+        //if inner lambda -> take new name from collection and put
+        //get new bytecode -> codeToString
     }
 }
