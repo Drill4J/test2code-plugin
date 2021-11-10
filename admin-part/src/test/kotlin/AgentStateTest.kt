@@ -17,18 +17,12 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
-import com.epam.kodux.*
-import jetbrains.exodus.entitystore.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlinx.coroutines.*
-import java.io.*
-import java.util.*
 import kotlin.test.*
+import kotlin.test.Test
 
-class AgentStateTest {
-
-    private val storageDir = File("build/tmp/test/storages/${this::class.simpleName}-${UUID.randomUUID()}")
-
-    private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
+class AgentStateTest: PostgresBased("agent_state") {
 
     private val agentInfo = AgentInfo(
         id = "ag",
@@ -42,12 +36,6 @@ class AgentStateTest {
     private val adminData = object : AdminData {
         override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
         override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
-    }
-
-    @AfterTest
-    fun cleanStore() {
-        storeClient.close()
-        storageDir.deleteRecursively()
     }
 
     @Test
