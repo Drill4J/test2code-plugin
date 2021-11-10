@@ -17,7 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
 import java.io.*

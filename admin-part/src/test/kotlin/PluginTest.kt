@@ -21,7 +21,7 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
 import java.io.*
@@ -34,7 +34,7 @@ class PluginTest {
 
     private val storageDir = File("build/tmp/test/storages/${this::class.simpleName}-${UUID.randomUUID()}")
 
-    private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
+    private val storeClient = StoreClient("store")
 
     private val agentInfo = AgentInfo(
         id = "ag",
@@ -54,7 +54,7 @@ class PluginTest {
 
     @AfterTest
     fun cleanStore() {
-        storeClient.close()
+//        storeClient.close()
         storageDir.deleteRecursively()
     }
 
