@@ -22,7 +22,7 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.*

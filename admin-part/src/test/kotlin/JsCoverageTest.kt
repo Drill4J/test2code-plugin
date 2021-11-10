@@ -20,28 +20,10 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.test.js.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
-import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
-import java.io.*
-import java.util.*
 import kotlin.test.*
 
-class JsCoverageTest {
-
-    private val storageDir = File("build/tmp/test/storages/${this::class.simpleName}-${UUID.randomUUID()}")
-
-    private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
-
-    private val autoTestType = "AUTO"
-
-    private val manualTestType = "MANUAL"
-
-    @AfterTest
-    fun cleanStore() {
-        storeClient.close()
-        storageDir.deleteRecursively()
-    }
+class JsCoverageTest : PostgresBased("js_coverage") {
 
     @Test
     fun `coverageData for active scope with custom js probes`() {

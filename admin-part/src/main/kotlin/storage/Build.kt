@@ -19,27 +19,24 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import kotlinx.serialization.*
 
 @Serializable
 internal class StoredClassData(
     @Id val version: String,
-    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [Method::class])
     val data: ClassData,
 )
 
 @Serializable
 internal class StoredBundles(
     @Id val version: String,
-    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [MethodCounter::class])
     val data: BundleCounters,
 )
 
 @Serializable
 class StoredBuildTests(
     @Id val version: String,
-    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val data: BuildTests,
 )
 
@@ -82,12 +79,13 @@ internal suspend fun StoreClient.loadBuild(
 internal suspend fun CachedBuild.store(storage: StoreClient) {
     storage.executeInAsyncTransaction {
         trackTime("Store build total") {
-            store(stats)
+            val schema = storage.schema
+            store(stats, schema)
             trackTime("Store build bundles") {
-                store(StoredBundles(version, bundleCounters))
+                store(StoredBundles(version, bundleCounters), schema)
             }
             trackTime("Store build tests") {
-                store(StoredBuildTests(version, tests))
+                store(StoredBuildTests(version, tests), schema)
             }
         }
     }

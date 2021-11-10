@@ -69,6 +69,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("org.testcontainers:postgresql:1.16.2")
 
     testData("com.epam.drill:test-data:$drillAdminVersion") { isChanging = true }
 }
