@@ -19,7 +19,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.logger
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
@@ -31,12 +31,12 @@ class ScopeManager(private val storage: StoreClient) {
         buildVersion: String,
         withData: Boolean = false,
     ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
-        findBy<FinishedScope> {
+        storage.findBy<FinishedScope> {
             FinishedScope::buildVersion eq buildVersion
         }.run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
-                    findBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }.takeIf { it.any() }
+                    storage.findBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }.takeIf { it.any() }
                 }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
@@ -49,23 +49,24 @@ class ScopeManager(private val storage: StoreClient) {
             trackTime("Store FinishedScope") {
                 store(scope.copy(data = ScopeData.empty))
                 scope.takeIf { it.any() }?.let {
-                    store(ScopeDataEntity(it.id, it.buildVersion, it.data))
+                    store(ScopeDataEntity(it.id, it.buildVersion, it.data), storage.schema)
                 }
             }
         }
     }
 
     suspend fun deleteById(scopeId: String): FinishedScope? = storage.executeInAsyncTransaction {
-        findById<FinishedScope>(scopeId)?.also {
-            deleteById<FinishedScope>(scopeId)
-            deleteById<ScopeDataEntity>(scopeId)
+        storage.findById<FinishedScope>(scopeId)?.also {
+            storage.deleteById<FinishedScope>(scopeId)
+            storage.deleteById<ScopeDataEntity>(scopeId)
         }
     }
 
     suspend fun deleteByVersion(buildVersion: String) {
         storage.executeInAsyncTransaction {
-            deleteBy<FinishedScope> { FinishedScope::buildVersion eq buildVersion }
-            deleteBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }
+            //todo dsm or where??
+            storage.deleteBy<FinishedScope> { FinishedScope::buildVersion eq buildVersion }
+            storage.deleteBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }
         }
     }
 
@@ -89,7 +90,7 @@ class ScopeManager(private val storage: StoreClient) {
 internal class ScopeDataEntity(
     @Id val id: String,
     val buildVersion: String,
-    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
+//    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val bytes: ScopeData,
 )
 

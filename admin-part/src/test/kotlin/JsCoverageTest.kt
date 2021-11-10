@@ -20,7 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.test.js.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import jetbrains.exodus.entitystore.*
 import kotlinx.coroutines.*
 import java.io.*
