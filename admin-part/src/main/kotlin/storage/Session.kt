@@ -18,14 +18,13 @@ package com.epam.drill.plugins.test2code.storage
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import kotlinx.serialization.*
 
 @Serializable
 internal class StoredSession(
     @Id val id: String,
     val scopeId: String,
-    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val data: FinishedSession,
 )
 
