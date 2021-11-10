@@ -21,7 +21,7 @@ import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import kotlinx.serialization.*
 import kotlin.reflect.*
 
@@ -79,7 +79,7 @@ internal suspend fun Plugin.updateGateConditions(
             conditionSettings.forEach { setting ->
                 val measure = setting.condition.measure
                 val id = QualityGateData.IdByAgent(agentInfo.id, measure)
-                store(QualityGateData.AgentSetting(id, setting))
+                store(QualityGateData.AgentSetting(id, setting), storeClient.schema)
             }
         }
         ActionResult(StatusCodes.OK, "")

@@ -26,7 +26,6 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.*
 import com.epam.kodux.util.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
@@ -36,6 +35,7 @@ import kotlinx.serialization.protobuf.*
 import java.io.*
 import java.util.*
 import java.util.concurrent.*
+import com.epam.dsm.*
 
 internal object AsyncJobDispatcher : CoroutineScope {
     override val coroutineContext =
