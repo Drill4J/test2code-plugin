@@ -47,7 +47,7 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
             trackTime("Store FinishedScope") {
-                store(scope.copy(data = ScopeData.empty))
+                store(scope.copy(data = ScopeData.empty), storage.schema)
                 scope.takeIf { it.any() }?.let {
                     store(ScopeDataEntity(it.id, it.buildVersion, it.data), storage.schema)
                 }
