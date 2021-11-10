@@ -17,7 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.kodux.*
+import com.epam.dsm.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
