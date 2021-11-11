@@ -64,7 +64,7 @@ class ScopeManager(private val storage: StoreClient) {
 
     suspend fun deleteByVersion(buildVersion: String) {
         storage.executeInAsyncTransaction {
-            //todo dsm or where??
+            //todo make in one transaction in DSM.
             storage.deleteBy<FinishedScope> { FinishedScope::buildVersion eq buildVersion }
             storage.deleteBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }
         }

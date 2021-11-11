@@ -73,7 +73,7 @@ internal suspend fun StoreClient.loadBuild(
 internal suspend fun CachedBuild.store(storage: StoreClient) {
     storage.executeInAsyncTransaction {
         trackTime("Store build total") {
-            val schema = storage.schema //todo in dsm?
+            val schema = storage.schema
             store(stats, schema)
             trackTime("Store build bundles") {
                 store(StoredBundles(version, bundleCounters), schema)
