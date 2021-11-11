@@ -44,9 +44,11 @@ dependencies {
     implementation("org.jetbrains.xodus:xodus-entity-store")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
+    testImplementation("ru.yandex.qatools.embed:postgresql-embedded:2.10")
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
+    testImplementation("org.slf4j:slf4j-simple:1.7.32")
 }
 
 tasks {
