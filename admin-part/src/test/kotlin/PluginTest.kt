@@ -20,21 +20,13 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.storage.*
-import com.epam.dsm.*
-import jetbrains.exodus.entitystore.*
+import com.epam.drill.plugins.test2code.util.*
 import kotlinx.coroutines.*
-import java.io.*
-import java.util.*
 import kotlin.random.Random
 import kotlin.test.*
 
 
-class PluginTest {
-
-    private val storageDir = File("build/tmp/test/storages/${this::class.simpleName}-${UUID.randomUUID()}")
-
-    private val storeClient = StoreClient("store")
+class PluginTest : PostgresBased("plugin") {
 
     private val agentInfo = AgentInfo(
         id = "ag",
@@ -52,18 +44,12 @@ class PluginTest {
         override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
     }
 
-    @AfterTest
-    fun cleanStore() {
-//        storeClient.close()
-        storageDir.deleteRecursively()
-    }
-
     private suspend fun initPlugin(
         buildVersion: String,
     ): Plugin = Plugin(
         adminData,
         sender,
-        storeClient,
+        agentStore,
         agentInfo.copy(buildVersion = buildVersion),
         "test2code"
     ).apply {
