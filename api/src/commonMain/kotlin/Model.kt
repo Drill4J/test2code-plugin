@@ -343,7 +343,8 @@ data class TestMetadata(
 @Serializable
 data class TestData(
     val name: String,
-    val metadata: TestMetadata,
+    val testName: TestName? = null,
+    val metadata: TestMetadata = TestMetadata.emptyMetadata,
 )
 
 @Serializable

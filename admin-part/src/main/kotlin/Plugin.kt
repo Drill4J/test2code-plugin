@@ -409,8 +409,9 @@ class Plugin(
         val cachedBuild = state.updateBuildTests(
             byTest.keys.groupBy(TypedTest::type) {
                 TestData(
-                    it.name,
-                    detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata,
+                    name = it.name,
+                    testName = detailsByTest[it]?.testName,
+                    metadata = detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata,
                 )
             },
         )
