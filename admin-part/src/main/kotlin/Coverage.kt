@@ -63,7 +63,12 @@ internal fun Sequence<Session>.calcBundleCounters(
         detailsByTest = fold(mutableMapOf()) { map, session ->
             session.testDetails.forEach { (test, stats) ->
                 map[test] = map[test]?.run {
-                    copy(duration = duration + stats.duration, result = stats.result, metadata = stats.metadata)
+                    copy(
+                        duration = duration + stats.duration,
+                        result = stats.result,
+                        testName = stats.testName,
+                        metadata = stats.metadata,
+                    )
                 } ?: stats
             }
             map
@@ -255,7 +260,7 @@ private fun Sequence<ExecClassData>.writeCoverage(
 
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
-    sessionId: String = genUuid()
+    sessionId: String = genUuid(),
 ) = activeScope.startSession(sessionId, "UNIT").runCatching {
     val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
     val classBytes = adminData.loadClassBytes()

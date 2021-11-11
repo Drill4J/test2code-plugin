@@ -37,7 +37,11 @@ internal fun BundleCounters.testsWith(
             packageSeq.toCoveredMethods(lazyMethodMap::value, lazyPackageSet::value).any()
         }
     }.distinct().groupBy(TypedTest::type) {
-        TestData(it.name, detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata)
+        TestData(
+            name = it.name,
+            testName = detailsByTest[it]?.testName,
+            metadata = detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata,
+        )
     }
 }.orEmpty()
 
@@ -74,7 +78,9 @@ internal fun CoverContext.testsToRunDto(
             details = bundleCounters.detailsByTest[typedTest] ?: TestDetails(
                 duration = 0,
                 result = TestResult.PASSED,
-                metadata = test.metadata)
+                testName = test.testName,
+                metadata = test.metadata,
+            )
         )
     }
 }
