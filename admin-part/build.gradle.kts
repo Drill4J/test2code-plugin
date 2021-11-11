@@ -40,7 +40,6 @@ dependencies {
     //provided by admin
     //TODO create a platform for admin dependencies
     implementation("com.epam.drill:dsm:$drillDsmVersion")
-    implementation("org.jetbrains.exposed:exposed-core:0.29.1")//todo remove it(move to API of dsm)
     implementation("com.epam.drill:kodux")
     implementation("org.jetbrains.xodus:xodus-entity-store")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
