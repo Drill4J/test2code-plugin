@@ -12,7 +12,8 @@ configurations.implementation {
     extendsFrom(jarDeps)
 }
 
-val drillDsm: String by extra
+val drillDsmVersion: String by extra
+val postgresEmbeddedVersion: String by extra
 kotlin.sourceSets.all {
     languageSettings.useExperimentalAnnotation("kotlinx.coroutines.ExperimentalCoroutinesApi")
     languageSettings.useExperimentalAnnotation("kotlinx.serialization.ExperimentalSerializationApi")
@@ -38,16 +39,16 @@ dependencies {
 
     //provided by admin
     //TODO create a platform for admin dependencies
-    implementation("com.epam.drill:dsm:$drillDsm")
+    implementation("com.epam.drill:dsm:$drillDsmVersion")
     implementation("org.jetbrains.exposed:exposed-core:0.29.1")//todo remove it(move to API of dsm)
     implementation("com.epam.drill:kodux")
     implementation("org.jetbrains.xodus:xodus-entity-store")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
-    testImplementation("ru.yandex.qatools.embed:postgresql-embedded:2.10")
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
+    testImplementation("ru.yandex.qatools.embed:postgresql-embedded:$postgresEmbeddedVersion")
     testImplementation("org.slf4j:slf4j-simple:1.7.32")
 }
 
