@@ -124,6 +124,10 @@ class ExecRuntime(
     private val _completedTests = atomic(persistentListOf<String>())
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
+    init {
+        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode"}
+    }
+
     override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
         data.filterNotNull().filter { datum -> datum.probes.values.any { it } }
     }.asSequence().also {
