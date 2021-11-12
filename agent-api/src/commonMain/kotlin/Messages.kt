@@ -77,3 +77,7 @@ data class SessionFinished(val sessionId: String, val ts: Long) : CoverMessage()
 @SerialName("SESSIONS_FINISHED")
 @Serializable
 data class SessionsFinished(val ids: List<String>, val ts: Long) : CoverMessage()
+
+@SerialName("ACTIVE_SESSIONS")
+@Serializable
+data class SessionsState(val ids: Set<String>) : CoverMessage()

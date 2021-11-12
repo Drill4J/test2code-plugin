@@ -50,6 +50,7 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
     fun cancel(sessionId: String)
     fun cancelAll(): List<String>
     fun addCompletedTests(sessionId: String, tests: List<String>)
+    fun getActiveSessions(): Set<String>
 
 }
 
@@ -316,6 +317,10 @@ open class SimpleSessionProbeArrayProvider(
     override fun addCompletedTests(sessionId: String, tests: List<String>) {
         runtimes[sessionId]?.addCompletedTests(tests)
     }
+
+    override fun getActiveSessions(): Set<String> = global?.let {
+        setOf(it.first)
+    } ?: emptySet<String>() + runtimes.keys
 
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         if (sessionId !in runtimes) {

@@ -291,5 +291,6 @@ class PluginTest {
 
 private object EmptySender : Sender {
     override suspend fun send(context: SendContext, destination: Any, message: Any) {}
+    override suspend fun sendAgentAction(agentId: String, pluginId: String, message: Any) {}
 
 }
