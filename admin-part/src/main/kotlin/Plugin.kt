@@ -274,6 +274,7 @@ class Plugin(
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes(buildVersion)
+        sender.sendToAgent(agentId, CancelAllAgentSessions)
         return initActiveScope() && initBundleHandler()
     }
 
