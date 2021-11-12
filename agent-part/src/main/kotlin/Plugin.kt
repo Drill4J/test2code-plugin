@@ -50,6 +50,14 @@ class Plugin(
 
     private val _retransformed = atomic(false)
 
+    override fun onConnect() {
+        val ids = instrContext.getActiveSessions()
+        logger.info { "Send active sessions after reconnect: ${ids.count()}" }
+        ids.takeIf { it.any() }?.let {
+            sendMessage(SessionsState(ids))
+        }
+    }
+
     //TODO remove
     override fun setEnabled(enabled: Boolean) {
         _enabled.value = enabled

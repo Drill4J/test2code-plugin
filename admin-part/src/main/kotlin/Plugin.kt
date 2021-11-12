@@ -249,7 +249,7 @@ class Plugin(
         }
         is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
             activeScope.addProbes(message.sessionId) { message.data }
-        } ?: logger.error { "Attempting to add coverage in non-existent active session" }
+        } ?: logger.debug { "Attempting to add coverage in non-existent active session" }
         is SessionChanged -> activeScope.takeIf { scope ->
             scope.activeSessions.values.any { it.isRealtime }
         }?.apply { probesChanged() }
@@ -262,6 +262,17 @@ class Plugin(
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
+        }
+        is SessionsState -> message.run {
+            logger.info { "Active session ids from agent: $ids" }
+            ids.forEach { sessionId ->
+                sessionId.takeIf { it !in activeScope.activeSessions }?.let {
+                    AsyncJobDispatcher.launch {
+                        logger.info { "Attempting to cancel session: $it" }
+                        sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
+                    }
+                }
+            }
         }
         else -> logger.info { "$instanceId: Message is not supported! $message" }
     }
@@ -291,7 +302,8 @@ class Plugin(
 
     private suspend fun sendParentTestsToRunStats() = send(
         buildVersion,
-        destination = Routes.Build().let(Routes.Build::TestsToRun).let(Routes.Build.TestsToRun::ParentTestsToRunStats),
+        destination = Routes.Build().let(Routes.Build::TestsToRun)
+            .let(Routes.Build.TestsToRun::ParentTestsToRunStats),
         message = state.storeClient.loadTestsToRunSummary(
             buildVersion = buildVersion,
             parentVersion = state.coverContext().build.parentVersion
@@ -357,7 +369,10 @@ class Plugin(
         sendScopeSummary(summary)
     }
 
-    internal suspend fun sendScopeSummary(scopeSummary: ScopeSummary, buildVersion: String = this.buildVersion) {
+    internal suspend fun sendScopeSummary(
+        scopeSummary: ScopeSummary, buildVersion: String =
+            this.buildVersion
+    ) {
         send(buildVersion, scopeById(scopeSummary.id), scopeSummary)
     }
 
@@ -589,6 +604,10 @@ class Plugin(
         sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
     }
 
+    private suspend fun Plugin.sendAgentAction(message: AgentAction) {
+        sender.sendAgentAction(agentId, id, message)
+    }
+
     private fun changeState() {
         logger.debug { "agent(id=$agentId, version=$buildVersion) changing state..." }
         _state.getAndUpdate {
@@ -641,9 +660,17 @@ class Plugin(
                 AsyncJobDispatcher.launch {
                     scopeId?.let {
                         Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeById(it)).let { test ->
-                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test), summary)
+                            send(
+                                buildVersion,
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test),
+                                summary
+                            )
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all)
-                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test), modified)
+                            send(
+                                buildVersion,
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test),
+                                modified
+                            )
                             send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new)
                             send(
                                 buildVersion,
