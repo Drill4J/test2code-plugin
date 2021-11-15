@@ -410,7 +410,7 @@ class Plugin(
             byTest.keys.groupBy(TypedTest::type) {
                 TestData(
                     name = it.name,
-                    testName = detailsByTest[it]?.testName,
+                    testName = detailsByTest[it]?.testName ?: TestName(name = it.name),
                     metadata = detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata,
                 )
             },

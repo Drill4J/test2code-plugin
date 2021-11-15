@@ -71,20 +71,24 @@ data class TestInfo(
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
-    val testName: TestName? = null,
+    val testName: TestName = TestName.emptyTestName,
     val metadata: TestMetadata = TestMetadata.emptyMetadata,
 )
 
 @Serializable
 data class TestName(
-    val engine: String,
-    val className: String,
-    val method: String,
-    val classParams: String = "",
-    val methodParams: String = "()",
+    val engine: String = "",
+    val path: String = "",
+    val name: String = "", // TODO Remove default after update to kotlin 1.5 (https://github.com/Kotlin/kotlinx.serialization/issues/133)
+    val pathParams: String = "",
+    val params: String = "",
 ) {
+    companion object {
+        val emptyTestName = TestName()
+    }
+
     val fullName
-        get() = "[${TestName::engine.name}:$engine]/[class:$className$classParams]/[${TestName::method.name}:$method$methodParams]"
+        get() = "[${TestName::engine.name}:$engine]/[class:$path$pathParams]/[method:$name$params]"
 }
 
 enum class TestResult {
@@ -312,7 +316,7 @@ data class TestCoverageDto(
     val name: String,
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
-    val details: TestDetails = TestDetails(0, TestResult.PASSED),
+    val details: TestDetails = TestDetails(0, TestResult.PASSED, TestName.emptyTestName),
 )
 
 @Serializable
@@ -326,7 +330,7 @@ data class TestsSummaryDto(
 data class TestDetails(
     val duration: Long,
     val result: TestResult,
-    val testName: TestName? = null,
+    val testName: TestName,
     val metadata: TestMetadata = TestMetadata.emptyMetadata,
 )
 
@@ -343,7 +347,7 @@ data class TestMetadata(
 @Serializable
 data class TestData(
     val name: String,
-    val testName: TestName? = null,
+    val testName: TestName = TestName.emptyTestName,
     val metadata: TestMetadata = TestMetadata.emptyMetadata,
 )
 

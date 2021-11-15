@@ -140,7 +140,7 @@ internal fun BundleCounters.calculateCoverageData(
             type = typedTest.type,
             name = typedTest.name,
             coverage = bundle.toCoverDto(tree),
-            details = detailsByTest[typedTest] ?: TestDetails(0, TestResult.PASSED)
+            details = detailsByTest[typedTest] ?: TestDetails(0, TestResult.PASSED, TestName(name = typedTest.name))
         )
     }.sortedBy { it.type }
 
