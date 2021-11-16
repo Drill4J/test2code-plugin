@@ -40,9 +40,9 @@ class AgentStateTest: PostgresBased("agent_state") {
 
     @Test
     fun `set initial build as baseline`() = runBlocking {
-        val state = AgentState(agentStore, agentInfo, adminData)
+        val state = AgentState(storeClient, agentInfo, adminData)
         state.initialized()
-        agentStore.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
+        storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
             assertEquals(agentInfo.buildVersion, it.version)
             assertEquals("", it.parentVersion)
         }
@@ -50,32 +50,32 @@ class AgentStateTest: PostgresBased("agent_state") {
 
     @Test
     fun `toggleBaseline - no toggling on initial version`() = runBlocking {
-        val state = AgentState(agentStore, agentInfo, adminData)
+        val state = AgentState(storeClient, agentInfo, adminData)
         state.initialized()
         assertNull(state.toggleBaseline())
     }
 
     @Test
     fun `toggleBaseline - 2 builds`() = runBlocking {
-        AgentState(agentStore, agentInfo, adminData).apply {
+        AgentState(storeClient, agentInfo, adminData).apply {
             initialized()
             storeBuild()
         }
         val version1 = agentInfo.buildVersion
-        agentStore.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
+        storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
             assertEquals(version1, it.version)
             assertEquals("", it.parentVersion)
         }
         val version2 = "0.2.0"
-        val state2 = AgentState(agentStore, agentInfo.copy(buildVersion = version2), adminData)
+        val state2 = AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData)
         state2.initialized()
         assertEquals(version2, state2.toggleBaseline())
-        agentStore.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
+        storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
             assertEquals(version2, it.version)
             assertEquals(version1, it.parentVersion)
         }
         assertEquals(version1, state2.toggleBaseline())
-        agentStore.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
+        storeClient.findById<GlobalAgentData>(agentInfo.id)!!.baseline.let {
             assertEquals(version1, it.version)
             assertEquals("", it.parentVersion)
         }
@@ -84,19 +84,19 @@ class AgentStateTest: PostgresBased("agent_state") {
 
     @Test
     fun `initialized - preserve parent version after restart`() = runBlocking {
-        AgentState(agentStore, agentInfo, adminData).apply {
+        AgentState(storeClient, agentInfo, adminData).apply {
             initialized()
             storeBuild()
         }
         val version1 = agentInfo.buildVersion
         val version2 = "0.2.0"
-        AgentState(agentStore, agentInfo.copy(buildVersion = version2), adminData).apply {
+        AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData).apply {
             initialized()
             storeBuild()
             assertEquals(version2, toggleBaseline())
             assertEquals(version1, coverContext().parentBuild?.version)
         }
-        AgentState(agentStore, agentInfo.copy(buildVersion = version2), adminData).apply {
+        AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData).apply {
             initialized()
             assertEquals(version1, coverContext().parentBuild?.version)
         }

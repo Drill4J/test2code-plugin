@@ -56,6 +56,7 @@ class ScopeManager(private val storage: StoreClient) {
     }
 
     suspend fun deleteById(scopeId: String): FinishedScope? = storage.executeInAsyncTransaction {
+        //todo make in one transaction in DSM. EPMDJ-9090
         storage.findById<FinishedScope>(scopeId)?.also {
             storage.deleteById<FinishedScope>(scopeId)
             storage.deleteById<ScopeDataEntity>(scopeId)
@@ -64,7 +65,7 @@ class ScopeManager(private val storage: StoreClient) {
 
     suspend fun deleteByVersion(buildVersion: String) {
         storage.executeInAsyncTransaction {
-            //todo make in one transaction in DSM.
+            //todo make in one transaction in DSM. EPMDJ-9090
             storage.deleteBy<FinishedScope> { FinishedScope::buildVersion eq buildVersion }
             storage.deleteBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }
         }
@@ -90,7 +91,6 @@ class ScopeManager(private val storage: StoreClient) {
 internal class ScopeDataEntity(
     @Id val id: String,
     val buildVersion: String,
-//    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val bytes: ScopeData,
 )
 

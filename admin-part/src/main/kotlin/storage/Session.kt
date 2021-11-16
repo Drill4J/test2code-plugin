@@ -25,7 +25,6 @@ import kotlinx.serialization.*
 internal class StoredSession(
     @Id val id: String,
     val scopeId: String,
-//    @StreamSerialization(SerializationType.KRYO, CompressType.ZSTD, [])
     val data: FinishedSession,
 )
 
