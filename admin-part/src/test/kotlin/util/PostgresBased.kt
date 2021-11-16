@@ -22,6 +22,8 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import ru.yandex.qatools.embed.postgresql.EmbeddedPostgres
 import ru.yandex.qatools.embed.postgresql.distribution.Version
+import java.io.*
+import java.util.*
 
 abstract class PostgresBased(private val schema: String) {
     val storeClient = StoreClient(schema)
@@ -42,11 +44,11 @@ abstract class PostgresBased(private val schema: String) {
 
     companion object {
         lateinit var postgres: EmbeddedPostgres
-
+        private val storageDir = File("build/tmp/test/stores/${this::class.simpleName}-${UUID.randomUUID()}")
         @BeforeAll
         @JvmStatic
         fun postgresSetup() {
-            postgres = EmbeddedPostgres(Version.V10_6)
+            postgres = EmbeddedPostgres(Version.V10_6, storageDir.absolutePath)
             val host = "localhost"
             val port = 5432
             val dbName = "dbName"
@@ -59,6 +61,7 @@ abstract class PostgresBased(private val schema: String) {
                 userName,
                 password
             )
+            Thread.sleep(5000) //todo :) timeout
             Database.connect(
                 "jdbc:postgresql://$host:$port/$dbName", driver = "org.postgresql.Driver",
                 user = userName, password = password
@@ -71,6 +74,7 @@ abstract class PostgresBased(private val schema: String) {
         @JvmStatic
         fun postgresClean() {
             postgres.close()
+            storageDir.deleteRecursively()
         }
 
     }
