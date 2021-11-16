@@ -103,7 +103,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
             override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
         }
         val state = AgentState(
-            agentStore, jsAgentInfo, adminData
+            storeClient, jsAgentInfo, adminData
         )
         state.init()
         (state.data as DataBuilder) += ast
