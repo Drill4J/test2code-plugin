@@ -49,7 +49,7 @@ class PluginTest : PostgresBased("plugin") {
     ): Plugin = Plugin(
         adminData,
         sender,
-        agentStore,
+        storeClient,
         agentInfo.copy(buildVersion = buildVersion),
         "test2code"
     ).apply {

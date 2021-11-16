@@ -24,7 +24,7 @@ import ru.yandex.qatools.embed.postgresql.EmbeddedPostgres
 import ru.yandex.qatools.embed.postgresql.distribution.Version
 
 abstract class PostgresBased(private val schema: String) {
-    val agentStore = StoreClient(schema)
+    val storeClient = StoreClient(schema)
 
     @kotlin.test.AfterTest
     fun after() {
