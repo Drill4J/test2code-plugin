@@ -115,37 +115,12 @@ internal class AgentState(
                         totalMethodCount = count(),
                         totalClassCount = packages.sumBy { it.totalClassesCount },
                         packages = packages
-                    ).toClassData(methods = methods)
+                    ).toClassData(buildVersion = agentInfo.buildVersion, methods = methods)
                 }
                 is NoData -> {
                     val classBytes = adminData.loadClassBytes(agentInfo.buildVersion)
                     logger.info { "initializing noData with classBytes size ${classBytes.size}..." }
-                    val probeIds: Map<String, Long> = classBytes.mapValues { CRC64.classId(it.value) }
-                    val bundleCoverage = classBytes.keys.bundle(classBytes, probeIds)
-                    val sortedPackages = bundleCoverage.packages.asSequence().run {
-                        mapNotNull { pc ->
-                            val classes = pc.classes.filter { it.methods.any() }
-                            if (classes.any()) {
-                                pc.copy(classes = classes.sortedBy(ClassCounter::name))
-                            } else null
-                        }.sortedBy(PackageCounter::name)
-                    }.toList()
-                    val classCounters = sortedPackages.flatMap { it.classes.asSequence() }
-                    val groupedMethods = trackTime("parsing classes") {
-                        classCounters.parallelStream().map { classCounter ->
-                            val name = classCounter.fullName
-                            val bytes = classBytes.getValue(name)
-                            name to classCounter.parseMethods(bytes)
-                        }.collect(Collectors.toMap({ it.first }, { it.second }, { first, _ -> first }))
-                    }
-                    val methods = groupedMethods.flatMap { it.value }.sorted()
-                    val packages = sortedPackages.toPackages(groupedMethods)
-                    PackageTree(
-                        totalCount = packages.sumBy { it.totalCount },
-                        totalMethodCount = groupedMethods.values.sumBy { it.count() },
-                        totalClassCount = packages.sumBy { it.totalClassesCount },
-                        packages = packages
-                    ).toClassData(methods = methods, probeIds = probeIds)
+                    classBytes.parseClassBytes(agentInfo.buildVersion)
                 }
                 else -> data
             } as ClassData
@@ -345,16 +320,6 @@ internal class AgentState(
         "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth + 1}"
         else -> trimmed
     }
-
-    private fun PackageTree.toClassData(
-        methods: List<Method>,
-        probeIds: Map<String, Long> = emptyMap()
-    ) = ClassData(
-        buildVersion = agentInfo.buildVersion,
-        packageTree = this,
-        methods = methods,
-        probeIds = probeIds
-    )
 
     internal suspend fun toggleBaseline(): String? = run {
         val agentId = agentInfo.id
