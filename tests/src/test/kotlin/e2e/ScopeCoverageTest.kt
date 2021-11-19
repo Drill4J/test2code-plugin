@@ -53,10 +53,7 @@ class ScopeCoverageTest : E2EPluginTest() {
                 val payloadWithEmptyTest = AddTests(
                     AddTestsPayload(
                         sessionId,
-                        TestRun(
-                            "", 0, 228,
-                            listOf(TestInfo(testWithoutCoverageName, TestResult.PASSED, 0, 228))
-                        )
+                        listOf(TestInfo("", testWithoutCoverageName, TestResult.PASSED, 0, 228))
                     )
                 ).stringify()
                 pluginAction(payloadWithEmptyTest) { status, _ ->
@@ -77,12 +74,12 @@ class ScopeCoverageTest : E2EPluginTest() {
                             testWithCoverageName -> {
                                 it.coverage.percentage shouldBeGreaterThan 46.6
                                 it.type shouldBe testType
-                                it.details.result shouldBe TestResult.PASSED
+                                it.overview.result shouldBe TestResult.PASSED
                             }
                             testWithoutCoverageName -> {
                                 it.coverage.percentage shouldBe 0.0
                                 it.type shouldBe testType
-                                it.details.result shouldBe TestResult.PASSED
+                                it.overview.result shouldBe TestResult.PASSED
                             }
                             else -> fail("Unknown test in collection")
                         }
@@ -97,7 +94,7 @@ class ScopeCoverageTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<CustomBuild> { plugUi, _ ->
                 val sessionId = "${UUID.randomUUID()}"
-                val startNewSession = StartNewSession(StartPayload(testType,sessionId)).stringify()
+                val startNewSession = StartNewSession(StartPayload(testType, sessionId)).stringify()
                 lateinit var cont: String
                 pluginAction(startNewSession) { status, _ ->
                     status shouldBe HttpStatusCode.OK
@@ -107,7 +104,7 @@ class ScopeCoverageTest : E2EPluginTest() {
                 repeat(5) { index ->
                     emptyTests.add(
                         TestInfo(
-                            "$testWithoutCoverageName$index", TestResult.PASSED, 0, 500
+                            "", "$testWithoutCoverageName$index", TestResult.PASSED, 0, 500
                         )
                     )
                 }
@@ -115,10 +112,7 @@ class ScopeCoverageTest : E2EPluginTest() {
                 val payloadWithEmptyTest = AddTests(
                     AddTestsPayload(
                         sessionId,
-                        TestRun(
-                            "", 0, 2500,
-                            emptyTests
-                        )
+                        emptyTests
                     )
                 ).stringify()
 

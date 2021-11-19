@@ -48,47 +48,37 @@ class EntityProbes(
 @Serializable
 data class StopSessionPayload(
     val sessionId: String,
-    val testRun: TestRun? = null,
+    val tests: List<TestInfo> = emptyList(),
 )
 
 @Serializable
 data class AddTestsPayload(
     val sessionId: String,
-    val testRun: TestRun? = null,
-)
-
-@Serializable
-data class TestRun(
-    val name: String = "",
-    val startedAt: Long,
-    val finishedAt: Long,
     val tests: List<TestInfo> = emptyList(),
 )
 
+
 @Serializable
 data class TestInfo(
-    val name: String,
+    val id: String = "",
+    val name: String, // TODO EPMDJ-9150 Replace name with test hash(id)
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
-    val testName: TestName = TestName.emptyTestName,
-    val metadata: TestMetadata = TestMetadata.emptyMetadata,
+    val details: TestDetails = TestDetails.emptyDetails,
 )
 
 @Serializable
-data class TestName(
+data class TestDetails(
     val engine: String = "",
     val path: String = "",
-    val name: String = "", // TODO Remove default after update to kotlin 1.5 (https://github.com/Kotlin/kotlinx.serialization/issues/133)
-    val pathParams: String = "",
-    val params: String = "",
+    val testName: String = "",
+    val params: Map<String, String> = emptyMap(),
+    val metadata: Map<String, String> = emptyMap(), // arbitrary
 ) {
     companion object {
-        val emptyTestName = TestName()
+        val emptyDetails = TestDetails()
     }
-
-    val fullName
-        get() = "[${TestName::engine.name}:$engine]/[class:$path$pathParams]/[method:$name$params]"
 }
 
 enum class TestResult {
@@ -316,7 +306,7 @@ data class TestCoverageDto(
     val name: String,
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
-    val details: TestDetails = TestDetails(0, TestResult.PASSED, TestName.emptyTestName),
+    val overview: TestOverview = TestOverview(0, TestResult.PASSED),
 )
 
 @Serializable
@@ -327,28 +317,17 @@ data class TestsSummaryDto(
 )
 
 @Serializable
-data class TestDetails(
+data class TestOverview(
     val duration: Long,
     val result: TestResult,
-    val testName: TestName,
-    val metadata: TestMetadata = TestMetadata.emptyMetadata,
+    val details: TestDetails = TestDetails.emptyDetails,
 )
 
-@Serializable
-data class TestMetadata(
-    val hash: String = "",
-    val data: Map<String, String> = emptyMap(),
-) {
-    companion object {
-        val emptyMetadata = TestMetadata()
-    }
-}
 
 @Serializable
 data class TestData(
     val name: String,
-    val testName: TestName = TestName.emptyTestName,
-    val metadata: TestMetadata = TestMetadata.emptyMetadata,
+    val details: TestDetails = TestDetails.emptyDetails,
 )
 
 @Serializable
