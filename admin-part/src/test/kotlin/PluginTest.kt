@@ -26,7 +26,7 @@ import kotlin.random.Random
 import kotlin.test.*
 
 
-class PluginTest : PostgresBased("plugin") {
+abstract class PluginTest : PostgresBased("plugin"){
 
     private val agentInfo = AgentInfo(
         id = "ag",
@@ -37,14 +37,16 @@ class PluginTest : PostgresBased("plugin") {
         agentVersion = "0.1.0"
     )
 
-    private val sender = EmptySender
+    private val sender = object : Sender {
+        override suspend fun send(context: SendContext, destination: Any, message: Any) {}
+    }
 
     private val adminData = object : AdminData {
         override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
         override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
     }
 
-    private suspend fun initPlugin(
+    protected suspend fun initPlugin(
         buildVersion: String,
     ): Plugin = Plugin(
         adminData,
