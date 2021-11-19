@@ -34,7 +34,7 @@ internal data class Baseline(
     val parentVersion: String = ""
 )
 
-internal sealed class AgentData
+sealed class AgentData
 
 internal object NoData : AgentData()
 
@@ -54,7 +54,7 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
  * Data for java-agent
  */
 @Serializable
-internal data class ClassData(
+data class ClassData(
     @Id val buildVersion: String,
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),
@@ -68,3 +68,14 @@ internal data class ClassData(
 
     override fun hashCode() = buildVersion.hashCode()
 }
+
+fun PackageTree.toClassData(
+    buildVersion: String,
+    methods: List<Method>,
+    probeIds: Map<String, Long> = emptyMap()
+) = ClassData(
+    buildVersion = buildVersion,
+    packageTree = this,
+    methods = methods,
+    probeIds = probeIds
+)
