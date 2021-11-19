@@ -181,17 +181,17 @@ class Plugin(
         }
         is AddTests -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
-                testRun?.let { session.setTestRun(it) }
+                session.addTests(tests)
                 AddAgentSessionTests(
                     AgentSessionTestsPayload(
                         sessionId,
-                        testRun?.tests?.map { it.name.urlEncode() } ?: emptyList()
+                        tests.map { it.name.urlEncode() }
                     )).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is StopSession -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
-                testRun?.let { session.setTestRun(it) }
+                session.addTests(tests)
                 StopAgentSession(
                     payload = AgentSessionPayload(session.id)
                 ).toActionResult()
@@ -425,8 +425,7 @@ class Plugin(
             byTest.keys.groupBy(TypedTest::type) {
                 TestData(
                     name = it.name,
-                    testName = detailsByTest[it]?.testName ?: TestName(name = it.name),
-                    metadata = detailsByTest[it]?.metadata ?: TestMetadata.emptyMetadata,
+                    details = detailsByTest[it]?.details ?: TestDetails(testName = it.name),
                 )
             },
         )

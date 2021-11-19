@@ -61,15 +61,14 @@ internal fun Sequence<Session>.calcBundleCounters(
         },
         byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
         detailsByTest = fold(mutableMapOf()) { map, session ->
-            session.testDetails.forEach { (test, stats) ->
+            session.testOverview.forEach { (test, overview) ->
                 map[test] = map[test]?.run {
                     copy(
-                        duration = duration + stats.duration,
-                        result = stats.result,
-                        testName = stats.testName,
-                        metadata = stats.metadata,
+                        duration = duration + overview.duration,
+                        result = overview.result,
+                        details = overview.details
                     )
-                } ?: stats
+                } ?: overview
             }
             map
         },
@@ -140,7 +139,7 @@ internal fun BundleCounters.calculateCoverageData(
             type = typedTest.type,
             name = typedTest.name,
             coverage = bundle.toCoverDto(tree),
-            details = detailsByTest[typedTest] ?: TestDetails(0, TestResult.PASSED, TestName(name = typedTest.name))
+            overview = detailsByTest[typedTest] ?: TestOverview(0, TestResult.PASSED, TestDetails(testName = typedTest.name))
         )
     }.sortedBy { it.type }
 
@@ -157,7 +156,7 @@ internal fun BundleCounters.calculateCoverageData(
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TypedTest, BundleCounter>,
     context: CoverContext,
-    detailsByTest: Map<TypedTest, TestDetails>,
+    detailsByTest: Map<TypedTest, TestOverview>,
 ): List<TestTypeSummary> = map { (testType, bundle) ->
     TestTypeSummary(
         type = testType,

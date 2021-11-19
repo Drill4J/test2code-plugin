@@ -29,7 +29,7 @@ sealed class Session : Sequence<ExecClassData> {
     abstract val id: String
     abstract val testType: String
     abstract val tests: Set<TypedTest>
-    abstract val testDetails: Map<TypedTest, TestDetails>
+    abstract val testOverview: Map<TypedTest, TestOverview>
 }
 
 class ActiveSession(
@@ -42,11 +42,11 @@ class ActiveSession(
     override val tests: Set<TypedTest>
         get() = _probes.value.keys
 
-    override val testDetails: Map<TypedTest, TestDetails>
-        get() = _testRun.value?.tests?.associate {
-            TypedTest(type = testType, name = it.name) to TestDetails(
+    override val testOverview: Map<TypedTest, TestOverview>
+        get() = _testTestInfo.value.associate {
+            TypedTest(type = testType, name = it.name) to TestOverview(
                 duration = it.finishedAt - it.startedAt,
-                testName = it.testName,
+                details = it.details,
                 result = it.result
             )
         } ?: emptyMap()
@@ -55,7 +55,7 @@ class ActiveSession(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
     )
 
-    private val _testRun = atomic<TestRun?>(null)
+    private val _testTestInfo = atomic<List<TestInfo>>(emptyList())
 
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
@@ -78,9 +78,9 @@ class ActiveSession(
         }
     }
 
-    fun setTestRun(testRun: TestRun) {
-        _testRun.update { current ->
-            current?.let { it + testRun } ?: testRun
+    fun addTests(testRun: List<TestInfo>) {
+        _testTestInfo.update { current ->
+            current + testRun
         }
     }
 
@@ -93,17 +93,16 @@ class ActiveSession(
         FinishedSession(
             id = id,
             testType = testType,
-            tests = HashSet(_testRun.value?.tests?.takeIf { it.any() }?.let { tests ->
+            tests = HashSet(_testTestInfo.value.takeIf { it.any() }?.let { tests ->
                 keys + tests.map { it.name.typedTest(testType) }
             } ?: keys),
-            testDetails = _testRun.value?.tests?.associate {
-                TypedTest(type = testType, name = it.name) to TestDetails(
+            testOverview = _testTestInfo.value.associate {
+                TypedTest(type = testType, name = it.name) to TestOverview(
                     duration = it.finishedAt - it.startedAt,
                     result = it.result,
-                    testName = it.testName,
-                    metadata = it.metadata
+                    details = it.details
                 )
-            } ?: emptyMap(),
+            },
             probes = values.flatMap { it.values },
         )
     }
@@ -114,7 +113,7 @@ data class FinishedSession(
     override val id: String,
     override val testType: String,
     override val tests: Set<TypedTest>,
-    override val testDetails: Map<TypedTest, TestDetails> = emptyMap(),
+    override val testOverview: Map<TypedTest, TestOverview> = emptyMap(),
     val probes: List<ExecClassData>,
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
@@ -124,8 +123,3 @@ data class FinishedSession(
     override fun hashCode(): Int = id.hashCode()
 }
 
-private operator fun TestRun.plus(other: TestRun) = copy(
-    startedAt = startedAt.takeIf { it < other.startedAt } ?: other.startedAt,
-    finishedAt = finishedAt.takeIf { it > other.finishedAt } ?: other.finishedAt,
-    tests = tests + other.tests
-)
