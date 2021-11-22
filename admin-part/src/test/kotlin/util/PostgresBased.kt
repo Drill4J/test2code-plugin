@@ -16,52 +16,30 @@
 package com.epam.drill.plugins.test2code.util
 
 import com.epam.dsm.*
-import com.zaxxer.hikari.*
 import org.jetbrains.exposed.sql.transactions.*
 import org.junit.jupiter.api.*
-import org.testcontainers.containers.*
+import kotlin.test.*
 
 abstract class PostgresBased(private val schema: String) {
     val storeClient = StoreClient(schema)
 
-    @kotlin.test.AfterTest
-    fun after() {
-        transaction {
-            exec("DROP SCHEMA $schema CASCADE")
-        }
-    }
-
-    @kotlin.test.BeforeTest
+    @BeforeTest
     fun before() {
         transaction {
             exec("CREATE SCHEMA IF NOT EXISTS $schema")
         }
     }
 
+    @AfterTest
+    fun after() {
+        TestDatabaseContainer.clearData(listOf(schema))
+    }
+
     companion object {
         @BeforeAll
         @JvmStatic
         fun postgresSetup() {
-            val port = 5432
-            val dbName = "dbName"
-            val postgresContainer = PostgreSQLContainer<Nothing>("postgres:12").apply {
-                withDatabaseName(dbName)
-                withExposedPorts(port)
-                start()
-            }
-            println("started container with id ${postgresContainer.containerId}.")
-            Thread.sleep(5000) //todo :) timeout
-            DatabaseFactory.init(HikariDataSource(HikariConfig().apply {
-                this.driverClassName = "org.postgresql.Driver"
-                this.jdbcUrl =
-                    "jdbc:postgresql://${postgresContainer.host}:${postgresContainer.getMappedPort(port)}/$dbName"
-                this.username = postgresContainer.username
-                this.password = postgresContainer.password
-                this.maximumPoolSize = 3
-                this.isAutoCommit = false
-                this.transactionIsolation = "TRANSACTION_REPEATABLE_READ"
-                this.validate()
-            }))
+            TestDatabaseContainer.startOnce()
         }
     }
 }

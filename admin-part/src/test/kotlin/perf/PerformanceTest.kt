@@ -4,9 +4,12 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.coroutines.*
+import org.junit.jupiter.api.*
 import kotlin.random.*
 import kotlin.test.*
+import kotlin.test.Test
 
+@Disabled//todo EPMDJ-9090 StreamSerialization
 class PerformanceTest : PluginTest() {
 
     @Test
