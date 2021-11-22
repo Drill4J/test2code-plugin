@@ -13,7 +13,6 @@ configurations.implementation {
 }
 
 val drillDsmVersion: String by extra
-val postgresEmbeddedVersion: String by extra
 val testContainerVersion: String by project
 kotlin.sourceSets.all {
     languageSettings.useExperimentalAnnotation("kotlinx.coroutines.ExperimentalCoroutinesApi")
@@ -48,7 +47,6 @@ dependencies {
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
-    testImplementation("ru.yandex.qatools.embed:postgresql-embedded:$postgresEmbeddedVersion")
     testImplementation("org.slf4j:slf4j-simple:1.7.32")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
 }
