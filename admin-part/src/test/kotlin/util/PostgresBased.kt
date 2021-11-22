@@ -20,6 +20,7 @@ import com.zaxxer.hikari.*
 import org.jetbrains.exposed.sql.transactions.*
 import org.junit.jupiter.api.*
 import org.testcontainers.containers.*
+import org.testcontainers.containers.wait.strategy.*
 
 abstract class PostgresBased(private val schema: String) {
     val storeClient = StoreClient(schema)
@@ -47,10 +48,10 @@ abstract class PostgresBased(private val schema: String) {
             val postgresContainer = PostgreSQLContainer<Nothing>("postgres:12").apply {
                 withDatabaseName(dbName)
                 withExposedPorts(port)
+                waitingFor(Wait.forLogMessage(".*database system is ready to accept connections.*\\s", 2))
                 start()
             }
             println("started container with id ${postgresContainer.containerId}.")
-            Thread.sleep(5000) //todo :) timeout
             DatabaseFactory.init(HikariDataSource(HikariConfig().apply {
                 this.driverClassName = "org.postgresql.Driver"
                 this.jdbcUrl =

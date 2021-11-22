@@ -27,7 +27,6 @@ val drillAdminVersion: String by rootProject
 val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
 val kodeinVersion: String by extra
-val postgresEmbeddedVersion: String by extra
 
 dependencies {
     implementation(project(":api"))
@@ -71,7 +70,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
-    testImplementation("ru.yandex.qatools.embed:postgresql-embedded:$postgresEmbeddedVersion")
     testImplementation("org.testcontainers:postgresql:1.16.2")
 
     testData("com.epam.drill:test-data:$drillAdminVersion") { isChanging = true }
