@@ -15,8 +15,10 @@
  */
 package com.epam.drill.jacoco
 
-open class AgentProbes(size: Int = 0) {
-    val values = BooleanArray(size)
+open class AgentProbes(
+    initialSize: Int = 0,
+    val values: BooleanArray = BooleanArray(initialSize),
+) {
 
     open fun set(index: Int) {
         if (!values[index])
@@ -32,7 +34,6 @@ open class AgentProbes(size: Int = 0) {
             values[it] = false
         }
     }
-
 }
 
 class StubAgentProbes(size: Int = 0) : AgentProbes(size) {

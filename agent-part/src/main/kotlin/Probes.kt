@@ -56,7 +56,7 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
 
 const val DRIlL_TEST_NAME = "drill-test-name"
 
-class ExecDatum(
+data class ExecDatum(
     val id: Long,
     val name: String,
     val probes: AgentProbes,
@@ -126,7 +126,7 @@ class ExecRuntime(
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
     init {
-        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode"}
+        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
     }
 
     override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
@@ -164,8 +164,19 @@ class GlobalExecRuntime(
 ) : Runtime(realtimeHandler) {
     internal val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
 
-    override fun collect(): Sequence<ExecDatum> = execDatum.copyOf().asSequence().filterNotNull().filter { datum ->
+    override fun collect(): Sequence<ExecDatum> = execDatum.asSequence().filterNotNull().filter { datum ->
         datum.probes.values.any { it }
+    }.map { datum ->
+        val probesToSend = datum.probes.values.copyOf()
+        probesToSend.forEachIndexed { index, value ->
+            if (value)
+                datum.probes.values[index] = false
+        }
+        datum.copy(
+            probes = AgentProbes(
+                values = probesToSend
+            )
+        )
     }
 
     override fun put(index: Int, updater: (String) -> ExecDatum) {
@@ -318,9 +329,9 @@ open class SimpleSessionProbeArrayProvider(
         runtimes[sessionId]?.addCompletedTests(tests)
     }
 
-    override fun getActiveSessions(): Set<String> = global?.let {
+    override fun getActiveSessions(): Set<String> = (global?.let {
         setOf(it.first)
-    } ?: emptySet<String>() + runtimes.keys
+    } ?: emptySet()) + runtimes.keys
 
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         if (sessionId !in runtimes) {
