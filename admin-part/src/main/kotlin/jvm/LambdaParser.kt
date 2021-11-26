@@ -206,7 +206,7 @@ class LambdaParser(
                 val const = constant_pool.getConstant(index, Const.CONSTANT_InvokeDynamic)
 
                 (const as? ConstantInvokeDynamic)?.bootstrapMethodAttrIndex?.also { bootstrapIndex ->
-                    bootstrapMethods[bootstrapIndex].let { lambdaSignature ->
+                    bootstrapMethods.getOrNull(bootstrapIndex)?.let { lambdaSignature ->  // TODO EPMDJ-9189 This is hot fix changes to avoid exception on java 17
                         val hash = lambdaMethods[lambdaSignature]?.let { method ->
                             codeToString(
                                 method.code.code,

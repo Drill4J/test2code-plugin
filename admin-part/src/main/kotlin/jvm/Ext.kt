@@ -45,7 +45,7 @@ internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = ru
 }
 
 private fun LambdaParser.checksum(
-    method: org.apache.bcel.classfile.Method?
+    method: org.apache.bcel.classfile.Method?,
 ): String = (method?.code?.run {
     codeToString(code, constantPool, 0, length, false)
 } ?: "").crc64.weakIntern()
@@ -57,12 +57,13 @@ private fun LambdaParser.checksum(
  * For more info: https://blogs.oracle.com/javamagazine/post/behind-the-scenes-how-do-lambda-expressions-really-work-in-java
  */
 internal fun JavaClass.parsedBootstrapMethods() = bootstrapMethods()
-    .map { bootstrapMethod ->
-        val (_, lambdaMethodIndex, _) = bootstrapMethod.bootstrapArguments
-        lambdaMethodIndex
-    }.mapNotNull { getConstant(it) as? ConstantMethodHandle }
-    .map { getConstant(it.referenceIndex) as ConstantCP }
-    .map {
+    .mapNotNull { bootstrapMethod ->  // TODO EPMDJ-9189 This is hot fix changes to avoid exception on java 17
+        bootstrapMethod.bootstrapArguments.firstOrNull {
+            getConstant(it) is ConstantMethodHandle
+        }?.let { getConstant(it) as ConstantMethodHandle }
+    }.map {
+        getConstant(it.referenceIndex) as ConstantCP
+    }.map {
         val classIndex = getConstant(it.classIndex) as ConstantClass
         val nameAndTypeIndex = getConstant(it.nameAndTypeIndex) as ConstantNameAndType
         classIndex to nameAndTypeIndex

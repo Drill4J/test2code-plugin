@@ -61,8 +61,8 @@ dependencies {
     testImplementation("org.jetbrains.xodus:xodus-entity-store")
 
     testImplementation("org.jacoco:org.jacoco.core")
-    testImplementation("org.apache.bcel:bcel:6.3.1")
-    testImplementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
+    testImplementation("org.apache.bcel:bcel")
+    testImplementation("io.vavr:vavr-kotlin:0.10.0") //TODO EPMDJ-9199 remove
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
