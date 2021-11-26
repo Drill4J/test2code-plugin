@@ -49,7 +49,7 @@ class ActiveSession(
                 details = it.details,
                 result = it.result
             )
-        } ?: emptyMap()
+        }
 
     private val _probes = atomic(
         persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()

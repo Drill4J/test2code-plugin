@@ -22,6 +22,7 @@ val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
 val benchmarkVersion: String by rootProject
 val kodeinVersion: String by extra
+val bcelVersion: String by extra
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
@@ -49,7 +50,7 @@ dependencies {
     testImplementation("org.jetbrains.xodus:xodus-entity-store")
 
     testImplementation("org.jacoco:org.jacoco.core")
-    testImplementation("org.apache.bcel:bcel:6.3.1")
+    testImplementation("org.apache.bcel:bcel")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(kotlin("test-junit5"))

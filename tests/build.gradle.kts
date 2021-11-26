@@ -61,8 +61,8 @@ dependencies {
     implementation("org.jetbrains.xodus:xodus-entity-store")
 
     implementation("org.jacoco:org.jacoco.core")
-    implementation("org.apache.bcel:bcel:6.3.1")
-    implementation("io.vavr:vavr-kotlin:0.10.0") //TODO remove
+    implementation("org.apache.bcel:bcel")
+    implementation("io.vavr:vavr-kotlin:0.10.0") //TODO EPMDJ-9199 remove
     implementation("org.jetbrains.kotlinx:atomicfu")
 
     testImplementation(project(":tests"))

@@ -20,6 +20,8 @@ val kxCollectionsVersion: String by project
 val koduxVersion: String by extra
 val xodusVersion: String by extra
 val zstdVersion: String by extra
+val jacocoVersion: String by extra
+val bcelVersion: String by extra
 
 //TODO remove this block and gradle/classes dir after gradle is updated to v6.8
 buildscript {
@@ -59,8 +61,8 @@ subprojects {
         "org.jetbrains.xodus:xodus-entity-store:$xodusVersion",
         "io.ktor:ktor-locations:$ktorVersion",
         "com.github.luben:zstd-jni:$zstdVersion",
-        "org.jacoco:org.jacoco.core:0.8.5",
-        "org.apache.bcel:bcel:6.3.1",
+        "org.jacoco:org.jacoco.core:$jacocoVersion",
+        "org.apache.bcel:bcel:$bcelVersion",
         "org.junit.jupiter:junit-jupiter:5.5.2"
     ).map(dependencies.constraints::create)
 
