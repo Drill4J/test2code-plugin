@@ -11,7 +11,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
       - id: cache-gradle
@@ -27,3 +27,10 @@ jobs:
       - uses: eskatos/gradle-command-action@v1
         with:
           arguments: -s check
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action/composite@v1
+        if: always()
+        with:
+          files: test-results/**/*.xml
+
+
