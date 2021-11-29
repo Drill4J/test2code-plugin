@@ -120,7 +120,9 @@ data class CoverMethod(
     val name: String,
     val desc: String,
     val hash: String = "",
-    val count: Count,
+    val count: CountDto,
+    val coverage: Double,
+    val type: MethodType,
     val coverageRate: CoverageRate = CoverageRate.MISSED,
 )
 
@@ -128,6 +130,13 @@ enum class CoverageRate {
     MISSED,
     PARTLY,
     FULL
+}
+
+enum class MethodType {
+    NEW,
+    MODIFIED,
+    UNAFFECTED,
+    DELETED,
 }
 
 @Serializable

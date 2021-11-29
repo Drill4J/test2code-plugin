@@ -57,7 +57,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests
 internal fun CoverContext.calculateBundleMethods(
     bundleCoverage: BundleCounter,
     onlyCovered: Boolean = false,
-): BuildMethods = methods.toCoverMap(bundleCoverage, onlyCovered).let { covered ->
+): BuildMethods = toCoverMap(bundleCoverage, onlyCovered).let { covered ->
     methodChanges.run {
         BuildMethods(
             totalMethods = covered.keys.toInfo(covered),
@@ -67,14 +67,14 @@ internal fun CoverContext.calculateBundleMethods(
             deletedMethods = MethodsInfo(
                 totalCount = deleted.count(),
                 coveredCount = deletedWithCoverage.count(),
-                methods = deleted.map { it.toCovered(deletedWithCoverage[it]) }
+                methods = deleted.map { it.toCovered(MethodType.DELETED, deletedWithCoverage[it]) }
             )
         )
     }
 }
 
 private fun Iterable<Method>.toInfo(
-    covered: Map<Method, CoverMethod>
+    covered: Map<Method, CoverMethod>,
 ) = MethodsInfo(
     totalCount = count(),
     coveredCount = count { covered[it]?.count?.covered ?: 0 > 0 },
