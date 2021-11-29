@@ -650,7 +650,7 @@ class Plugin(
     ) = AsyncJobDispatcher.launch {
         trackTime("coveredByTestJob") {
             entries.parallelStream().forEach { (typedTest, bundle) ->
-                val coveredMethods = context.methods.toCoverMap(bundle, true)
+                val coveredMethods = context.toCoverMap(bundle, true)
                 val summary = coveredMethods.toSummary(typedTest, context)
                 val all = coveredMethods.values.toList()
                 val modified = coveredMethods.filterValues { it in context.methodChanges.modified }

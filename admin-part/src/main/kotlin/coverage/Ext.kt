@@ -87,17 +87,24 @@ internal fun BundleCounter.toCoverDto(
     )
 }
 
-internal fun List<Method>.toCoverMap(
+internal fun CoverContext.toCoverMap(
     bundle: BundleCounter,
     onlyCovered: Boolean,
 ): Map<Method, CoverMethod> = bundle.packages.let { packages ->
     val map = packages.parallelStream().flatMap { it.classes.stream() }.flatMap { c ->
         c.methods.stream().map { m -> m.fullName to m }
     }.collect(Collectors.toMap({ it.first }, { it.second }, { first, _ -> first }))
-    parallelStream().map { method ->
-        val covered = method.toCovered(map[method.key])
+    methods.parallelStream().map { method ->
+        val covered = method.toCovered(methodType(method), map[method.key])
         covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
     }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }, { first, _ -> first }))
+}
+
+internal fun CoverContext.methodType(method: Method) = when (method) {
+    in methodChanges.modified -> MethodType.MODIFIED
+    in methodChanges.new -> MethodType.NEW
+    in methodChanges.deleted -> MethodType.DELETED
+    else -> MethodType.UNAFFECTED
 }
 
 internal fun BundleCounter.coveredMethods(
@@ -137,16 +144,21 @@ internal fun Iterable<Method>.toPackageSet(): Set<String> = takeIf { it.any() }?
     }
 }.orEmpty()
 
-internal fun Method.toCovered(count: Count?) = CoverMethod(
+internal fun Method.toCovered(methodType: MethodType, count: Count?) = CoverMethod(
     ownerClass = ownerClass.weakIntern(),
     name = name.weakIntern(),
     desc = desc.weakIntern(),//.takeIf { "):" in it } ?: declaration(desc), //TODO js methods //Regex has a big impact on performance
     hash = hash.weakIntern(),
-    count = count ?: zeroCount,
+    count = count?.toDto() ?: zeroCount.toDto(),
+    coverage = count?.percentage() ?: 0.0,
+    type = methodType,
     coverageRate = count?.coverageRate() ?: CoverageRate.MISSED
 )
 
-internal fun Method.toCovered(counter: MethodCounter? = null): CoverMethod = toCovered(counter?.count)
+internal fun Method.toCovered(
+    methodType: MethodType,
+    counter: MethodCounter? = null,
+): CoverMethod = toCovered(methodType, counter?.count)
 
 internal fun String.typedTest(type: String) = TypedTest(
     name = urlDecode().weakIntern(),
