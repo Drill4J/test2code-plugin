@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code.util
 
 import com.epam.dsm.*
+import com.epam.dsm.util.test.*
 import org.jetbrains.exposed.sql.transactions.*
 import org.junit.jupiter.api.*
 import kotlin.test.*
