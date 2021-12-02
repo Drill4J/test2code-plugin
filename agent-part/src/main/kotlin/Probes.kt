@@ -129,7 +129,14 @@ class ExecRuntime(
         logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
     }
 
-    override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
+    override fun collect(): Sequence<ExecDatum> = _execData.also {
+        val log = "Tests Count ${_execData.keys.size} Probes with coverage ${
+            _execData.values.flatMap {
+                it.filterNotNull().filter { it.probes.values.any { it } }
+            }.count()
+        } "
+        logger?.info { log } ?: println(log)
+    }.values.flatMap { data ->
         data.filterNotNull().filter { datum -> datum.probes.values.any { it } }
     }.asSequence().also {
         val passedTest = _completedTests.getAndUpdate { it.clear() }
