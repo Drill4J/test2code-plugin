@@ -62,7 +62,6 @@ dependencies {
 
     testImplementation("org.jacoco:org.jacoco.core")
     testImplementation("org.apache.bcel:bcel")
-    testImplementation("io.vavr:vavr-kotlin:0.10.0") //TODO EPMDJ-9199 remove
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
