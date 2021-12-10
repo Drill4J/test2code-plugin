@@ -28,6 +28,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
 
     companion object {
         const val sessionId = "xxx"
+        const val MAX_CLASS_COUNT = 1000
 
         val instrContextStub: AgentContext =
             object : AgentContext {

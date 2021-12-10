@@ -185,9 +185,10 @@ class Plugin(
             val testName = context[DRIlL_TEST_NAME] ?: "unspecified"
             runtimes[sessionId]?.run {
                 val execDatum = getOrPut(testName) {
-                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
+                    arrayOfNulls<ExecDatum>(probeMetaContainer.classCount).apply { fillFromMeta(testName) }
                 }
                 logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testName '$testName'" }
+                //TODO Problem is here
                 requestThreadLocal.set(execDatum)
             }
         }

@@ -85,9 +85,6 @@ internal fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
 
 typealias ExecData = Array<ExecDatum?>
 
-//TODO EPMDJ-8255 Replace this "magic number" with a calculated value
-const val MAX_CLASS_COUNT = 50_000
-
 internal object ProbeWorker : CoroutineScope {
     override val coroutineContext: CoroutineContext = run {
         Executors.newFixedThreadPool(2).asCoroutineDispatcher() + SupervisorJob()
@@ -148,9 +145,9 @@ class ExecRuntime(
     override fun put(
         index: Int,
         updater: (String) -> ExecDatum,
-    ) = _execData.forEach { (testName, execDataset) ->
-        runCatching { execDataset[index] = updater(testName) }.onFailure {
-            logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
+    ) = _execData.replaceAll { testName, data ->
+        data.copyOf(index.inc()).apply {
+            set(index, updater(testName))
         }
     }
 
@@ -160,11 +157,13 @@ class ExecRuntime(
 class GlobalExecRuntime(
     private val testName: String?,
     private val logger: Logger? = null,
+    classCount: Int,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
-    internal val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
+    //TODO do we need atomic here ?  mb var value
+    internal val execDatum = atomic(arrayOfNulls<ExecDatum?>(classCount))
 
-    override fun collect(): Sequence<ExecDatum> = execDatum.asSequence().filterNotNull().filter { datum ->
+    override fun collect(): Sequence<ExecDatum> = execDatum.value.asSequence().filterNotNull().filter { datum ->
         datum.probes.values.any { it }
     }.map { datum ->
         val probesToSend = datum.probes.values.copyOf()
@@ -180,16 +179,21 @@ class GlobalExecRuntime(
     }
 
     override fun put(index: Int, updater: (String) -> ExecDatum) {
-        runCatching { execDatum[index] = updater(testName ?: "undefined") }.onFailure {
-            logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
+        execDatum.updateAndGet {
+            it.copyOf(index.inc()).apply {
+                set(index, updater(testName ?: "undefined"))
+            }
         }
     }
 
-    fun get(num: Int) = execDatum[num]?.probes
+    fun get(num: Int) = execDatum.value[num]?.probes
 }
 
 class ProbeMetaContainer {
-    private val probesDescriptor = arrayOfNulls<ProbeDescriptor?>(MAX_CLASS_COUNT)
+    private val probesDescriptor = atomic(arrayOfNulls<ProbeDescriptor?>(0))
+
+    val classCount
+        get() = probesDescriptor.value.size
 
     fun addDescriptor(
         index: Int,
@@ -197,7 +201,7 @@ class ProbeMetaContainer {
         globalRuntime: GlobalExecRuntime?,
         runtimes: Collection<ExecRuntime>,
     ) {
-        probesDescriptor[index] = probeDescriptor
+        probesDescriptor.updateAndGet { it.copyOf(index.inc()).apply { set(index, probeDescriptor) } }
 
         globalRuntime?.put(index) { probeDescriptor.toExecDatum(it) }
 
@@ -211,10 +215,11 @@ class ProbeMetaContainer {
     fun forEachIndexed(
         action: (Int, ProbeDescriptor?) -> Unit,
     ) {
-        probesDescriptor.forEachIndexed { index, probeDescriptor ->
+        probesDescriptor.value.forEachIndexed { index, probeDescriptor ->
             action(index, probeDescriptor)
         }
     }
+
 }
 
 
@@ -267,7 +272,7 @@ open class SimpleSessionProbeArrayProvider(
         name: String,
         probeCount: Int,
     ): AgentProbes = global?.second?.get(num)
-        ?: checkLocalProbes(num)
+        ?: checkLocalProbes(num) // <-- Could lose coverage here
         ?: stubProbes
 
     private fun checkLocalProbes(num: Int) = requestThreadLocal.get()?.get(num)?.probes
@@ -342,8 +347,8 @@ open class SimpleSessionProbeArrayProvider(
     }
 
     private fun addGlobal(sessionId: String, testName: String?, realtimeHandler: RealtimeHandler) {
-        val runtime = GlobalExecRuntime(testName, logger, realtimeHandler).apply {
-            execDatum.fillFromMeta(testName)
+        val runtime = GlobalExecRuntime(testName, logger, probeMetaContainer.classCount, realtimeHandler).apply {
+            execDatum.value.fillFromMeta(testName)
         }
         global = sessionId to runtime
     }
@@ -362,8 +367,9 @@ open class SimpleSessionProbeArrayProvider(
 
     fun ExecData.fillFromMeta(testName: String?) {
         probeMetaContainer.forEachIndexed { inx, probeDescriptor ->
-            if (probeDescriptor != null)
+            if (probeDescriptor != null) {
                 this[inx] = probeDescriptor.toExecDatum(testName)
+            }
         }
     }
 }

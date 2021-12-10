@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.MAX_CLASS_COUNT
 import org.junit.jupiter.api.*
 import kotlin.test.*
 import kotlin.test.Test
@@ -31,7 +32,7 @@ class ProbeMetaContainerTest {
     @Test
     fun `addDescriptor - with global runtime`() {
         val probeContainer = ProbeMetaContainer()
-        val global = GlobalExecRuntime("test") {}
+        val global = GlobalExecRuntime("test", classCount = MAX_CLASS_COUNT) {}
         probeContainer.addDescriptor(0, probeDescriptor, global, emptyList())
         assertNotNull(global.get(0))
     }

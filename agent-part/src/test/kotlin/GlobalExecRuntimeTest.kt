@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.*
+import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.MAX_CLASS_COUNT
 import org.junit.jupiter.api.*
 import kotlin.test.*
 import kotlin.test.Test
@@ -25,20 +26,20 @@ class GlobalExecRuntimeTest {
 
     @Test
     fun `put - should put by existing index`() {
-        val runtime = GlobalExecRuntime("test") {}
+        val runtime = GlobalExecRuntime("test", classCount = MAX_CLASS_COUNT) {}
         runtime.put(0) { ExecDatum(1L, className, AgentProbes(5)) }
         assertNotNull(runtime.get(0))
     }
 
     @Test
     fun `put - not existing index`() {
-        val runtime = GlobalExecRuntime("test") {}
+        val runtime = GlobalExecRuntime("test", classCount = MAX_CLASS_COUNT) {}
         assertDoesNotThrow { runtime.put(MAX_CLASS_COUNT + 1) { ExecDatum(1L, className, AgentProbes(5)) } }
     }
 
     @Test
     fun `collect - should add probes`() {
-        val runtime = GlobalExecRuntime("test") {}
+        val runtime = GlobalExecRuntime("test", classCount = MAX_CLASS_COUNT) {}
         runtime.put(0) { ExecDatum(1L, className, AgentProbes(5), it) }
         runtime.get(0)?.set(1)
         val collect = runtime.collect()
@@ -50,7 +51,7 @@ class GlobalExecRuntimeTest {
 
     @Test
     fun `collect - empty probes`() {
-        val runtime = GlobalExecRuntime("test") {}
+        val runtime = GlobalExecRuntime("test", classCount = MAX_CLASS_COUNT) {}
         runtime.put(0) { ExecDatum(1L, className, AgentProbes(5)) }
         assertNotNull(runtime.get(0))
         assertTrue { runtime.collect().none() }
@@ -60,7 +61,7 @@ class GlobalExecRuntimeTest {
     @Ignore
     //TODO ignore because of EPMDJ-8428
     fun `collect - should not collect the same probes`() {
-        val runtime = GlobalExecRuntime("test") {}
+        val runtime = GlobalExecRuntime("test", classCount = MAX_CLASS_COUNT) {}
         runtime.put(0) { ExecDatum(1L, className, AgentProbes(5)) }
         runtime.get(0)?.set(0)
         assertTrue { runtime.collect().any() }
