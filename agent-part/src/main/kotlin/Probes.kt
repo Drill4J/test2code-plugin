@@ -80,7 +80,7 @@ internal fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
     id = id,
     name = name,
     probes = AgentProbes(probeCount),
-    testName = testName ?: "undefined"
+    testName = testName ?: "unspecified"
 )
 
 typealias ExecData = Array<ExecDatum?>
@@ -180,7 +180,7 @@ class GlobalExecRuntime(
     }
 
     override fun put(index: Int, updater: (String) -> ExecDatum) {
-        runCatching { execDatum[index] = updater(testName ?: "undefined") }.onFailure {
+        runCatching { execDatum[index] = updater(testName ?: "unspecified") }.onFailure {
             logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
         }
     }
