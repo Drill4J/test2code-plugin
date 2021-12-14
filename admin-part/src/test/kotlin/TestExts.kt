@@ -15,8 +15,15 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.jvm.*
+import org.apache.bcel.classfile.*
+
 fun Class<*>.readBytes(): ByteArray = getResourceAsStream(
     "/${name.replace('.', '/')}.class"
 ).readBytes()
 
 internal val Class<*>.path get() = this.name.replace('.', '/')
+
+fun JavaClass.parsedBootstrapMethods() = bootstrapMethods().mapNotNull {
+    constantPool.parse(it)
+}
