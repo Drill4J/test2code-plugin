@@ -9,6 +9,7 @@ import java.io.*
 import java.util.concurrent.*
 
 internal const val LAMBDA = "lambda"
+internal const val LAMBDA_NUM_ARGS = 3
 
 private val ldcInstructions = listOf(
     Const.LDC_W,
@@ -19,7 +20,7 @@ private val ldcInstructions = listOf(
 )
 
 class LambdaParser(
-    private val bootstrapMethods: List<String>,
+    private val bootstrapMethods: Array<BootstrapMethod>,
     private val lambdaMethods: Map<String, Method>
 ) {
     private var wide = false
@@ -204,21 +205,21 @@ class LambdaParser(
             Const.INVOKEDYNAMIC -> {
                 index = bytes.readUnsignedShort()
                 val const = constant_pool.getConstant(index, Const.CONSTANT_InvokeDynamic)
-
                 (const as? ConstantInvokeDynamic)?.bootstrapMethodAttrIndex?.also { bootstrapIndex ->
-                    bootstrapMethods.getOrNull(bootstrapIndex)?.let { lambdaSignature ->  // TODO EPMDJ-9189 This is hot fix changes to avoid exception on java 17
-                        val hash = lambdaMethods[lambdaSignature]?.let { method ->
-                            codeToString(
-                                method.code.code,
-                                method.constantPool,
-                                0,
-                                method.code.length,
-                                verbose
-                            ).crc64.weakIntern()
-                        } ?: lambdaSignature.crc64.weakIntern()
-                        val currentHash = lambdaHash[lambdaSignature] ?: ""
-                        lambdaHash[lambdaSignature] = currentHash + hash
-                    }
+                    bootstrapMethods.getOrNull(bootstrapIndex)?.let { constant_pool.parse(it) }
+                        ?.let { bootstrapMethodSignature ->
+                            val hash = lambdaMethods[bootstrapMethodSignature]?.let { lambda ->
+                                codeToString(
+                                    lambda.code.code,
+                                    lambda.constantPool,
+                                    0,
+                                    lambda.code.length,
+                                    verbose
+                                ).crc64.weakIntern()
+                            } ?: bootstrapMethodSignature.crc64.weakIntern()
+                            val currentHash = lambdaHash[bootstrapMethodSignature] ?: ""
+                            lambdaHash[bootstrapMethodSignature] = currentHash + hash
+                        }
                 }
             }
             Const.LDC_W, Const.LDC2_W -> {
