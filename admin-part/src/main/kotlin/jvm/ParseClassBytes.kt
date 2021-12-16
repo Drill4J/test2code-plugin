@@ -27,9 +27,9 @@ fun Map<String, ByteArray>.parseClassBytes(buildVersion: String): ClassData = ru
     val methods = groupedMethods.flatMap { it.value }
     val packages = sortedPackages.toPackages(groupedMethods)
     PackageTree(
-        totalCount = packages.sumBy { it.totalCount },
-        totalMethodCount = groupedMethods.values.sumBy { it.count() },
-        totalClassCount = packages.sumBy { it.totalClassesCount },
+        totalCount = packages.sumOf { it.totalCount },
+        totalMethodCount = groupedMethods.values.sumOf { it.count() },
+        totalClassCount = packages.sumOf { it.totalClassesCount },
         packages = packages
     ).toClassData(buildVersion, methods, probeIds)
 }
