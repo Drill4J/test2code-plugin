@@ -111,9 +111,9 @@ internal class AgentState(
                     }.sorted()
                     val packages = data.toPackages()
                     PackageTree(
-                        totalCount = sumBy { it.second.count },
+                        totalCount = sumOf { it.second.count },
                         totalMethodCount = count(),
-                        totalClassCount = packages.sumBy { it.totalClassesCount },
+                        totalClassCount = packages.sumOf { it.totalClassesCount },
                         packages = packages
                     ).toClassData(methods = methods)
                 }
@@ -141,9 +141,9 @@ internal class AgentState(
                     val methods = groupedMethods.flatMap { it.value }.sorted()
                     val packages = sortedPackages.toPackages(groupedMethods)
                     PackageTree(
-                        totalCount = packages.sumBy { it.totalCount },
-                        totalMethodCount = groupedMethods.values.sumBy { it.count() },
-                        totalClassCount = packages.sumBy { it.totalClassesCount },
+                        totalCount = packages.sumOf { it.totalCount },
+                        totalMethodCount = groupedMethods.values.sumOf { it.count() },
+                        totalClassCount = packages.sumOf { it.totalClassesCount },
                         packages = packages
                     ).toClassData(methods = methods, probeIds = probeIds)
                 }

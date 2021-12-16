@@ -23,18 +23,21 @@ import com.epam.dsm.*
 import kotlinx.serialization.*
 
 @Serializable
+@StreamSerialization
 internal class StoredClassData(
     @Id val version: String,
     val data: ClassData,
 )
 
 @Serializable
+@StreamSerialization
 internal class StoredBundles(
     @Id val version: String,
     val data: BundleCounters,
 )
 
 @Serializable
+@StreamSerialization
 class StoredBuildTests(
     @Id val version: String,
     val data: BuildTests,

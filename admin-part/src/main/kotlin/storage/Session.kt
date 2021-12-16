@@ -22,6 +22,7 @@ import com.epam.dsm.*
 import kotlinx.serialization.*
 
 @Serializable
+@StreamSerialization
 internal class StoredSession(
     @Id val id: String,
     val scopeId: String,
