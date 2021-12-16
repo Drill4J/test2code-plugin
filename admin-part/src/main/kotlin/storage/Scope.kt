@@ -88,6 +88,7 @@ class ScopeManager(private val storage: StoreClient) {
 }
 
 @Serializable
+@StreamSerialization
 internal class ScopeDataEntity(
     @Id val id: String,
     val buildVersion: String,
