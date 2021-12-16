@@ -111,9 +111,9 @@ internal class AgentState(
                     }.sorted()
                     val packages = data.toPackages()
                     PackageTree(
-                        totalCount = sumBy { it.second.count },
+                        totalCount = sumOf { it.second.count },
                         totalMethodCount = count(),
-                        totalClassCount = packages.sumBy { it.totalClassesCount },
+                        totalClassCount = packages.sumOf { it.totalClassesCount },
                         packages = packages
                     ).toClassData(buildVersion = agentInfo.buildVersion, methods = methods)
                 }

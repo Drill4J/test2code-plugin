@@ -15,6 +15,8 @@
  */
 package com.epam.drill.plugins.test2code
 
+//TODO EPMDJ-9373 Replace this classes with java classes
+
 class TestTarget : Runnable {
 
     override fun run() {

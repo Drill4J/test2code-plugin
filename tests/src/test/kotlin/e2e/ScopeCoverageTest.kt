@@ -94,8 +94,7 @@ class ScopeCoverageTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<CustomBuild> { plugUi, _ ->
                 val sessionId = "${UUID.randomUUID()}"
-                val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
-                lateinit var cont: String
+                val startNewSession = StartNewSession(StartPayload(testType, sessionId)).stringify()
                 pluginAction(startNewSession) { status, _ ->
                     status shouldBe HttpStatusCode.OK
                 }.join()
