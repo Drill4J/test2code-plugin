@@ -34,7 +34,7 @@ sealed class Session : Sequence<ExecClassData> {
 
 class ActiveSession(
     override val id: String,
-    override val testType: String,
+    override val testType: String, // TODO Replace on list of labels
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
 ) : Session() {
@@ -44,7 +44,7 @@ class ActiveSession(
 
     override val testOverview: Map<TypedTest, TestOverview>
         get() = _testTestInfo.value.associate {
-            TypedTest(type = testType, name = it.name) to TestOverview(
+            TypedTest(type = testType, id = it.id) to TestOverview(
                 duration = it.finishedAt - it.startedAt,
                 details = it.details,
                 result = it.result
@@ -61,7 +61,7 @@ class ActiveSession(
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
         if (true in probe.probes) {
-            val typedTest = probe.testName.typedTest(testType)
+            val typedTest = probe.testId.typedTest(testType)
             _probes.update { map ->
                 (map[typedTest] ?: persistentHashMapOf()).let { testData ->
                     val probeId = probe.id()
@@ -72,7 +72,7 @@ class ActiveSession(
                                 testData.put(probeId, copy(probes = merged))
                             }
                         }
-                    } else testData.put(probeId, probe.copy(testName = typedTest.name))
+                    } else testData.put(probeId, probe.copy(testId = typedTest.id))
                 }?.let { map.put(typedTest, it) } ?: map
             }
         }
@@ -93,11 +93,12 @@ class ActiveSession(
         FinishedSession(
             id = id,
             testType = testType,
+            //TODO remove HasSet
             tests = HashSet(_testTestInfo.value.takeIf { it.any() }?.let { tests ->
-                keys + tests.map { it.name.typedTest(testType) }
+                keys + tests.map { it.id.typedTest(testType) }
             } ?: keys),
             testOverview = _testTestInfo.value.associate {
-                TypedTest(type = testType, name = it.name) to TestOverview(
+                TypedTest(type = testType, id = it.id) to TestOverview(
                     duration = it.finishedAt - it.startedAt,
                     result = it.result,
                     details = it.details

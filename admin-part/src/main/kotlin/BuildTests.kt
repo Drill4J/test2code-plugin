@@ -38,8 +38,8 @@ internal fun BundleCounters.testsWith(
         }
     }.distinct().groupBy(TypedTest::type) {
         TestData(
-            name = it.name,
-            details = detailsByTest[it]?.details ?: TestDetails(testName = it.name),
+            name = it.id,
+            details = detailsByTest[it]?.details ?: TestDetails(testName = it.id),
         )
     }
 }.orEmpty()
@@ -67,7 +67,7 @@ internal fun CoverContext.testsToRunDto(
     bundleCounters: BundleCounters = build.bundleCounters,
 ): List<TestCoverageDto> = testsToRun.flatMap { (type, testData) ->
     testData.map { test ->
-        val typedTest = TypedTest(type = type, name = test.name)
+        val typedTest = TypedTest(type = type, id = test.name)
         TestCoverageDto(
             id = typedTest.id(),
             type = type,
@@ -93,7 +93,7 @@ internal fun GroupedTests.totalDuration(
     detailsByTest: Map<TypedTest, TestOverview>,
 ): Long = this.flatMap { (type, testData) ->
     testData.map { test ->
-        val typedTest = TypedTest(type = type, name = test.name)
+        val typedTest = TypedTest(type = type, id = test.name)
         detailsByTest[typedTest]?.duration
     }
 }.filterNotNull().sum()

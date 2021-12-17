@@ -31,8 +31,8 @@ import kotlin.test.*
 
 class ScopeCoverageTest : E2EPluginTest() {
 
-    private val testWithCoverageName = "TestWithCoverage"
-    private val testWithoutCoverageName = "EmptyTest"
+    private val testWithCoverageName = TestDetails(testName = "TestWithCoverage")
+    private val testWithoutCoverageName = TestDetails(testName = "EmptyTest")
     private val testType = "AUTO"
 
     @Test
@@ -46,14 +46,14 @@ class ScopeCoverageTest : E2EPluginTest() {
                     status shouldBe HttpStatusCode.OK
                 }.join()
 
-                runWithSession(sessionId, testWithCoverageName) {
+                runWithSession(sessionId, testWithCoverageName.testName) {
                     build.entryPoint().test2()
                 }
 
                 val payloadWithEmptyTest = AddTests(
                     AddTestsPayload(
                         sessionId,
-                        listOf(TestInfo("", testWithoutCoverageName, TestResult.PASSED, 0, 228))
+                        listOf(TestInfo("", "", TestResult.PASSED, 0, 228, testWithoutCoverageName))
                     )
                 ).stringify()
                 pluginAction(payloadWithEmptyTest) { status, _ ->
@@ -104,7 +104,7 @@ class ScopeCoverageTest : E2EPluginTest() {
                 repeat(5) { index ->
                     emptyTests.add(
                         TestInfo(
-                            "", "$testWithoutCoverageName$index", TestResult.PASSED, 0, 500
+                            "", "", TestResult.PASSED, 0, 500, TestDetails(testName = "$testWithoutCoverageName$index")
                         )
                     )
                 }

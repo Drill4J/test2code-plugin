@@ -54,13 +54,14 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
 
 }
 
-const val DRIlL_TEST_NAME = "drill-test-name"
+const val DRIlL_TEST_NAME_HEADER = "drill-test-name"
+const val DRILL_TEST_HASH_HEADER = "drill-test-id"
 
 data class ExecDatum(
     val id: Long,
     val name: String,
     val probes: AgentProbes,
-    val testName: String = "",
+    val testId: String = "",
 )
 
 class ProbeDescriptor(
@@ -69,18 +70,19 @@ class ProbeDescriptor(
     val probeCount: Int,
 )
 
+
 internal fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
     className = name,
     probes = probes.values.toBitSet(),
-    testName = testName
+    testId = testId,
 )
 
-internal fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
+internal fun ProbeDescriptor.toExecDatum(testKey: String?) = ExecDatum(
     id = id,
     name = name,
     probes = AgentProbes(probeCount),
-    testName = testName ?: "unspecified"
+    testId = testKey ?: "unspecified",
 )
 
 typealias ExecData = Array<ExecDatum?>
@@ -372,7 +374,7 @@ private class GlobalContext(
     private val sessionId: String,
     private val testName: String?,
 ) : AgentContext {
-    override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME }
+    override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME_HEADER }
 
     override fun invoke(): String? = sessionId
 }

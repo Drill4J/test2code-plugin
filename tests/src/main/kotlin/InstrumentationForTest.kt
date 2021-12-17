@@ -32,7 +32,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
         val instrContextStub: AgentContext =
             object : AgentContext {
                 override fun get(key: String): String? = when (key) {
-                    DRIlL_TEST_NAME -> "test"
+                    DRIlL_TEST_NAME_HEADER -> "test"
                     else -> null
                 }
 
@@ -85,10 +85,10 @@ class InstrumentationForTest(kClass: KClass<*>) {
     }
 
     private fun fillProbes() = TestProbeArrayProvider.run {
-        val testName = instrContextStub[DRIlL_TEST_NAME] ?: "unspecified"
+        val testKey = TestKey(instrContextStub[DRIlL_TEST_NAME_HEADER] ?: "unspecified")
         val execRuntime = runtimes[sessionId]
         if (execRuntime != null) {
-            val execDatum = execRuntime.getOrPut(testName) { arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) } }
+            val execDatum = execRuntime.getOrPut(testKey) { arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) } }
             requestThreadLocal.set(execDatum)
         } else {
             requestThreadLocal.remove()

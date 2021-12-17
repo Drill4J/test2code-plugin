@@ -137,9 +137,9 @@ internal fun BundleCounters.calculateCoverageData(
         TestCoverageDto(
             id = typedTest.id(),
             type = typedTest.type,
-            name = typedTest.name,
+            name = typedTest.id,
             coverage = bundle.toCoverDto(tree),
-            overview = detailsByTest[typedTest] ?: TestOverview(0, TestResult.PASSED, TestDetails(testName = typedTest.name))
+            overview = detailsByTest[typedTest] ?: TestOverview(0, TestResult.PASSED, TestDetails(testName = typedTest.id))
         )
     }.sortedBy { it.type }
 
@@ -176,9 +176,10 @@ private fun Map<String, List<Session>>.bundlesByTests(
     val bundleByTests = values.asSequence().flatten().testsWithBundle()
     bundleByTests.putAll(cache)
     map { (testType, sessions: List<Session>) ->
+        val allTests = sessions.flatMap { it.tests }
         sessions.asSequence().flatten()
             .mapNotNull { execData ->
-                execData.testName.typedTest(testType).takeIf { it !in cache }?.to(execData)
+                execData.testId.typedTest(testType).takeIf { it !in cache }?.to(execData)
             }
             .groupBy(Pair<TypedTest, ExecClassData>::first) { it.second }
             .mapValuesTo(bundleByTests) {
@@ -265,7 +266,7 @@ internal suspend fun Plugin.importCoverage(
     val classBytes = adminData.loadClassBytes()
     val probeIds = state.coverContext().probeIds
     val execDatum = jacocoFile.executionDataStore.contents.map {
-        ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
+        ExecClassData(className = it.name, probes = it.probes.toBitSet(), testId = "All unit tests")
     }.asSequence()
     execDatum.bundle(probeIds, classBytes) { bytes, execData ->
         analyzeClass(bytes, execData.name)

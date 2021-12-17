@@ -40,7 +40,7 @@ class ProbeMetaContainerTest {
     fun `addDescriptor - with filled local runtime`() {
         val probeMetaContainer = ProbeMetaContainer()
         val local = ExecRuntime {}
-        val execDatum = local.getOrPut("test") { arrayOfNulls(MAX_CLASS_COUNT) }
+        val execDatum = local.getOrPut(TestKey("test")) { arrayOfNulls(MAX_CLASS_COUNT) }
         probeMetaContainer.addDescriptor(0, probeDescriptor, null, listOf(local))
         assertEquals(MAX_CLASS_COUNT, execDatum.size)
     }

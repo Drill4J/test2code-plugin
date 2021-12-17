@@ -49,7 +49,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests
             packageName = key.packageName,
             className = key.className,
             methodName = key.methodName,
-            tests = tests.stream().sorted { o1, o2 -> o1.name.compareTo(o2.name) }.collect(Collectors.toList())
+            tests = tests.stream().sorted { o1, o2 -> o1.id.compareTo(o2.id) }.collect(Collectors.toList())
         )
     }.sorted { o1, o2 -> o1.methodName.compareTo(o2.methodName) }.collect(Collectors.toList())
 }

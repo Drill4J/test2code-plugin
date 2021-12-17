@@ -154,10 +154,13 @@ class Plugin(
                 )
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+        // TODO notify JS and .dot net about changes
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 this.data.map { probes ->
-                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes.toBitSet())
+                    ExecClassData(className = probes.name,
+                        testId = probes.testId ?: probes.test,
+                        probes = probes.probes.toBitSet())
                 }
             }?.run {
                 if (isRealtime) {
@@ -185,7 +188,7 @@ class Plugin(
                 AddAgentSessionTests(
                     AgentSessionTestsPayload(
                         sessionId,
-                        tests.map { it.name.urlEncode() }
+                        tests.map { it.id.urlEncode() } //TODO remove encode
                     )).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
@@ -247,6 +250,7 @@ class Plugin(
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
+        //TODO notify JS and .dot net about changes
         is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
             activeScope.addProbes(message.sessionId) { message.data }
         } ?: logger.debug { "Attempting to add coverage in non-existent active session" }
@@ -370,8 +374,8 @@ class Plugin(
     }
 
     internal suspend fun sendScopeSummary(
-        scopeSummary: ScopeSummary, buildVersion: String =
-            this.buildVersion
+        scopeSummary: ScopeSummary,
+        buildVersion: String = this.buildVersion,
     ) {
         send(buildVersion, scopeById(scopeSummary.id), scopeSummary)
     }
@@ -424,8 +428,8 @@ class Plugin(
         val cachedBuild = state.updateBuildTests(
             byTest.keys.groupBy(TypedTest::type) {
                 TestData(
-                    name = it.name,
-                    details = detailsByTest[it]?.details ?: TestDetails(testName = it.name),
+                    name = it.id,
+                    details = detailsByTest[it]?.details ?: TestDetails(testName = it.id),
                 )
             },
         )

@@ -75,7 +75,7 @@ class InstrumentationTest {
         runnable.run()
         val runtimeData = InstrumentationForTest.TestProbeArrayProvider.stop(sessionId)!!.toList()
         val assertions = runtimeData.map { execDatum ->
-            { assertEquals("test", execDatum.testName) }
+            { assertEquals("test", execDatum.testId) }
         }.toTypedArray()
         assertAll(*assertions)
     }

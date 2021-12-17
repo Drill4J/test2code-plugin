@@ -41,7 +41,13 @@ data class CoverPayload(
 @Serializable
 class EntityProbes(
     val name: String,
+    @Deprecated(
+        "Test name will be removed soon, replace it with test hash",
+        ReplaceWith("this.testId"),
+        DeprecationLevel.WARNING
+    )
     val test: String = "",
+    val testId: String? = null,
     val probes: List<Boolean>,
 )
 
@@ -60,12 +66,17 @@ data class AddTestsPayload(
 
 @Serializable
 data class TestInfo(
-    val id: String = "",
-    val name: String, // TODO EPMDJ-9150 Replace name with test hash(id)
+    val id: String, //  = ""
+    @Deprecated(
+        "Test name will be removed soon, replace it with test hash",
+        ReplaceWith("this.id"),
+        DeprecationLevel.WARNING
+    )
+    val name: String = "",//TODO or remove
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
-    val details: TestDetails = TestDetails.emptyDetails,
+    val details: TestDetails, //= TestDetails.emptyDetails,
 )
 
 @Serializable
@@ -75,9 +86,17 @@ data class TestDetails(
     val testName: String = "",
     val params: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(), // arbitrary
-) {
+) : Comparable<TestDetails> {
     companion object {
         val emptyDetails = TestDetails()
+    }
+
+    override fun compareTo(other: TestDetails): Int {
+        return toString().compareTo(other.toString())
+    }
+
+    override fun toString(): String {
+        return "TestDetails(engine='$engine', path='$path', testName='$testName', params=$params)"
     }
 }
 
@@ -282,7 +301,7 @@ data class AssociatedTests(
 
 @Serializable
 data class TypedTest(
-    val name: String,
+    val id: String,
     val type: String,
 )
 
@@ -315,7 +334,13 @@ data class TestCoverageDto(
     val name: String,
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
-    val overview: TestOverview = TestOverview(0, TestResult.PASSED),
+    val overview: TestOverview = TestOverview(0, TestResult.PASSED),//TODO remove
+)
+
+@Serializable
+data class TestData(
+    val name: String,
+    val details: TestDetails = TestDetails.emptyDetails,
 )
 
 @Serializable
@@ -329,15 +354,15 @@ data class TestsSummaryDto(
 data class TestOverview(
     val duration: Long,
     val result: TestResult,
-    val details: TestDetails = TestDetails.emptyDetails,
+    val details: TestDetails = TestDetails.emptyDetails, //TODO remove
 )
 
 
-@Serializable
-data class TestData(
-    val name: String,
-    val details: TestDetails = TestDetails.emptyDetails,
-)
+//@Serializable
+//data class TestData(
+//    val name: String,
+//    val details: TestDetails = TestDetails.emptyDetails,
+//)
 
 @Serializable
 data class ActiveSessions(

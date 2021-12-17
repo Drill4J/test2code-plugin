@@ -108,10 +108,11 @@ class ActiveScope(
         while (true) {
             _bundleCacheHandler.value?.let {
                 val probes = this@ActiveScope + activeSessions.values
+                val allTests = probes.flatMap { it.tests }
                 val tests = activeSessions.values.flatMap { it.testOverview.keys }
                 val probesByTests = probes.groupBy { it.testType }.map { (testType, sessions) ->
                     sessions.asSequence().flatten()
-                        .groupBy { it.testName.typedTest(testType) }
+                        .groupBy { it.testId.typedTest(testType) }
                         .filter { it.key in tests }
                         .mapValuesTo(mutableMapOf()) { it.value.asSequence() }
                 }.takeIf { it.isNotEmpty() }?.reduce { m1, m2 ->
