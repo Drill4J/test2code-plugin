@@ -76,6 +76,15 @@ internal fun Sequence<Session>.calcBundleCounters(
     )
 }
 
+fun Sequence<ExecClassData>.calcBundleCounters(context: CoverContext, classBytes: Map<String, ByteArray>) = run {
+    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    val execClassData = this
+    BundleCounters(
+        all = execClassData.bundle(context, classBytes),
+        overlap = execClassData.overlappingBundle(context, classBytes),
+    )
+}
+
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null,

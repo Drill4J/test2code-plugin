@@ -19,7 +19,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import kotlinx.serialization.*
 
-internal data class DiffMethods(
+data class DiffMethods(
     val new: List<Method> = emptyList(),
     val modified: List<Method> = emptyList(),
     val deleted: List<Method> = emptyList(),
@@ -36,7 +36,7 @@ data class TestDurations(
     val byType: Map<String, Long> = emptyMap(),
 )
 
-internal data class CoverContext(
+data class CoverContext(
     val agentType: String,
     val packageTree: PackageTree,
     val methods: List<Method>,
@@ -67,7 +67,7 @@ data class CoverageKey(
 @Serializable
 class BundleCounters(
     val all: BundleCounter,
-    val testTypeOverlap: BundleCounter,
+    val testTypeOverlap: BundleCounter = BundleCounter.empty,
     val overlap: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
