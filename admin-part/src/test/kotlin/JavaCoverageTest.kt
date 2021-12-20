@@ -89,16 +89,15 @@ class JavaCoverageTest : PluginTest() {
 
             val all = storeClient.getAll<StoredSession>()
             assertEquals(1, all.size)
-            val testOverview = all.first().data.testOverview
-            println(testOverview)
+            val testOverview = all.first().data.tests
+            assertEquals(2, testOverview.size)
 
-
+            //todo example: "typedTest" need to convert in "". because Postgresql sensitive of register. maybe do it DSM?
             val tests = storeClient.findInListWhere<StoredSession, String>(
-                "details -> 'testName'",
-                "'data' -> 'testOverview') as items(result text, details jsonb) " +
+                "\"typedTest\" -> 'name'",
+                "'data' -> 'testsOverview') as items(result text, \"typedTest\" jsonb, details jsonb) " +
                         "where result = 'PASSED';"
             )
-            println(tests)
             assertEquals(listOf(passedTest), tests)
             val probes = storeClient.findInListWhere<StoredSession, ExecClassData>(
                 "to_jsonb(items)",
@@ -106,12 +105,10 @@ class JavaCoverageTest : PluginTest() {
                         "where \"testName\" in ('${tests[0]}')"//todo add split of tests
             )
 
-            // 3) merge probes with the same id todo
-            println(probes)
+            // 3) todo merge probes with the same id
             assertEquals(autoProbes, probes)
 
-
-            //calculate
+            //calculate coverage
             val asSequence: Sequence<ExecClassData> = probes.asSequence()
             val context = pair.second
             val calcBundleCounters: BundleCounters = asSequence.calcBundleCounters(context, classBytesEmptyBody)
@@ -166,9 +163,6 @@ class JavaCoverageTest : PluginTest() {
                     result = result,
                     startedAt = 0,
                     finishedAt = 0,
-                    details = TestDetails(
-                        testName = testName
-                    )
                 )
             )
         )
