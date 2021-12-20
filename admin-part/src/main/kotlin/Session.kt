@@ -29,7 +29,7 @@ sealed class Session : Sequence<ExecClassData> {
     abstract val id: String
     abstract val testType: String
     abstract val tests: Set<TypedTest>
-    abstract val testOverview: Map<TypedTest, TestOverview>
+    abstract val testsOverview: List<TestOverview>
 }
 
 class ActiveSession(
@@ -42,9 +42,10 @@ class ActiveSession(
     override val tests: Set<TypedTest>
         get() = _probes.value.keys
 
-    override val testOverview: Map<TypedTest, TestOverview>
-        get() = _testTestInfo.value.associate {
-            TypedTest(type = testType, name = it.name) to TestOverview(
+    override val testsOverview: List<TestOverview>
+        get() = _testTestInfo.value.map {
+            TestOverview(
+                typedTest = TypedTest(type = testType, name = it.name),
                 duration = it.finishedAt - it.startedAt,
                 details = it.details,
                 result = it.result
@@ -96,8 +97,9 @@ class ActiveSession(
             tests = HashSet(_testTestInfo.value.takeIf { it.any() }?.let { tests ->
                 keys + tests.map { it.name.typedTest(testType) }
             } ?: keys),
-            testOverview = _testTestInfo.value.associate {
-                TypedTest(type = testType, name = it.name) to TestOverview(
+            testsOverview = _testTestInfo.value.map {
+                TestOverview(
+                    typedTest = TypedTest(type = testType, name = it.name),
                     duration = it.finishedAt - it.startedAt,
                     result = it.result,
                     details = it.details
@@ -113,7 +115,7 @@ data class FinishedSession(
     override val id: String,
     override val testType: String,
     override val tests: Set<TypedTest>,
-    override val testOverview: Map<TypedTest, TestOverview> = emptyMap(),
+    override val testsOverview: List<TestOverview> = emptyList(),
     val probes: List<ExecClassData>,
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()

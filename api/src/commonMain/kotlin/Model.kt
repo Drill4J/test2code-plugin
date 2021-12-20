@@ -315,7 +315,7 @@ data class TestCoverageDto(
     val name: String,
     val toRun: Boolean = false,
     val coverage: CoverDto = CoverDto(),
-    val overview: TestOverview = TestOverview(0, TestResult.PASSED),
+    val overview: TestOverview = TestOverview(TypedTest("", ""), 0, TestResult.PASSED),
 )
 
 @Serializable
@@ -327,6 +327,7 @@ data class TestsSummaryDto(
 
 @Serializable
 data class TestOverview(
+    val typedTest: TypedTest,
     val duration: Long,
     val result: TestResult,
     val details: TestDetails = TestDetails.emptyDetails,

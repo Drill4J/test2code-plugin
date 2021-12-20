@@ -75,6 +75,7 @@ internal fun CoverContext.testsToRunDto(
             toRun = typedTest !in bundleCounters.byTest,
             coverage = bundleCounters.byTest[typedTest]?.toCoverDto(packageTree) ?: CoverDto(),
             overview = bundleCounters.detailsByTest[typedTest] ?: TestOverview(
+                typedTest = typedTest,
                 duration = 0,
                 result = TestResult.PASSED,
                 details = test.details
