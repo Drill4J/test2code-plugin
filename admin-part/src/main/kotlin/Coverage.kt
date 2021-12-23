@@ -23,6 +23,7 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.dsm.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import org.jacoco.core.tools.*
@@ -78,6 +79,7 @@ internal fun Sequence<Session>.calcBundleCounters(
 
 fun Sequence<ExecClassData>.calcBundleCounters(context: CoverContext, classBytes: Map<String, ByteArray>) = run {
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    //todo EPMDJ-8824 add by tests type etc.
     val execClassData = this
     BundleCounters(
         all = execClassData.bundle(context, classBytes),
