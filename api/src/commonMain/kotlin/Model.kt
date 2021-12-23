@@ -107,6 +107,22 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "")
 
 @Serializable
+data class FilterCoveragePayload(
+    val buildVersion: String = "",//todo EPMDJ-8824 use the filter by buildVersion
+    val filters: List<FieldFilter>,
+)
+
+enum class FieldOp { EQ, CONTAINS }
+const val delimiterForWayToObject = "->"
+
+@Serializable
+data class FieldFilter(
+    val field: String,
+    val value: String,
+    val op: FieldOp = FieldOp.EQ,
+)
+
+@Serializable
 data class BuildPayload(val version: String)
 
 @Serializable

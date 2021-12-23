@@ -10,7 +10,7 @@ import kotlin.random.*
 import kotlin.test.*
 import kotlin.test.Test
 
-@Disabled//todo EPMDJ-9090 StreamSerialization
+@Disabled//todo EPMDJ-9090 StreamSerialization Roma, does it woks?
 class PerformanceTest : PluginTest() {
 
     @Test

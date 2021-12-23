@@ -90,7 +90,7 @@ class ActiveSession(
     }.iterator()
 
     fun finish() = _probes.value.run {
-        logger.debug { "ActiveSession finish with size = ${_probes.value.size} " }
+        logger.debug { "ActiveSession finish with size = $size " }
         FinishedSession(
             id = id,
             testType = testType,

@@ -58,6 +58,7 @@ class Plugin(
     companion object {
         val json = Json { encodeDefaults = true }
     }
+
     val agentId = agentInfo.id
     val buildVersion = agentInfo.buildVersion
 
@@ -103,6 +104,10 @@ class Plugin(
         is SwitchActiveScope -> changeActiveScope(action.payload)
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
+        is FilterCoverage -> {
+            val coverageId = calculateFilteredCoverageInBuild(action.payload.filters)
+            ActionResult(code = StatusCodes.OK, data = coverageId)
+        }
         is RemoveBuild -> {
             val version = action.payload.version
             if (version != buildVersion && version != state.coverContext().parentBuild?.agentKey?.buildVersion) {
@@ -387,11 +392,58 @@ class Plugin(
     ) = sender.send(
         context = AgentSendContext(
             agentId,
-            buildVersion
+            buildVersion,
+            coverageId = "",
         ),
         destination = Routes.Build.Scopes(Routes.Build()).let { Routes.Build.Scopes.FinishedScopes(it) },
         message = scopes.summaries()
     )
+
+
+    /**
+     * User filter by testType=Manual/Auto OR label for example, engine=junit
+     * or test result = 'PASSED'
+     *
+     * In current build
+     *
+     * Input: filters, for example, testResult = 'PASSED'
+     * Output: coverage in topics?
+     *
+     * like:
+     * @see calculateAndSendBuildCoverage
+     */
+    private suspend fun calculateFilteredCoverageInBuild(
+        fieldFilter: List<FieldFilter>
+    ): String {
+        logger.debug { "starting to calculate coverage by $fieldFilter..." }
+        val context = state.coverContext()
+
+        val probes = findProbesByFilter(
+            storeClient = storeClient,
+            agentKey = AgentKey(agentId, buildVersion),
+            fieldFilter = fieldFilter,
+        )
+        logger.debug { "found ${probes.size} probes by filter" }
+        val bundleCounters = probes.asSequence().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
+        logger.debug { "Starting to calculate coverage by filter..." }
+        val coverageInfoSet = bundleCounters.calculateCoverageData(context)
+
+        //todo send it in needed topics
+        val coverage = coverageInfoSet.coverage
+        val buildMethods = coverageInfoSet.buildMethods
+        val packageCoverage = coverageInfoSet.packageCoverage
+        val tests2 = coverageInfoSet.tests//todo is it need? fill it manual?
+        val coverageByTests = coverageInfoSet.coverageByTests
+        //for example: coverage
+        val buildCoverage = (coverageInfoSet.coverage as BuildCoverage)
+        val coverageId = fieldFilter.hashCode().toString()
+        Routes.Build().let { buildRoute ->
+            val coverageRoute = Routes.Build.Coverage(buildRoute)
+            send(buildVersion, coverageRoute, buildCoverage, coverageId)
+        }
+        return coverageId
+    }
+
 
     internal suspend fun calculateAndSendBuildCoverage() {
         val scopes = state.scopeManager.run {
@@ -599,8 +651,8 @@ class Plugin(
         }
     }
 
-    internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
-        sender.send(AgentSendContext(agentId, buildVersion), destination, message)
+    internal suspend fun send(buildVersion: String, destination: Any, message: Any, coverageId: String = "") {
+        sender.send(AgentSendContext(agentId, buildVersion, coverageId), destination, message)
     }
 
     private suspend fun Plugin.sendAgentAction(message: AgentAction) {

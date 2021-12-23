@@ -38,19 +38,19 @@ val manualFullProbes = listOf(
     )
 )
 
-val autoProbes = listOf(
+val autoProbesWithPartCoverage = listOf(
     ExecClassData(
         id = CRC64.classId(emptyBodyBytes),
         className = fullNameClass,
         testName = "test1",
-        probes = probesOf(true, false, false, false)
+        probes = probesOf(false, true, false, false)
     )
 )
-val autoProbes2 = listOf(
+val autoProbesWithFullCoverage = listOf(
     ExecClassData(
         id = CRC64.classId(emptyBodyBytes),
         className = fullNameClass,
         testName = "test2",
-        probes = probesOf(true, true, true, false)
+        probes = probesOf(true, true, true, true)
     )
 )

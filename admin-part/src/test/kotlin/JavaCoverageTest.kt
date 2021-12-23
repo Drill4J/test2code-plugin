@@ -34,12 +34,11 @@ class JavaCoverageTest : PluginTest() {
     @Test
     fun `coverageData for active scope with manual`() = runBlocking {
         val sessionId = genUuid()
-        val pair = calculateCoverage(sessionId) {
+        val (coverageData, _) = calculateCoverage(sessionId) {
             this.execSession("test", sessionId, "MANUAL") { sessionId ->
                 addProbes(sessionId) { manualFullProbes }
             }
         }
-        val coverageData = pair.first
         coverageData.run {
             println(coverage)
             assertEquals(1, coverage.classCount.total)
@@ -52,73 +51,79 @@ class JavaCoverageTest : PluginTest() {
     }
 
     @Test
-    fun `coverageData for active scope with auto`() {
+    fun `coverageData for active scope with auto session and filter results`() {
         runBlocking {
-            val sessionId = genUuid()
-            val passedTest = "test1"
-            val pair = calculateCoverage(sessionId) {
-                val session: ActiveSession? = startSession(sessionId = sessionId, testType = AUTO_TEST_TYPE)
-                this.execSession(
-                    testName = passedTest,
-                    sessionId = sessionId,
-                    testType = AUTO_TEST_TYPE,
-                    session
-                ) { sessionId ->
-                    addProbes(sessionId) { autoProbes }
-                }
-                this.execSession(
-                    testName = "test2",
-                    sessionId = sessionId,
-                    testType = AUTO_TEST_TYPE,
-                    session,
-                    TestResult.FAILED
-                ) { sessionId ->
-                    addProbes(sessionId) { autoProbes2 }
-                }
-            }
-            val coverageData = pair.first
+            val (coverageData, context) = runAutoSession(passedTest = "test1")
             coverageData.run {
-                println(coverage)
                 assertEquals(1, coverage.classCount.total)
                 assertTrue(coverage.percentage > 0.0)
-                println(packageCoverage)
-                println(packageCoverage[0])
-                println(associatedTests)
-                println(buildMethods)
             }
 
-            val all = storeClient.getAll<StoredSession>()
-            assertEquals(1, all.size)
-            val testOverview = all.first().data.testsOverview
-            assertEquals(2, testOverview.size)
-
-            //todo example: "typedTest" need to convert in "". because Postgresql sensitive of register. maybe do it DSM?
-            val tests = storeClient.findInListWhere<StoredSession, String>(
-                "\"typedTest\" -> 'name'",
-                "'data' -> 'testsOverview') as items(result text, \"typedTest\" jsonb, details jsonb) " +
-                        "where result = 'PASSED';"
+            filterAndCalculateCoverage(
+                context,
+                filter = FieldFilter("result", value = "PASSED"),
+                expectedProbes = autoProbesWithPartCoverage,
+                expectedCoverage = 25.0
             )
-            assertEquals(listOf(passedTest), tests)
-            val probes = storeClient.findInListWhere<StoredSession, ExecClassData>(
-                "to_jsonb(items)",
-                "'data' -> 'probes') as items(\"testName\" text, id text, \"className\" text, probes jsonb) " +
-                        "where \"testName\" in ('${tests[0]}')"//todo add split of tests
-            )
+        }
+    }
 
-            // 3) todo merge probes with the same id
-            assertEquals(autoProbes, probes)
-
-            //calculate coverage
-            val asSequence: Sequence<ExecClassData> = probes.asSequence()
-            val context = pair.second
-            val calcBundleCounters: BundleCounters = asSequence.calcBundleCounters(context, classBytesEmptyBody)
-            calcBundleCounters.run {
-                println(all)
-                println(overlap)
+    @Test
+    fun `coverageData for active scope with auto and complex filter`() {
+        runBlocking {
+            val (coverageData, context) = runAutoSession(passedTest = "test1")
+            coverageData.run {
+                assertEquals(1, coverage.classCount.total)
+                assertTrue(coverage.percentage > 0.0)
             }
-            val calculateCoverageData = calcBundleCounters.calculateCoverageData(context)
-            println(calculateCoverageData)
-            assertEquals(25.0, calculateCoverageData.coverage.percentage)
+
+            filterAndCalculateCoverage(
+                context,
+                filter = FieldFilter("typedTest->name", value = "test2"),
+                expectedProbes = autoProbesWithFullCoverage,
+                expectedCoverage = 100.0
+            )
+        }
+    }
+
+    @Test
+    fun `coverageData for active scope with auto and filter with null value`() {
+        runBlocking {
+            val (coverageData, context) = runAutoSession(passedTest = "test1")
+            coverageData.run {
+                assertEquals(1, coverage.classCount.total)
+                assertTrue(coverage.percentage > 0.0)
+            }
+
+            filterAndCalculateCoverage(
+                context,
+                filter = FieldFilter("details->engine", value = ""),
+                expectedProbes = emptyList(),
+                expectedCoverage = 0.0,
+            )
+        }
+    }
+
+    private suspend fun runAutoSession(
+        sessionId: String = genUuid(),
+        passedTest: String,
+    ) = calculateCoverage(sessionId) {
+        val session: ActiveSession? = startSession(sessionId = sessionId, testType = AUTO_TEST_TYPE)
+        this.execSession(
+            testName = passedTest,
+            sessionId = sessionId,
+            testType = AUTO_TEST_TYPE,
+            session,
+        ) { sessionId ->
+            addProbes(sessionId) { autoProbesWithPartCoverage }
+        }
+        this.execSession(
+            testName = "test2",
+            sessionId = sessionId,
+            testType = AUTO_TEST_TYPE,
+            session,
+        ) { sessionId ->
+            addProbes(sessionId) { autoProbesWithFullCoverage }
         }
     }
 
@@ -145,7 +150,6 @@ class JavaCoverageTest : PluginTest() {
         return bundleCounters.calculateCoverageData(context) to context
     }
 
-
     private suspend fun ActiveScope.execSession(
         testName: String,
         sessionId: String,
@@ -166,5 +170,47 @@ class JavaCoverageTest : PluginTest() {
                 )
             )
         )
+    }
+
+
+    private suspend fun filterAndCalculateCoverage(
+        context: CoverContext,
+        filter: FieldFilter,
+        expectedProbes: List<ExecClassData>,
+        expectedCoverage: Double,
+        expectedSessionSize: Int = 1,
+    ) {
+        val all = storeClient.getAll<StoredSession>()
+        assertEquals(expectedSessionSize, all.size)
+        val testOverview = all.first().data.testsOverview
+        assertEquals(2, testOverview.size)
+
+        val agentId = "ag"
+        val buildVersion = "0.1.0"
+
+        val probes = findProbesByFilter(
+            storeClient,
+            AgentKey(agentId, buildVersion),
+            fieldFilter = listOf(filter)
+        )
+
+        assertEquals(expectedProbes, probes)
+
+        //calculate coverage by probes
+        val asSequence: Sequence<ExecClassData> = probes.asSequence()
+        val calcBundleCounters: BundleCounters = asSequence.calcBundleCounters(context, classBytesEmptyBody)
+        calcBundleCounters.run {
+            println(all)
+            println(overlap)
+        }
+        val calculateCoverageData: CoverageInfoSet = calcBundleCounters.calculateCoverageData(context)
+        println(calculateCoverageData)
+        //what we need to send all except associatedTests??
+        val coverage = calculateCoverageData.coverage
+        assertEquals(expectedCoverage, coverage.percentage)
+        val buildMethods = calculateCoverageData.buildMethods
+        val packageCoverage = calculateCoverageData.packageCoverage
+        val tests2 = calculateCoverageData.tests//todo is it need? fill it manual?
+        val coverageByTests = calculateCoverageData.coverageByTests
     }
 }
