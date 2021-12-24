@@ -15,4 +15,12 @@
  */
 package com.epam.drill.plugins.test2code
 
+import java.util.zip.*
+import java.lang.Long.*
+
 fun currentTimeMillis() = System.currentTimeMillis()
+
+fun String.id(): String = CRC32().let {
+    it.update(toByteArray())
+    toHexString(it.value)
+}

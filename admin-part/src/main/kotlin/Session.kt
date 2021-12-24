@@ -28,9 +28,15 @@ private val logger = logger {}
 sealed class Session : Sequence<ExecClassData> {
     abstract val id: String
     abstract val testType: String
-    abstract val tests: Set<TypedTest>
-    abstract val testOverview: Map<TypedTest, TestOverview>
+
+    /**
+     * All test received from autotest agent as [TestInfo] and for manual tests from [ExecClassData]
+     */
+    abstract val tests: Set<TestOverview>
 }
+
+
+private typealias ProbeKey = Pair<String, String>
 
 class ActiveSession(
     override val id: String,
@@ -39,31 +45,37 @@ class ActiveSession(
     val isRealtime: Boolean = false,
 ) : Session() {
 
-    override val tests: Set<TypedTest>
-        get() = _probes.value.keys
-
-    override val testOverview: Map<TypedTest, TestOverview>
-        get() = _testTestInfo.value.associate {
-            TypedTest(type = testType, name = it.name) to TestOverview(
-                duration = it.finishedAt - it.startedAt,
-                details = it.details,
-                result = it.result
-            )
-        }
+    override val tests: Set<TestOverview>
+        get() = _probes.value.run {
+            _testTestInfo.value.takeIf { it.any() }?.let { tests ->
+                val autotests = tests.values.map {
+                    TestOverview(
+                        testId = it.id,
+                        duration = it.finishedAt - it.startedAt,
+                        details = it.details,
+                        result = it.result
+                    )
+                }
+                val manualTests = keys.filter { (id, _) -> id !in tests }.map { (id, name) ->
+                    TestOverview(testId = id, details = TestDetails(testName = name))
+                }
+                autotests + manualTests
+            } ?: keys.map { (id, name) -> TestOverview(testId = id, details = TestDetails(testName = name)) }
+        }.toSet()
 
     private val _probes = atomic(
-        persistentMapOf<TypedTest, PersistentMap<Long, ExecClassData>>()
+        persistentMapOf<ProbeKey, PersistentMap<Long, ExecClassData>>()
     )
 
-    private val _testTestInfo = atomic<List<TestInfo>>(emptyList())
+    private val _testTestInfo = atomic<PersistentMap<String, TestInfo>>(persistentHashMapOf())
 
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
         if (true in probe.probes) {
-            val typedTest = probe.testName.typedTest(testType)
+            val test = probe.testId to probe.testName
             _probes.update { map ->
-                (map[typedTest] ?: persistentHashMapOf()).let { testData ->
+                (map[test] ?: persistentHashMapOf()).let { testData ->
                     val probeId = probe.id()
                     if (probeId in testData) {
                         testData.getValue(probeId).run {
@@ -72,15 +84,15 @@ class ActiveSession(
                                 testData.put(probeId, copy(probes = merged))
                             }
                         }
-                    } else testData.put(probeId, probe.copy(testName = typedTest.name))
-                }?.let { map.put(typedTest, it) } ?: map
+                    } else testData.put(probeId, probe)
+                }?.let { map.put(test, it) } ?: map
             }
         }
     }
 
     fun addTests(testRun: List<TestInfo>) {
         _testTestInfo.update { current ->
-            current + testRun
+            current.putAll(testRun.associateBy { it.id })
         }
     }
 
@@ -93,16 +105,7 @@ class ActiveSession(
         FinishedSession(
             id = id,
             testType = testType,
-            tests = HashSet(_testTestInfo.value.takeIf { it.any() }?.let { tests ->
-                keys + tests.map { it.name.typedTest(testType) }
-            } ?: keys),
-            testOverview = _testTestInfo.value.associate {
-                TypedTest(type = testType, name = it.name) to TestOverview(
-                    duration = it.finishedAt - it.startedAt,
-                    result = it.result,
-                    details = it.details
-                )
-            },
+            tests = tests,
             probes = values.flatMap { it.values },
         )
     }
@@ -112,8 +115,7 @@ class ActiveSession(
 data class FinishedSession(
     override val id: String,
     override val testType: String,
-    override val tests: Set<TypedTest>,
-    override val testOverview: Map<TypedTest, TestOverview> = emptyMap(),
+    override val tests: Set<TestOverview>,
     val probes: List<ExecClassData>,
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()

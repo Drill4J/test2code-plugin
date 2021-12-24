@@ -25,7 +25,7 @@ import kotlin.test.Test
 class ExecRuntimeTest {
     private val threadLocal = ThreadLocal<Array<ExecDatum?>>()
     private val className = "foo/bar/Foo"
-    private val testName = "test"
+    private val testKey = TestKey("test","id")
 
     @AfterTest
     fun removeThreadLocal() {
@@ -35,7 +35,7 @@ class ExecRuntimeTest {
     @Test
     fun `put - should put by existing index`() {
         val runtime = ExecRuntime {}
-        val probesByClasses = runtime.getOrPut(testName) { arrayOfNulls(9) }
+        val probesByClasses = runtime.getOrPut(testKey) { arrayOfNulls(9) }
         runtime.put(7) { ExecDatum(1L, className, AgentProbes()) }
         assertNotNull(probesByClasses[7])
     }
@@ -43,7 +43,7 @@ class ExecRuntimeTest {
     @Test
     fun `put - not existing index`() {
         val runtime = ExecRuntime {}
-        val probesByClasses = runtime.getOrPut(testName) { arrayOfNulls(5) }
+        val probesByClasses = runtime.getOrPut(testKey) { arrayOfNulls(5) }
         assertDoesNotThrow {
             runtime.put(7) { ExecDatum(1L, className, AgentProbes()) }
         }
@@ -53,7 +53,7 @@ class ExecRuntimeTest {
     @Test
     fun `collect - empty probes`() {
         val runtime = ExecRuntime {}
-        val probesByClasses = runtime.getOrPut(testName) { arrayOfNulls(9) }
+        val probesByClasses = runtime.getOrPut(testKey) { arrayOfNulls(9) }
         runtime.put(7) { ExecDatum(1L, className, AgentProbes()) }
         assertNotNull(probesByClasses[7])
         assertTrue { runtime.collect().none() }
@@ -70,7 +70,7 @@ class ExecRuntimeTest {
         val probesByClass = data.byClass(className)
         assertEquals(1, probesByClass.probes.values.count { it })
         assertEquals(4, probesByClass.probes.values.count { !it })
-        assertEquals(testName, probesByClass.testName)
+        assertEquals(testKey.testName, probesByClass.testName)
         assertEquals(className, probesByClass.name)
     }
 
@@ -106,9 +106,9 @@ class ExecRuntimeTest {
     }
 
     private fun ExecRuntime.fillProbe() {
-        val value = getOrPut(testName) { arrayOfNulls(5) }
+        val value = getOrPut(testKey) { arrayOfNulls(5) }
         threadLocal.set(value)
-        put(0) { ExecDatum(1L, className, AgentProbes(5), it) }
+        put(0) { ExecDatum(1L, className, AgentProbes(5), it.testName!!) }
     }
 }
 

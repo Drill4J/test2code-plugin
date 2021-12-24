@@ -38,11 +38,11 @@ interface Scope : Sequence<FinishedSession> {
 
 fun Sequence<Scope>.summaries(): List<ScopeSummary> = map(Scope::summary).toList()
 
-typealias SoftBundleByTests = SoftReference<PersistentMap<TypedTest, BundleCounter>>
+typealias SoftBundleByTests = SoftReference<PersistentMap<TestKey, BundleCounter>>
 
 typealias CoverageHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) -> Unit
 
-typealias BundleCacheHandler = suspend ActiveScope.(Map<TypedTest, Sequence<ExecClassData>>) -> Unit
+typealias BundleCacheHandler = suspend ActiveScope.(Map<TestKey, Sequence<ExecClassData>>) -> Unit
 
 class ActiveScope(
     override val id: String = genUuid(),
@@ -53,7 +53,7 @@ class ActiveScope(
 ) : Scope {
     private val _bundleByTests = atomic<SoftBundleByTests>(SoftReference(persistentMapOf()))
 
-    val bundleByTests: PersistentMap<TypedTest, BundleCounter>
+    val bundleByTests: PersistentMap<TestKey, BundleCounter>
         get() = _bundleByTests.value.get() ?: persistentMapOf()
 
     private enum class Change(val sessions: Boolean, val probes: Boolean) {
@@ -108,10 +108,12 @@ class ActiveScope(
         while (true) {
             _bundleCacheHandler.value?.let {
                 val probes = this@ActiveScope + activeSessions.values
-                val tests = activeSessions.values.flatMap { it.testOverview.keys }
+                val tests = activeSessions.values.flatMap { session ->
+                    session.tests.map { it.testId.typedTestId(session.testType) }
+                }
                 val probesByTests = probes.groupBy { it.testType }.map { (testType, sessions) ->
                     sessions.asSequence().flatten()
-                        .groupBy { it.testName.typedTest(testType) }
+                        .groupBy { it.testId.typedTestId(testType) }
                         .filter { it.key in tests }
                         .mapValuesTo(mutableMapOf()) { it.value.asSequence() }
                 }.takeIf { it.isNotEmpty() }?.reduce { m1, m2 ->
@@ -146,12 +148,9 @@ class ActiveScope(
             active = false,
             enabled = enabled
         ),
-        data = toList().let { sessions ->
-            ScopeData(
-                sessions = sessions,
-                typedTests = sessions.flatMapTo(mutableSetOf(), Session::tests),
-            )
-        }
+        data = ScopeData(
+            sessions = toList(),
+        )
     )
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
@@ -186,7 +185,7 @@ class ActiveScope(
         probeProvider: () -> Collection<ExecClassData>,
     ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
 
-    fun addBundleCache(bundleByTests: Map<TypedTest, BundleCounter>) {
+    fun addBundleCache(bundleByTests: Map<TestKey, BundleCounter>) {
         _bundleByTests.update {
             val bundles = (it.get() ?: persistentMapOf()).putAll(bundleByTests)
             SoftReference(bundles)
@@ -258,7 +257,6 @@ class ActiveScope(
 data class ScopeData(
     @Transient
     val sessions: List<FinishedSession> = emptyList(),
-    val typedTests: Set<TypedTest> = emptySet(),
 ) {
     companion object {
         val empty = ScopeData()

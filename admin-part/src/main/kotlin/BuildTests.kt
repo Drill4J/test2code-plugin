@@ -36,10 +36,10 @@ internal fun BundleCounters.testsWith(
             val packageSeq = counter.packages.asSequence()
             packageSeq.toCoveredMethods(lazyMethodMap::value, lazyPackageSet::value).any()
         }
-    }.distinct().groupBy(TypedTest::type) {
+    }.distinct().groupBy(TestKey::type) {
         TestData(
-            name = it.name,
-            details = detailsByTest[it]?.details ?: TestDetails(testName = it.name),
+            id = it.id,
+            details = byTestOverview[it]?.details ?: TestDetails.emptyDetails,
         )
     }
 }.orEmpty()
@@ -47,36 +47,35 @@ internal fun BundleCounters.testsWith(
 internal fun GroupedTests.filter(
     predicate: (String, String) -> Boolean,
 ): GroupedTests = asSequence().mapNotNull { (type, testData) ->
-    val filtered = testData.filter { predicate(it.name, type) }
+    val filtered = testData.filter { predicate(it.id, type) }
     filtered.takeIf { it.any() }?.let { type to it }
 }.toMap()
 
 internal fun GroupedTests.withoutCoverage(
     bundleCounters: BundleCounters,
-): GroupedTests = filter { name, type ->
-    TypedTest(name, type) !in bundleCounters.byTest
+): GroupedTests = filter { id, type ->
+    id.typedTestId(type) !in bundleCounters.byTest
 }
 
 internal fun GroupedTests.withCoverage(
     bundleCounters: BundleCounters,
-): GroupedTests = filter { name, type ->
-    TypedTest(name, type) in bundleCounters.byTest
+): GroupedTests = filter { id, type ->
+    id.typedTestId(type) in bundleCounters.byTest
 }
 
 internal fun CoverContext.testsToRunDto(
     bundleCounters: BundleCounters = build.bundleCounters,
 ): List<TestCoverageDto> = testsToRun.flatMap { (type, testData) ->
     testData.map { test ->
-        val typedTest = TypedTest(type = type, name = test.name)
+        val typedTestId = test.id.typedTestId(type)
         TestCoverageDto(
-            id = typedTest.id(),
+            id = typedTestId.id(),
             type = type,
-            name = test.name,
-            toRun = typedTest !in bundleCounters.byTest,
-            coverage = bundleCounters.byTest[typedTest]?.toCoverDto(packageTree) ?: CoverDto(),
-            overview = bundleCounters.detailsByTest[typedTest] ?: TestOverview(
-                duration = 0,
-                result = TestResult.PASSED,
+            name = test.details, // TODO delete
+            toRun = typedTestId !in bundleCounters.byTest,
+            coverage = bundleCounters.byTest[typedTestId]?.toCoverDto(packageTree) ?: CoverDto.empty,
+            overview = bundleCounters.byTestOverview[typedTestId] ?: TestOverview(
+                testId = test.id,
                 details = test.details
             )
         )
@@ -90,10 +89,10 @@ internal fun List<TestCoverageDto>.toDto(agentId: String) = TestsSummaryDto(
 )
 
 internal fun GroupedTests.totalDuration(
-    detailsByTest: Map<TypedTest, TestOverview>,
+    detailsByTest: Map<TestKey, TestOverview>,
 ): Long = this.flatMap { (type, testData) ->
     testData.map { test ->
-        val typedTest = TypedTest(type = type, name = test.name)
+        val typedTest = TestKey(type = type, id = test.id)
         detailsByTest[typedTest]?.duration
     }
 }.filterNotNull().sum()

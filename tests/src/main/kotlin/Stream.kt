@@ -22,6 +22,7 @@ import com.epam.drill.admin.endpoints.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.util.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.locations.*
 import kotlinx.coroutines.*
