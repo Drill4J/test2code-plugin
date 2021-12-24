@@ -13,14 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.plugins.test2code
+package e2e
 
-import java.util.zip.*
-import java.lang.Long.*
-
-fun currentTimeMillis() = System.currentTimeMillis()
-
-fun String.id(): String = CRC32().let {
-    it.update(toByteArray())
-    toHexString(it.value)
-}
+internal const val AUTO_TEST_TYPE = "AUTO"
+internal const val MANUAL_TEST_TYPE = "MANUAL"

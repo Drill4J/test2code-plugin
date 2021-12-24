@@ -182,12 +182,14 @@ class Plugin(
     fun processServerRequest() {
         (instrContext as DrillProbeArrayProvider).run {
             val sessionId = context()
-            val testName = context[DRIlL_TEST_NAME] ?: "unspecified"
+            val name = context[DRIlL_TEST_NAME_HEADER] ?: DEFAULT_TEST_NAME
+            val id = context[DRILL_TEST_ID_HEADER] ?: name.id()
+            val testKey = TestKey(name, id)
             runtimes[sessionId]?.run {
-                val execDatum = getOrPut(testName) {
-                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testName) }
+                val execDatum = getOrPut(testKey) {
+                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) }
                 }
-                logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testName '$testName'" }
+                logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
                 requestThreadLocal.set(execDatum)
             }
         }

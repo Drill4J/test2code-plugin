@@ -157,7 +157,10 @@ class Plugin(
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 this.data.map { probes ->
-                    ExecClassData(className = probes.name, testName = probes.test, probes = probes.probes.toBitSet())
+                    ExecClassData(className = probes.name,
+                        testName = probes.test,
+                        testId = probes.testId,
+                        probes = probes.probes.toBitSet())
                 }
             }?.run {
                 if (isRealtime) {
@@ -185,7 +188,7 @@ class Plugin(
                 AddAgentSessionTests(
                     AgentSessionTestsPayload(
                         sessionId,
-                        tests.map { it.name.urlEncode() }
+                        tests.map { it.id }
                     )).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
@@ -326,7 +329,7 @@ class Plugin(
             val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
             coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
             bundleCounters.assocTestsJob(scope)
-            bundleCounters.byTest.coveredMethodsJob(scope.id)
+            bundleCounters.coveredMethodsJob(scope.id)
         }
     }
 
@@ -370,8 +373,8 @@ class Plugin(
     }
 
     internal suspend fun sendScopeSummary(
-        scopeSummary: ScopeSummary, buildVersion: String =
-            this.buildVersion
+        scopeSummary: ScopeSummary,
+        buildVersion: String = this.buildVersion,
     ) {
         send(buildVersion, scopeById(scopeSummary.id), scopeSummary)
     }
@@ -421,13 +424,9 @@ class Plugin(
             riskCount = Count(risks.notCovered(all).count(), risks.count())
         )
         state.updateBuildStats(buildCoverage, context)
+
         val cachedBuild = state.updateBuildTests(
-            byTest.keys.groupBy(TypedTest::type) {
-                TestData(
-                    name = it.name,
-                    details = detailsByTest[it]?.details ?: TestDetails(testName = it.name),
-                )
-            },
+            byTestOverview.asSequence().groupBy({ it.key.type }, { TestData(it.key.id, it.value.details) })
         )
         val summary = cachedBuild.toSummary(
             agentInfo.name,
@@ -439,7 +438,7 @@ class Plugin(
         )
         coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary)
         assocTestsJob()
-        byTest.coveredMethodsJob()
+        coveredMethodsJob()
         state.storeBuild()
         val stats = summary.toStatsDto()
         val qualityGate = checkQualityGate(stats)
@@ -555,7 +554,7 @@ class Plugin(
         }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         bundleCounters.assocTestsJob(scope)
-        bundleCounters.byTest.coveredMethodsJob(scope.id)
+        bundleCounters.coveredMethodsJob(scope.id)
     }
 
     private suspend fun sendScopeTree(
@@ -624,7 +623,7 @@ class Plugin(
         trackTime("assocTestsJob") {
             logger.debug { "Calculating all associated tests..." }
             val assocTestsMap = trackTime("assocTestsJob getAssocTestsMap") {
-                byTest.associatedTests(onlyPackages = false)
+                associatedTests(onlyPackages = false)
             }
             val associatedTests = trackTime("assocTestsJob getAssociatedTests") {
                 assocTestsMap.getAssociatedTests()
@@ -644,21 +643,23 @@ class Plugin(
         }
     }
 
-    internal suspend fun Map<TypedTest, BundleCounter>.coveredMethodsJob(
+    internal suspend fun BundleCounters.coveredMethodsJob(
         scopeId: String? = null,
         context: CoverContext = state.coverContext(),
     ) = AsyncJobDispatcher.launch {
         trackTime("coveredByTestJob") {
-            entries.parallelStream().forEach { (typedTest, bundle) ->
+            byTest.entries.parallelStream().forEach { (testKey, bundle) ->
+                val testId = testKey.id()
+                val typedTest = byTestOverview[testKey]?.details?.typedTest(testKey.type) ?: TypedTest(testKey.type)
                 val coveredMethods = context.toCoverMap(bundle, true)
-                val summary = coveredMethods.toSummary(typedTest, context)
+                val summary = coveredMethods.toSummary(testId, typedTest, context)
                 val all = coveredMethods.values.toList()
                 val modified = coveredMethods.filterValues { it in context.methodChanges.modified }
                 val new = coveredMethods.filterValues { it in context.methodChanges.new }
                 val unaffected = coveredMethods.filterValues { it in context.methodChanges.unaffected }
                 AsyncJobDispatcher.launch {
                     scopeId?.let {
-                        Routes.Build.Scopes.Scope.MethodsCoveredByTest(typedTest.id(), scopeById(it)).let { test ->
+                        Routes.Build.Scopes.Scope.MethodsCoveredByTest(testId, scopeById(it)).let { test ->
                             send(
                                 buildVersion,
                                 Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test),
@@ -678,7 +679,7 @@ class Plugin(
                             )
                         }
                     } ?: run {
-                        Routes.Build.MethodsCoveredByTest(typedTest.id(), Routes.Build()).let { test ->
+                        Routes.Build.MethodsCoveredByTest(testId, Routes.Build()).let { test ->
                             send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), summary)
                             send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), all)
                             send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), modified)

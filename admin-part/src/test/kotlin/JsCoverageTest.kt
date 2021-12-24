@@ -33,6 +33,10 @@ class JsCoverageTest {
 
     private val storeClient = StoreClient(PersistentEntityStores.newInstance(storageDir))
 
+    private val autoTestType = "AUTO"
+
+    private val manualTestType = "MANUAL"
+
     @AfterTest
     fun cleanStore() {
         storeClient.close()
@@ -40,62 +44,65 @@ class JsCoverageTest {
     }
 
     @Test
-    fun `coverageData for active scope with custom js probes`() = runBlocking {
-        val coverageData = calculateCoverage() {
-            this.execSession("MANUAL") { sessionId ->
-                addProbes(sessionId) { probes }
-            }
-            this.execSession("AUTO") { sessionId ->
-                addProbes(sessionId) { IncorrectProbes.underCount }
-                addProbes(sessionId) { IncorrectProbes.overCount }
-                addProbes(sessionId) { IncorrectProbes.notExisting }
-            }
-        }
-        coverageData.run {
-            assertEquals(Count(3, 5).toDto(), coverage.count.toDto())
-            assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
-            assertEquals(1, packageCoverage[0].coveredClassesCount)
-            assertEquals(1, packageCoverage[0].totalClassesCount)
-            assertEquals(2, packageCoverage[0].coveredMethodsCount)
-            assertEquals(3, packageCoverage[0].totalMethodsCount)
-            val expectedProbes = probes[0].probes
-            packageCoverage[0].classes.run {
-                assertEquals(listOf("foo/bar"), map { it.path })
-                assertEquals(listOf("baz.js"), map { it.name })
-                assertEquals(listOf(100.0, 0.0, 50.0), flatMap { it.methods }.map { it.coverage })
-                this[0].run {
-                    assertEquals(expectedProbes.toList(), probes)
-                    assertEquals(3, methods.size)
-                    methods[0].run {
-                        assertEquals(ProbeRange(0, 1), probeRange)
-                        assertEquals(2, probesCount)
-                    }
-                    methods[1].run {
-                        assertEquals(ProbeRange(2, 2), probeRange)
-                        assertEquals(1, probesCount)
-                    }
-                    methods[2].run {
-                        assertEquals(ProbeRange(3, 4), probeRange)
-                        assertEquals(2, probesCount)
-                    }
+    fun `coverageData for active scope with custom js probes`() {
+        runBlocking {
+            val coverageData = calculateCoverage() {
+                this.execSession(manualTestType) { sessionId ->
+                    addProbes(sessionId) { probes }
+                }
+                this.execSession(autoTestType) { sessionId ->
+                    addProbes(sessionId) { IncorrectProbes.underCount }
+                    addProbes(sessionId) { IncorrectProbes.overCount }
+                    addProbes(sessionId) { IncorrectProbes.notExisting }
                 }
             }
-            assertEquals(
-                setOf(TypedTest("default", "MANUAL"), TypedTest("default", "AUTO")),
-                associatedTests.getAssociatedTests().flatMap { it.tests }.toSet()
-            )
-            buildMethods.run {
-                assertEquals(2, totalMethods.coveredCount)
-                assertEquals(3, totalMethods.totalCount)
-            }
+            coverageData.run {
+                assertEquals(Count(3, 5).toDto(), coverage.count.toDto())
+                assertEquals(listOf("foo/bar"), packageCoverage.map { it.name })
+                assertEquals(1, packageCoverage[0].coveredClassesCount)
+                assertEquals(1, packageCoverage[0].totalClassesCount)
+                assertEquals(2, packageCoverage[0].coveredMethodsCount)
+                assertEquals(3, packageCoverage[0].totalMethodsCount)
+                val expectedProbes = probes[0].probes
+                packageCoverage[0].classes.run {
+                    assertEquals(listOf("foo/bar"), map { it.path })
+                    assertEquals(listOf("baz.js"), map { it.name })
+                    assertEquals(listOf(100.0, 0.0, 50.0), flatMap { it.methods }.map { it.coverage })
+                    this[0].run {
+                        assertEquals(expectedProbes.toList(), probes)
+                        assertEquals(3, methods.size)
+                        methods[0].run {
+                            assertEquals(ProbeRange(0, 1), probeRange)
+                            assertEquals(2, probesCount)
+                        }
+                        methods[1].run {
+                            assertEquals(ProbeRange(2, 2), probeRange)
+                            assertEquals(1, probesCount)
+                        }
+                        methods[2].run {
+                            assertEquals(ProbeRange(3, 4), probeRange)
+                            assertEquals(2, probesCount)
+                        }
+                    }
+                }
+                assertEquals(
+                    setOf(TypedTest(details = TestDetails(testName = "default"), type = manualTestType),
+                        TypedTest(details = TestDetails(testName = "default"), type = autoTestType)),
+                    associatedTests.getAssociatedTests().flatMap { it.tests }.toSet()
+                )
+                buildMethods.run {
+                    assertEquals(2, totalMethods.coveredCount)
+                    assertEquals(3, totalMethods.totalCount)
+                }
 
+            }
         }
     }
 
     @Test
     fun `should merge probes`() = runBlocking {
         val coverageData = calculateCoverage() {
-            this.execSession("MANUAL") { sessionId ->
+            this.execSession(manualTestType) { sessionId ->
                 addProbes(sessionId) { probes }
                 addProbes(sessionId) { probes2 }
             }

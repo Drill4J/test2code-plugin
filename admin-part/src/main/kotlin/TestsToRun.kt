@@ -44,7 +44,7 @@ private fun CoverContext.toTestsToRunStats(
 ): TestsToRunStats = TestsToRunStats(
     total = curTestsToRun.totalCount(),
     completed = curTestsToRun.withCoverage(build.bundleCounters).totalCount(),
-    duration = curTestsToRun.totalDuration(build.bundleCounters.detailsByTest),
+    duration = curTestsToRun.totalDuration(build.bundleCounters.byTestOverview),
     parentDuration = parentDuration
 )
 

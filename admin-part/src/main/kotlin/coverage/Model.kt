@@ -70,8 +70,11 @@ class BundleCounters(
     val testTypeOverlap: BundleCounter,
     val overlap: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
-    val byTest: Map<TypedTest, BundleCounter> = emptyMap(),
-    val detailsByTest: Map<TypedTest, TestOverview> = emptyMap(),
+    val byTest: Map<TestKey, BundleCounter> = emptyMap(),
+    /**
+     * All test (auto, manual, tests without coverage)
+     */
+    val byTestOverview: Map<TestKey, TestOverview> = emptyMap(),
 ) {
     companion object {
         val empty = BundleCounter("").let {

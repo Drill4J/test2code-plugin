@@ -34,7 +34,7 @@ private val logger = logger {}
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
-    cache: Map<TypedTest, BundleCounter> = emptyMap(),
+    cache: Map<TestKey, BundleCounter> = emptyMap(),
 ) = run {
     logger.trace {
         "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
@@ -60,9 +60,10 @@ internal fun Sequence<Session>.calcBundleCounters(
             it.value.asSequence().flatten().bundle(context, classBytes)
         },
         byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
-        detailsByTest = fold(mutableMapOf()) { map, session ->
-            session.testOverview.forEach { (test, overview) ->
-                map[test] = map[test]?.run {
+        byTestOverview = fold(mutableMapOf()) { map, session ->
+            session.tests.forEach { overview ->
+                val testKey = TestKey(id = overview.testId, type = session.testType)
+                map[testKey] = map[testKey]?.run {
                     copy(
                         duration = duration + overview.duration,
                         result = overview.result,
@@ -82,7 +83,7 @@ internal fun BundleCounters.calculateCoverageData(
     val bundle = all
     val bundlesByTests = byTest
 
-    val assocTestsMap = trackTime("assocTestsMap") { bundlesByTests.associatedTests() }
+    val assocTestsMap = trackTime("assocTestsMap") { associatedTests() }
 
     val tree = context.packageTree
     val coverageCount = bundle.count.copy(total = tree.totalCount)
@@ -93,9 +94,9 @@ internal fun BundleCounters.calculateCoverageData(
             all = TestSummary(
                 coverage = bundle.toCoverDto(tree),
                 testCount = bundlesByTests.keys.count(),
-                duration = detailsByTest.values.sumOf { it.duration }
+                duration = byTestOverview.values.sumOf { it.duration }
             ),
-            byType = byTestType.coveragesByTestType(byTest, context, detailsByTest)
+            byType = byTestType.coveragesByTestType(byTest, context, byTestOverview)
         )
     }
     logger.info { coverageByTests.byType }
@@ -133,13 +134,14 @@ internal fun BundleCounters.calculateCoverageData(
 
     val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
 
-    val tests = bundlesByTests.map { (typedTest, bundle) ->
+    val tests = bundlesByTests.map { (testKey, bundle) ->
+        val testOverview = byTestOverview[testKey] ?: TestOverview.empty
+        val typedTest = TypedTest(type = testKey.type, details = testOverview.details)
         TestCoverageDto(
-            id = typedTest.id(),
+            id = testKey.id(),
             type = typedTest.type,
-            name = typedTest.name,
             coverage = bundle.toCoverDto(tree),
-            overview = detailsByTest[typedTest] ?: TestOverview(0, TestResult.PASSED, TestDetails(testName = typedTest.name))
+            overview = testOverview,
         )
     }.sortedBy { it.type }
 
@@ -154,16 +156,16 @@ internal fun BundleCounters.calculateCoverageData(
 }
 
 internal fun Map<String, BundleCounter>.coveragesByTestType(
-    bundleMap: Map<TypedTest, BundleCounter>,
+    bundleMap: Map<TestKey, BundleCounter>,
     context: CoverContext,
-    detailsByTest: Map<TypedTest, TestOverview>,
+    byOverview: Map<TestKey, TestOverview>,
 ): List<TestTypeSummary> = map { (testType, bundle) ->
     TestTypeSummary(
         type = testType,
         summary = TestSummary(
             coverage = bundle.toCoverDto(context.packageTree),
             testCount = bundleMap.keys.filter { it.type == testType }.distinct().count(),
-            duration = detailsByTest.filter { it.key.type == testType }.map { it.value.duration }.sum()
+            duration = byOverview.filter { it.key.type == testType }.map { it.value.duration }.sum()
         )
     )
 }
@@ -171,16 +173,16 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
-    cache: Map<TypedTest, BundleCounter>,
-): Map<TypedTest, BundleCounter> = run {
+    cache: Map<TestKey, BundleCounter>,
+): Map<TestKey, BundleCounter> = run {
     val bundleByTests = values.asSequence().flatten().testsWithBundle()
     bundleByTests.putAll(cache)
     map { (testType, sessions: List<Session>) ->
         sessions.asSequence().flatten()
             .mapNotNull { execData ->
-                execData.testName.typedTest(testType).takeIf { it !in cache }?.to(execData)
+                execData.testId.testKey(testType).takeIf { it !in cache }?.to(execData)
             }
-            .groupBy(Pair<TypedTest, ExecClassData>::first) { it.second }
+            .groupBy(Pair<TestKey, ExecClassData>::first) { it.second }
             .mapValuesTo(bundleByTests) {
                 it.value.asSequence().bundle(context, classBytes)
             }
@@ -191,8 +193,8 @@ private fun Map<String, List<Session>>.bundlesByTests(
 }
 
 private fun Sequence<Session>.testsWithBundle(
-): MutableMap<TypedTest, BundleCounter> = flatMap { session ->
-    session.tests.asSequence()
+): MutableMap<TestKey, BundleCounter> = flatMap { session ->
+    session.tests.map { it.testId.testKey(session.testType) }.asSequence()
 }.associateWithTo(mutableMapOf()) {
     BundleCounter.empty
 }
@@ -216,10 +218,11 @@ internal fun Sequence<ExecClassData>.bundle(
     else -> bundle(context.packageTree)
 }
 
-internal fun Map<TypedTest, BundleCounter>.associatedTests(
+internal fun BundleCounters.associatedTests(
     onlyPackages: Boolean = true,
-): Map<CoverageKey, List<TypedTest>> = entries.parallelStream().flatMap { (test, bundle) ->
-    bundle.coverageKeys(onlyPackages).map { it to test }.distinct()
+): Map<CoverageKey, List<TypedTest>> = byTest.entries.parallelStream().flatMap { (test, bundle) ->
+    val typedTest = byTestOverview[test]?.details?.typedTest(test.type) ?: TypedTest(test.type)
+    bundle.coverageKeys(onlyPackages).map { it to typedTest }.distinct()
 }.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
 internal suspend fun Plugin.exportCoverage(buildVersion: String) = runCatching {

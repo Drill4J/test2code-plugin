@@ -49,7 +49,7 @@ fun Map<CoverageKey, List<TypedTest>>.getAssociatedTests(): List<AssociatedTests
             packageName = key.packageName,
             className = key.className,
             methodName = key.methodName,
-            tests = tests.stream().sorted { o1, o2 -> o1.name.compareTo(o2.name) }.collect(Collectors.toList())
+            tests = tests.stream().sorted { o1, o2 -> o1.details.compareTo(o2.details) }.collect(Collectors.toList())
         )
     }.sorted { o1, o2 -> o1.methodName.compareTo(o2.methodName) }.collect(Collectors.toList())
 }
@@ -77,6 +77,6 @@ private fun Iterable<Method>.toInfo(
     covered: Map<Method, CoverMethod>,
 ) = MethodsInfo(
     totalCount = count(),
-    coveredCount = count { covered[it]?.count?.covered ?: 0 > 0 },
+    coveredCount = count { (covered[it]?.count?.covered ?: 0) > 0 },
     methods = mapNotNull(covered::get)
 )

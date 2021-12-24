@@ -39,7 +39,7 @@ class GlobalExecRuntimeTest {
     @Test
     fun `collect - should add probes`() {
         val runtime = GlobalExecRuntime("test") {}
-        runtime.put(0) { ExecDatum(1L, className, AgentProbes(5), it) }
+        runtime.put(0) { (testName, _) -> ExecDatum(1L, className, AgentProbes(5), testName) }
         runtime.get(0)?.set(1)
         val collect = runtime.collect()
         assertTrue { collect.any() }

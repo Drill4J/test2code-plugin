@@ -22,6 +22,7 @@ import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import e2e.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
@@ -41,7 +42,7 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()
@@ -82,7 +83,7 @@ class SessionTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.count.covered shouldBe 0
 
                 "${UUID.randomUUID()}".let { sessionId ->
-                    val startNewSession = StartNewSession(StartPayload("MANUAL", sessionId)).stringify()
+                    val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE, sessionId)).stringify()
                     pluginAction(startNewSession) { status, _ ->
                         status shouldBe HttpStatusCode.OK
 
@@ -102,7 +103,7 @@ class SessionTest : E2EPluginTest() {
                 }
 
                 "${UUID.randomUUID()}".let { sessionId ->
-                    val startSession = StartNewSession(StartPayload("AUTO", sessionId)).stringify()
+                    val startSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
                     pluginAction(startSession) { status, _ ->
                         status shouldBe HttpStatusCode.OK
 
@@ -141,7 +142,7 @@ class SessionTest : E2EPluginTest() {
 
                 plugUi.activeScope()!!.coverage.count shouldBe Count(0, 15)
                 plugUi.buildCoverage()!!.count shouldBe Count(0, 15)
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()
@@ -152,7 +153,7 @@ class SessionTest : E2EPluginTest() {
                         gt.test2()
                     }
 
-                    val startNewSession2 = StartNewSession(StartPayload("AUTO")).stringify()
+                    val startNewSession2 = StartNewSession(StartPayload(AUTO_TEST_TYPE)).stringify()
 
                     pluginAction(startNewSession2) { status2, content2 ->
                         status2 shouldBe HttpStatusCode.OK
@@ -169,7 +170,7 @@ class SessionTest : E2EPluginTest() {
 
                         plugUi.activeSessions()!!.apply {
                             count shouldBe 1
-                            testTypes shouldBe setOf("AUTO")
+                            testTypes shouldBe setOf(AUTO_TEST_TYPE)
                         }
 
                         pluginAction(StopSession(StopSessionPayload(startSession2.payload.sessionId)).stringify()).join()

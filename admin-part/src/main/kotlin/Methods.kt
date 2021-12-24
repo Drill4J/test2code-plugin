@@ -17,7 +17,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.jvm.LAMBDA
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
@@ -146,7 +145,7 @@ internal fun TypedRisks.notCovered(
 internal fun TypedRisks.count() = values.sumBy { it.count() }
 
 internal fun CoverContext.risksDto(
-    associatedTests: Map<CoverageKey, List<TypedTest>> = emptyMap()
+    associatedTests: Map<CoverageKey, List<TypedTest>> = emptyMap(),
 ): List<RiskDto> = build.bundleCounters.all.coveredMethods(risks.values.flatten()).let { covered ->
     risks.flatMap { (type, methods) ->
         methods.map { method ->
@@ -168,11 +167,12 @@ internal fun CoverContext.risksDto(
 }
 
 internal fun Map<Method, CoverMethod>.toSummary(
+    id: String,
     typedTest: TypedTest,
     context: CoverContext,
 ) = TestedMethodsSummary(
-    id = typedTest.id(),
-    testName = typedTest.name,
+    id = id,
+    testName = typedTest.details,
     testType = typedTest.type,
     methodCounts = CoveredMethodCounts(
         all = size,
@@ -183,7 +183,7 @@ internal fun Map<Method, CoverMethod>.toSummary(
 )
 
 internal fun Map<Method, CoverMethod>.filterValues(
-    predicate: (Method) -> Boolean
+    predicate: (Method) -> Boolean,
 ) = filter { predicate(it.key) }.values.toList()
 
 private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
