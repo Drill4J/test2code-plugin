@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
+import kotlinx.serialization.Serializable
 import java.util.stream.*
 import kotlin.math.*
 
@@ -43,13 +44,14 @@ internal infix fun Count.subtraction(other: Count): Pair<Long, Long> = takeIf { 
             second = totalLong / gcd * otherTotalLong
         )
     }
-} ?: covered.toLong() to total.toLong()
+} ?: (covered.toLong() to total.toLong())
 
 internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
-        id = (parent as? ClassCounter)?.run { fullClassname(path, name) }.let { fullMethodName(it ?: "", name, desc).crc64 },
+        id = (parent as? ClassCounter)?.run { fullClassname(path, name) }
+            .let { fullMethodName(it ?: "", name, desc).crc64 },
         packageName = (parent as? ClassCounter)?.path?.weakIntern() ?: "",
         className = (parent as? ClassCounter)?.name?.weakIntern() ?: "",
         methodName = name.weakIntern(),
@@ -160,12 +162,23 @@ internal fun Method.toCovered(
     counter: MethodCounter? = null,
 ): CoverMethod = toCovered(methodType, counter?.count)
 
-internal fun String.typedTest(type: String) = TypedTest(
-    name = urlDecode().weakIntern(),
-    type = type.weakIntern(),
+@Serializable
+data class TestKey(
+    val id: String,
+    val type: String,
 )
 
-internal fun TypedTest.id() = "$name:$type".weakIntern()
+internal fun String.testKey(type: String) = TestKey(
+    id = this,
+    type = type
+)
+
+internal fun TestDetails.typedTest(type: String) = TypedTest(
+    details = this,
+    type = type,
+)
+
+fun TestKey.id() = "$id:$type".weakIntern()
 
 private fun Int.toArrowType(): ArrowType? = when (this) {
     in Int.MIN_VALUE..-1 -> ArrowType.INCREASE

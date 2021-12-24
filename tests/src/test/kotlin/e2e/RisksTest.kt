@@ -22,6 +22,7 @@ import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import e2e.*
 import io.kotlintest.*
 import io.kotlintest.matchers.numerics.*
 import io.ktor.http.*
@@ -39,7 +40,7 @@ class RisksTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.count.covered shouldBe 0
                 plugUi.activeScope()!!.coverage.count.covered shouldBe 0
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()
@@ -79,7 +80,7 @@ class RisksTest : E2EPluginTest() {
                     }
                 }
 
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()

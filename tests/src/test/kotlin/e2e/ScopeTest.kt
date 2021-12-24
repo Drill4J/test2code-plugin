@@ -21,6 +21,7 @@ import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import e2e.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
@@ -85,7 +86,7 @@ class ScopeTest : E2EPluginTest() {
                     coverage.percentage shouldBe 0.0
                     droppedScopeId = id
                 }
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()
@@ -128,7 +129,7 @@ class ScopeTest : E2EPluginTest() {
                 val ignoredScopeId = plugUi.activeScope()!!.apply {
                     coverage.percentage shouldBe 0.0
                 }.id
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession = content!!.parseJsonData<StartAgentSession>()

@@ -40,7 +40,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
         if (sessionChanged) {
             bundleCounters.assocTestsJob(this)
-            bundleCounters.byTest.coveredMethodsJob(id)
+            bundleCounters.coveredMethodsJob(id)
         }
     }
 }

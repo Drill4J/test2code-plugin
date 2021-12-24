@@ -17,6 +17,8 @@ package com.epam.drill.plugins.test2code.api
 
 import kotlinx.serialization.*
 
+const val DEFAULT_TEST_NAME = "unspecified"
+
 @Serializable
 data class StartPayload(
     val testType: String = "MANUAL",
@@ -42,6 +44,7 @@ data class CoverPayload(
 class EntityProbes(
     val name: String,
     val test: String = "",
+    val testId: String = "", //TODO mb make it as required field
     val probes: List<Boolean>,
 )
 
@@ -60,24 +63,31 @@ data class AddTestsPayload(
 
 @Serializable
 data class TestInfo(
-    val id: String = "",
-    val name: String, // TODO EPMDJ-9150 Replace name with test hash(id)
+    val id: String,
     val result: TestResult,
     val startedAt: Long,
     val finishedAt: Long,
-    val details: TestDetails = TestDetails.emptyDetails,
+    val details: TestDetails,
 )
 
 @Serializable
 data class TestDetails(
     val engine: String = "",
     val path: String = "",
-    val testName: String = "",
+    val testName: String,
     val params: Map<String, String> = emptyMap(),
-    val metadata: Map<String, String> = emptyMap(), // arbitrary
-) {
+    val metadata: Map<String, String> = emptyMap(),
+) : Comparable<TestDetails> {
     companion object {
-        val emptyDetails = TestDetails()
+        val emptyDetails = TestDetails(testName = DEFAULT_TEST_NAME)
+    }
+
+    override fun compareTo(other: TestDetails): Int {
+        return toString().compareTo(other.toString())
+    }
+
+    override fun toString(): String {
+        return "engine='$engine', path='$path', testName='$testName', params=$params"
     }
 }
 
@@ -167,12 +177,12 @@ interface Coverage {
 data class ScopeCoverage(
     override val percentage: Double = 0.0,
     override val count: Count = zeroCount,
-    val overlap: CoverDto = CoverDto(),
+    val overlap: CoverDto = CoverDto.empty,
     override val methodCount: Count = zeroCount,
     override val classCount: Count = zeroCount,
     override val packageCount: Count = zeroCount,
     override val riskCount: Count = zeroCount,
-    override val testTypeOverlap: CoverDto = CoverDto(),
+    override val testTypeOverlap: CoverDto = CoverDto.empty,
     override val byTestType: List<TestTypeSummary> = emptyList(),
 ) : Coverage
 
@@ -185,7 +195,7 @@ data class BuildCoverage(
     override val classCount: Count,
     override val packageCount: Count,
     override val riskCount: Count = zeroCount,
-    override val testTypeOverlap: CoverDto = CoverDto(),
+    override val testTypeOverlap: CoverDto = CoverDto.empty,
     override val byTestType: List<TestTypeSummary> = emptyList(),
     val finishedScopesCount: Int = 0,
 ) : Coverage
@@ -282,8 +292,8 @@ data class AssociatedTests(
 
 @Serializable
 data class TypedTest(
-    val name: String,
     val type: String,
+    val details: TestDetails = TestDetails.emptyDetails,
 )
 
 @Serializable
@@ -303,7 +313,7 @@ data class CoverageByTests(
 @Serializable
 data class TestedMethodsSummary(
     val id: String,
-    val testName: String,
+    val testName: TestDetails,
     val testType: String,
     val methodCounts: CoveredMethodCounts,
 )
@@ -312,10 +322,9 @@ data class TestedMethodsSummary(
 data class TestCoverageDto(
     val id: String,
     val type: String,
-    val name: String,
     val toRun: Boolean = false,
-    val coverage: CoverDto = CoverDto(),
-    val overview: TestOverview = TestOverview(0, TestResult.PASSED),
+    val coverage: CoverDto = CoverDto.empty,
+    val overview: TestOverview = TestOverview.empty,
 )
 
 @Serializable
@@ -327,15 +336,19 @@ data class TestsSummaryDto(
 
 @Serializable
 data class TestOverview(
-    val duration: Long,
-    val result: TestResult,
+    val testId: String,
+    val duration: Long = 0,
+    val result: TestResult = TestResult.PASSED,
     val details: TestDetails = TestDetails.emptyDetails,
-)
-
+) {
+    companion object {
+        val empty = TestOverview("")
+    }
+}
 
 @Serializable
 data class TestData(
-    val name: String,
+    val id: String,
     val details: TestDetails = TestDetails.emptyDetails,
 )
 
@@ -468,7 +481,11 @@ data class CoverDto(
     val percentage: Double = 0.0,
     val methodCount: CountDto = zeroCountDto,
     val count: CountDto = zeroCountDto,
-)
+) {
+    companion object {
+        val empty = CoverDto()
+    }
+}
 
 @Serializable
 data class CountDto(

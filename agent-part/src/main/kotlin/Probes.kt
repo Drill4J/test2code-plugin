@@ -54,13 +54,15 @@ interface SessionProbeArrayProvider : ProbeArrayProvider {
 
 }
 
-const val DRIlL_TEST_NAME = "drill-test-name"
+const val DRIlL_TEST_NAME_HEADER = "drill-test-name"
+const val DRILL_TEST_ID_HEADER = "drill-test-id"
 
 data class ExecDatum(
     val id: Long,
     val name: String,
     val probes: AgentProbes,
     val testName: String = "",
+    val testId: String = "",
 )
 
 class ProbeDescriptor(
@@ -69,18 +71,22 @@ class ProbeDescriptor(
     val probeCount: Int,
 )
 
+typealias TestKey = Pair<String, String>
+
 internal fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
     className = name,
     probes = probes.values.toBitSet(),
-    testName = testName
+    testName = testName,
+    testId = testId,
 )
 
-internal fun ProbeDescriptor.toExecDatum(testName: String?) = ExecDatum(
+internal fun ProbeDescriptor.toExecDatum(testName: String, testId: String) = ExecDatum(
     id = id,
     name = name,
     probes = AgentProbes(probeCount),
-    testName = testName ?: "unspecified"
+    testName = testName,
+    testId = testId
 )
 
 typealias ExecData = Array<ExecDatum?>
@@ -105,7 +111,7 @@ abstract class Runtime(
     }
 
     abstract fun collect(): Sequence<ExecDatum>
-    abstract fun put(index: Int, updater: (String) -> ExecDatum)
+    abstract fun put(index: Int, updater: (TestKey) -> ExecDatum)
 
     fun close() {
         job.cancel()
@@ -120,7 +126,7 @@ class ExecRuntime(
     private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
-    private val _execData = ConcurrentHashMap<String, ExecData>()
+    private val _execData = ConcurrentHashMap<TestKey, ExecData>()
 
     private val _completedTests = atomic(persistentListOf<String>())
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
@@ -136,18 +142,18 @@ class ExecRuntime(
         if (isPerformanceMode) {
             _execData.clear()
         } else {
-            passedTest.forEach { _execData.remove(it) }
+            passedTest.forEach { _execData.remove(TestKey(DEFAULT_TEST_NAME, it)) }
         }
     }
 
     fun getOrPut(
-        testName: String,
+        testKey: TestKey,
         updater: () -> ExecData,
-    ): Array<ExecDatum?> = _execData.getOrPut(testName) { updater() }
+    ): Array<ExecDatum?> = _execData.getOrPut(testKey) { updater() }
 
     override fun put(
         index: Int,
-        updater: (String) -> ExecDatum,
+        updater: (TestKey) -> ExecDatum,
     ) = _execData.forEach { (testName, execDataset) ->
         runCatching { execDataset[index] = updater(testName) }.onFailure {
             logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
@@ -158,7 +164,7 @@ class ExecRuntime(
 }
 
 class GlobalExecRuntime(
-    private val testName: String?,
+    private val testName: String,
     private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
@@ -179,8 +185,8 @@ class GlobalExecRuntime(
         )
     }
 
-    override fun put(index: Int, updater: (String) -> ExecDatum) {
-        runCatching { execDatum[index] = updater(testName ?: "unspecified") }.onFailure {
+    override fun put(index: Int, updater: (TestKey) -> ExecDatum) {
+        runCatching { execDatum[index] = updater(TestKey(testName, testName.id())) }.onFailure {
             logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
         }
     }
@@ -199,11 +205,13 @@ class ProbeMetaContainer {
     ) {
         probesDescriptor[index] = probeDescriptor
 
-        globalRuntime?.put(index) { probeDescriptor.toExecDatum(it) }
+        globalRuntime?.put(index) { (testName, testId) ->
+            probeDescriptor.toExecDatum(testName, testId)
+        }
 
         runtimes.forEach {
-            it.put(index) { testName ->
-                probeDescriptor.toExecDatum(testName)
+            it.put(index) { (testName, testId) ->
+                probeDescriptor.toExecDatum(testName, testId)
             }
         }
     }
@@ -338,12 +346,13 @@ open class SimpleSessionProbeArrayProvider(
             val value = ExecRuntime(logger, realtimeHandler)
             runtimes[sessionId] = value
         } else runtimes
-
     }
 
     private fun addGlobal(sessionId: String, testName: String?, realtimeHandler: RealtimeHandler) {
-        val runtime = GlobalExecRuntime(testName, logger, realtimeHandler).apply {
-            execDatum.fillFromMeta(testName)
+        val name = testName ?: DEFAULT_TEST_NAME
+        val testId = name.id()
+        val runtime = GlobalExecRuntime(name, logger, realtimeHandler).apply {
+            execDatum.fillFromMeta(TestKey(name, testId))
         }
         global = sessionId to runtime
     }
@@ -360,10 +369,11 @@ open class SimpleSessionProbeArrayProvider(
         }
     }?.also(ExecRuntime::close)
 
-    fun ExecData.fillFromMeta(testName: String?) {
+    fun ExecData.fillFromMeta(testKey: TestKey) {
+        val (testName, testId) = testKey
         probeMetaContainer.forEachIndexed { inx, probeDescriptor ->
             if (probeDescriptor != null)
-                this[inx] = probeDescriptor.toExecDatum(testName)
+                this[inx] = probeDescriptor.toExecDatum(testName, testId)
         }
     }
 }
@@ -372,7 +382,7 @@ private class GlobalContext(
     private val sessionId: String,
     private val testName: String?,
 ) : AgentContext {
-    override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME }
+    override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME_HEADER }
 
     override fun invoke(): String? = sessionId
 }

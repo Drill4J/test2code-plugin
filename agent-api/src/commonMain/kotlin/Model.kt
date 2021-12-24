@@ -17,11 +17,13 @@ package com.epam.drill.plugins.test2code.common.api
 
 import kotlinx.serialization.*
 
+const val DEFAULT_TEST_NAME = "unspecified"
+
 @Serializable
 data class AstEntity(
     val path: String,
     val name: String,
-    val methods: List<AstMethod>
+    val methods: List<AstMethod>,
 )
 
 @Serializable
@@ -31,14 +33,14 @@ data class AstMethod(
     val returnType: String,
     val count: Int = 0,
     val probes: List<Int> = emptyList(),
-    val checksum: String = ""
+    val checksum: String = "",
 )
 
 @Serializable
 data class InitScopePayload(
     val id: String,
     val name: String,
-    val prevId: String
+    val prevId: String,
 )
 
 @Serializable
@@ -47,12 +49,12 @@ data class StartSessionPayload(
     val testType: String,
     val testName: String?,
     val isRealtime: Boolean,
-    val isGlobal: Boolean
+    val isGlobal: Boolean,
 )
 
 @Serializable
 data class AgentSessionPayload(
-    val sessionId: String
+    val sessionId: String,
 )
 
 @Serializable
@@ -66,7 +68,14 @@ data class ExecClassData(
     val id: Long? = null,
     val className: String,
     @Serializable(with = BitSetSerializer::class) val probes: Probes,
-    val testName: String = ""
+    /**
+     * Test name only use for global session/manual testing and in cases where we couldn't set testId(hash) in headers
+     */
+    val testName: String = "",
+    /**
+     * It's full test name hashed by CRC32 algorithm
+     */
+    val testId: String = "", // TODO must not have default value
 )
 
 

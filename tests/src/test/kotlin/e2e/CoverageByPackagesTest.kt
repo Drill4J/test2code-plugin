@@ -21,6 +21,10 @@ import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.coverage.TestKey
+import com.epam.drill.plugins.test2code.util.*
+import e2e.*
 import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
@@ -28,6 +32,9 @@ import kotlinx.coroutines.*
 import kotlin.test.*
 
 class CoverageByPackagesTest : E2EPluginTest() {
+
+    private val testDetails = TestDetails(testName = "xxxx")
+    private val testHash = testDetails.testName.crc64
 
     @Test
     fun `cover one method in 2 scopes`() {
@@ -41,7 +48,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     totalClassesCount shouldBe 1
                     assocTestsCount shouldBe 0
                 }
-                val startNewSession = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 lateinit var cont: String
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
@@ -49,7 +56,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                 }.join()
                 val startSession = cont.parseJsonData<StartAgentSession>()
                 println(startSession)
-                runWithSession(startSession.payload.sessionId) {
+                runWithSession(startSession.payload.sessionId, testHash = testHash) {
                     val gt = build.entryPoint()
                     gt.test1()
                 }
@@ -71,9 +78,10 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         classes shouldBe emptyList()
                         assocTestsCount shouldBe 1
                     }
-                    plugUi.subscribeOnTest(scopeId, "xxxx:MANUAL") {
+                    plugUi.subscribeOnTest(scopeId, TestKey(type = MANUAL_TEST_TYPE, id = testHash)
+                        .id()) {
                         methodsCoveredByTest()!!.apply {
-                            testName shouldBe "xxxx"
+                            testName shouldBe testDetails
                             methodCounts.apply {
                                 new shouldBe 0
                                 modified shouldBe 0
@@ -101,7 +109,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     assocTestsCount shouldBe 1
                 }
 
-                val startNewSession2 = StartNewSession(StartPayload("MANUAL")).stringify()
+                val startNewSession2 = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession2) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     val startSession2 = content!!.parseJsonData<StartAgentSession>()

@@ -20,6 +20,7 @@ import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
+import e2e.*
 import io.kotlintest.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
@@ -60,7 +61,7 @@ class CoverageTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.count.covered shouldBe 0
 
                 "${UUID.randomUUID()}".let { sessionId ->
-                    val startNewSession = StartNewSession(StartPayload("MANUAL", sessionId)).stringify()
+                    val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE, sessionId)).stringify()
                     pluginAction(startNewSession) { status, _ ->
                         status shouldBe HttpStatusCode.OK
 

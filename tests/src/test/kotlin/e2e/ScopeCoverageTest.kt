@@ -31,29 +31,29 @@ import kotlin.test.*
 
 class ScopeCoverageTest : E2EPluginTest() {
 
-    private val testWithCoverageName = "TestWithCoverage"
-    private val testWithoutCoverageName = "EmptyTest"
-    private val testType = "AUTO"
+    private val testWithCoverageName = TestDetails(testName = "TestWithCoverage")
+    private val testWithoutCoverageName = TestDetails(testName = "EmptyTest")
+
 
     @Test
     fun `tests without coverage must be in scope when at least one test have coverage`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<Build1> { plugUi, build ->
                 val sessionId = "${UUID.randomUUID()}"
-                val startNewSession = StartNewSession(StartPayload(testType, sessionId)).stringify()
+                val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
 
                 pluginAction(startNewSession) { status, _ ->
                     status shouldBe HttpStatusCode.OK
                 }.join()
 
-                runWithSession(sessionId, testWithCoverageName) {
+                runWithSession(sessionId, testWithCoverageName.testName) {
                     build.entryPoint().test2()
                 }
 
                 val payloadWithEmptyTest = AddTests(
                     AddTestsPayload(
                         sessionId,
-                        listOf(TestInfo("", testWithoutCoverageName, TestResult.PASSED, 0, 228))
+                        listOf(TestInfo("id", TestResult.PASSED, 0, 228, testWithoutCoverageName))
                     )
                 ).stringify()
                 pluginAction(payloadWithEmptyTest) { status, _ ->
@@ -70,15 +70,15 @@ class ScopeCoverageTest : E2EPluginTest() {
                     val allTests = tests()!!
                     allTests.size shouldBe 2
                     allTests.forEach {
-                        when (it.name) {
+                        when (it.overview.details) {
                             testWithCoverageName -> {
                                 it.coverage.percentage shouldBeGreaterThan 46.6
-                                it.type shouldBe testType
+                                it.type shouldBe AUTO_TEST_TYPE
                                 it.overview.result shouldBe TestResult.PASSED
                             }
                             testWithoutCoverageName -> {
                                 it.coverage.percentage shouldBe 0.0
-                                it.type shouldBe testType
+                                it.type shouldBe AUTO_TEST_TYPE
                                 it.overview.result shouldBe TestResult.PASSED
                             }
                             else -> fail("Unknown test in collection")
@@ -94,7 +94,7 @@ class ScopeCoverageTest : E2EPluginTest() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<CustomBuild> { plugUi, _ ->
                 val sessionId = "${UUID.randomUUID()}"
-                val startNewSession = StartNewSession(StartPayload(testType, sessionId)).stringify()
+                val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
                 lateinit var cont: String
                 pluginAction(startNewSession) { status, _ ->
                     status shouldBe HttpStatusCode.OK
@@ -104,7 +104,7 @@ class ScopeCoverageTest : E2EPluginTest() {
                 repeat(5) { index ->
                     emptyTests.add(
                         TestInfo(
-                            "", "$testWithoutCoverageName$index", TestResult.PASSED, 0, 500
+                            "", TestResult.PASSED, 0, 500, TestDetails(testName = "$testWithoutCoverageName$index")
                         )
                     )
                 }
