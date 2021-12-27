@@ -19,22 +19,23 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.group.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.dsm.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
 internal data class CachedBuild(
-    val version: String,
+    val agentKey: AgentKey,
     val parentVersion: String = "",
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
     val bundleCounters: BundleCounters = BundleCounters.empty,
-    val stats: BuildStats = BuildStats(version),
+    val stats: BuildStats = BuildStats(agentKey),
     val tests: BuildTests = BuildTests(),
 )
 
 @Serializable
 internal data class BuildStats(
-    @Id val version: String,
+    @Id val agentKey: AgentKey,
     val coverage: Count = zeroCount,
     val methodCount: Count = zeroCount,
     val coverageByType: Map<String, Count> = emptyMap(),
@@ -61,7 +62,7 @@ internal fun AgentSummary.recommendations(): Set<String> = sequenceOf(
 ).filterNotNullTo(mutableSetOf())
 
 internal fun CoverContext.toBuildStatsDto(): BuildStatsDto = BuildStatsDto(
-    parentVersion = parentBuild?.version ?: "",
+    parentVersion = parentBuild?.agentKey?.buildVersion ?: "",
     total = methods.count(),
     new = methodChanges.new.count(),
     modified = methodChanges.modified.count(),

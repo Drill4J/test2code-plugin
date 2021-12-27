@@ -116,8 +116,8 @@ internal suspend fun Plugin.renameScope(
     val scopeName = payload.scopeName
     if (state.scopeByName(scopeName) == null) {
         state.renameScope(payload.scopeId, scopeName)?.let { summary ->
-            sendScopeMessages(scope.buildVersion)
-            sendScopeSummary(summary, scope.buildVersion)
+            sendScopeMessages(scope.agentKey.buildVersion)
+            sendScopeSummary(summary, scope.agentKey.buildVersion)
         }
         ActionResult(StatusCodes.OK, "Renamed scope with id ${payload.scopeId} -> $scopeName")
     } else ActionResult(
@@ -177,10 +177,11 @@ private suspend fun Plugin.cleanTopics(scopeId: String) = scopeById(scopeId).let
 }
 
 private suspend fun Plugin.handleChange(scope: FinishedScope) {
-    if (scope.buildVersion == buildVersion) {
+    val scopeBuildVersion = scope.agentKey.buildVersion
+    if (scopeBuildVersion == buildVersion) {
         calculateAndSendBuildCoverage()
         activeScope.probesChanged()
     }
-    sendScopes(scope.buildVersion)
-    sendScopeSummary(scope.summary, scope.buildVersion)
+    sendScopes(scopeBuildVersion)
+    sendScopeSummary(scope.summary, scopeBuildVersion)
 }

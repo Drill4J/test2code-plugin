@@ -3,9 +3,10 @@ package com.epam.drill.plugins.test2code.jvm
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.storage.*
 import org.jacoco.core.internal.data.*
 
-fun Map<String, ByteArray>.parseClassBytes(buildVersion: String): ClassData = run {
+fun Map<String, ByteArray>.parseClassBytes(agentKey: AgentKey): ClassData = run {
     val probeIds: Map<String, Long> = mapValues { CRC64.classId(it.value) }
     val bundleCoverage = keys.bundle(this, probeIds)
     val sortedPackages = bundleCoverage.packages.asSequence().run {
@@ -31,5 +32,5 @@ fun Map<String, ByteArray>.parseClassBytes(buildVersion: String): ClassData = ru
         totalMethodCount = groupedMethods.values.sumOf { it.count() },
         totalClassCount = packages.sumOf { it.totalClassesCount },
         packages = packages
-    ).toClassData(buildVersion, methods, probeIds)
+    ).toClassData(agentKey, methods, probeIds)
 }

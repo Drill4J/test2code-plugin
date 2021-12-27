@@ -18,7 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
-import com.epam.drill.plugins.test2code.jvm.LAMBDA
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
@@ -46,7 +46,7 @@ data class Method(
 
 @Serializable
 internal data class LambdaHash(
-    @Id val buildVersion: String,
+    @Id val agentKey: AgentKey,
     val hash: Map<String, Map<String, String>> = emptyMap(),
 )
 

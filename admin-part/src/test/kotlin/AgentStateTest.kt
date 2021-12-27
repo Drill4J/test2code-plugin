@@ -20,7 +20,6 @@ import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.coroutines.*
 import kotlin.test.*
-import kotlin.test.Test
 
 class AgentStateTest: PostgresBased("agent_state") {
 
@@ -94,11 +93,11 @@ class AgentStateTest: PostgresBased("agent_state") {
             initialized()
             storeBuild()
             assertEquals(version2, toggleBaseline())
-            assertEquals(version1, coverContext().parentBuild?.version)
+            assertEquals(version1, coverContext().parentBuild?.agentKey?.buildVersion)
         }
         AgentState(storeClient, agentInfo.copy(buildVersion = version2), adminData).apply {
             initialized()
-            assertEquals(version1, coverContext().parentBuild?.version)
+            assertEquals(version1, coverContext().parentBuild?.agentKey?.buildVersion)
         }
         Unit
     }
