@@ -24,9 +24,10 @@ import com.epam.drill.plugins.test2code.util.*
 
 abstract class PluginTest : PostgresBased("plugin") {
 
+    val agentId = "ag"
     private val agentInfo = AgentInfo(
-        id = "ag",
-        name = "ag",
+        id = agentId,
+        name = agentId,
         description = "",
         buildVersion = "0.1.0",
         agentType = "JAVA",

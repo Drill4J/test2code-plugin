@@ -1,5 +1,6 @@
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.storage.*
 import kotlinx.coroutines.*
 import kotlin.test.*
 
@@ -10,7 +11,7 @@ class TestToRunSummaryTest : PluginTest() {
         val plugin = initPlugin(version1)
         assertTrue(
             plugin.storeClient.loadTestsToRunSummary(
-                buildVersion = version1
+                agentKey = AgentKey(agentId, version1)
             ).isEmpty()
         )
 
@@ -18,7 +19,7 @@ class TestToRunSummaryTest : PluginTest() {
         val plugin2 = initPlugin(version2)
         assertTrue(
             plugin2.storeClient.loadTestsToRunSummary(
-                buildVersion = version2,
+                agentKey = AgentKey(agentId, version2),
                 parentVersion = version1
             ).isEmpty()
         )
@@ -34,11 +35,11 @@ class TestToRunSummaryTest : PluginTest() {
         val currentVersion = "0.3.0"
         val plugin3 = initPlugin(currentVersion)
         val testsToRunSummary = plugin3.storeClient.loadTestsToRunSummary(
-            buildVersion = currentVersion,
+            agentKey = AgentKey(agentId, currentVersion),
             parentVersion = version1
         )
         assertEquals(1, testsToRunSummary.size)
-        assertEquals(version2, testsToRunSummary.first().buildVersion)
+        assertEquals(version2, testsToRunSummary.first().agentKey.buildVersion)
         assertEquals(version1, testsToRunSummary.first().parentVersion)
     }
 
@@ -52,7 +53,7 @@ class TestToRunSummaryTest : PluginTest() {
         val plugin4 = initPlugin(currentVersion)
 
         val testsToRunSummaries = plugin4.storeClient.loadTestsToRunSummary(
-            buildVersion = currentVersion,
+            agentKey = AgentKey(agentId, currentVersion),
             parentVersion = version1
         )
         assertEquals(2, testsToRunSummaries.size)

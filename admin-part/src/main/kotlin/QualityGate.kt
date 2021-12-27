@@ -78,7 +78,7 @@ internal suspend fun Plugin.updateGateConditions(
         storeClient.executeInAsyncTransaction {
             conditionSettings.forEach { setting ->
                 val measure = setting.condition.measure
-                val id = QualityGateData.IdByAgent(agentInfo.id, measure)
+                val id = QualityGateData.IdByAgent(agentId, measure)
                 store(QualityGateData.AgentSetting(id, setting), storeClient.schema)
             }
         }

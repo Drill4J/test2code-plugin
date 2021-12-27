@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
@@ -31,7 +32,7 @@ data class TestsToRunStats(
 
 @Serializable
 internal data class TestsToRunSummary(
-    @Id val buildVersion: String,
+    @Id val agentKey: AgentKey,
     val parentVersion: String = "",
     val lastModifiedAt: Long = 0L,
     val stats: TestsToRunStats = TestsToRunStats(),
@@ -49,7 +50,7 @@ private fun CoverContext.toTestsToRunStats(
 )
 
 internal fun CoverContext.toTestsToRunSummary(): TestsToRunSummary = TestsToRunSummary(
-    buildVersion = build.version,
+    agentKey = build.agentKey,
     parentVersion = build.parentVersion,
     lastModifiedAt = currentTimeMillis(),
     stats = toTestsToRunStats(testsToRunParentDurations.all),
@@ -69,14 +70,14 @@ private fun TestsToRunStats.toTestsToRunStatsDto() = TestsToRunStatsDto(
 )
 
 internal fun TestsToRunSummary.toTestsToRunSummaryDto() = TestsToRunSummaryDto(
-    buildVersion = buildVersion,
+    buildVersion = agentKey.buildVersion,
     stats = stats.toTestsToRunStatsDto(),
     statsByType = statsByType.mapValues { it.value.toTestsToRunStatsDto() }
 )
 
 internal suspend fun StoreClient.loadTestsToRunSummary(
-    buildVersion: String,
+    agentKey: AgentKey,
     parentVersion: String = "",
 ): List<TestsToRunSummary> = getAll<TestsToRunSummary>()
-    .filter { it.parentVersion == parentVersion && it.buildVersion != buildVersion }
+    .filter { it.parentVersion == parentVersion && it.agentKey != agentKey }
     .sortedBy { it.lastModifiedAt }

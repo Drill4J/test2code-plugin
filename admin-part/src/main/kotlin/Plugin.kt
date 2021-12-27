@@ -58,23 +58,23 @@ class Plugin(
     companion object {
         val json = Json { encodeDefaults = true }
     }
+    val agentId = agentInfo.id
+    val buildVersion = agentInfo.buildVersion
 
-    internal val logger = logger(agentInfo.id)
+    internal val logger = logger(agentId)
 
     internal val runtimeConfig = RuntimeConfig(id)
 
     internal val state: AgentState get() = _state.value!!
 
-    val buildVersion = agentInfo.buildVersion
-
     val activeScope: ActiveScope get() = state.activeScope
 
-    private val agentId = agentInfo.id
+    private val agentKey = AgentKey(agentId, buildVersion)
 
     private val _state = atomic<AgentState?>(null)
 
     override suspend fun initialize() {
-        logger.debug { "agent(id=$id, version=$buildVersion) initializing from admin..." }
+        logger.debug { "$agentKey initializing from admin..." }
         changeState()
         state.loadFromDb {
             processInitialized()
@@ -86,8 +86,8 @@ class Plugin(
     }
 
     override suspend fun applyPackagesChanges() {
-        state.scopeManager.deleteByVersion(buildVersion)
-        storeClient.removeClassData(buildVersion)
+        state.scopeManager.deleteByVersion(agentKey)
+        storeClient.removeClassData(agentKey)
         changeState()
     }
 
@@ -105,8 +105,8 @@ class Plugin(
         is ToggleScope -> toggleScope(action.payload.scopeId)
         is RemoveBuild -> {
             val version = action.payload.version
-            if (version != buildVersion && version != state.coverContext().parentBuild?.version) {
-                storeClient.removeBuildData(version, state.scopeManager)
+            if (version != buildVersion && version != state.coverContext().parentBuild?.agentKey?.buildVersion) {
+                storeClient.removeBuildData(AgentKey(agentId, version), state.scopeManager)
                 ActionResult(code = StatusCodes.OK, data = "")
             } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Can not remove a current or baseline build")
         }
@@ -287,14 +287,14 @@ class Plugin(
         sendBaseline()
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
-        sendScopes(buildVersion)
+        sendScopes()
         return initActiveScope() && initBundleHandler()
     }
 
     private suspend fun sendParentBuild() = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Parent),
-        message = state.coverContext().parentBuild?.version?.let(::BuildVersionDto) ?: ""
+        message = state.coverContext().parentBuild?.agentKey?.buildVersion?.let(::BuildVersionDto) ?: ""
     )
 
     internal suspend fun sendBaseline() = send(
@@ -308,7 +308,7 @@ class Plugin(
         destination = Routes.Build().let(Routes.Build::TestsToRun)
             .let(Routes.Build.TestsToRun::ParentTestsToRunStats),
         message = state.storeClient.loadTestsToRunSummary(
-            buildVersion = buildVersion,
+            agentKey = agentKey,
             parentVersion = state.coverContext().build.parentVersion
         ).map { it.toTestsToRunSummaryDto() }
     )
@@ -319,7 +319,7 @@ class Plugin(
 
     private suspend fun calculateAndSendCachedCoverage() = state.coverContext().build.let { build ->
         val scopes = state.scopeManager.byVersion(
-            buildVersion, withData = true
+            agentKey, withData = true
         )
         state.updateProbes(scopes.enabled())
         val coverContext = state.coverContext()
@@ -333,7 +333,7 @@ class Plugin(
         }
     }
 
-    internal suspend fun sendScopeMessages(buildVersion: String = this.buildVersion) {
+    internal suspend fun sendScopeMessages(buildVersion: String) {
         sendActiveScope()
         sendScopes(buildVersion)
     }
@@ -380,7 +380,7 @@ class Plugin(
     }
 
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        val scopes = state.scopeManager.byVersion(buildVersion)
+        val scopes = state.scopeManager.byVersion(AgentKey(id, buildVersion))
         sendScopes(buildVersion, scopes)
     }
 
@@ -398,7 +398,7 @@ class Plugin(
 
     internal suspend fun calculateAndSendBuildCoverage() {
         val scopes = state.scopeManager.run {
-            byVersion(buildVersion, withData = true).enabled()
+            byVersion(agentKey, withData = true).enabled()
         }
         scopes.calculateAndSendBuildCoverage(state.coverContext())
     }
@@ -599,7 +599,7 @@ class Plugin(
     }
 
     internal suspend fun send(buildVersion: String, destination: Any, message: Any) {
-        sender.send(AgentSendContext(agentInfo.id, buildVersion), destination, message)
+        sender.send(AgentSendContext(agentId, buildVersion), destination, message)
     }
 
     private suspend fun Plugin.sendAgentAction(message: AgentAction) {
@@ -607,7 +607,7 @@ class Plugin(
     }
 
     private fun changeState() {
-        logger.debug { "agent(id=$agentId, version=$buildVersion) changing state..." }
+        logger.debug { "$agentKey changing state..." }
         _state.getAndUpdate {
             AgentState(
                 storeClient = storeClient,
