@@ -19,7 +19,7 @@ class BaselineTest : PluginTest() {
 
         val plugin2 = initPlugin("0.2.0")
 
-        assertEquals(version, plugin2.state.coverContext().parentBuild?.version)
+        assertEquals(version, plugin2.state.coverContext().parentBuild?.agentKey?.buildVersion)
         assertEquals(StatusCodes.OK, plugin2.toggleBaseline().code)
         assertEquals(StatusCodes.OK, plugin2.toggleBaseline().code)
     }
@@ -43,7 +43,7 @@ class BaselineTest : PluginTest() {
         assertEquals(StatusCodes.OK, plugin2.toggleBaseline().code)
 
         plugin2.initialize()
-        assertEquals(version1, plugin2.state.coverContext().parentBuild?.version)
+        assertEquals(version1, plugin2.state.coverContext().parentBuild?.agentKey?.buildVersion)
     }
 
     @Test
@@ -55,7 +55,7 @@ class BaselineTest : PluginTest() {
         assertEquals(StatusCodes.OK, plugin2.toggleBaseline().code)
 
         plugin.initialize()
-        assertEquals(version2, plugin.state.coverContext().parentBuild?.version)
+        assertEquals(version2, plugin.state.coverContext().parentBuild?.agentKey?.buildVersion)
         assertEquals(StatusCodes.OK, plugin.toggleBaseline().code)
     }
 
@@ -69,13 +69,13 @@ class BaselineTest : PluginTest() {
         assertEquals(StatusCodes.OK, plugin2.toggleBaseline().code)
 
         val plugin3 = initPlugin("0.3.0")
-        assertEquals(version2, plugin3.state.coverContext().parentBuild?.version)
+        assertEquals(version2, plugin3.state.coverContext().parentBuild?.agentKey?.buildVersion)
 
         plugin2.initialize()
         assertEquals(StatusCodes.OK, plugin2.toggleBaseline().code)
 
         plugin3.initialize()
-        assertEquals(version1, plugin3.state.coverContext().parentBuild?.version)
+        assertEquals(version1, plugin3.state.coverContext().parentBuild?.agentKey?.buildVersion)
     }
 
 }

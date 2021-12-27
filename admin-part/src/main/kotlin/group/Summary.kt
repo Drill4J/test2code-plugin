@@ -76,7 +76,7 @@ internal fun CachedBuild.toSummary(
     parentCoverageCount: Count? = null,
 ): AgentSummary = AgentSummary(
     name = agentName,
-    buildVersion = version,
+    buildVersion = agentKey.buildVersion,
     coverage = stats.coverage,
     methodCount = stats.methodCount,
     coverageByType = stats.coverageByType,

@@ -3,6 +3,7 @@ package com.epam.drill.plugins.test2code.perf
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import kotlinx.coroutines.*
 import org.junit.jupiter.api.*
 import kotlin.random.*
@@ -48,7 +49,7 @@ class PerformanceTest : PluginTest() {
         finishedSession(plugin, "sessionId2", countAddProbes)
         val res = plugin.changeActiveScope(ActiveScopeChangePayload("new scope", true))
         val scopes = plugin.state.scopeManager.run {
-            byVersion(buildVersion, withData = true)
+            byVersion(AgentKey(agentId, buildVersion), withData = true)
         }
         assertEquals(200, res.code)
         assertEquals(2, scopes.first().data.sessions.size)
