@@ -16,8 +16,6 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.logger
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
@@ -28,15 +26,15 @@ fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
 class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byVersion(
-        buildVersion: String,
+        agentKey: AgentKey,
         withData: Boolean = false,
     ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
         storage.findBy<FinishedScope> {
-            FinishedScope::buildVersion eq buildVersion
+            FinishedScope::agentKey eq agentKey
         }.run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
-                    storage.findBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }.takeIf { it.any() }
+                    storage.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.takeIf { it.any() }
                 }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
@@ -49,7 +47,7 @@ class ScopeManager(private val storage: StoreClient) {
             trackTime("Store FinishedScope") {
                 store(scope.copy(data = ScopeData.empty), storage.schema)
                 scope.takeIf { it.any() }?.let {
-                    store(ScopeDataEntity(it.id, it.buildVersion, it.data), storage.schema)
+                    store(ScopeDataEntity(it.id, it.agentKey, it.data), storage.schema)
                 }
             }
         }
@@ -63,11 +61,11 @@ class ScopeManager(private val storage: StoreClient) {
         }
     }
 
-    suspend fun deleteByVersion(buildVersion: String) {
+    suspend fun deleteByVersion(agentKey: AgentKey) {
         storage.executeInAsyncTransaction {
             //todo make in one transaction in DSM. EPMDJ-9090
-            storage.deleteBy<FinishedScope> { FinishedScope::buildVersion eq buildVersion }
-            storage.deleteBy<ScopeDataEntity> { ScopeDataEntity::buildVersion eq buildVersion }
+            storage.deleteBy<FinishedScope> { FinishedScope::agentKey eq agentKey }
+            storage.deleteBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }
         }
     }
 
@@ -82,7 +80,7 @@ class ScopeManager(private val storage: StoreClient) {
         } ?: findById(scopeId)
     }
 
-    internal suspend fun counter(buildVersion: String): ActiveScopeInfo? = storage.findById(buildVersion)
+    internal suspend fun counter(agentKey: AgentKey): ActiveScopeInfo? = storage.findById(agentKey)
 
     internal suspend fun storeCounter(activeScopeInfo: ActiveScopeInfo) = storage.store(activeScopeInfo)
 }
@@ -91,7 +89,7 @@ class ScopeManager(private val storage: StoreClient) {
 @StreamSerialization
 internal class ScopeDataEntity(
     @Id val id: String,
-    val buildVersion: String,
+    val agentKey: AgentKey,
     val bytes: ScopeData,
 )
 

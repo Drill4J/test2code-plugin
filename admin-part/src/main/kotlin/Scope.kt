@@ -19,6 +19,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.kodux.util.*
@@ -31,7 +32,7 @@ import kotlin.jvm.Transient
 
 interface Scope : Sequence<FinishedSession> {
     val id: String
-    val buildVersion: String
+    val agentKey: AgentKey
     val name: String
     val summary: ScopeSummary
 }
@@ -46,7 +47,7 @@ typealias BundleCacheHandler = suspend ActiveScope.(Map<TypedTest, Sequence<Exec
 
 class ActiveScope(
     override val id: String = genUuid(),
-    override val buildVersion: String,
+    override val agentKey: AgentKey,
     val nth: Int = 1,
     name: String = "$DEFAULT_SCOPE_NAME $nth".weakIntern(),
     sessions: List<FinishedSession> = emptyList(),
@@ -138,7 +139,7 @@ class ActiveScope(
 
     fun finish(enabled: Boolean) = FinishedScope(
         id = id,
-        buildVersion = buildVersion,
+        agentKey = agentKey,
         name = summary.name,
         enabled = enabled,
         summary = summary.copy(
@@ -268,7 +269,7 @@ data class ScopeData(
 @Serializable
 data class FinishedScope(
     @Id override val id: String,
-    override val buildVersion: String,
+    override val agentKey: AgentKey,
     override val name: String,
     override val summary: ScopeSummary,
     val enabled: Boolean,
@@ -281,7 +282,7 @@ data class FinishedScope(
 
 @Serializable
 internal data class ActiveScopeInfo(
-    @Id val buildVersion: String,
+    @Id val agentKey: AgentKey,
     val id: String = genUuid(),
     val nth: Int = 1,
     val name: String = "",

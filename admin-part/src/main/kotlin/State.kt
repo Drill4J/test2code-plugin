@@ -25,8 +25,6 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
-import org.jacoco.core.internal.data.*
-import java.util.stream.*
 
 /**
  * Agent state.
@@ -56,9 +54,10 @@ internal class AgentState(
 
     private val _coverContext = atomic<CoverContext?>(null)
 
+    private val agentKey = AgentKey(agentInfo.id, agentInfo.buildVersion)
     private val _activeScope = atomic(
         ActiveScope(
-            buildVersion = agentInfo.buildVersion,
+            agentKey = agentKey,
         )
     )
 
@@ -72,7 +71,7 @@ internal class AgentState(
 
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
-        storeClient.loadClassData(agentInfo.buildVersion)?.let { classData ->
+        storeClient.loadClassData(agentKey)?.let { classData ->
             logger.debug { "take from DB count methods ${classData.methods.size}" }
             _data.value = classData
             initialized(classData)
@@ -95,7 +94,7 @@ internal class AgentState(
         _data.getAndUpdate {
             when (it) {
                 is ClassData -> it
-                else -> ClassData(agentInfo.buildVersion)
+                else -> ClassData(agentKey)
             }
         }.takeIf { it !is ClassData }?.also { data ->
             val classData = when (data) {
@@ -115,12 +114,12 @@ internal class AgentState(
                         totalMethodCount = count(),
                         totalClassCount = packages.sumOf { it.totalClassesCount },
                         packages = packages
-                    ).toClassData(buildVersion = agentInfo.buildVersion, methods = methods)
+                    ).toClassData(agentKey, methods = methods)
                 }
                 is NoData -> {
                     val classBytes = adminData.loadClassBytes(agentInfo.buildVersion)
                     logger.info { "initializing noData with classBytes size ${classBytes.size}..." }
-                    classBytes.parseClassBytes(agentInfo.buildVersion)
+                    classBytes.parseClassBytes(agentKey)
                 }
                 else -> data
             } as ClassData
@@ -131,9 +130,8 @@ internal class AgentState(
     }
 
     private suspend fun initialized(classData: ClassData) {
-        val buildVersion = agentInfo.buildVersion
-        val build: CachedBuild = storeClient.loadBuild(buildVersion) ?: CachedBuild(buildVersion)
-        val probes = scopeManager.byVersion(buildVersion, withData = true)
+        val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
+        val probes = scopeManager.byVersion(agentKey, withData = true)
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
             packageTree = classData.packageTree,
@@ -143,8 +141,9 @@ internal class AgentState(
         )
         _coverContext.value = coverContext
         updateProbes(probes)
-        val agentId = agentInfo.id
-        logger.debug { "agent(id=$agentId, version=$buildVersion) initializing..." }
+        val agentId = agentKey.agentId
+        val buildVersion = agentKey.buildVersion
+        logger.debug { "$agentKey initializing..." }
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
             logger.debug { "(buildVersion=$buildVersion) Current baseline=$baseline." }
             val parentVersion = when (baseline.version) {
@@ -152,9 +151,9 @@ internal class AgentState(
                 else -> baseline.version
             }.takeIf(String::any)
             logger.debug { "ParentVersion=$parentVersion." }
-            parentVersion?.let { storeClient.loadClassData(it) }?.let { parentClassData ->
+            parentVersion?.let { storeClient.loadClassData(AgentKey(agentInfo.id, it)) }?.let { parentClassData ->
                 val methodChanges = classData.methods.diff(parentClassData.methods)
-                val parentBuild = storeClient.loadBuild(parentVersion)?.run {
+                val parentBuild = storeClient.loadBuild(AgentKey(agentId, parentVersion))?.run {
                     baseline.parentVersion.takeIf(String::any)?.let {
                         copy(parentVersion = it)
                     } ?: this
@@ -195,7 +194,13 @@ internal class AgentState(
     ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
         if (it.any()) {
             logger.debug { "FinishSession. size of exec data = ${it.probes.size}" }.also { logPoolStats() }
-            trackTime("session storing") { storeClient.storeSession(activeScope.id, it) }
+            trackTime("session storing") {
+                storeClient.storeSession(
+                    activeScope.id,
+                    agentKey,
+                    it
+                )
+            }
             logger.debug { "Session $sessionId finished." }.also { logPoolStats() }
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
         if (activeScope.activeSessions.isEmpty()) {
@@ -260,7 +265,7 @@ internal class AgentState(
 
     suspend fun scopeByName(name: String): Scope? = when (name) {
         activeScope.name -> activeScope
-        else -> scopeManager.byVersion(agentInfo.buildVersion).firstOrNull { it.name == name }
+        else -> scopeManager.byVersion(agentKey).firstOrNull { it.name == name }
     }
 
     suspend fun scopeById(id: String): Scope? = when (id) {
@@ -280,7 +285,7 @@ internal class AgentState(
                 ActiveScope(
                     id = id,
                     nth = nth,
-                    buildVersion = agentInfo.buildVersion,
+                    agentKey = agentKey,
                     name = name,
                     sessions = sessions,
                 ).apply {
@@ -296,17 +301,17 @@ internal class AgentState(
         ActiveScope(
             nth = it.nth.inc(),
             name = scopeName(name),
-            buildVersion = agentInfo.buildVersion,
+            agentKey = agentKey,
         )
     }.apply { close() }
 
-    private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentInfo.buildVersion)
+    private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentKey)
 
     suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
         scopeManager.storeCounter(
             activeScope.run {
                 ActiveScopeInfo(
-                    buildVersion = buildVersion,
+                    agentKey = AgentKey(agentInfo.id, agentKey.buildVersion),
                     id = id,
                     nth = nth,
                     name = name,

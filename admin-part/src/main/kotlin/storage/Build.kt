@@ -16,7 +16,6 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
@@ -25,28 +24,28 @@ import kotlinx.serialization.*
 @Serializable
 @StreamSerialization
 internal class StoredClassData(
-    @Id val version: String,
+    @Id val agentKey: AgentKey,
     val data: ClassData,
 )
 
 @Serializable
 @StreamSerialization
 internal class StoredBundles(
-    @Id val version: String,
+    @Id val agentKey: AgentKey,
     val data: BundleCounters,
 )
 
 @Serializable
 @StreamSerialization
 class StoredBuildTests(
-    @Id val version: String,
+    @Id val agentKey: AgentKey,
     val data: BuildTests,
 )
 
 internal suspend fun StoreClient.loadClassData(
-    version: String,
-): ClassData? = findById<StoredClassData>(version)?.run {
-    val lambdaHash = findById(version) ?: LambdaHash(version)
+    agentKey: AgentKey,
+): ClassData? = findById<StoredClassData>(agentKey)?.run {
+    val lambdaHash = findById(agentKey) ?: LambdaHash(agentKey)
     data.copy(methods = data.methods.map {
         it.copy(
             lambdasHash = lambdaHash.hash[it.key] ?: emptyMap(),
@@ -59,22 +58,22 @@ internal suspend fun ClassData.store(storage: StoreClient) {
         val hash = methods.mapNotNull { method ->
             method.takeIf { it.lambdasHash.any() }?.let { it.key to it.lambdasHash }
         }.toMap()
-        storage.store(StoredClassData(buildVersion, this))
-        storage.store(LambdaHash(buildVersion, hash))
+        storage.store(StoredClassData(agentKey, this))
+        storage.store(LambdaHash(agentKey, hash))
     }
 }
 
-internal suspend fun StoreClient.removeClassData(version: String) = deleteById<StoredClassData>(version)
+internal suspend fun StoreClient.removeClassData(agentKey: AgentKey) = deleteById<StoredClassData>(agentKey)
 
 internal suspend fun StoreClient.loadBuild(
-    version: String,
-): CachedBuild? = findById<BuildStats>(version)?.let { stats ->
+    agentKey: AgentKey,
+): CachedBuild? = findById<BuildStats>(agentKey)?.let { stats ->
     trackTime("Load build") {
         CachedBuild(
-            version = version,
+            agentKey = agentKey,
             stats = stats,
-            bundleCounters = findById<StoredBundles>(version)?.data ?: BundleCounters.empty,
-            tests = findById<StoredBuildTests>(version)?.data ?: BuildTests()
+            bundleCounters = findById<StoredBundles>(agentKey)?.data ?: BundleCounters.empty,
+            tests = findById<StoredBuildTests>(agentKey)?.data ?: BuildTests()
         )
     }
 }
@@ -85,31 +84,31 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
             val schema = storage.schema
             store(stats, schema)
             trackTime("Store build bundles") {
-                store(StoredBundles(version, bundleCounters), schema)
+                store(StoredBundles(agentKey, bundleCounters), schema)
             }
             trackTime("Store build tests") {
-                store(StoredBuildTests(version, tests), schema)
+                store(StoredBuildTests(agentKey, tests), schema)
             }
         }
     }
 }
 
 internal suspend fun StoreClient.removeBuild(
-    version: String,
+    agentKey: AgentKey,
 ) = executeInAsyncTransaction {
-    deleteById<BuildStats>(version)
-    deleteById<StoredBundles>(version)
-    deleteById<StoredBuildTests>(version)
+    deleteById<BuildStats>(agentKey)
+    deleteById<StoredBundles>(agentKey)
+    deleteById<StoredBuildTests>(agentKey)
 }
 
 
 internal suspend fun StoreClient.removeBuildData(
-    buildVersion: String,
+    agentKey: AgentKey,
     scopeManager: ScopeManager,
 ) = executeInAsyncTransaction {
-    logger.debug { "starting to remove build '$buildVersion' data..." }
-    removeClassData(buildVersion)
-    removeBuild(buildVersion)
-    scopeManager.deleteByVersion(buildVersion)
+    logger.debug { "starting to remove build '$agentKey' data..." }
+    removeClassData(agentKey)
+    removeBuild(agentKey)
+    scopeManager.deleteByVersion(agentKey)
 }
 

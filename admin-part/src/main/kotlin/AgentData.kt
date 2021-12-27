@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.dsm.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
@@ -55,7 +56,7 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
  */
 @Serializable
 data class ClassData(
-    @Id val buildVersion: String,
+    @Id val agentKey: AgentKey,
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),
     val probeIds: Map<String, Long> = emptyMap()
@@ -64,17 +65,17 @@ data class ClassData(
         private val emptyPackageTree = PackageTree()
     }
 
-    override fun equals(other: Any?) = other is ClassData && buildVersion == other.buildVersion
+    override fun equals(other: Any?) = other is ClassData && agentKey == other.agentKey
 
-    override fun hashCode() = buildVersion.hashCode()
+    override fun hashCode() = agentKey.hashCode()
 }
 
 fun PackageTree.toClassData(
-    buildVersion: String,
+    agentKey: AgentKey,
     methods: List<Method>,
     probeIds: Map<String, Long> = emptyMap()
 ) = ClassData(
-    buildVersion = buildVersion,
+    agentKey = agentKey,
     packageTree = this,
     methods = methods,
     probeIds = probeIds
