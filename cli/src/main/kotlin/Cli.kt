@@ -1,6 +1,7 @@
 package com.epam.drill.plugins.test2code.cli
 
 import com.epam.drill.plugins.test2code.jvm.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.github.ajalt.clikt.core.*
 import com.github.ajalt.clikt.parameters.options.*
 import java.io.*
@@ -20,7 +21,7 @@ private class ClassParse : CliktCommand() {
         files.forEach { file ->
             file.scan(packages) { classname, bytes -> classBytes[classname] = bytes }
         }
-        val parsed = classBytes.parseClassBytes("")
+        val parsed = classBytes.parseClassBytes(AgentKey("", ""))
         val outputValue = """
              classCount: ${parsed.packageTree.totalClassCount}
              methodCount: ${parsed.packageTree.totalMethodCount}

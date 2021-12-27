@@ -16,15 +16,25 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
 
 @Serializable
+data class AgentKey(
+    val agentId: String,
+    val buildVersion: String,
+) : Comparable<AgentKey> {
+    override fun compareTo(other: AgentKey): Int = run {
+        agentId.compareTo(other.agentId).takeIf { it != 0 } ?: buildVersion.compareTo(other.buildVersion)
+    }
+}
+
+@Serializable
 @StreamSerialization
 internal class StoredSession(
     @Id val id: String,
+    val agentKey: AgentKey,
     val scopeId: String,
     val data: FinishedSession,
 )
@@ -39,12 +49,14 @@ internal suspend fun StoreClient.loadSessions(
 
 internal suspend fun StoreClient.storeSession(
     scopeId: String,
+    agentKey: AgentKey,
     session: FinishedSession,
 ) {
     trackTime("Store session") {
         store(
             StoredSession(
                 id = genUuid(),
+                agentKey = agentKey,
                 scopeId = scopeId,
                 data = session
             )

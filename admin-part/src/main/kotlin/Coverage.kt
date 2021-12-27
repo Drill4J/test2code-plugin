@@ -21,6 +21,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.util.*
 import kotlinx.collections.immutable.*
@@ -37,7 +38,7 @@ internal fun Sequence<Session>.calcBundleCounters(
     cache: Map<TestKey, BundleCounter> = emptyMap(),
 ) = run {
     logger.trace {
-        "CalcBundleCounters for ${context.build.version} sessions(size=${this.toList().size}, ids=${
+        "CalcBundleCounters for ${context.build.agentKey} sessions(size=${this.toList().size}, ids=${
             this.toList().map { it.id + " " }
         })..."
     }
@@ -225,17 +226,17 @@ internal fun BundleCounters.associatedTests(
     bundle.coverageKeys(onlyPackages).map { it to typedTest }.distinct()
 }.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
-internal suspend fun Plugin.exportCoverage(buildVersion: String) = runCatching {
+internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatching {
     val coverage = File(System.getProperty("java.io.tmpdir"))
         .resolve("jacoco.exec")
     coverage.outputStream().use { outputStream ->
         val executionDataWriter = ExecutionDataWriter(outputStream)
-        val classBytes = adminData.loadClassBytes(buildVersion)
-        val allFinishedScopes = state.scopeManager.byVersion(buildVersion, true)
+        val classBytes = adminData.loadClassBytes(exportBuildVersion)
+        val allFinishedScopes = state.scopeManager.byVersion(AgentKey(agentId, exportBuildVersion), true)
         allFinishedScopes.filter { it.enabled }.flatMap { finishedScope ->
             finishedScope.data.sessions.flatMap { it.probes }
         }.writeCoverage(executionDataWriter, classBytes)
-        if (buildVersion == buildVersion) {
+        if (buildVersion == exportBuildVersion) {
             activeScope.flatMap {
                 it.probes
             }.writeCoverage(executionDataWriter, classBytes)
