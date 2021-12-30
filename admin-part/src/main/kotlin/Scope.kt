@@ -28,7 +28,6 @@ import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import java.lang.ref.*
-import kotlin.jvm.Transient
 
 interface Scope : Sequence<FinishedSession> {
     val id: String
