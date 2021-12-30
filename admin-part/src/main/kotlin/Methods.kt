@@ -22,7 +22,6 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
-import kotlin.jvm.Transient
 
 @Serializable
 data class Method(
