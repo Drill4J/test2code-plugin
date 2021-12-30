@@ -14,6 +14,7 @@ configurations.implementation {
 
 val drillDsmVersion: String by extra
 val testContainerVersion: String by project
+val muLogger: String by project
 kotlin.sourceSets.all {
     languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
     languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
@@ -40,14 +41,13 @@ dependencies {
     //provided by admin
     //TODO create a platform for admin dependencies
     implementation("com.epam.drill:dsm:$drillDsmVersion")
-    implementation("com.epam.drill:kodux")
-    implementation("org.jetbrains.xodus:xodus-entity-store")
+    //TODO replace with drill logging - EPMDJ-9548
+    implementation("io.github.microutils:kotlin-logging-jvm:$muLogger")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
-    testImplementation("org.slf4j:slf4j-simple:1.7.32")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
 }
 

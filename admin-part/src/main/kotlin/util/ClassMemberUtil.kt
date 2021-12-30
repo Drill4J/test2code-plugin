@@ -15,7 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.util
 
-import com.epam.kodux.util.*
+import com.epam.dsm.util.*
 
 fun fullClassname(path: String, className: String): String = "$path/$className".weakIntern()
 

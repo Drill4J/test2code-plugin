@@ -46,9 +46,6 @@ dependencies {
     testImplementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
     testImplementation("org.javassist:javassist:+")
 
-    testImplementation("com.epam.drill:kodux")
-    testImplementation("org.jetbrains.xodus:xodus-entity-store")
-
     testImplementation("org.jacoco:org.jacoco.core")
     testImplementation("org.apache.bcel:bcel")
     testImplementation("org.jetbrains.kotlinx:atomicfu")

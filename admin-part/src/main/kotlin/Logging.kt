@@ -15,7 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.kodux.util.*
+import com.epam.dsm.util.*
 import mu.*
 
 private val packagePrefix: String = ::logger::class.qualifiedName?.run {
