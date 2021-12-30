@@ -23,7 +23,7 @@ import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
-import com.epam.kodux.util.*
+import com.epam.dsm.util.*
 import kotlinx.atomicfu.*
 
 /**

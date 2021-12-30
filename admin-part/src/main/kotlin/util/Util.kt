@@ -15,12 +15,10 @@
  */
 package com.epam.drill.plugins.test2code.util
 
-import com.epam.kodux.util.*
-import kotlinx.coroutines.*
+import com.epam.dsm.util.*
 import org.jacoco.core.internal.data.*
 import java.net.*
 import java.util.*
-import java.util.concurrent.*
 
 fun currentTimeMillis() = System.currentTimeMillis()
 
