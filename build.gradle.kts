@@ -17,8 +17,6 @@ val ktorVersion: String by project
 val coroutinesVersion: String by project
 val kxSerializationVersion: String by project
 val kxCollectionsVersion: String by project
-val koduxVersion: String by extra
-val xodusVersion: String by extra
 val zstdVersion: String by extra
 val jacocoVersion: String by extra
 val bcelVersion: String by extra
@@ -57,8 +55,6 @@ subprojects {
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable:$kxCollectionsVersion",
         "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
-        "com.epam.drill:kodux:$koduxVersion",
-        "org.jetbrains.xodus:xodus-entity-store:$xodusVersion",
         "io.ktor:ktor-locations:$ktorVersion",
         "com.github.luben:zstd-jni:$zstdVersion",
         "org.jacoco:org.jacoco.core:$jacocoVersion",
