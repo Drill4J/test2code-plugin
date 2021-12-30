@@ -18,7 +18,7 @@ package com.epam.drill.plugins.test2code.jvm
 import com.epam.drill.plugins.test2code.Method
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.util.*
+import com.epam.dsm.util.*
 import org.apache.bcel.classfile.*
 import java.io.*
 

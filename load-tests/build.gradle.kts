@@ -57,9 +57,6 @@ dependencies {
     testImplementation(ktor("client-cio"))
     testImplementation(ktor("serialization"))
 
-    testImplementation("com.epam.drill:kodux")
-    testImplementation("org.jetbrains.xodus:xodus-entity-store")
-
     testImplementation("org.jacoco:org.jacoco.core")
     testImplementation("org.apache.bcel:bcel")
 

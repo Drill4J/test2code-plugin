@@ -57,9 +57,6 @@ dependencies {
     implementation(ktor("client-cio"))
     implementation(ktor("serialization"))
 
-    implementation("com.epam.drill:kodux")
-    implementation("org.jetbrains.xodus:xodus-entity-store")
-
     implementation("org.jacoco:org.jacoco.core")
     implementation("org.apache.bcel:bcel")
     implementation("org.jetbrains.kotlinx:atomicfu")

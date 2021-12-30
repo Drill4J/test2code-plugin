@@ -18,7 +18,7 @@ package com.epam.drill.plugins.test2code.coverage
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.kodux.util.*
+import com.epam.dsm.util.*
 
 internal fun Sequence<ExecClassData>.bundle(
     tree: PackageTree
