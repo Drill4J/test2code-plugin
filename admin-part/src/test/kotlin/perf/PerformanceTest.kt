@@ -5,12 +5,10 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.storage.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.*
 import kotlin.random.*
 import kotlin.test.*
 import kotlin.test.Test
 
-@Disabled//todo EPMDJ-9090 StreamSerialization
 class PerformanceTest : PluginTest() {
 
     @Test
@@ -36,10 +34,10 @@ class PerformanceTest : PluginTest() {
     fun `should finish scope with 2 session and takes probes`() = runBlocking {
         switchScopeWithProbes()
     }
-
+    //TODO EPMDJ-9621 Increase probe count after
     @Test
     fun `perf check! should finish scope with 2 session and takes probes`() = runBlocking {
-        switchScopeWithProbes(800)
+        switchScopeWithProbes(20)
     }
 
     private suspend fun switchScopeWithProbes(countAddProbes: Int = 1) {
@@ -100,13 +98,5 @@ class PerformanceTest : PluginTest() {
     }
 
     private fun randomBoolean(n: Int = 100) = (0 until n).map { Random.nextBoolean() }.toBitSet()
-
-
-//    @Test
-//    fun `performance test`() = runBlocking {
-//        val plugin: Plugin = initPlugin("0.1.0")
-//        plugin
-//    }
-
 
 }
