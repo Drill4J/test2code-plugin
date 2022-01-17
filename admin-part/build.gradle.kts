@@ -40,15 +40,15 @@ dependencies {
 
     //provided by admin
     //TODO create a platform for admin dependencies
-    implementation("com.epam.drill:dsm:$drillDsmVersion")
+    implementation("com.epam.drill.dsm:core:$drillDsmVersion")
     //TODO replace with drill logging - EPMDJ-9548
     implementation("io.github.microutils:kotlin-logging-jvm:$muLogger")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
     testImplementation(kotlin("test-junit5"))
+    testImplementation("com.epam.drill.dsm:test-framework:$drillDsmVersion")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
-    testImplementation("org.testcontainers:postgresql:$testContainerVersion")
 }
 
 tasks {
