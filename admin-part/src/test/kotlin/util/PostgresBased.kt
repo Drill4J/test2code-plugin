@@ -16,24 +16,16 @@
 package com.epam.drill.plugins.test2code.util
 
 import com.epam.dsm.*
-import com.epam.dsm.util.test.*
-import org.jetbrains.exposed.sql.transactions.*
+import com.epam.dsm.test.*
 import org.junit.jupiter.api.*
 import kotlin.test.*
 
 abstract class PostgresBased(private val schema: String) {
     val storeClient = StoreClient(schema)
 
-    @BeforeTest
-    fun before() {
-        transaction {
-            exec("CREATE SCHEMA IF NOT EXISTS $schema")
-        }
-    }
-
     @AfterTest
     fun after() {
-        TestDatabaseContainer.clearData(listOf(schema))
+        TestDatabaseContainer.clearData()
     }
 
     companion object {
