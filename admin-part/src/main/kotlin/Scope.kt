@@ -202,17 +202,17 @@ class ActiveScope(
     fun cancelSession(
         sessionId: String,
     ): ActiveSession? = removeSession(sessionId)?.also {
+        clearBundleCache()
         if (it.any()) {
             _change.value = Change.ALL
         } else sessionsChanged()
     }
 
-    fun cancelAllSessions() {
-        activeSessions.clear().also { map ->
-            if (map.values.any { it.any() }) {
-                _change.value = Change.ALL
-            } else sessionsChanged()
-        }
+    fun cancelAllSessions() = activeSessions.clear().also { map ->
+        clearBundleCache()
+        if (map.values.any { it.any() }) {
+            _change.value = Change.ALL
+        } else sessionsChanged()
     }
 
     fun finishSession(
@@ -245,6 +245,8 @@ class ActiveScope(
             }
         }
     }
+
+    private fun clearBundleCache() = _bundleByTests.update { SoftReference(persistentMapOf()) }
 
     private fun removeSession(id: String): ActiveSession? = activeSessions.run {
         if (this[""]?.id == id) {
