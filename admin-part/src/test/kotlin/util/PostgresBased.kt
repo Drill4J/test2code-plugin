@@ -20,8 +20,8 @@ import com.epam.dsm.test.*
 import org.junit.jupiter.api.*
 import kotlin.test.*
 
-abstract class PostgresBased(private val schema: String) {
-    val storeClient = StoreClient(schema)
+abstract class PostgresBased(schema: String) {
+    val storeClient = StoreClient(TestDatabaseContainer.createDataSource(schema = schema))
 
     @AfterTest
     fun after() {
