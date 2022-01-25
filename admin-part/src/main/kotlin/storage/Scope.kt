@@ -30,12 +30,12 @@ class ScopeManager(private val storage: StoreClient) {
         withData: Boolean = false,
     ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
         val transaction = this
-        transaction.findBy<FinishedScope>(storage.schema) {
+        transaction.findBy<FinishedScope> {
             FinishedScope::agentKey eq agentKey
         }.run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
-                    transaction.findBy<ScopeDataEntity>(storage.schema) { ScopeDataEntity::agentKey eq agentKey }.takeIf { it.any() }
+                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.takeIf { it.any() }
                 }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
@@ -46,26 +46,25 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
             trackTime("Store FinishedScope") {
-                store(scope.copy(data = ScopeData.empty), storage.schema)
+                store(scope.copy(data = ScopeData.empty))
                 scope.takeIf { it.any() }?.let {
-                    store(ScopeDataEntity(it.id, it.agentKey, it.data), storage.schema)
+                    store(ScopeDataEntity(it.id, it.agentKey, it.data))
                 }
             }
         }
     }
 
     suspend fun deleteById(scopeId: String): FinishedScope? = storage.executeInAsyncTransaction {
-        val schema = storage.schema
-        findById<FinishedScope>(id = scopeId, schema = schema)?.also {
-            this.deleteById<FinishedScope>(schema, scopeId)
-            this.deleteById<ScopeDataEntity>(schema, scopeId)
+        findById<FinishedScope>(id = scopeId)?.also {
+            this.deleteById<FinishedScope>(scopeId)
+            this.deleteById<ScopeDataEntity>(scopeId)
         }
     }
 
     suspend fun deleteByVersion(agentKey: AgentKey) {
         storage.executeInAsyncTransaction {
-            deleteBy<FinishedScope>(storage.schema) { FinishedScope::agentKey eq agentKey }
-            deleteBy<ScopeDataEntity>(storage.schema) { ScopeDataEntity::agentKey eq agentKey }
+            deleteBy<FinishedScope> { FinishedScope::agentKey eq agentKey }
+            deleteBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }
         }
     }
 
