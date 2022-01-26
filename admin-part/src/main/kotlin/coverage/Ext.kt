@@ -22,6 +22,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 import java.util.stream.*
 import kotlin.math.*
+import kotlinx.serialization.*
 
 internal fun ExecClassData.id(): Long = id ?: className.crc64()
 

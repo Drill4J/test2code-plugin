@@ -25,6 +25,10 @@ import kotlin.test.*
 
 class JsCoverageTest : PostgresBased("js_coverage") {
 
+    private val autoTestType = "AUTO"
+
+    private val manualTestType = "MANUAL"
+
     @Test
     fun `coverageData for active scope with custom js probes`() {
         runBlocking {
