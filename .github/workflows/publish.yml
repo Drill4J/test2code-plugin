@@ -31,11 +31,11 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-#     TODO doesn't work for macos
-#      - name: Test
-#        uses: eskatos/gradle-command-action@v1
-#        with:
-#          arguments: -s test
+      - name: Test
+        uses: eskatos/gradle-command-action@v1
+        if: ${{ matrix.config.preset == 'linuxX64' }}
+        with:
+          arguments: -s test
       - name: Publish test report to artifact
         uses: actions/upload-artifact@v2
         if: failure()
