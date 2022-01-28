@@ -49,10 +49,10 @@ class PerformanceTest : PluginTest() {
     fun `should finish scope with 2 session and takes probes`() = runBlocking {
         switchScopeWithProbes()
     }
-    //TODO EPMDJ-9621 Increase probe count after
+
     @Test
     fun `perf check! should finish scope with 2 session and takes probes`() = runBlocking {
-        switchScopeWithProbes(20)
+        switchScopeWithProbes(800)
     }
 
     private suspend fun switchScopeWithProbes(countAddProbes: Int = 1) {
