@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 EPAM Systems
+ * Copyright 2020 - 2022 EPAM Systems
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ class UtilTest {
 
     @Test
     fun `urlDecode - cyrillic characters`() {
-        val input = "пример названия теста 1"
+        val input = "пример названи�? те�?та 1"
         val encoded = URLEncoder.encode(input, Charsets.UTF_8.name())
         val decoded = encoded.urlDecode()
         assertEquals(input, decoded)
