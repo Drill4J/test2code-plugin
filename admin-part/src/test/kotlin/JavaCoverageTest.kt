@@ -51,9 +51,9 @@ class JavaCoverageTest : PluginTest() {
     }
 
     @Test
-    fun `coverageData for active scope with auto session and filter results`() {
+    fun `should filter coverage when auto session has several tests`() {
         runBlocking {
-            val (coverageData, context) = runAutoSession(passedTest = "test1")
+            val (coverageData, context) = runAutoSessionWithTwoTests(firstTest = "test1")
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
                 assertTrue(coverage.percentage > 0.0)
@@ -71,7 +71,7 @@ class JavaCoverageTest : PluginTest() {
     @Test
     fun `coverageData for active scope with auto and complex filter`() {
         runBlocking {
-            val (coverageData, context) = runAutoSession(passedTest = "test1")
+            val (coverageData, context) = runAutoSessionWithTwoTests(firstTest = "test1")
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
                 assertTrue(coverage.percentage > 0.0)
@@ -89,7 +89,7 @@ class JavaCoverageTest : PluginTest() {
     @Test
     fun `coverageData for active scope with auto and filter with null value`() {
         runBlocking {
-            val (coverageData, context) = runAutoSession(passedTest = "test1")
+            val (coverageData, context) = runAutoSessionWithTwoTests(firstTest = "test1")
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
                 assertTrue(coverage.percentage > 0.0)
@@ -104,13 +104,13 @@ class JavaCoverageTest : PluginTest() {
         }
     }
 
-    private suspend fun runAutoSession(
+    private suspend fun runAutoSessionWithTwoTests(
         sessionId: String = genUuid(),
-        passedTest: String,
+        firstTest: String,
     ) = calculateCoverage(sessionId) {
         val session: ActiveSession? = startSession(sessionId = sessionId, testType = AUTO_TEST_TYPE)
         this.execSession(
-            testName = passedTest,
+            testName = firstTest,
             sessionId = sessionId,
             testType = AUTO_TEST_TYPE,
             session,
@@ -134,7 +134,7 @@ class JavaCoverageTest : PluginTest() {
 
     private suspend fun calculateCoverage(
         sessionId: String,
-        addProbes: suspend ActiveScope.() -> Unit
+        addProbes: suspend ActiveScope.() -> Unit,
     ): Pair<CoverageInfoSet, CoverContext> {
         val plugin = initPlugin("0.1.0", classEmptyBody)
         plugin.initialize()
@@ -156,17 +156,20 @@ class JavaCoverageTest : PluginTest() {
         testType: String,
         session: ActiveSession? = null,
         result: TestResult = TestResult.PASSED,
-        block: suspend ActiveScope.(String) -> Unit
+        block: suspend ActiveScope.(String) -> Unit,
     ) {
         val startSessionNew = session ?: startSession(sessionId = sessionId, testType = testType)
         block(sessionId)
         startSessionNew?.addTests(
             listOf(
                 TestInfo(
-                    name = testName,
+                    id = testName.hashCode().toString(),//like crc32
                     result = result,
                     startedAt = 0,
                     finishedAt = 0,
+                    details = TestDetails(
+                        testName = testName
+                    )
                 )
             )
         )
@@ -182,7 +185,7 @@ class JavaCoverageTest : PluginTest() {
     ) {
         val all = storeClient.getAll<StoredSession>()
         assertEquals(expectedSessionSize, all.size)
-        val testOverview = all.first().data.testsOverview
+        val testOverview = all.first().data.tests
         assertEquals(2, testOverview.size)
 
         val agentId = "ag"
