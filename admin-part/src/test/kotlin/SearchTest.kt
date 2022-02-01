@@ -24,6 +24,30 @@ import kotlin.test.Test
 class SearchTest {
 
     @Test
+    fun `should get enum default value by field`() {
+        val field = "result"
+        val readInstanceProperty = readInstanceProperty(TestOverview.empty, field)
+        println(readInstanceProperty)
+
+        assertEquals("PASSED", readInstanceProperty.toString())
+    }
+
+    @Test
+    fun `should get int default value by field`() {
+        val field = "duration"
+
+        val readInstanceProperty = readInstanceProperty(TestOverview.empty, field)
+        assertEquals("0", readInstanceProperty.toString())
+    }
+
+    //todo Is it need??
+    @Disabled("not implement")
+    @Test
+    fun `should get default value from inner field`(){
+        val field = "details->path"
+
+    }
+    @Test
     fun `should split list of tests into SQL`() {
         val tests = listOf("test1", "test2")
         assertEquals("'test1', 'test2'", tests.toSqlIn())
@@ -34,17 +58,17 @@ class SearchTest {
     fun `should create where query when use FieldFilter`() {
         val value = "PASSED"
         val field = "details"
-        assertEquals("AND \"$field\" = '$value'", FieldFilter(field, value = value).toSql())
+        assertEquals("AND \"$field\" = '$value'", TestOverviewFilter(field, value = value).toSql())
     }
 
     @Test
-    fun `should create where query when use FieldFilter few fields`() {
+    fun `should create where query when use FieldFilter with few fields`() {
         val value = "PASSED"
         val field = "details"
         val field2 = "testName"
         assertEquals(
             "AND \"$field\" ->> '$field2' = '$value'",
-            FieldFilter("$field->$field2", value = value).toSql()
+            TestOverviewFilter("$field$delimiterForWayToObject$field2", value = value).toSql()
         )
     }
 
@@ -59,7 +83,7 @@ class SearchTest {
 
         assertEquals(
             "AND \"$field\" -> '$field2' ->> '$field3' = '$value'",
-            FieldFilter("$field->$field2->$field3", value = value).toSql()
+            TestOverviewFilter("$field->$field2->$field3", value = value).toSql()
         )
     }
 }

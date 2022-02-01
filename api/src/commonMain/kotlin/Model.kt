@@ -119,14 +119,18 @@ data class ScopePayload(val scopeId: String = "")
 @Serializable
 data class FilterCoveragePayload(
     val buildVersion: String = "",//todo EPMDJ-8824 use the filter by buildVersion
-    val filters: List<FieldFilter>,
+    val filters: List<TestOverviewFilter>,
 )
 
 enum class FieldOp { EQ, CONTAINS }
 const val delimiterForWayToObject = "->"
 
+/**
+ * @see TestOverview filter for this class.
+ * @param field
+ */
 @Serializable
-data class FieldFilter(
+data class TestOverviewFilter(
     val field: String,
     val value: String,
     val op: FieldOp = FieldOp.EQ,

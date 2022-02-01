@@ -42,7 +42,7 @@ val autoProbesWithPartCoverage = listOf(
     ExecClassData(
         id = CRC64.classId(emptyBodyBytes),
         className = fullNameClass,
-        testName = "test1",
+        testId = "test1".hashCode().toString(),
         probes = probesOf(false, true, false, false)
     )
 )
@@ -50,7 +50,7 @@ val autoProbesWithFullCoverage = listOf(
     ExecClassData(
         id = CRC64.classId(emptyBodyBytes),
         className = fullNameClass,
-        testName = "test2",
+        testId = "test2".hashCode().toString(),
         probes = probesOf(true, true, true, true)
     )
 )

@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.TestResult.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
@@ -61,7 +62,7 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = FieldFilter("result", value = "PASSED"),
+                filter = TestOverviewFilter("result", value = "PASSED"),
                 expectedProbes = autoProbesWithPartCoverage,
                 expectedCoverage = 25.0
             )
@@ -79,7 +80,7 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = FieldFilter("typedTest->name", value = "test2"),
+                filter = TestOverviewFilter("details->testName", value = "test2"),
                 expectedProbes = autoProbesWithFullCoverage,
                 expectedCoverage = 100.0
             )
@@ -97,7 +98,7 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = FieldFilter("details->engine", value = ""),
+                filter = TestOverviewFilter("details->engine", value = ""),
                 expectedProbes = emptyList(),
                 expectedCoverage = 0.0,
             )
@@ -121,7 +122,8 @@ class JavaCoverageTest : PluginTest() {
             testName = "test2",
             sessionId = sessionId,
             testType = AUTO_TEST_TYPE,
-            session,
+            session = session,
+            result = FAILED,
         ) { sessionId ->
             addProbes(sessionId) { autoProbesWithFullCoverage }
         }
@@ -155,7 +157,7 @@ class JavaCoverageTest : PluginTest() {
         sessionId: String,
         testType: String,
         session: ActiveSession? = null,
-        result: TestResult = TestResult.PASSED,
+        result: TestResult = PASSED,
         block: suspend ActiveScope.(String) -> Unit,
     ) {
         val startSessionNew = session ?: startSession(sessionId = sessionId, testType = testType)
@@ -178,7 +180,7 @@ class JavaCoverageTest : PluginTest() {
 
     private suspend fun filterAndCalculateCoverage(
         context: CoverContext,
-        filter: FieldFilter,
+        filter: TestOverviewFilter,
         expectedProbes: List<ExecClassData>,
         expectedCoverage: Double,
         expectedSessionSize: Int = 1,
@@ -194,7 +196,7 @@ class JavaCoverageTest : PluginTest() {
         val probes = findProbesByFilter(
             storeClient,
             AgentKey(agentId, buildVersion),
-            fieldFilter = listOf(filter)
+            testOverviewFilter = listOf(filter)
         )
 
         assertEquals(expectedProbes, probes)

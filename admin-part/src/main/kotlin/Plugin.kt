@@ -416,15 +416,15 @@ class Plugin(
      * @see calculateAndSendBuildCoverage
      */
     private suspend fun calculateFilteredCoverageInBuild(
-        fieldFilter: List<FieldFilter>
+        testOverviewFilter: List<TestOverviewFilter>
     ): String {
-        logger.debug { "starting to calculate coverage by $fieldFilter..." }
+        logger.debug { "starting to calculate coverage by $testOverviewFilter..." }
         val context = state.coverContext()
 
         val probes = findProbesByFilter(
             storeClient = storeClient,
             agentKey = AgentKey(agentId, buildVersion),
-            fieldFilter = fieldFilter,
+            testOverviewFilter = testOverviewFilter,
         )
         logger.debug { "found ${probes.size} probes by filter" }
         val bundleCounters = probes.asSequence().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
@@ -439,7 +439,7 @@ class Plugin(
         val coverageByTests = coverageInfoSet.coverageByTests
         //for example: coverage
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage)
-        val coverageId = fieldFilter.hashCode().toString()
+        val coverageId = testOverviewFilter.hashCode().toString()
         Routes.Build().let { buildRoute ->
             val coverageRoute = Routes.Build.Coverage(buildRoute)
             send(buildVersion, coverageRoute, buildCoverage, coverageId)
