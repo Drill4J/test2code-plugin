@@ -472,6 +472,7 @@ class Plugin(
         send(buildVersion, Routes.Build.Risks(buildRoute), context.risksDto())
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
         val testsToRunSummary = context.toTestsToRunSummary()
+        testsToRunSummary.sendTotalSavedTime()
         state.storeClient.store(testsToRunSummary)
         Routes.Build.Summary(buildRoute).let {
             send(buildVersion, Routes.Build.Summary.TestsToRun(it), testsToRunSummary.toTestsToRunSummaryDto())
