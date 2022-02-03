@@ -63,6 +63,8 @@ dependencies {
     implementation("org.apache.bcel:bcel")
     implementation("org.jetbrains.kotlinx:atomicfu")
 
+//    TODO how did it work before and check?
+    implementation("org.flywaydb:flyway-core:8.4.1")
     testImplementation(project(":tests"))
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")

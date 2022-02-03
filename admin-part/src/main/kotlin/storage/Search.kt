@@ -40,57 +40,78 @@ private suspend fun findTests(
     storeClient: StoreClient,
     agentKey: AgentKey,
     testOverviewFilter: List<TestOverviewFilter>,
-): List<String> {
-    val tests = storeClient.findInList<StoredSession, String>(
-        whatReturn = "to_jsonb(\"testId\")",
-        listWay = "'data' -> 'tests'",
-        listDescription = "items(result text, \"testId\" text, details jsonb) ",
-        where = "where json_body -> 'agentKey' ->> 'agentId' = '${agentKey.agentId}' " +
-                "AND json_body -> 'agentKey' ->> 'buildVersion' = '${agentKey.buildVersion}' ${testOverviewFilter.toSql()}",
-    )
-    //todo refactor with apply
-    logger.debug { "for $agentKey with filter '$testOverviewFilter' found tests: $tests" }
-    return tests
+): List<String> = storeClient.findInList<StoredSession, String>(
+    whatReturn = "to_jsonb(\"testId\")",
+    listWay = "'data' -> 'tests'",
+    listDescription = "items(result text, \"testId\" text, details jsonb) ",
+    where = "where json_body -> 'agentKey' ->> 'agentId' = '${agentKey.agentId}' " +
+            "AND json_body -> 'agentKey' ->> 'buildVersion' = '${agentKey.buildVersion}' ${testOverviewFilter.toSql()}",
+).apply {
+    logger.debug { "for $agentKey with filter '$testOverviewFilter' found tests: $this" }
 }
 
-fun List<TestOverviewFilter>.toSql(): String {
-    val string: StringBuilder = StringBuilder()
-    this.forEach {
-        string.append(it.toSql())
+
+fun List<TestOverviewFilter>.toSql(): String = run {
+    val filterSql = StringBuilder()
+    forEach {
+        filterSql.append(" AND ${it.toSql()}")
     }
-    return string.toString()
+    logger.debug { "sql for filters: $filterSql" }
+    filterSql.toString()
 }
 
 fun TestOverviewFilter.toSql(): String {
-    val wayToObject = field.split(delimiterForWayToObject)
-    val newField = when (wayToObject.size) {
-        1 -> wayToObject.joinToString(prefix = "AND \"", postfix = "\"")
-        2 -> wayToObject.joinToString(prefix = "AND \"", separator = "\" ->> '", postfix = "'")
-        else -> throw RuntimeException("not implemented for size ${wayToObject.size}")//todo EPMDJ-8824
-    }
-    if (wayToObject.size == 1) {
-        val fieldDefaultValue = readInstanceProperty(TestOverview.empty, field)
-        if (fieldDefaultValue.toString() == value) {
-            return "$newField is null"
-        }//todo refactoring
-    }
-    val sql = when (op) {
-        FieldOp.EQ -> "$newField = '$value'"
-        else -> {
-            logger.warn { "does not exist this operation $op" }
-            throw RuntimeException("not implemented $op")//todo EPMDJ-8824 new operations
+    val wayToObject: List<String> = fieldPath.split(delimiterForWayToObject)
+    val field = toSqlPathField(wayToObject)
+
+    val defaultField = readInstanceProperty(TestOverview.empty, wayToObject).toString()
+    val sql = StringBuilder("")
+    values.forEachIndexed { index, it ->
+        if (index > 0) {
+            sql.append(" $valuesOp ")
+        }
+        if (defaultField == it.value) {
+            sql.append("$field is null")
+        } else {
+            when (it.op) {
+                FieldOp.EQ -> sql.append("$field = '${it.value}'")
+                else -> {
+                    logger.warn { "does not exist this operation ${it.op}" }
+                    throw RuntimeException("not implemented ${it.op}")//todo EPMDJ-8975 new operations
+                }
+            }
         }
     }
-    logger.debug { "sql filter: $sql" }
-    return sql
+    val finalSql = if (values.size > 1) "($sql)" else sql
+    logger.debug { "sql filter by one filter: $finalSql" }
+    return finalSql.toString()
+}
+
+private fun toSqlPathField(wayToObject: List<String>): String {
+    val field = when (wayToObject.size) {
+        1 -> wayToObject.joinToString(prefix = "\"", postfix = "\"")
+        2 -> wayToObject.joinToString(prefix = "\"", separator = "\" ->> '", postfix = "'")
+        else -> throw RuntimeException("not implemented for size ${wayToObject.size}")//todo EPMDJ-8975
+    }
+    return field
 }
 
 @Suppress("UNCHECKED_CAST")
-fun readInstanceProperty(instance: Any, propertyName: String): Any? {
+fun readInstanceProperty(instance: Any, propertyName: String): Any {
     val property = instance::class.members
         // don't cast here to <Any, R>, it would succeed silently
         .first { it.name == propertyName } as KProperty1<Any, *>
-    return property.get(instance)
+    return property.get(instance) ?: ""
+}
+
+@Suppress("UNCHECKED_CAST")
+fun readInstanceProperty(instance: Any, properties: List<String>): Any {
+    //todo or recursive?
+    var temp: Any = instance
+    properties.forEach {
+        temp = readInstanceProperty(temp, it)
+    }
+    return temp
 }
 
 private suspend fun findAutoProbes(

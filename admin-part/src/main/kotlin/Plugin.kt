@@ -104,9 +104,9 @@ class Plugin(
         is SwitchActiveScope -> changeActiveScope(action.payload)
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
-        is FilterCoverage -> {
-            val coverageId = calculateFilteredCoverageInBuild(action.payload.filters)
-            ActionResult(code = StatusCodes.OK, data = coverageId)
+        is CreateFilter -> {
+            val filterId = calculateAndSendFilteredCoverageInBuild(action.payload.attributes)
+            ActionResult(code = StatusCodes.OK, data = filterId)
         }
         is RemoveBuild -> {
             val version = action.payload.version
@@ -415,7 +415,7 @@ class Plugin(
      * like:
      * @see calculateAndSendBuildCoverage
      */
-    private suspend fun calculateFilteredCoverageInBuild(
+    private suspend fun calculateAndSendFilteredCoverageInBuild(
         testOverviewFilter: List<TestOverviewFilter>
     ): String {
         logger.debug { "starting to calculate coverage by $testOverviewFilter..." }
@@ -440,9 +440,15 @@ class Plugin(
         //for example: coverage
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage)
         val coverageId = testOverviewFilter.hashCode().toString()
+
+        /**
+         * @see sendBuildCoverage
+         * //todo risks, test2run,
+         */
         Routes.Build().let { buildRoute ->
             val coverageRoute = Routes.Build.Coverage(buildRoute)
             send(buildVersion, coverageRoute, buildCoverage, coverageId)
+
         }
         return coverageId
     }
@@ -650,8 +656,8 @@ class Plugin(
         }
     }
 
-    internal suspend fun send(buildVersion: String, destination: Any, message: Any, coverageId: String = "") {
-        sender.send(AgentSendContext(agentId, buildVersion, coverageId), destination, message)
+    internal suspend fun send(buildVersion: String, destination: Any, message: Any, filterId: String = "") {
+        sender.send(AgentSendContext(agentId, buildVersion, filterId), destination, message)
     }
 
     private suspend fun Plugin.sendAgentAction(message: AgentAction) {

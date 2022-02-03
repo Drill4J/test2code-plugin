@@ -79,7 +79,7 @@ internal fun Sequence<Session>.calcBundleCounters(
 
 fun Sequence<ExecClassData>.calcBundleCounters(context: CoverContext, classBytes: Map<String, ByteArray>) = run {
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
-    //todo EPMDJ-8824 add by tests type etc.
+    //todo EPMDJ-8975 add by tests type etc.
     val execClassData = this
     BundleCounters(
         all = execClassData.bundle(context, classBytes),

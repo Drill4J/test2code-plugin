@@ -117,24 +117,51 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "")
 
 @Serializable
-data class FilterCoveragePayload(
-    val buildVersion: String = "",//todo EPMDJ-8824 use the filter by buildVersion
-    val filters: List<TestOverviewFilter>,
+data class FilterPayload(
+    val name: String,
+    val attributes: List<TestOverviewFilter>,
+    val attributesOp: BetweenOp = BetweenOp.AND,//only AND for this
+    val buildVersion: String = "",//todo EPMDJ-8975 use the filter by buildVersion
 )
 
-enum class FieldOp { EQ, CONTAINS }
+enum class BetweenOp { AND, OR }
+
 const val delimiterForWayToObject = "->"
 
 /**
  * @see TestOverview filter for this class.
- * @param field
+ * @param fieldPath - name of the field. If it nested object then use the delimiterForWayToObject
+ * Example: details->testName
  */
 @Serializable
 data class TestOverviewFilter(
-    val field: String,
+    val fieldPath: String,
+    val values: List<FilterValue>,
+    val valuesOp: BetweenOp = BetweenOp.OR,
+)
+
+@Serializable
+data class FilterValue(
     val value: String,
     val op: FieldOp = FieldOp.EQ,
 )
+
+enum class FieldOp { EQ, CONTAINS }
+
+@Serializable
+data class DeleteFilterPayload(
+    val name: String, //todo what pass better?
+    val id: String,
+)
+
+
+//todo add topics.
+//1) read filters. name&filterId
+//2) get filter
+// /filters/{filterId}
+//3) Get from current build attributes and values
+// - attributes - all names
+// - attribute/{name}/values - all values.
 
 @Serializable
 data class BuildPayload(val version: String)

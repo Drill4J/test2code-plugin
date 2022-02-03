@@ -72,9 +72,17 @@ data class RenameScope(val payload: RenameScopePayload) : Action()
 @Serializable
 data class ToggleScope(val payload: ScopePayload) : Action()
 
-@SerialName("FILTER_COVERAGE")
+@SerialName("CREATE_FILTER")
 @Serializable
-data class FilterCoverage(val payload: FilterCoveragePayload) : Action()
+data class CreateFilter(val payload: FilterPayload) : Action()
+
+@SerialName("UPDATE_FILTER")
+@Serializable
+data class UpdateFilter(val payload: FilterPayload) : Action()
+
+@SerialName("DELETE_FILTER")
+@Serializable
+data class DeleteFilter(val payload: DeleteFilterPayload) : Action()
 
 @SerialName("DROP_SCOPE")
 @Serializable

@@ -33,6 +33,18 @@ class Routes {
 
     @Location("/build")
     class Build {
+        @Location("/filters")
+        class Filters(val build: Build) {
+            @Location("/{id}/attributes")
+            class FilterAttributes(val filters: Filters, val id: String)
+        }
+
+        @Location("/attributes")
+        class Attributes(val coverage: Build) {
+            @Location("/{name}/values")
+            class AttributeValues(val attributes: Attributes, val name: String)
+        }
+
         @Location("/coverage")
         class Coverage(val build: Build) {
             @Location("/packages")

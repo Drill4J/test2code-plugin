@@ -23,30 +23,37 @@ import kotlin.test.Test
 
 class SearchTest {
 
+    private val testOverviewResult = "result"
+    private val testOverviewDuration = "duration"
+
+    //default values
     @Test
     fun `should get enum default value by field`() {
-        val field = "result"
-        val readInstanceProperty = readInstanceProperty(TestOverview.empty, field)
-        println(readInstanceProperty)
-
-        assertEquals("PASSED", readInstanceProperty.toString())
+        val result = readInstanceProperty(TestOverview.empty, testOverviewResult)
+        assertEquals("PASSED", result.toString())
     }
 
     @Test
     fun `should get int default value by field`() {
-        val field = "duration"
-
-        val readInstanceProperty = readInstanceProperty(TestOverview.empty, field)
-        assertEquals("0", readInstanceProperty.toString())
+        val result = readInstanceProperty(TestOverview.empty, testOverviewDuration)
+        assertEquals("0", result.toString())
     }
 
-    //todo Is it need??
-    @Disabled("not implement")
     @Test
-    fun `should get default value from inner field`(){
-        val field = "details->path"
+    fun `should get string default value by nested field`() {
+        val result = readInstanceProperty(TestOverview.empty, listOf("details", "path"))
 
+        assertEquals("", result.toString())
     }
+
+    @Test
+    fun `should get string default value by nested field testName`() {
+        val result = readInstanceProperty(TestOverview.empty, listOf("details", "testName"))
+
+        assertEquals(DEFAULT_TEST_NAME, result.toString())
+    }
+
+
     @Test
     fun `should split list of tests into SQL`() {
         val tests = listOf("test1", "test2")
@@ -54,36 +61,64 @@ class SearchTest {
         assertEquals("'test1'", listOf("test1").toSqlIn())
     }
 
+    // TestOverviewFilter
     @Test
-    fun `should create where query when use FieldFilter`() {
-        val value = "PASSED"
-        val field = "details"
-        assertEquals("AND \"$field\" = '$value'", TestOverviewFilter(field, value = value).toSql())
+    fun `should create where query when TestOverviewFilter has one value`() {
+        val value = "SKIPPED"
+        val testOverviewFilter = TestOverviewFilter(fieldPath = testOverviewResult, values = listOf(FilterValue(value)))
+        assertEquals("\"$testOverviewResult\" = '$value'", testOverviewFilter.toSql())
     }
 
     @Test
-    fun `should create where query when use FieldFilter with few fields`() {
+    fun `should create where query when TestOverviewFilter has nested field`() {
         val value = "PASSED"
         val field = "details"
         val field2 = "testName"
         assertEquals(
-            "AND \"$field\" ->> '$field2' = '$value'",
-            TestOverviewFilter("$field$delimiterForWayToObject$field2", value = value).toSql()
+            "\"$field\" ->> '$field2' = '$value'",
+            TestOverviewFilter("$field$delimiterForWayToObject$field2", values = listOf(FilterValue(value))).toSql()
         )
+    }
+
+    @Test
+    fun `should create where query when TestOverviewFilter has few values`() {
+        val value = "FAILED"
+        val value2 = "SKIPPED"
+        val filter = TestOverviewFilter(testOverviewResult, values = listOf(FilterValue(value), FilterValue(value2)))
+        assertEquals("(\"$testOverviewResult\" = '$value' OR \"$testOverviewResult\" = '$value2')", filter.toSql())
     }
 
     //todo
     @Disabled
     @Test
-    fun `should create where query when use FieldFilter three fields`() {
+    fun `should create where query when nested three fields`() {
         val value = "PASSED"
         val field = "details"
         val field2 = "params"
         val field3 = "smth"
 
         assertEquals(
-            "AND \"$field\" -> '$field2' ->> '$field3' = '$value'",
-            TestOverviewFilter("$field->$field2->$field3", value = value).toSql()
+            "\"$field\" -> '$field2' ->> '$field3' = '$value'",
+            TestOverviewFilter("$field->$field2->$field3", values = listOf(FilterValue(value))).toSql()
         )
+    }
+
+    @Test
+    fun `should create sql when list TestOverviewFilter has one element`() {
+        val value = "PASSED"
+        val field = "details"
+        val filter1 = TestOverviewFilter(fieldPath = field, values = listOf(FilterValue(value)))
+        assertEquals(" AND \"$field\" = '$value'", listOf(filter1).toSql())
+    }
+
+    @Test
+    fun `should create sql when list TestOverviewFilter has few elements`() {
+        val field = "details"
+        val value = "PASSED"
+
+        val value2 = "23"
+        val filter1 = TestOverviewFilter(fieldPath = field, values = listOf(FilterValue(value)))
+        val filter2 = TestOverviewFilter(fieldPath = testOverviewDuration, values = listOf(FilterValue(value2)))
+        assertEquals(" AND \"$field\" = '$value' AND \"$testOverviewDuration\" = '$value2'", listOf(filter1, filter2).toSql())
     }
 }

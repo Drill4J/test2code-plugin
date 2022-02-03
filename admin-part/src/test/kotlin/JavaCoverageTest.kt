@@ -33,7 +33,7 @@ class JavaCoverageTest : PluginTest() {
     }
 
     @Test
-    fun `coverageData for active scope with manual`() = runBlocking {
+    fun `should collect coverageData when manual session`() = runBlocking {
         val sessionId = genUuid()
         val (coverageData, _) = calculateCoverage(sessionId) {
             this.execSession("test", sessionId, "MANUAL") { sessionId ->
@@ -57,12 +57,12 @@ class JavaCoverageTest : PluginTest() {
             val (coverageData, context) = runAutoSessionWithTwoTests(firstTest = "test1")
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
-                assertTrue(coverage.percentage > 0.0)
+                assertEquals(100.0, coverage.percentage)
             }
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result", value = "PASSED"),
+                filter = TestOverviewFilter("result", values = listOf(FilterValue("PASSED"))),
                 expectedProbes = autoProbesWithPartCoverage,
                 expectedCoverage = 25.0
             )
@@ -70,17 +70,18 @@ class JavaCoverageTest : PluginTest() {
     }
 
     @Test
-    fun `coverageData for active scope with auto and complex filter`() {
+    fun `should filter coverage when filter has nested query`() {
         runBlocking {
             val (coverageData, context) = runAutoSessionWithTwoTests(firstTest = "test1")
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
+                assertEquals(100.0, coverage.percentage)
                 assertTrue(coverage.percentage > 0.0)
             }
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("details->testName", value = "test2"),
+                filter = TestOverviewFilter("details->testName", values = listOf(FilterValue("test2"))),
                 expectedProbes = autoProbesWithFullCoverage,
                 expectedCoverage = 100.0
             )
@@ -88,17 +89,17 @@ class JavaCoverageTest : PluginTest() {
     }
 
     @Test
-    fun `coverageData for active scope with auto and filter with null value`() {
+    fun `should get 0 coverage when filter does not math any probes`() {
         runBlocking {
             val (coverageData, context) = runAutoSessionWithTwoTests(firstTest = "test1")
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
-                assertTrue(coverage.percentage > 0.0)
+                assertEquals(100.0, coverage.percentage)
             }
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("details->engine", value = ""),
+                filter = TestOverviewFilter("details->engine", values = listOf(FilterValue("does not exist"))),
                 expectedProbes = emptyList(),
                 expectedCoverage = 0.0,
             )
