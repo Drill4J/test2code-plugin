@@ -90,6 +90,7 @@ tasks {
         useJUnitPlatform()
         systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
         systemProperty("drill.plugins.test2code.features.realtime", false)
+        environment("analytic.disable", true)
         mustRunAfter(test)
     }
 

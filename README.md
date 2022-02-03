@@ -1,3 +1,8 @@
+> **DISCLAIMER**: We use Google Analytics for sending anonymous usage information such as total time saved by tests.
+> This information might help us to improve both Drill4J backend and client sides. It is used by the
+> Drill4J team only and is not supposed for sharing with 3rd parties.
+> You are able to turn off by setting environment variable 'analytic.disable'.
+
 [![Check](https://github.com/Drill4J/test2code-plugin/actions/workflows/check.yml/badge.svg)](https://github.com/Drill4J/test2code-plugin/actions/workflows/check.yml)
 [![Release](https://github.com/Drill4J/test2code-plugin/actions/workflows/release.yml/badge.svg)](https://github.com/Drill4J/test2code-plugin/actions/workflows/release.yml)
 [![Publish](https://github.com/Drill4J/test2code-plugin/actions/workflows/publish.yml/badge.svg)](https://github.com/Drill4J/test2code-plugin/actions/workflows/publish.yml)
