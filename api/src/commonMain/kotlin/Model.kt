@@ -117,6 +117,50 @@ data class RenameScopePayload(
 data class ScopePayload(val scopeId: String = "")
 
 @Serializable
+data class FilterPayload(
+    val name: String,
+    val attributes: List<TestOverviewFilter>,
+    //now use only AND here:
+    val attributesOp: BetweenOp = BetweenOp.AND,
+    val buildVersion: String = "",//todo EPMDJ-8975 use the filter by buildVersion
+)
+
+@Serializable
+data class ApplyPayload(
+    val name: String,
+    val buildVersion: String = "",//todo EPMDJ-8975 use the filter by buildVersion
+)
+
+enum class BetweenOp { AND, OR }
+
+const val PATH_DELIMITER = "->"
+
+/**
+ * @see TestOverview filter for this class.
+ * @param fieldPath - name of the field. If it nested object then use the delimiterForWayToObject
+ * Example: details->testName
+ */
+@Serializable
+data class TestOverviewFilter(
+    val fieldPath: String,
+    val values: List<FilterValue>,
+    val valuesOp: BetweenOp = BetweenOp.OR,
+)
+
+@Serializable
+data class FilterValue(
+    val value: String,
+    val op: FieldOp = FieldOp.EQ,
+)
+
+enum class FieldOp { EQ, }
+
+@Serializable
+data class DeleteFilterPayload(
+    val name: String,
+)
+
+@Serializable
 data class BuildPayload(val version: String)
 
 @Serializable
