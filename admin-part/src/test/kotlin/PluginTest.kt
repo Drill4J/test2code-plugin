@@ -36,13 +36,14 @@ abstract class PluginTest : PostgresBased("plugin") {
 
     private val sender = EmptySender
 
-    private val adminData = object : AdminData {
+    private val emptyAdminData = object : AdminData {
         override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
         override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
     }
 
     protected suspend fun initPlugin(
         buildVersion: String,
+        adminData : AdminData = emptyAdminData,
     ): Plugin = Plugin(
         adminData,
         sender,

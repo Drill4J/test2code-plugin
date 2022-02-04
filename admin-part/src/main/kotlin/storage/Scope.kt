@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.storage
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
+import com.epam.dsm.find.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
@@ -32,10 +33,10 @@ class ScopeManager(private val storage: StoreClient) {
         val transaction = this
         transaction.findBy<FinishedScope> {
             FinishedScope::agentKey eq agentKey
-        }.run {
+        }.get().run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
-                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.takeIf { it.any() }
+                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.get().takeIf { it.any() }
                 }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }

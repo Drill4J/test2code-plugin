@@ -20,9 +20,12 @@ import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.global_filter.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
+import com.epam.dsm.*
+import com.epam.dsm.find.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.data.*
 import org.jacoco.core.tools.*
@@ -73,6 +76,35 @@ internal fun Sequence<Session>.calcBundleCounters(
             }
             map
         },
+    )
+}
+
+suspend fun List<TestOverviewFilter>.calcBundleCounters(
+    context: CoverContext,
+    classBytes: Map<String, ByteArray>,
+    storeClient: StoreClient,
+    agentKey: AgentKey,
+) = run {
+    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    val sessionsIds = storeClient.sessionIds(agentKey)
+    val testIds: List<String> = findTestsByFilter(storeClient, sessionsIds, this)
+    val byTestOverview: Map<TestKey, TestOverview> = findByTestType(storeClient, sessionsIds, testIds)
+    val byTestType: Map<String, List<TestOverview>> = byTestOverview.toList().groupBy({ it.first.type }, { it.second })
+    val allProbes: Sequence<ExecClassData> = findProbes(storeClient, sessionsIds, testIds).asSequence()
+    val probesByTestId = groupProbes(storeClient, sessionsIds, testIds)
+    BundleCounters(
+        all = allProbes.bundle(context, classBytes),
+        testTypeOverlap = BundleCounter.empty, //todo impl EPMDJ-8975 Overlapping
+        overlap = allProbes.overlappingBundle(context, classBytes),
+        byTestType = byTestType.map {
+            val tests: List<String> = it.value.map { overview -> overview.testId }
+            val probes = findProbes(storeClient, sessionsIds, tests).asSequence()
+            it.key to probes.bundle(context, classBytes)
+        }.toMap(),
+        byTest = byTestOverview.map {
+            it.key to (probesByTestId[it.key.id]?.bundle(context, classBytes) ?: BundleCounter.empty)
+        }.toMap(),
+        byTestOverview = byTestOverview,
     )
 }
 
