@@ -11,5 +11,10 @@
     <logger name="org.eclipse.jetty" level="info"/>
     <logger name="io.netty" level="info"/>
     <logger name="io.mockk.impl.recording.states" level="off"/>
-    <logger name="com.epam.dsm" level="debug"/>
+    <!--    database-->
+    <logger name="com.epam.dsm" level="DEBUG"/>
+    <logger name="Exposed" level="debug"/>
+    <logger name="com.zaxxer.hikari" level="info"/>
+    <logger name="org.testcontainers" level="INFO"/>
+    <logger name="com.github.dockerjava" level="WARN"/>
 </configuration>

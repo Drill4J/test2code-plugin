@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code.storage
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
+import com.epam.dsm.find.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -44,7 +45,7 @@ internal suspend fun StoreClient.loadSessions(
 ): List<FinishedSession> = trackTime("Load session") {
     findBy<StoredSession> {
         StoredSession::scopeId eq scopeId
-    }.map { it.data }
+    }.get().map { it.data }
 }
 
 internal suspend fun StoreClient.storeSession(
@@ -63,3 +64,7 @@ internal suspend fun StoreClient.storeSession(
         )
     }
 }
+
+internal suspend fun StoreClient.sessionIds(
+    agentKey: AgentKey,
+) = findBy<StoredSession> { StoredSession::agentKey eq agentKey }.getIds()
