@@ -24,7 +24,7 @@ import com.epam.dsm.*
 import kotlinx.collections.immutable.*
 import kotlinx.serialization.*
 
-internal data class CachedBuild(
+data class CachedBuild(
     val agentKey: AgentKey,
     val parentVersion: String = "",
     val probes: PersistentMap<Long, ExecClassData> = persistentHashMapOf(),
@@ -34,7 +34,7 @@ internal data class CachedBuild(
 )
 
 @Serializable
-internal data class BuildStats(
+data class BuildStats(
     @Id val agentKey: AgentKey,
     val coverage: Count = zeroCount,
     val methodCount: Count = zeroCount,
@@ -47,12 +47,12 @@ internal fun BuildCoverage.toCachedBuildStats(
 ): BuildStats = context.build.stats.copy(
     coverage = count,
     methodCount = methodCount,
-    coverageByType = byTestType.map {
+    coverageByType = byTestType.associate {
         it.type to Count(
             it.summary.coverage.count.covered,
             it.summary.coverage.count.total
         )
-    }.toMap(),
+    },
     scopeCount = finishedScopesCount
 )
 
