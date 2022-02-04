@@ -49,6 +49,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
     testImplementation(kotlin("test-junit5"))
+    testImplementation("ch.qos.logback:logback-classic:1.2.3")
     testImplementation("com.epam.drill.dsm:test-framework:$drillDsmVersion")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu")
