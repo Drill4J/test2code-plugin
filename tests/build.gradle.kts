@@ -28,6 +28,7 @@ val drillDsmVersion: String by rootProject
 val ktorVersion: String by rootProject
 val ktorSwaggerVersion: String by rootProject
 val kodeinVersion: String by extra
+val flywayVersion: String by extra
 
 dependencies {
     implementation(project(":api"))
@@ -43,6 +44,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 
     implementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
+    implementation("org.flywaydb:flyway-core:$flywayVersion")
     implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
     implementation("com.epam.drill.dsm:test-framework:$drillDsmVersion")
 
