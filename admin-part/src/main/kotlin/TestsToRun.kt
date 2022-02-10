@@ -79,5 +79,5 @@ internal suspend fun StoreClient.loadTestsToRunSummary(
     agentKey: AgentKey,
     parentVersion: String = "",
 ): List<TestsToRunSummary> = getAll<TestsToRunSummary>()
-    .filter { it.parentVersion == parentVersion && it.agentKey != agentKey }
+    .filter { it.parentVersion == parentVersion && it.agentKey.buildVersion != agentKey.buildVersion && it.agentKey.agentId == agentKey.agentId }
     .sortedBy { it.lastModifiedAt }
