@@ -51,14 +51,17 @@ internal data class LambdaHash(
 
 internal typealias TypedRisks = Map<RiskType, List<Method>>
 
+/**
+ * Methods are sorted to improve performance of difference calculation
+ */
 internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (any()) {
     if (otherMethods.any()) {
         val new = mutableListOf<Method>()
         val modified = mutableListOf<Method>()
         val deleted = mutableListOf<Method>()
         val unaffected = mutableListOf<Method>()
-        val otherItr = otherMethods.iterator()
-        iterator().run {
+        val otherItr = otherMethods.sorted().iterator()
+        sorted().iterator().run {
             var lastRight: Method? = otherItr.next()
             while (hasNext()) {
                 val left = next()
