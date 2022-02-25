@@ -57,7 +57,6 @@ dependencies {
 tasks {
     test {
         useJUnitPlatform()
-        environment("DSM_FETCH_AND_PUSH_LIMIT" to 5000)
     }
 
     shadowJar {
