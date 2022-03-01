@@ -56,7 +56,7 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
  */
 @Serializable
 data class ClassData(
-    @Id val agentKey: AgentKey,
+    val agentKey: AgentKey,
     val packageTree: PackageTree = emptyPackageTree,
     val methods: List<Method> = emptyList(),
     val probeIds: Map<String, Long> = emptyMap()
