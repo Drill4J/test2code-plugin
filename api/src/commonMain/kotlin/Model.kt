@@ -428,7 +428,6 @@ data class RiskDto(
 enum class RiskStatus {
     COVERED,
     NOT_COVERED
-    //TODO half covered or smt like this
 }
 
 enum class RiskType {

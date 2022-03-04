@@ -128,7 +128,8 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
  */
 internal suspend fun CoverContext.calculateRisks(
     storeClient: StoreClient,
-): TypedRisks = build.bundleCounters.all.coveredMethods(methodChanges.new + methodChanges.modified).let { covered ->
+    bundleCounter: BundleCounter = build.bundleCounters.all
+): TypedRisks = bundleCounter.coveredMethods(methodChanges.new + methodChanges.modified).let { covered ->
     val buildVersion = build.agentKey.buildVersion
     val baselineBuild = parentBuild?.agentKey ?: build.agentKey
 
@@ -164,19 +165,6 @@ internal fun TypedRisks.toCounts() = RiskCounts(
     new = this[RiskType.NEW]?.count() ?: 0,
     modified = this[RiskType.MODIFIED]?.count() ?: 0
 ).run { copy(total = new + modified) }
-
-//internal fun TypedRisks.filter(
-//    predicate: (Method) -> Boolean,
-//): TypedRisks = asSequence().mapNotNull { (type, testData) ->
-//    val filtered = testData.filter { predicate(it.method) }
-//    filtered.takeIf { it.any() }?.let { type to it }
-//}.toMap()
-//
-//internal fun TypedRisks.notCovered(
-//    bundleCounter: BundleCounter,
-//) = bundleCounter.coveredMethods(toMethods()).let { covered ->
-//    filter { method -> method !in covered }
-//}
 
 internal fun TypedRisks.notCovered(buildVersion: String) = asSequence().mapNotNull { (type, risks) ->
     val filtered = risks.filter { it.status[buildVersion] == RiskStatus.NOT_COVERED }

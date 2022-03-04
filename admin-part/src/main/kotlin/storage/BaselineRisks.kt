@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 EPAM Systems
+ * Copyright 2020 - 2022 EPAM Systems
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import kotlinx.serialization.*
 internal data class Risk(
     val method: Method,
     val status: Map<String, RiskStatus> = emptyMap(),
-    //TODO Mb add additional info for instance "This risk covered in build 0.2.0"
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -47,9 +46,6 @@ internal data class BaselineRisks(
     @Id
     val baseline: AgentKey,
     val risks: Set<Risk> = emptySet(),
-//    val covered: Map<AgentKey, Risk> = emptyMap(), //TODO mb store in one map and filter on status / or stay this and remove status
-//    val uncovered: Map<AgentKey, Risk> = emptyMap(),
-//    //TODO half covered or smt like this
 )
 
 
