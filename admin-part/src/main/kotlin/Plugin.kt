@@ -242,7 +242,8 @@ class Plugin(
         }
         is Initialized -> state.initialized {
             processInitialized()
-        }.also { calculateAndSendCachedCoverage() }
+            calculateAndSendCachedCoverage()
+        }
         is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
             .also { logPoolStats() }
