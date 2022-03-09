@@ -22,6 +22,7 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
+import kotlin.math.*
 
 @Serializable
 data class Method(
@@ -50,8 +51,6 @@ internal data class LambdaHash(
 )
 
 internal typealias TypedRisks = Map<RiskType, List<Risk>>
-
-internal fun TypedRisks.toMethods() = values.flatten().map { it.method }
 
 /**
  * Methods are sorted to improve performance of difference calculation
@@ -128,15 +127,15 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
  */
 internal suspend fun CoverContext.calculateRisks(
     storeClient: StoreClient,
-    bundleCounter: BundleCounter = build.bundleCounters.all
+    bundleCounter: BundleCounter = build.bundleCounters.all,
 ): TypedRisks = bundleCounter.coveredMethods(methodChanges.new + methodChanges.modified).let { covered ->
     val buildVersion = build.agentKey.buildVersion
     val baselineBuild = parentBuild?.agentKey ?: build.agentKey
 
     val baselineCoveredRisks = storeClient.loadRisksByBaseline(baselineBuild)
     val riskByMethod = baselineCoveredRisks.risks.associateByTo(mutableMapOf()) { it.method }
-    val (newCovered, newUncovered) = methodChanges.new.partition { it in covered }
-    val (modifiedCovered, modifiedUncovered) = methodChanges.modified.partition { it in covered }
+    val (newCovered, newUncovered) = methodChanges.new.partitionByCoverage(covered)
+    val (modifiedCovered, modifiedUncovered) = methodChanges.modified.partitionByCoverage(covered)
 
     riskByMethod.putRisks(newCovered + modifiedCovered, buildVersion, RiskStatus.COVERED)
     riskByMethod.putRisks(newUncovered + modifiedUncovered, buildVersion, RiskStatus.NOT_COVERED)
@@ -151,14 +150,19 @@ internal suspend fun CoverContext.calculateRisks(
     )
 }
 
+internal fun List<Method>.partitionByCoverage(
+    covered: Map<Method, Count>,
+) = map { it to (covered[it] ?: zeroCount) }.partition { it.first in covered }
+
 internal fun MutableMap<Method, Risk>.putRisks(
-    methods: List<Method>,
+    methods: List<Pair<Method, Count>>,
     buildVersion: String,
     status: RiskStatus,
-) = methods.forEach { method ->
-    get(method)?.let {
-        put(method, it.copy(status = it.status + (buildVersion to status)))
-    } ?: put(method, Risk(method, mapOf(buildVersion to status)))
+) = methods.forEach { (method, coverage) ->
+    get(method)?.let { risk ->
+        val highestCoverage = max(risk.coverage, coverage)
+        put(method, risk.copy(coverage = highestCoverage, status = risk.status + (buildVersion to status)))
+    } ?: put(method, Risk(method, coverage, mapOf(buildVersion to status)))
 }
 
 internal fun TypedRisks.toCounts() = RiskCounts(
@@ -166,9 +170,9 @@ internal fun TypedRisks.toCounts() = RiskCounts(
     modified = this[RiskType.MODIFIED]?.count() ?: 0
 ).run { copy(total = new + modified) }
 
-internal fun TypedRisks.notCovered(buildVersion: String) = asSequence().mapNotNull { (type, risks) ->
-    val filtered = risks.filter { it.status[buildVersion] == RiskStatus.NOT_COVERED }
-    filtered.takeIf { it.any() }?.let { type to it }
+internal fun TypedRisks.notCovered() = asSequence().mapNotNull { (type, risks) ->
+    val uncovered = risks.filter { RiskStatus.COVERED !in it.status.values }
+    uncovered.takeIf { it.any() }?.let { type to it }
 }.toMap()
 
 internal fun TypedRisks.count() = values.sumOf { it.count() }
@@ -176,29 +180,25 @@ internal fun TypedRisks.count() = values.sumOf { it.count() }
 internal suspend fun CoverContext.risksDto(
     storeClient: StoreClient,
     associatedTests: Map<CoverageKey, List<TypedTest>> = emptyMap(),
-): List<RiskDto> = run {
-    val typedRisks = calculateRisks(storeClient)
-    build.bundleCounters.all.coveredMethods(typedRisks.toMethods()).let { covered ->
-        typedRisks.flatMap { (type, risks) ->
-            risks.map { risk ->
-                val count = covered[risk.method] ?: zeroCount
-                val id = risk.method.key.crc64
-                RiskDto(
-                    id = id,
-                    type = type,
-                    ownerClass = risk.method.ownerClass,
-                    name = risk.method.name,
-                    desc = risk.method.desc,
-                    coverage = count.percentage(),
-                    count = count.toDto(),
-                    status = risk.status,
-                    coverageRate = count.coverageRate(),
-                    assocTestsCount = associatedTests[CoverageKey(id)]?.count() ?: 0,
-                )
-            }
-        }
+): List<RiskDto> = calculateRisks(storeClient).flatMap { (type, risks) ->
+    risks.map { risk ->
+        val count = risk.coverage
+        val id = risk.method.key.crc64
+        RiskDto(
+            id = id,
+            type = type,
+            ownerClass = risk.method.ownerClass,
+            name = risk.method.name,
+            desc = risk.method.desc,
+            coverage = count.percentage(),
+            count = count.toDto(),
+            status = risk.status,
+            coverageRate = count.coverageRate(),
+            assocTestsCount = associatedTests[CoverageKey(id)]?.count() ?: 0,
+        )
     }
 }
+
 
 internal fun Map<Method, CoverMethod>.toSummary(
     id: String,
