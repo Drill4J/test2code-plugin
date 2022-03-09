@@ -332,6 +332,7 @@ class Plugin(
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes()
+        sendAttributes()
         return initActiveScope() && initBundleHandler()
     }
 
@@ -451,6 +452,7 @@ class Plugin(
     ): String {
         logger.debug { "starting to calculate coverage by $filter..." }
         val context: CoverContext = state.coverContext().copy()
+        //TODO EPMDJ-8975 for right calculate: risks - need to take init methodChanges; testsToRun - tests2run.
 
         val bundleCounters = filter.attributes.calcBundleCounters(
             context,

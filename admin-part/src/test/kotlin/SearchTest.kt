@@ -52,11 +52,4 @@ class SearchTest {
         assertEquals(DEFAULT_TEST_NAME, result.toString())
     }
 
-    //todo move to another file
-    @Test
-    fun `should get fields when pass class`() {
-        val staticAttr = staticAttr()
-        val details = "details->"
-        assertEquals(setOf("testId", "duration", "result", "${details}engine", "${details}path","${details}testName"), staticAttr)
-    }
 }

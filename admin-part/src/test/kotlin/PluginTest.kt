@@ -19,20 +19,23 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 
 
 abstract class PluginTest : PostgresBased("plugin") {
 
     val agentId = "ag"
+    val buildVersion = "0.1.0"
     private val agentInfo = AgentInfo(
         id = agentId,
         name = agentId,
         description = "",
-        buildVersion = "0.1.0",
+        buildVersion = buildVersion,
         agentType = "JAVA",
         agentVersion = "0.1.0"
     )
+    val agentKey = AgentKey(agentId, buildVersion)
 
     private val sender = EmptySender
 
