@@ -23,6 +23,7 @@ import kotlinx.serialization.*
 @Serializable
 internal data class Risk(
     val method: Method,
+    val coverage: Count = zeroCount,
     val status: Map<String, RiskStatus> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean {
