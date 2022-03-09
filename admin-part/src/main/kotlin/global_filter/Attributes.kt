@@ -22,8 +22,6 @@ import com.epam.drill.plugins.test2code.api.routes.Routes.Build.Attributes.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
-import com.epam.dsm.util.*
-import kotlinx.coroutines.*
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 
@@ -33,81 +31,50 @@ suspend fun Plugin.sendAttributes() {
     val attributesRoute = Routes.Build().let(Routes.Build::Attributes)
     val dynamicAttr = setOf<String>()//todo take dynamic attr from metadata/params
     val attributes = staticAttributes.union(dynamicAttr)
+    logger.debug { "start send attributes: $attributes" }
     send(
         buildVersion,
         destination = attributesRoute,
         message = attributes
     )
-    val sessionIds: List<String> = storeClient.sessionIds(agentKey)
-    //todo refactor : union testOverview & testDetails
-    attributes
-        .filterNot { it.contains(PATH_DELIMITER) }
-        .map { attribute ->
-            val values = attrValues<TestOverview>(sessionIds, attribute)
-            send(
-                buildVersion,
-                destination = AttributeValues(attributesRoute, attribute),
-                message = values.toSet()
-            )
-        }
-    //todo need to check
-    attributes
-        .filter { it.contains(PATH_DELIMITER) }.map {
-            it.substringAfter(PATH_DELIMITER)
-        }.map { attribute ->
-            val values = attrValues<TestDetails>(sessionIds, attribute)
-            send(
-                buildVersion,
-                destination = AttributeValues(attributesRoute, attribute),
-                message = values.toSet()
-            )
-
-        }
+    val sessionIds = storeClient.sessionIds(agentKey)
+    attributes.map { attribute ->
+        val values = if (attribute.contains(PATH_DELIMITER)) {
+            storeClient.attrValues(sessionIds, attribute.substringAfter(PATH_DELIMITER), isTestDetails = true)
+        } else storeClient.attrValues(sessionIds, attribute)
+        logger.debug { "send attr '$attribute' values '$values'" }//todo change to trace after testing
+        send(
+            buildVersion,
+            destination = AttributeValues(attributesRoute, attribute),
+            message = values.toSet()
+        )
+    }
 }
 
-private suspend inline fun <reified T : Any> Plugin.attrValues(
+suspend inline fun StoreClient.attrValues(
     sessionIds: List<String>,
     attribute: String,
-): List<String> = storeClient.findBy<T> { containsParentId(sessionIds) }
+    isTestDetails: Boolean = false,
+): List<String> = findBy<TestOverview> { containsParentId(sessionIds) }
     .distinct()
-    .getStrings(attribute)
-
-//@Suppress("UNCHECKED_CAST")
-//private fun example(): Map<String, KClass<*>> {
-//    val kClass: KClass<Int> = Int::class
-//    val mapOf = mapOf<String, KClass<*>>("duration" to kClass, "testId" to String::class, "result" to String::class)
-////    return mapOf as Map<String, KClass<Any>>
-//    return mapOf
-//}
-//
-//private suspend inline fun <reified T : Any> KClass<T>.findValues(
-//    storeClient: StoreClient,
-//    sessionIds: List<String>,
-//    attribute: String,
-//): List<T> {
-//    val values = storeClient.findBy<TestOverview> { containsParentId(sessionIds) }
-////                .distinct()//todo it is null when default values so it can not deserialize
-//        //todo maybe store all values to easy search
-//        .getAndMap<TestOverview, T>(attribute).distinct()
-//    return values
-//}
+    .getStrings(FieldPath(TestOverview::details.name, attribute).takeIf { isTestDetails }
+        ?: FieldPath(attribute))
 
 fun staticAttr(): Set<String> {
     val details = TestOverview::details.name
-    val testOverviewAttributes = TestOverview::class.fields(listOf(details))
-    val testDetailsAttr = TestDetails::class.fields(
-        listOf(TestDetails::metadata.name, TestDetails::params.name),
-        "$details$PATH_DELIMITER")
+    val testOverviewAttributes = TestOverview::class.nameFields(exceptFields = listOf(details))
+    val testDetailsAttr = TestDetails::class.nameFields(
+        exceptFields = listOf(TestDetails::metadata.name, TestDetails::params.name),
+        prefix = "$details$PATH_DELIMITER")
     return testOverviewAttributes.union(testDetailsAttr)
 }
 
-private fun KClass<*>.fields(
-    exp: List<String>,
+private fun KClass<*>.nameFields(
+    exceptFields: List<String>,
     prefix: String = "",
 ): List<String> {
-    val set2 = this.memberProperties.filterNot { exp.contains(it.name) }.map {
+    return this.memberProperties.filterNot { exceptFields.contains(it.name) }.map {
         "$prefix${it.name}"
     }
-    return set2
 }
 
