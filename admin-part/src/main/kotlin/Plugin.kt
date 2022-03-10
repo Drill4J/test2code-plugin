@@ -336,6 +336,7 @@ class Plugin(
         state.classDataOrNull()?.sendBuildStats()
         sendScopes()
         calculateAndSendCachedCoverage()
+        sendAttributes()
         return initActiveScope() && initBundleHandler()
     }
 
@@ -455,6 +456,7 @@ class Plugin(
     ): String {
         logger.debug { "starting to calculate coverage by $filter..." }
         val context: CoverContext = state.coverContext().copy()
+        //TODO EPMDJ-8975 for right calculate: risks - need to take init methodChanges; testsToRun - tests2run.
 
         val bundleCounters = filter.attributes.calcBundleCounters(
             context,
@@ -752,7 +754,7 @@ class Plugin(
                     Routes.Build.Risks(Routes.Build()),
                     state.coverContext().risksDto(storeClient, assocTestsMap),
                     filterId)
-                trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
+                trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests, filterId) }
             }
         }
     }
