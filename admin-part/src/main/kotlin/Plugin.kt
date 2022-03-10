@@ -750,7 +750,7 @@ class Plugin(
                     Routes.Build.Risks(Routes.Build()),
                     state.coverContext().risksDto(storeClient, assocTestsMap),
                     filterId)
-                trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
+                trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests, filterId) }
             }
         }
     }
