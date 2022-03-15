@@ -162,8 +162,9 @@ internal class AgentState(
                 }
                 val testsToRun = parentBuild?.run {
                     val baselineRisks = storeClient.loadRisksByBaseline(parentBuild.agentKey)
-                    val coveredMethods = baselineRisks.risks.map { it.method }
-                    val notCoveredMethods = methodChanges.modified.filterNot { coveredMethods.contains(it) }
+                    val methodStatus = baselineRisks.risks.associate { it.method to it.status.values }
+                    val notCoveredMethods =
+                        methodChanges.modified.filterNot { methodStatus[it]?.contains(RiskStatus.COVERED) ?: false }
                     bundleCounters.testsWith(notCoveredMethods)
                 }.orEmpty()
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
@@ -178,8 +179,10 @@ internal class AgentState(
                     )
                 } ?: TestDurations(all = 0L, byType = emptyMap())
                 logger.debug { "testsToRun parent durations $testsToRunParentDurations" }
+                val diffMethods = methodChanges.copy(deletedWithCoverage = deletedWithCoverage)
+                storeClient.store(InitCoverContext(agentKey, diffMethods, testsToRun))
                 _coverContext.value = coverContext.copy(
-                    methodChanges = methodChanges.copy(deletedWithCoverage = deletedWithCoverage),
+                    methodChanges = diffMethods,
                     build = build.copy(parentVersion = parentVersion),
                     parentBuild = parentBuild,
                     testsToRun = testsToRun,
@@ -355,4 +358,17 @@ internal class AgentState(
             logger.debug { "(buildVersion=${agentInfo.buildVersion}) Toggled baseline $baseline->$newBaseline" }
         }?.version
     }
+}
+
+
+fun CoverContext.updateBundleCounters(
+    bundleCounters: BundleCounters,
+): CoverContext = updateBuild {
+    copy(bundleCounters = bundleCounters)
+}
+
+private fun CoverContext.updateBuild(
+    updater: CachedBuild.() -> CachedBuild,
+): CoverContext {
+    return copy(build = build.updater())
 }
