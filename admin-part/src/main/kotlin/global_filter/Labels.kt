@@ -22,33 +22,53 @@ import com.epam.drill.plugins.test2code.api.routes.Routes.Build.Attributes.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
+import kotlinx.serialization.Serializable
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 
-val staticAttributes = staticAttr()
+@Serializable
+data class LabelMarker(val name: String, val isLabel: Boolean = true)
 
-suspend fun Plugin.sendAttributes() {
+private val propertyNames = staticPropertyNames()
+
+suspend fun Plugin.sendLabels() {
     val attributesRoute = Routes.Build().let(Routes.Build::Attributes)
-    val dynamicAttr = setOf<String>()//todo take dynamic attr from metadata/params
-    val attributes = staticAttributes.union(dynamicAttr)
-    logger.debug { "start send attributes: $attributes" }
+
+    val sessionIds = storeClient.sessionIds(agentKey)
+    //TODO can be replace on sql with unique labels condition, instead toSet()
+    val allLabels = storeClient.getAll<Label>().toSet()
+    val staticLabels = storeClient.staticLabels(sessionIds)
+
+    val labels = allLabels.fold(mutableMapOf<LabelMarker, MutableSet<String>>()) { acc, tag ->
+        acc[LabelMarker(tag.name)]?.add(tag.value) ?: acc.put(LabelMarker(tag.name), mutableSetOf(tag.value))
+        acc
+    } + staticLabels
+
     send(
         buildVersion,
         destination = attributesRoute,
-        message = attributes
+        message = labels.keys
     )
-    val sessionIds = storeClient.sessionIds(agentKey)
-    attributes.map { attribute ->
-        val values = if (attribute.contains(PATH_DELIMITER)) {
-            storeClient.attrValues(sessionIds, attribute.substringAfter(PATH_DELIMITER), isTestDetails = true)
-        } else storeClient.attrValues(sessionIds, attribute)
-        logger.debug { "send attr '$attribute' values '$values'" }//todo change to trace after testing
+
+    labels.forEach { (label, values) ->
+        logger.debug { "send tags '$label' values '$values'" }//todo change to trace after testing
         send(
             buildVersion,
-            destination = AttributeValues(attributesRoute, attribute),
+            destination = AttributeValues(attributesRoute, label.name),
             message = values.toSet()
         )
     }
+}
+
+
+private suspend fun StoreClient.staticLabels(
+    sessionIds: List<String>,
+): MutableMap<LabelMarker, MutableSet<String>> = propertyNames.fold(mutableMapOf()) { acc, tag ->
+    val values = if (tag.contains(PATH_DELIMITER)) {
+        attrValues(sessionIds, tag.substringAfter(PATH_DELIMITER), isTestDetails = true)
+    } else attrValues(sessionIds, tag)
+    acc[LabelMarker(tag, false)]?.addAll(values) ?: acc.put(LabelMarker(tag, false), values.toMutableSet())
+    acc
 }
 
 suspend inline fun StoreClient.attrValues(
@@ -60,17 +80,19 @@ suspend inline fun StoreClient.attrValues(
     .getStrings(FieldPath(TestOverview::details.name, attribute).takeIf { isTestDetails }
         ?: FieldPath(attribute))
 
-fun staticAttr(): Set<String> {
+fun staticPropertyNames(): Set<String> {
     val details = TestOverview::details.name
-    val testOverviewAttributes = TestOverview::class.nameFields(exceptFields = listOf(details))
+    val testOverviewAttributes = TestOverview::class.nameFields(
+        exceptFields = listOf(details, TestOverview::testId.name)
+    )
     val testDetailsAttr = TestDetails::class.nameFields(
-        exceptFields = listOf(TestDetails::metadata.name, TestDetails::params.name),
+        exceptFields = listOf(TestDetails::metadata.name, TestDetails::params.name, TestDetails::labels.name),
         prefix = "$details$PATH_DELIMITER")
     return testOverviewAttributes.union(testDetailsAttr)
 }
 
 private fun KClass<*>.nameFields(
-    exceptFields: List<String>,
+    exceptFields: List<String> = emptyList(),
     prefix: String = "",
 ): List<String> {
     return this.memberProperties.filterNot { exceptFields.contains(it.name) }.map {
