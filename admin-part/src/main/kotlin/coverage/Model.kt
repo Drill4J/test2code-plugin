@@ -17,9 +17,11 @@ package com.epam.drill.plugins.test2code.coverage
 
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.storage.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
 
+@Serializable
 data class DiffMethods(
     val new: List<Method> = emptyList(),
     val modified: List<Method> = emptyList(),
@@ -35,6 +37,16 @@ data class DiffMethods(
 data class TestDurations(
     val all: Long = 0L,
     val byType: Map<String, Long> = emptyMap(),
+)
+
+/**
+ * for calculating filtered risks & tests2run
+ */
+@Serializable
+data class InitCoverContext(
+    @Id val agentKey: AgentKey,
+    val methodChanges: DiffMethods = DiffMethods(),
+    val testsToRun: GroupedTests = emptyMap(),
 )
 
 data class CoverContext(
