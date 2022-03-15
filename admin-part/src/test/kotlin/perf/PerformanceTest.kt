@@ -50,7 +50,8 @@ class PerformanceTest : PluginTest() {
         switchScopeWithProbes()
     }
 
-    //todo OOM in ~8-9 min EPMDJ-8975 Ability of a User to filter
+    //todo OOM in ~10 min EPMDJ-8975 Ability of a User to filter
+    //  Without default values completed ~17 min.
     @Ignore
     @Test
     fun `perf check! should finish scope with 2 session and takes probes`() = runBlocking {

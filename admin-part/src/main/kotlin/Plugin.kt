@@ -453,14 +453,19 @@ class Plugin(
         filter: StoredFilter,
     ): String {
         logger.debug { "starting to calculate coverage by $filter..." }
-        val context: CoverContext = state.coverContext().copy()
-        //TODO EPMDJ-8975 for right calculate: risks - need to take init methodChanges; testsToRun - tests2run.
+        val initContext = storeClient.findById<InitCoverContext>(agentKey)
+        var context = initContext?.let {
+            logger.debug { "init tests2run: ${initContext.testsToRun}" }
+            logger.trace { "init methodChanges: ${initContext.methodChanges}" }
+            state.coverContext().copy(methodChanges = it.methodChanges, testsToRun = it.testsToRun)
+        } ?: state.coverContext().copy()
 
         val bundleCounters = filter.attributes.calcBundleCounters(
             context,
             adminData.loadClassBytes(buildVersion),
             storeClient,
             agentKey)
+        context = context.updateBundleCounters(bundleCounters)
         logger.debug { "Starting to calculate coverage by filter..." }
         val filterId = filter.hashCode().toString()
         bundleCounters.calculateAndSendBuildCoverage(
@@ -501,38 +506,29 @@ class Plugin(
             riskCount = Count(risks.notCovered().count(), risks.count())
         )
         val testsNew = byTestOverview.asSequence().groupBy({ it.key.type }, { TestData(it.key.id, it.value.details) })
-        val summary: AgentSummary
-        //todo refactoring this:
-        val context2 = if (filterId.isEmpty()) {
+        //todo EPMDJ-8975 refactoring this:
+        // Option 1: add filterContext as a field of State.
+        // Option 2: Move working of Context in another file.
+        val newContext = if (filterId.isEmpty()) {
             state.updateBuildStats(buildCoverage, context)
-
-            val cachedBuild = state.updateBuildTests(testsNew)
-            summary = cachedBuild.toSummary(
-                agentInfo.name,
-                context.testsToRun,
-                risks,
-                coverageInfoSet.coverageByTests,
-                coverageInfoSet.tests,
-                parentCoverageCount
-            )
+            state.updateBuildTests(testsNew)
             context
         } else {
-            val newContext: CoverContext = context.copy(build = context.build.copy(
+            context.copy(build = context.build.copy(
                 stats = buildCoverage.toCachedBuildStats(context),
                 tests = context.build.tests.copy(tests = testsNew)
             ))
-            summary = newContext.build.toSummary(
-                agentInfo.name,
-                newContext.testsToRun,
-                risks,
-                coverageInfoSet.coverageByTests,
-                coverageInfoSet.tests,
-                parentCoverageCount
-            )
-            newContext
         }
+        val summary = newContext.build.toSummary(
+            agentInfo.name,
+            newContext.testsToRun,
+            risks,
+            coverageInfoSet.coverageByTests,
+            coverageInfoSet.tests,
+            parentCoverageCount
+        )
 
-        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary, filterId, context2)
+        coverageInfoSet.sendBuildCoverage(buildVersion, buildCoverage, summary, filterId, newContext)
         assocTestsJob(filterId = filterId)
         coveredMethodsJob(filterId = filterId)
         if (filterId.isEmpty()) {
