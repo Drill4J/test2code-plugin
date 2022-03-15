@@ -70,7 +70,7 @@ internal fun Sequence<Session>.calcBundleCounters(
                     copy(
                         duration = duration + overview.duration,
                         result = overview.result,
-                        details = overview.details
+                        details = overview.details.copy(labels = overview.details.labels + details.labels)
                     )
                 } ?: overview
             }
