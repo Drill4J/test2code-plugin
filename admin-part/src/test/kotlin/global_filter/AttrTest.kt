@@ -27,7 +27,7 @@ class AttrTest {
     fun `should return static fields of testOverview`() {
         val details = "details$PATH_DELIMITER"
         assertEquals(setOf("testId", "duration", "result", "${details}engine", "${details}path", "${details}testName"),
-            staticAttr())
+            staticPropertyNames())
     }
 
 }

@@ -50,18 +50,39 @@ private fun toExprFilters(
     sessionsIds: List<String>,
 ): Expr<TestOverview>.() -> Unit = {
     testOverviewFilter.fold(containsParentId(sessionsIds)) { filters: Expr<TestOverview>, filter: TestOverviewFilter ->
-        val fieldPath = FieldPath(filter.fieldPath.split(PATH_DELIMITER))
-        val values = filter.values.map { it.value }
-        when (filter.valuesOp) {
-            OR -> {
-                val containValues = fieldPath contains values
-                filters and containValues
-            }
-            AND -> {
-                val eqValues = values.fold(filters) { acc2, value ->
-                    acc2 and (fieldPath eq value)
+        if (filter.isLabel) {
+            val values = filter.values.map { it.value }
+            val fieldPath = FieldPath(TestOverview::details.name, TestDetails::labels.name)
+            when (filter.valuesOp) {
+                OR -> {
+                    val containValues = fieldPath.anyInList(Label::class) {
+                        (Label::name eq filter.fieldPath) and (Label::value contains values)
+                    }
+                    filters and containValues
                 }
-                eqValues
+                AND -> {
+                    val eqValues = values.fold(filters) { acc2, value ->
+                        acc2 and (fieldPath.allInList(Label::class) {
+                            (Label::name eq filter.fieldPath) and (Label::value eq value)
+                        })
+                    }
+                    eqValues
+                }
+            }
+        } else {
+            val fieldPath = FieldPath(filter.fieldPath.split(PATH_DELIMITER))
+            val values = filter.values.map { it.value }
+            when (filter.valuesOp) {
+                OR -> {
+                    val containValues = fieldPath contains values
+                    filters and containValues
+                }
+                AND -> {
+                    val eqValues = values.fold(filters) { acc2, value ->
+                        acc2 and (fieldPath eq value)
+                    }
+                    eqValues
+                }
             }
         }
     }
@@ -96,7 +117,7 @@ fun findByTestType(
         connection.prepareStatement(sql, false).executeQuery().let {
             while (it.next()) {
                 val testType: String = it.getString(1)
-                val testOverview: TestOverview = json.decodeFromStream(it.getBinaryStream(2))
+                val testOverview: TestOverview = dsmDecode(it.getBinaryStream(2), TestOverview::class.java.classLoader)
                 result[TestKey(testOverview.testId, testType)] = testOverview
             }
         }
