@@ -44,6 +44,7 @@ class ActiveSession(
     override val testType: String,
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
+    private val labels: Set<Label> = emptySet(),
 ) : Session() {
 
     override val tests: Set<TestOverview>
@@ -53,16 +54,17 @@ class ActiveSession(
                     TestOverview(
                         testId = it.id.weakIntern(),
                         duration = it.finishedAt - it.startedAt,
-                        details = it.details,
+                        details = it.details.copy(labels = it.details.labels + labels),
                         result = it.result
                     )
                 }
                 val manualTests = keys.filter { (id, _) -> id !in tests }.map { (id, name) ->
-                    TestOverview(testId = id, details = TestDetails(testName = name.weakIntern()))
+                    TestOverview(testId = id,
+                        details = TestDetails(testName = name.weakIntern(), labels = labels))
                 }
                 autotests + manualTests
             } ?: keys.map { (id, name) ->
-                TestOverview(testId = id, details = TestDetails(testName = name.weakIntern()))
+                TestOverview(testId = id, details = TestDetails(testName = name.weakIntern(), labels = labels))
             }
         }.toSet()
 

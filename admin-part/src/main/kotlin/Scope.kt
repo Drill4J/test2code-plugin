@@ -160,12 +160,8 @@ class ActiveScope(
         testType: String,
         isGlobal: Boolean = false,
         isRealtime: Boolean = false,
-    ) = ActiveSession(
-        sessionId,
-        testType,
-        isGlobal,
-        isRealtime
-    ).takeIf { newSession ->
+        labels: Set<Label> = emptySet(),
+    ) = ActiveSession(sessionId, testType, isGlobal, isRealtime, labels).takeIf { newSession ->
         val key = if (isGlobal) "" else sessionId
         activeSessions(key) { existing ->
             existing ?: newSession.takeIf { activeSessionOrNull(it.id) == null }

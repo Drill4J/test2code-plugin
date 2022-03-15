@@ -105,7 +105,7 @@ class Plugin(
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> {
             val changeActiveScope = changeActiveScope(action.payload)
-            sendAttributes()
+            sendLabels()
             changeActiveScope
         }
         is RenameScope -> renameScope(action.payload)
@@ -151,11 +151,13 @@ class Plugin(
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
+            val labels = labels + Label("Session", newSessionId)
             activeScope.startSession(
                 newSessionId,
                 testType,
                 isGlobal,
-                isRealtimeSession
+                isRealtimeSession,
+                labels
             )?.run {
                 StartAgentSession(
                     payload = StartSessionPayload(
@@ -332,7 +334,7 @@ class Plugin(
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes()
-        sendAttributes()
+        sendLabels()
         return initActiveScope() && initBundleHandler()
     }
 

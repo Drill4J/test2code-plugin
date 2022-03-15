@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code.api
 
 import kotlinx.serialization.*
+import kotlin.jvm.*
 
 const val DEFAULT_TEST_NAME = "unspecified"
 
@@ -26,6 +27,7 @@ data class StartPayload(
     val testName: String? = null,
     val isRealtime: Boolean = false,
     val isGlobal: Boolean = false,
+    val labels: Set<Label> = emptySet(),
 )
 
 @Serializable
@@ -71,12 +73,19 @@ data class TestInfo(
 )
 
 @Serializable
-data class TestDetails(
+data class Label(
+    val name: String,
+    val value: String,
+)
+
+@Serializable
+data class TestDetails @JvmOverloads constructor(
     val engine: String = "",
     val path: String = "",
     val testName: String,
     val params: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(),
+    val labels: Set<Label> = emptySet(),
 ) : Comparable<TestDetails> {
     companion object {
         val emptyDetails = TestDetails(testName = DEFAULT_TEST_NAME)
@@ -142,8 +151,9 @@ const val PATH_DELIMITER = "->"
  */
 @Serializable
 data class TestOverviewFilter(
-    val fieldPath: String,
-    val values: List<FilterValue>,
+    val fieldPath: String, // Name -> [details->testName : Prop]  // Path -> [details->path]
+    val isLabel: Boolean,
+    val values: List<FilterValue>, //
     val valuesOp: BetweenOp = BetweenOp.OR,
 )
 
