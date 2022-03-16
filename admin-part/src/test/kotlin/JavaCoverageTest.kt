@@ -66,7 +66,7 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result", values = listOf(FilterValue("FAILED"))),
+                filter = TestOverviewFilter("result", false, values = listOf(FilterValue("FAILED"))),
                 expectedCoverage = 100.0
             )
         }
@@ -83,7 +83,7 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result", values = listOf(FilterValue("PASSED"))),
+                filter = TestOverviewFilter("result", false, values = listOf(FilterValue("PASSED"))),
                 expectedCoverage = 25.0
             )
         }
@@ -100,7 +100,7 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter("details->testName", values = listOf(FilterValue(failedAutoTest))),
+            filter = TestOverviewFilter("details->testName", false, values = listOf(FilterValue(failedAutoTest))),
             expectedCoverage = 100.0
         )
     }
@@ -115,7 +115,7 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter("details->engine", values = listOf(FilterValue("does not exist"))),
+            filter = TestOverviewFilter("details->engine", false, values = listOf(FilterValue("does not exist"))),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -134,6 +134,7 @@ class JavaCoverageTest : PluginTest() {
             context,
             filter = TestOverviewFilter(
                 "result",
+                isLabel = false,
                 values = listOf(FilterValue("PASSED"), FilterValue("FAILED")),
                 valuesOp = AND
             ),
@@ -155,6 +156,7 @@ class JavaCoverageTest : PluginTest() {
             context,
             filter = TestOverviewFilter(
                 "result",
+                isLabel = false,
                 values = listOf(FilterValue("FAILED"), FilterValue("SKIPPED")),
                 valuesOp = AND
             ),
@@ -175,7 +177,9 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result", values = listOf(FilterValue("PASSED"), FilterValue("FAILED"))),
+                filter = TestOverviewFilter("result",
+                    isLabel = false,
+                    values = listOf(FilterValue("PASSED"), FilterValue("FAILED"))),
                 expectedCoverage = 100.0,
                 expectedTestsCount = 2,
             )
@@ -192,7 +196,9 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter("result", values = listOf(FilterValue("SKIPPED"), FilterValue("FAILED"))),
+            filter = TestOverviewFilter("result",
+                isLabel = false,
+                values = listOf(FilterValue("SKIPPED"), FilterValue("FAILED"))),
             expectedCoverage = 100.0,
             expectedTestsCount = 1,
         )

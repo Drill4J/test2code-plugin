@@ -55,14 +55,14 @@ private fun toExprFilters(
             val fieldPath = FieldPath(TestOverview::details.name, TestDetails::labels.name)
             when (filter.valuesOp) {
                 OR -> {
-                    val containValues = fieldPath.anyInList(Label::class) {
+                    val containValues = fieldPath.anyInCollection<Label> {
                         (Label::name eq filter.fieldPath) and (Label::value contains values)
                     }
                     filters and containValues
                 }
                 AND -> {
                     val eqValues = values.fold(filters) { acc2, value ->
-                        acc2 and (fieldPath.allInList(Label::class) {
+                        acc2 and (fieldPath.anyInCollection<Label> {
                             (Label::name eq filter.fieldPath) and (Label::value eq value)
                         })
                     }
