@@ -34,7 +34,16 @@ import kotlin.test.*
 class TestNameMappingTest : E2EPluginTest() {
 
     private val testName = "test"
-    private val details = TestDetails("testng", "class", testName, mapOf("one" to "two"))
+    private val sessionId = "${UUID.randomUUID()}"
+    private val labels = setOf(Label("Session", sessionId))
+    private val manualTest = TestDetails(testName = testName, labels = labels)
+    private val details = TestDetails(
+        engine = "testng",
+        path = "class",
+        testName = testName,
+        params = mapOf("one" to "two"),
+        labels = labels
+    )
 
     // Any hash algorithm can be used
     private val testHash = details.toString().crc64
@@ -43,7 +52,7 @@ class TestNameMappingTest : E2EPluginTest() {
     fun `mapping test name on test hash`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                val sessionId = "${UUID.randomUUID()}"
+
                 val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
 
                 pluginAction(startNewSession) { status, _ ->
@@ -89,7 +98,6 @@ class TestNameMappingTest : E2EPluginTest() {
     fun `probe without test hash mapping should be displaced with default test name`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                val sessionId = "${UUID.randomUUID()}"
 
                 val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
 
@@ -110,7 +118,7 @@ class TestNameMappingTest : E2EPluginTest() {
                 plugUi.subscribeOnScope(scopeId) {
                     val allTests = tests()!!
                     allTests.size shouldBe 1
-                    allTests[0].overview.details shouldBe TestDetails(testName = testName)
+                    allTests[0].overview.details shouldBe manualTest
                 }
             }
         }
@@ -118,9 +126,9 @@ class TestNameMappingTest : E2EPluginTest() {
 
     @Test
     fun `probes with with hash and without should display correctly`() {
+
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-                val sessionId = "${UUID.randomUUID()}"
 
                 val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
 
@@ -168,7 +176,7 @@ class TestNameMappingTest : E2EPluginTest() {
                                 it.type shouldBe AUTO_TEST_TYPE
                                 it.overview.result shouldBe TestResult.PASSED
                             }
-                            TestDetails(testName = testName) -> {
+                            manualTest -> {
                                 it.coverage.percentage shouldBeGreaterThan 46.6
                                 it.type shouldBe AUTO_TEST_TYPE
                                 it.overview.result shouldBe TestResult.PASSED
