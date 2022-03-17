@@ -206,7 +206,7 @@ internal fun Map<Method, CoverMethod>.toSummary(
     context: CoverContext,
 ) = TestedMethodsSummary(
     id = id,
-    testName = typedTest.details,
+    details = typedTest.details,
     testType = typedTest.type,
     methodCounts = CoveredMethodCounts(
         all = size,

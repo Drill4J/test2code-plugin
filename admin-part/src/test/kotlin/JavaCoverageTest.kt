@@ -27,14 +27,35 @@ import com.epam.drill.plugins.test2code.util.*
 import kotlinx.coroutines.*
 import kotlin.test.*
 
+
 class JavaCoverageTest : PluginTest() {
 
     companion object {
         const val AUTO_TEST_TYPE = "AUTO"
+        const val TEAM = "Team";
+        const val DRILL4J = "Drill4j";
+        const val RP = "Report portal"
+        const val USER = "User";
+        const val OKSANA = "Oksana"
+        const val PLATFORM = "Platform";
+        const val WINDOWS = "Mingw"
+        const val BROWSER = "Browser";
+        const val CHROME = "Chrome"
     }
 
     private val passedAutoTest = "test1"
+    private val passedTestLabels = setOf(
+        Label(TEAM, DRILL4J),
+        Label(USER, OKSANA),
+        Label(BROWSER, CHROME)
+    )
     private val failedAutoTest = "test2"
+    private val failedTestLabels = setOf(
+        Label(TEAM, DRILL4J),
+        Label(TEAM, RP),
+        Label(PLATFORM, WINDOWS)
+    )
+
 
     @Test
     fun `should collect coverageData when manual session`() = runBlocking {
@@ -58,7 +79,7 @@ class JavaCoverageTest : PluginTest() {
     @Test
     fun `should filter coverage when auto session has several tests`() {
         runBlocking {
-            val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+            val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
                 assertEquals(100.0, coverage.percentage)
@@ -66,7 +87,9 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result", false, values = listOf(FilterValue("FAILED"))),
+                filters = listOf(TestOverviewFilter(TestOverview::result.name,
+                    false,
+                    values = listOf(FilterValue(FAILED.name)))),
                 expectedCoverage = 100.0
             )
         }
@@ -75,7 +98,7 @@ class JavaCoverageTest : PluginTest() {
     @Test
     fun `should filter coverage when auto session has several tests and filter has default value`() {
         runBlocking {
-            val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+            val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
                 assertEquals(100.0, coverage.percentage)
@@ -83,7 +106,9 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result", false, values = listOf(FilterValue("PASSED"))),
+                filters = listOf(TestOverviewFilter(TestOverview::result.name,
+                    false,
+                    values = listOf(FilterValue(PASSED.name)))),
                 expectedCoverage = 25.0
             )
         }
@@ -91,7 +116,7 @@ class JavaCoverageTest : PluginTest() {
 
     @Test
     fun `should filter coverage when filter has nested query`() = runBlocking {
-        val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
         coverageData.run {
             assertEquals(1, coverage.classCount.total)
             assertEquals(100.0, coverage.percentage)
@@ -100,14 +125,16 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter("details->testName", false, values = listOf(FilterValue(failedAutoTest))),
+            filters = listOf(TestOverviewFilter("${TestOverview::details.name}->${TestDetails::testName.name}",
+                false,
+                values = listOf(FilterValue(failedAutoTest)))),
             expectedCoverage = 100.0
         )
     }
 
     @Test
     fun `should get 0 coverage when filter does not math any probes`() = runBlocking {
-        val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
         coverageData.run {
             assertEquals(1, coverage.classCount.total)
             assertEquals(100.0, coverage.percentage)
@@ -115,7 +142,9 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter("details->engine", false, values = listOf(FilterValue("does not exist"))),
+            filters = listOf(TestOverviewFilter("${TestOverview::details.name}->${TestDetails::engine.name}",
+                false,
+                values = listOf(FilterValue("does not exist")))),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -124,7 +153,7 @@ class JavaCoverageTest : PluginTest() {
 
     @Test
     fun `should get 0 coverage when filter has 'and' and default`() = runBlocking {
-        val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
         coverageData.run {
             assertEquals(1, coverage.classCount.total)
             assertEquals(100.0, coverage.percentage)
@@ -132,12 +161,12 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter(
-                "result",
+            filters = listOf(TestOverviewFilter(
+                TestOverview::result.name,
                 isLabel = false,
-                values = listOf(FilterValue("PASSED"), FilterValue("FAILED")),
+                values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)),
                 valuesOp = AND
-            ),
+            )),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -146,7 +175,7 @@ class JavaCoverageTest : PluginTest() {
 
     @Test
     fun `should get 0 coverage when filter has 'and'`() = runBlocking {
-        val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
         coverageData.run {
             assertEquals(1, coverage.classCount.total)
             assertEquals(100.0, coverage.percentage)
@@ -154,12 +183,12 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter(
-                "result",
+            filters = listOf(TestOverviewFilter(
+                TestOverview::result.name,
                 isLabel = false,
-                values = listOf(FilterValue("FAILED"), FilterValue("SKIPPED")),
+                values = listOf(FilterValue(FAILED.name), FilterValue(SKIPPED.name)),
                 valuesOp = AND
-            ),
+            )),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -169,7 +198,7 @@ class JavaCoverageTest : PluginTest() {
     @Test
     fun `should get 100 coverage when auto session has several tests and filter has few values with default`() =
         runBlocking {
-            val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+            val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
             coverageData.run {
                 assertEquals(1, coverage.classCount.total)
                 assertEquals(100.0, coverage.percentage)
@@ -177,18 +206,127 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filter = TestOverviewFilter("result",
+                filters = listOf(TestOverviewFilter(TestOverview::result.name,
                     isLabel = false,
-                    values = listOf(FilterValue("PASSED"), FilterValue("FAILED"))),
+                    values = listOf(FilterValue(PASSED.name), FilterValue(FAILED.name)))),
                 expectedCoverage = 100.0,
                 expectedTestsCount = 2,
             )
         }
 
+    @Test
+    fun `should filter coverage when filter has two select condition`() = runBlocking {
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
+        coverageData.run {
+            assertEquals(1, coverage.classCount.total)
+            assertEquals(100.0, coverage.percentage)
+            assertTrue(coverage.percentage > 0.0)
+        }
+
+        filterAndCalculateCoverage(
+            context,
+            filters = listOf(
+                TestOverviewFilter("${TestOverview::details.name}->${TestDetails::testName.name}",
+                    false,
+                    values = listOf(FilterValue(failedAutoTest))),
+                TestOverviewFilter(TestOverview::result.name,
+                    false,
+                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)))
+            ),
+            expectedCoverage = 100.0,
+        )
+    }
+
+    @Test
+    fun `should filter test by single label`() = runBlocking {
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
+        coverageData.run {
+            assertEquals(1, coverage.classCount.total)
+            assertEquals(100.0, coverage.percentage)
+            assertTrue(coverage.percentage > 0.0)
+        }
+        filterAndCalculateCoverage(
+            context,
+            filters = listOf(TestOverviewFilter(USER, true, values = listOf(FilterValue(OKSANA)))),
+            expectedCoverage = 25.0,
+        )
+    }
+
+    @Test
+    fun `should filter test by labels with same key ('and' operation)`() {
+        runBlocking {
+            val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
+            coverageData.run {
+                assertEquals(1, coverage.classCount.total)
+                assertEquals(100.0, coverage.percentage)
+            }
+
+            filterAndCalculateCoverage(
+                context,
+                filters = listOf(
+                    TestOverviewFilter(
+                        TEAM,
+                        true,
+                        values = listOf(FilterValue(DRILL4J), FilterValue(RP)),
+                        valuesOp = AND
+                    ),
+                ),
+                expectedCoverage = 100.0
+            )
+        }
+    }
+
+    @Test
+    fun `should filter test by labels with same key ('or' operation)`() {
+        runBlocking {
+            val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
+            coverageData.run {
+                assertEquals(1, coverage.classCount.total)
+                assertEquals(100.0, coverage.percentage)
+            }
+
+            filterAndCalculateCoverage(
+                context,
+                filters = listOf(
+                    TestOverviewFilter(
+                        TEAM,
+                        true,
+                        values = listOf(FilterValue(DRILL4J), FilterValue(RP)),
+                    ),
+                ),
+                expectedCoverage = 100.0,
+                expectedTestsCount = 2,
+            )
+        }
+    }
+
+    @Test
+    fun `should filter coverage when filter by properties and labels`() = runBlocking {
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
+        coverageData.run {
+            assertEquals(1, coverage.classCount.total)
+            assertEquals(100.0, coverage.percentage)
+            assertTrue(coverage.percentage > 0.0)
+        }
+
+        filterAndCalculateCoverage(
+            context,
+            filters = listOf(
+                TestOverviewFilter(TEAM, true, values = listOf(FilterValue(DRILL4J), FilterValue(RP)), valuesOp = AND),
+                TestOverviewFilter(TestOverview::result.name,
+                    false,
+                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name))),
+                TestOverviewFilter("${TestOverview::details.name}->${TestDetails::testName.name}",
+                    false,
+                    values = listOf(FilterValue(failedAutoTest)))
+            ),
+            expectedCoverage = 100.0,
+        )
+    }
 
     @Test
     fun `should get 100 coverage when auto session has several tests and filter has few values OR`() = runBlocking {
-        val (coverageData, context) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+        val (coverageData, context) = runAutoSessionWithTwoTests(testName = passedAutoTest)
         coverageData.run {
             assertEquals(1, coverage.classCount.total)
             assertEquals(100.0, coverage.percentage)
@@ -196,9 +334,9 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filter = TestOverviewFilter("result",
+            filters = listOf(TestOverviewFilter("result",
                 isLabel = false,
-                values = listOf(FilterValue("SKIPPED"), FilterValue("FAILED"))),
+                values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)))),
             expectedCoverage = 100.0,
             expectedTestsCount = 1,
         )
@@ -206,7 +344,7 @@ class JavaCoverageTest : PluginTest() {
 
     @Test
     fun `find attributes after collect coverage`() = runBlocking {
-        val (coverageData, _) = runAutoSessionWithTwoTests(passedTest = passedAutoTest)
+        val (coverageData, _) = runAutoSessionWithTwoTests(testName = passedAutoTest)
         coverageData.run {
             assertEquals(1, coverage.classCount.total)
             assertEquals(100.0, coverage.percentage)
@@ -221,14 +359,15 @@ class JavaCoverageTest : PluginTest() {
 
     private suspend fun runAutoSessionWithTwoTests(
         sessionId: String = genUuid(),
-        passedTest: String,
+        testName: String,
     ) = calculateCoverage(sessionId) {
         val session: ActiveSession? = startSession(sessionId = sessionId, testType = AUTO_TEST_TYPE)
         this.execSession(
-            testName = passedTest,
+            testName = testName,
             sessionId = sessionId,
             testType = AUTO_TEST_TYPE,
-            session,
+            labels = passedTestLabels,
+            session = session,
         ) { sessionId ->
             addProbes(sessionId) { autoProbesWithPartCoverage }
         }
@@ -238,6 +377,7 @@ class JavaCoverageTest : PluginTest() {
             testType = AUTO_TEST_TYPE,
             session = session,
             result = FAILED,
+            labels = failedTestLabels,
         ) { sessionId ->
             addProbes(sessionId) { autoProbesWithFullCoverage }
         }
@@ -272,6 +412,7 @@ class JavaCoverageTest : PluginTest() {
         testType: String,
         session: ActiveSession? = null,
         result: TestResult = PASSED,
+        labels: Set<Label> = emptySet(),
         block: suspend ActiveScope.(String) -> Unit,
     ) {
         val startSessionNew = session ?: startSession(sessionId = sessionId, testType = testType)
@@ -284,7 +425,8 @@ class JavaCoverageTest : PluginTest() {
                     startedAt = 0,
                     finishedAt = 0,
                     details = TestDetails(
-                        testName = testName
+                        testName = testName,
+                        labels = labels,
                     )
                 )
             )
@@ -294,7 +436,7 @@ class JavaCoverageTest : PluginTest() {
 
     private suspend fun filterAndCalculateCoverage(
         context: CoverContext,
-        filter: TestOverviewFilter,
+        filters: List<TestOverviewFilter>,
         expectedCoverage: Double,
         expectedTestsCount: Int = 1,
         expectedTestTypeCount: Int = 1,
@@ -310,7 +452,7 @@ class JavaCoverageTest : PluginTest() {
 
         val agentKey = AgentKey(agentId, buildVersion)
 
-        val filterBundleCounters: BundleCounters = listOf(filter).calcBundleCounters(context,
+        val filterBundleCounters: BundleCounters = filters.calcBundleCounters(context,
             classBytesEmptyBody,
             storeClient,
             agentKey)
