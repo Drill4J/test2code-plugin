@@ -39,10 +39,10 @@ suspend fun Plugin.sendLabels() {
     val allLabels = storeClient.getAll<Label>().toSet()
     val staticLabels = storeClient.staticLabels(sessionIds)
 
-    val labels = allLabels.fold(mutableMapOf<LabelMarker, MutableSet<String>>()) { acc, tag ->
+    val labels = allLabels.fold(staticLabels) { acc, tag ->
         acc[LabelMarker(tag.name)]?.add(tag.value) ?: acc.put(LabelMarker(tag.name), mutableSetOf(tag.value))
         acc
-    } + staticLabels
+    }
 
     send(
         buildVersion,
@@ -55,7 +55,7 @@ suspend fun Plugin.sendLabels() {
         send(
             buildVersion,
             destination = AttributeValues(attributesRoute, label.name),
-            message = values.toSet()
+            message = values
         )
     }
 }

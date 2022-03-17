@@ -27,13 +27,15 @@ import io.kotlintest.*
 import io.kotlintest.matchers.numerics.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import kotlin.test.*
+import org.junit.jupiter.api.*
+import kotlin.test.Test
 
 
 class RisksTest : E2EPluginTest() {
 
     @Ignore //TODO Fix tests EPMDJ-10319
     @Test
+    @Disabled //TODO fix  admin test-framework
     fun `cover all risks during 2 builds`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
