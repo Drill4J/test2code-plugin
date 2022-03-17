@@ -20,26 +20,30 @@ import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.api.TestInfo
 import com.epam.drill.plugins.test2code.api.TestResult
 import com.epam.drill.plugins.test2code.common.api.*
 import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
+import org.junit.jupiter.api.*
 import java.util.*
 import kotlin.test.*
+import kotlin.test.Test
 
 class ScopeCoverageTest : E2EPluginTest() {
 
-    private val testWithCoverageName = TestDetails(testName = "TestWithCoverage")
-    private val testWithoutCoverageName = TestDetails(testName = "EmptyTest")
+    private val sessionId = "${UUID.randomUUID()}"
+    private val labels = setOf(Label("Session", sessionId))
 
+    private val testWithCoverageName = TestDetails(testName = "TestWithCoverage", labels = labels)
+    private val testWithoutCoverageName = TestDetails(testName = "EmptyTest", labels = labels)
 
     @Test
     fun `tests without coverage must be in scope when at least one test have coverage`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<Build1> { plugUi, build ->
-                val sessionId = "${UUID.randomUUID()}"
                 val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
 
                 pluginAction(startNewSession) { status, _ ->
@@ -92,8 +96,7 @@ class ScopeCoverageTest : E2EPluginTest() {
     @Test
     fun `tests without coverage shouldn't be in scope`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
-            connectAgent<CustomBuild> { plugUi, _ ->
-                val sessionId = "${UUID.randomUUID()}"
+            connectAgent<Build1> { plugUi, _ ->
                 val startNewSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
                 pluginAction(startNewSession) { status, _ ->
                     status shouldBe HttpStatusCode.OK
@@ -126,12 +129,7 @@ class ScopeCoverageTest : E2EPluginTest() {
                 val scopeId = plugUi.activeScope()!!.id
                 plugUi.subscribeOnScope(scopeId) {
                     coverage()!!.percentage shouldBe 0.0
-                    scope()!!.coverage.apply {
-                        byTestType.size shouldBe 0
-                        methodCount shouldBe zeroCount
-                        count shouldBe zeroCount
-                        packageCount shouldBe zeroCount
-                    }
+                    scope()!!.coverage.byTestType.size shouldBe 0
                 }
             }
         }

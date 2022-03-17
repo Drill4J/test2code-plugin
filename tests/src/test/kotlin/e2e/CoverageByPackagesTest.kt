@@ -81,7 +81,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     plugUi.subscribeOnTest(scopeId, TestKey(type = MANUAL_TEST_TYPE, id = testHash)
                         .id()) {
                         methodsCoveredByTest()!!.apply {
-                            testName shouldBe testDetails
+                            details.testName shouldBe testDetails.testName
                             methodCounts.apply {
                                 new shouldBe 0
                                 modified shouldBe 0
