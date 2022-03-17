@@ -151,9 +151,9 @@ const val PATH_DELIMITER = "->"
  */
 @Serializable
 data class TestOverviewFilter(
-    val fieldPath: String, // Name -> [details->testName : Prop]  // Path -> [details->path]
+    val fieldPath: String,
     val isLabel: Boolean,
-    val values: List<FilterValue>, //
+    val values: List<FilterValue>,
     val valuesOp: BetweenOp = BetweenOp.OR,
 )
 
@@ -367,7 +367,7 @@ data class CoverageByTests(
 @Serializable
 data class TestedMethodsSummary(
     val id: String,
-    val testName: TestDetails,
+    val details: TestDetails,
     val testType: String,
     val methodCounts: CoveredMethodCounts,
 )
