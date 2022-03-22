@@ -23,6 +23,8 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import e2e.*
 import io.kotlintest.*
+import io.kotlintest.matchers.doubles.*
+import io.kotlintest.matchers.numerics.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlin.test.*
@@ -55,6 +57,7 @@ class ScopeTest : E2EPluginTest() {
                 }
                 val renameScope =
                     RenameScope(RenameScopePayload(activeScope.id, "integration")).stringify()
+                delay(150)
                 pluginAction(renameScope).join()
                 plugUi.activeScope()!!.name shouldBe "integration"
 
@@ -155,6 +158,61 @@ class ScopeTest : E2EPluginTest() {
                 plugUi.buildCoverage()!!.percentage shouldBe 0.0
                 pluginAction(ToggleScope(ScopePayload(ignoredScopeId)).stringify()).join()
                 plugUi.buildCoverage()!!.percentage shouldBe 100.0
+            }
+        }
+    }
+
+    @Test
+    fun `finish active scope when agent is offline`() {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(delayBeforeClearData = 100L) {
+            connectAgent<Build1> { plugUi: CoverageSocketStreams, build ->
+                plugUi.buildCoverage()
+                plugUi.coveragePackages()
+                plugUi.activeSessions()!!.run {
+                    count shouldBe 0
+                    testTypes shouldBe emptySet()
+                }
+                plugUi.activeScope()!!.apply {
+                    coverage.percentage shouldBe 0.0
+                }
+                val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
+                pluginAction(startNewSession) { status, content ->
+                    status shouldBe HttpStatusCode.OK
+                    val startSession = content!!.parseJsonData<StartAgentSession>()
+                    plugUi.activeSessions()!!.run { count shouldBe 1 }
+                    runWithSession(startSession.payload.sessionId) {
+                        val gt = build.entryPoint()
+                        gt.test1()
+                        gt.test2()
+                        gt.test3()
+                    }
+                    pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()).join()
+                }.join()
+                plugUi.activeSessions()!!.count shouldBe 0
+                plugUi.activeScope()!!.coverage.percentage shouldBe 100.0
+
+                println("toggle agentId $agentId")
+//                toggleAgent(agentId)//todo how to make build OFFLINE? remove if cannot
+//                delay(100)
+
+                val switchScope = SwitchActiveScope(
+                    ActiveScopeChangePayload(
+                        scopeName = "new2",
+                        savePrevScope = true,
+                        prevScopeEnabled = true
+                    )
+                ).stringify()
+                pluginAction(switchScope) { status: HttpStatusCode?, content: String? ->
+                    println("status: $status $content")
+                    status shouldBe HttpStatusCode.OK
+                    plugUi.buildCoverage()!!.apply {
+                        count.covered shouldBeGreaterThan 0
+                    }
+                    plugUi.coveragePackages()
+                    plugUi.coveragePackages()!!.apply {
+                        first().coverage shouldBeGreaterThan 0.0
+                    }
+                }.join()
             }
         }
     }

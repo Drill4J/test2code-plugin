@@ -36,8 +36,10 @@ data class InitDataPart(val astEntities: List<AstEntity>) : CoverMessage()
 @Serializable
 data class Initialized(val msg: String = "") : CoverMessage()
 
+//TODO EPMDJ-10321 remove it after supporting on other agents
 @SerialName("SCOPE_INITIALIZED")
 @Serializable
+@Deprecated("it is the old and unnecessary action")
 data class ScopeInitialized(
     val id: String,
     val name: String,

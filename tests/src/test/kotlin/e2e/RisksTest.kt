@@ -67,6 +67,7 @@ class RisksTest : E2EPluginTest() {
                 pluginAction(switchScope) { status, _ ->
                     status shouldBe HttpStatusCode.OK
                 }.join()
+                delay(100)
                 plugUi.activeScope()!!.coverage.count.covered shouldBe 0
                 plugUi.buildCoverage()!!.count.covered shouldBeGreaterThan 0
                 delay(500)

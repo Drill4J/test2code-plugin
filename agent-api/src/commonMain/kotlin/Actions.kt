@@ -21,10 +21,6 @@ import kotlinx.serialization.*
 sealed class AgentAction
 
 @Serializable
-@SerialName("INIT_ACTIVE_SCOPE")
-data class InitActiveScope(val payload: InitScopePayload) : AgentAction()
-
-@Serializable
 @SerialName("START_AGENT_SESSION")
 data class StartAgentSession(val payload: StartSessionPayload) : AgentAction()
 

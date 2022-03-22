@@ -85,13 +85,14 @@ internal suspend fun Plugin.changeActiveScope(
                 logger.info { "$prevScope is empty, it won't be added to the build." }.also { logPoolStats() }
             }
         } else cleanTopics(prevScope.id)
-        InitActiveScope(
-            payload = InitScopePayload(
+        scopeInitialized(prevScope.id)
+        ActionResult(StatusCodes.OK,
+            data = ActionScopeResult(
                 id = activeScope.id,
                 name = activeScope.name,
                 prevId = prevScope.id
             )
-        ).toActionResult()
+        )
     }
 } else ActionResult(
     code = StatusCodes.CONFLICT,
