@@ -117,18 +117,6 @@ class Plugin(
 
     override suspend fun doAction(action: AgentAction) {
         when (action) {
-            is InitActiveScope -> action.payload.apply {
-                logger.info { "Initializing scope $id, $name, prevId=$prevId" }
-                instrContext.cancelAll()
-                sendMessage(
-                    ScopeInitialized(
-                        id = id,
-                        name = name,
-                        prevId = prevId,
-                        ts = currentTimeMillis()
-                    )
-                )
-            }
             is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
                 val handler = probeSender(sessionId, isRealtime)

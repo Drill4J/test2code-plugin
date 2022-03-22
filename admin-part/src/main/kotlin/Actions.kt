@@ -25,6 +25,7 @@ internal object StatusCodes {
     const val NOT_FOUND = 404
     const val CONFLICT = 409
     const val ERROR = 500
+    const val NOT_IMPLEMENTED = 501
 }
 
 internal fun AgentAction.toActionResult() = ActionResult(

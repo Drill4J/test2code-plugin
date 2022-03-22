@@ -37,7 +37,7 @@ data class AstMethod(
 )
 
 @Serializable
-data class InitScopePayload(
+data class ActionScopeResult(
     val id: String,
     val name: String,
     val prevId: String,

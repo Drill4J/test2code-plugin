@@ -100,6 +100,11 @@ class Plugin(
         action: Action,
         data: Any?,
     ): ActionResult = when (action) {
+        is IsPossibleOffline -> {
+            if (action.payload is SwitchActiveScope){
+                ActionResult(code = StatusCodes.OK, data = "")
+            } else ActionResult(code = StatusCodes.NOT_IMPLEMENTED, data = "")
+        }
         is ToggleBaseline -> toggleBaseline()
         is SwitchActiveScope -> changeActiveScope(action.payload)
         is RenameScope -> renameScope(action.payload)
@@ -243,7 +248,6 @@ class Plugin(
         is Initialized -> state.initialized {
             processInitialized()
         }
-        is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
             .also { logPoolStats() }
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }

@@ -23,3 +23,15 @@ For more information see https://drill4j.github.io/
 
 With Gradle:
 `./gradlew run`
+
+## How to Debug
+
+change DRILL_AGENTS_SOCKET_TIMEOUT for your needs.
+
+### Admin part
+
+by remote debug with port 5006
+
+### Agent part
+
+by remote debug with port 

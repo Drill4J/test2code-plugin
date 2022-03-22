@@ -87,3 +87,7 @@ data class UpdateSettings(val payload: List<Setting>) : Action()
 @Serializable
 @SerialName("TOGGLE_BASELINE")
 object ToggleBaseline : Action()
+
+@SerialName("IS_POSSIBLE_OFFLINE")
+@Serializable
+data class IsPossibleOffline(val payload: Action) : Action()

@@ -44,6 +44,8 @@ typealias CoverageHandler = suspend ActiveScope.(Boolean, Sequence<Session>?) ->
 
 typealias BundleCacheHandler = suspend ActiveScope.(Map<TestKey, Sequence<ExecClassData>>) -> Unit
 
+private val logger = logger {}
+
 class ActiveScope(
     override val id: String = genUuid(),
     override val agentKey: AgentKey,
@@ -229,6 +231,7 @@ class ActiveScope(
 
 
     fun close() {
+        logger.debug { "closing active scope $id..." }
         _change.value = null
         activeSessions.clear()
         realtimeCoverageJob.cancel()
