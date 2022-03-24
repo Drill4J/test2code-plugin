@@ -23,8 +23,7 @@ import kotlinx.serialization.*
 @Serializable
 internal data class Risk(
     val method: Method,
-    val coverage: Count = zeroCount,
-    val status: Map<String, RiskStatus> = emptyMap(),
+    val status: Map<String, RiskStat> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -47,6 +46,12 @@ internal data class BaselineRisks(
     @Id
     val baseline: AgentKey,
     val risks: Set<Risk> = emptySet(),
+)
+
+@Serializable
+internal data class RiskStat(
+    val coverage: Count = zeroCount,
+    val status: RiskStatus = RiskStatus.NOT_COVERED,
 )
 
 

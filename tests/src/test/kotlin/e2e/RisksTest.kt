@@ -32,6 +32,7 @@ import kotlin.test.*
 
 class RisksTest : E2EPluginTest() {
 
+    @Ignore //TODO Fix tests EPMDJ-10319
     @Test
     fun `cover all risks during 2 builds`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {

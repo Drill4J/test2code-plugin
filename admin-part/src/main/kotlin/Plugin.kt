@@ -242,7 +242,6 @@ class Plugin(
         }
         is Initialized -> state.initialized {
             processInitialized()
-            calculateAndSendCachedCoverage()
         }
         is ScopeInitialized -> scopeInitialized(message.prevId)
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
@@ -290,6 +289,7 @@ class Plugin(
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
         sendScopes()
+        calculateAndSendCachedCoverage()
         return initActiveScope() && initBundleHandler()
     }
 

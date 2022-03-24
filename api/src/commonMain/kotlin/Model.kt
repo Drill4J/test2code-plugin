@@ -420,9 +420,15 @@ data class RiskDto(
     val type: RiskType,
     val count: CountDto,
     val coverage: Double = 0.0,
-    val status: Map<String, RiskStatus> = emptyMap(),
+    val previousCovered: RiskStatDto?,
     val coverageRate: CoverageRate = CoverageRate.MISSED,
     val assocTestsCount: Int = 0,
+)
+
+@Serializable
+data class RiskStatDto(
+    val buildVersion: String,
+    val coverage: Double = 0.0,
 )
 
 enum class RiskStatus {
