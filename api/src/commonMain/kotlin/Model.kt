@@ -128,6 +128,7 @@ data class ScopePayload(val scopeId: String = "")
 @Serializable
 data class FilterPayload(
     val name: String,
+    val id: String = "",
     val attributes: List<TestOverviewFilter>,
     //now use only AND here:
     val attributesOp: BetweenOp = BetweenOp.AND,
@@ -136,7 +137,7 @@ data class FilterPayload(
 
 @Serializable
 data class ApplyPayload(
-    val name: String,
+    val id: String,
     val buildVersion: String = "",//todo EPMDJ-8975 use the filter by buildVersion
 )
 
@@ -152,7 +153,7 @@ const val PATH_DELIMITER = "->"
 @Serializable
 data class TestOverviewFilter(
     val fieldPath: String,
-    val isLabel: Boolean,
+    val isLabel: Boolean = true,
     val values: List<FilterValue>,
     val valuesOp: BetweenOp = BetweenOp.OR,
 )
@@ -167,7 +168,7 @@ enum class FieldOp { EQ, }
 
 @Serializable
 data class DeleteFilterPayload(
-    val name: String,
+    val id: String,
 )
 
 @Serializable
