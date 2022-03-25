@@ -17,11 +17,12 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
+import com.epam.drill.plugins.test2code.global_filter.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.coroutines.*
 import kotlin.test.*
 
-class AgentStateTest: PostgresBased("agent_state") {
+class AgentStateTest : PostgresBased("agent_state") {
 
     private val agentInfo = AgentInfo(
         id = "ag",
