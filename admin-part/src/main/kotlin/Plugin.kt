@@ -116,31 +116,35 @@ class Plugin(
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
         is CreateFilter -> {
-            val filter = action.payload.toStoredFilter(agentId)
+            val newFilter = action.payload
+            logger.debug { "creating filter with $newFilter..." }
             val isNotExistFilter = storeClient.findBy<StoredFilter> {
-                (StoredFilter::name eq filter.name) and (StoredFilter::agentId eq filter.agentId)
+                (StoredFilter::name eq newFilter.name) and (StoredFilter::agentId eq agentId)
             }.get().isEmpty()
             if (isNotExistFilter) {
-                calculateFilter(filter)
+                calculateFilter(newFilter.toStoredFilter(agentId))
             } else ActionResult(code = StatusCodes.CONFLICT, data = "Filter with this name already exists")
         }
         is UpdateFilter -> {
-            calculateFilter(action.payload.toStoredFilter(agentId))
+            val updateFilter = action.payload
+            val filterId = updateFilter.id
+            storeClient.findById<StoredFilter>(filterId)?.let {
+                logger.debug { "updating filter with id '$filterId': $updateFilter" }
+                calculateFilter(updateFilter.toStoredFilter(agentId))
+            } ?: ActionResult(StatusCodes.BAD_REQUEST, "Can not find the filter with id '$filterId'")
         }
         is ApplyFilter -> {
-            val filters = storeClient.findBy<StoredFilter> {
-                (StoredFilter::name eq action.payload.name) and (StoredFilter::agentId eq agentId)
-            }.get()
-            if (filters.isNotEmpty()) {
-                calculateFilter(filters.first())
-            } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this name is not found")
+            val filterId = action.payload.id
+            val filter = storeClient.findById<StoredFilter>(filterId)
+            logger.debug { "applying $filter..." }
+            filter?.let {
+                calculateFilter(it)
+            } ?: ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this id is not found")
         }
         is DeleteFilter -> {
-            val filterExpr: Expr<StoredFilter>.() -> Unit = {
-                (StoredFilter::agentId eq agentId) and (StoredFilter::name eq action.payload.name)
-            }
-            val filterId = storeClient.findBy(filterExpr).get().hashCode().toString()
-            storeClient.deleteBy(filterExpr)
+            val filterId = action.payload.id
+            logger.debug { "deleting filter with id '$filterId'" }
+            storeClient.deleteById<StoredFilter>(filterId)//todo why not excute?
             sendFilterUpdates(filterId = filterId)
             ActionResult(code = StatusCodes.OK, data = "")
         }
@@ -471,7 +475,7 @@ class Plugin(
             agentKey)
         context = context.updateBundleCounters(bundleCounters)
         logger.debug { "Starting to calculate coverage by filter..." }
-        val filterId = filter.hashCode().toString()
+        val filterId = filter.id
         bundleCounters.calculateAndSendBuildCoverage(
             context = context,
             scopeCount = context.build.stats.scopeCount,

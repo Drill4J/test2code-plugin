@@ -22,6 +22,7 @@ import com.epam.drill.admin.endpoints.*
 import com.epam.drill.e2e.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.global_filter.*
 import com.epam.drill.plugins.test2code.util.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.locations.*
@@ -92,6 +93,9 @@ class CoverageSocketStreams : PluginStreams() {
 
     private val summary: Channel<SummaryDto?> = Channel(Channel.UNLIMITED)
     suspend fun summary() = summary.receive()
+
+    private val filters: Channel<List<FilterDto>?> = Channel(Channel.UNLIMITED)
+    suspend fun filters() = filters.receive()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun queued(incoming: ReceiveChannel<Frame>, out: SendChannel<Frame>, isDebugStream: Boolean) {
@@ -199,6 +203,9 @@ class CoverageSocketStreams : PluginStreams() {
 
                                     is Routes.Group.Summary -> {
                                         summary.send(SummaryDto.serializer(), content)
+                                    }
+                                    is Routes.Build.Filters -> {
+                                        filters.send(ListSerializer(FilterDto.serializer()), content)
                                     }
                                     else -> println("!!!$url ignored")
                                 }

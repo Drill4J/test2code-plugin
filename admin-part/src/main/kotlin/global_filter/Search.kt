@@ -127,24 +127,6 @@ fun findByTestType(
     return result
 }
 
-@Suppress("UNCHECKED_CAST")
-fun readInstanceProperty(instance: Any, propertyName: String): Any {
-    val property = instance::class.members
-        // don't cast here to <Any, R>, it would succeed silently
-        .first { it.name == propertyName } as KProperty1<Any, *>
-    return property.get(instance) ?: ""
-}
-
-//todo maybe remove readInstanceProperty if not using
-fun readInstanceProperty(instance: Any, properties: List<String>): Any {
-    //todo or recursive?
-    var temp: Any = instance
-    properties.forEach {
-        temp = readInstanceProperty(temp, it)
-    }
-    return temp
-}
-
 suspend fun findProbes(
     storeClient: StoreClient,
     sessionsIds: List<String>,
