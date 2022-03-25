@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.BetweenOp
 import com.epam.drill.plugins.test2code.api.routes.*
 import com.epam.drill.plugins.test2code.api.routes.Routes.Build.Filters.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
 import kotlinx.serialization.Serializable
@@ -30,8 +31,9 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class StoredFilter(
-    @Id val agentId: String,
-    @Id val name: String,
+    @Id val id: String,
+    val agentId: String,
+    val name: String,
     val attributes: List<TestOverviewFilter>,
     val attributesOp: BetweenOp = BetweenOp.AND,
     val buildVersion: String = "",
@@ -40,6 +42,7 @@ data class StoredFilter(
 fun FilterPayload.toStoredFilter(
     agentId: String,
 ) = StoredFilter(
+    id = id.ifEmpty { genUuid() },
     agentId = agentId,
     name = name,
     attributes = attributes,
@@ -58,16 +61,18 @@ suspend fun Plugin.sendFilterUpdates(filter: StoredFilter? = null, filterId: Str
     send(
         buildVersion,
         destination = Filter(id = filterId, filters = filtersRoute),
-        message = filter ?: ""
+        message = filter?.id?.ifEmpty { "" } ?: ""
     )
+    val filters = storeClient.findBy<StoredFilter> { StoredFilter::agentId eq agentId }.get().map {
+        FilterDto(
+            name = it.name,
+            id = it.id
+        )
+    }
+    logger.debug { "sending filters $filters..." }
     send(
         buildVersion,
         destination = filtersRoute,
-        message = storeClient.findBy<StoredFilter> { StoredFilter::agentId eq agentId }.get().map {
-            FilterDto(
-                name = it.name,
-                id = it.hashCode().toString()
-            )
-        }
+        message = filters
     )
 }

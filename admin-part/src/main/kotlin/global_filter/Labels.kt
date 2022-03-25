@@ -51,7 +51,7 @@ suspend fun Plugin.sendLabels() {
     )
 
     labels.forEach { (label, values) ->
-        logger.debug { "send tags '$label' values '$values'" }//todo change to trace after testing
+        logger.trace { "send tags '$label' values '$values'" }
         send(
             buildVersion,
             destination = AttributeValues(attributesRoute, label.name),

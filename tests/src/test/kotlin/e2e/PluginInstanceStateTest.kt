@@ -18,7 +18,6 @@ package com.epam.drill.plugins.test2code.e2e
 import com.epam.drill.builds.*
 import com.epam.drill.e2e.*
 import com.epam.drill.e2e.plugin.*
-import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*

@@ -94,8 +94,8 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
     val probesByTestId = groupProbes(storeClient, sessionsIds, testIds)
     BundleCounters(
         all = allProbes.bundle(context, classBytes),
-        testTypeOverlap = BundleCounter.empty, //todo impl EPMDJ-8975 Overlapping
-        overlap = allProbes.overlappingBundle(context, classBytes),
+        testTypeOverlap = BundleCounter.empty,
+        overlap = BundleCounter.empty,
         byTestType = byTestType.map {
             val tests: List<String> = it.value.map { overview -> overview.testId }
             val probes = findProbes(storeClient, sessionsIds, tests).asSequence()

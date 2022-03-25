@@ -60,12 +60,17 @@ class ActiveSession(
                     )
                 }
                 val manualTests = keys.filter { (id, _) -> id !in tests }.map { (id, name) ->
-                    TestOverview(testId = id,
-                        details = TestDetails(testName = name.weakIntern(), labels = labels))
+                    TestOverview(
+                        testId = id,
+                        details = TestDetails(testName = name.urlDecode().weakIntern(), labels = labels)
+                    )
                 }
                 autotests + manualTests
             } ?: keys.map { (id, name) ->
-                TestOverview(testId = id, details = TestDetails(testName = name.weakIntern(), labels = labels))
+                TestOverview(
+                    testId = id,
+                    details = TestDetails(testName = name.urlDecode().weakIntern(), labels = labels)
+                )
             }
         }.toSet()
 

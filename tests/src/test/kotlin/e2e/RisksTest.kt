@@ -34,7 +34,6 @@ import kotlin.test.Test
 class RisksTest : E2EPluginTest() {
 
     @Test
-    @Disabled //TODO fix  admin test-framework
     fun `cover all risks during 2 builds`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
