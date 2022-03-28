@@ -46,6 +46,6 @@ tasks {
         environment("DRILL_DEFAULT_PACKAGES", "org/springframework/samples/petclinic,com/epam,package")
         environment("DRILL_AGENTS_SOCKET_TIMEOUT", 360)
         environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
-        environment("analytic.disable", true)
+        systemProperty("analytic.disable", true)
     }
 }
