@@ -25,6 +25,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import com.epam.kodux.util.*
 import kotlinx.atomicfu.*
+import kotlinx.coroutines.sync.*
 import org.jacoco.core.internal.data.*
 import java.util.stream.*
 
@@ -90,7 +91,9 @@ internal class AgentState(
         activeScope.close()
     }
 
-    suspend fun initialized(block: suspend () -> Unit = {}) {
+    private val mutex = Mutex()
+
+    suspend fun initialized(block: suspend () -> Unit = {}): Unit = mutex.withLock {
         logger.debug { "initialized by event from agent..." }.also { logPoolStats() }
         _data.getAndUpdate {
             when (it) {
@@ -219,7 +222,7 @@ internal class AgentState(
     }
 
     internal suspend fun finishSession(
-        sessionId: String
+        sessionId: String,
     ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
         if (it.any()) {
             logger.debug { "FinishSession. size of exec data = ${it.probes.size}" }.also { logPoolStats() }
@@ -233,7 +236,7 @@ internal class AgentState(
     }
 
     internal fun updateProbes(
-        buildScopes: Sequence<FinishedScope>
+        buildScopes: Sequence<FinishedScope>,
     ) {
         _coverContext.update {
             it?.copy(build = it.build.copy(probes = buildScopes.flatten().flatten().merge()))
@@ -241,7 +244,7 @@ internal class AgentState(
     }
 
     internal fun updateBundleCounters(
-        bundleCounters: BundleCounters
+        bundleCounters: BundleCounters,
     ): CachedBuild = updateBuild {
         copy(bundleCounters = bundleCounters)
     }
@@ -256,13 +259,13 @@ internal class AgentState(
 
     internal fun updateBuildStats(
         buildCoverage: BuildCoverage,
-        context: CoverContext
+        context: CoverContext,
     ): CachedBuild = updateBuild {
         copy(stats = buildCoverage.toCachedBuildStats(context))
     }
 
     private fun updateBuild(
-        updater: CachedBuild.() -> CachedBuild
+        updater: CachedBuild.() -> CachedBuild,
     ): CachedBuild = _coverContext.updateAndGet {
         it?.copy(build = it.build.updater())
     }!!.build
