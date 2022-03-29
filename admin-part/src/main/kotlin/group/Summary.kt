@@ -74,23 +74,27 @@ internal fun CachedBuild.toSummary(
     coverageByTests: CoverageByTests? = null,
     testsCoverage: List<TestCoverageDto>? = null,
     parentCoverageCount: Count? = null,
-): AgentSummary = AgentSummary(
-    name = agentName,
-    buildVersion = version,
-    coverage = stats.coverage,
-    methodCount = stats.methodCount,
-    coverageByType = stats.coverageByType,
-    scopeCount = stats.scopeCount,
-    arrow = parentCoverageCount.arrowType(stats.coverage),
-    risks = risks.notCovered(agentKey.buildVersion),
-    testDuration = coverageByTests?.all?.duration ?: 0L,
-    durationByType = coverageByTests?.byType?.groupBy { it.type }
-        ?.mapValues { (_, values) -> values.sumOf { it.summary.duration } }
-        ?: emptyMap(),
-    tests = tests.tests,
-    testsCoverage = testsCoverage ?: emptyList(),
-    testsToRun = testsToRun.withoutCoverage(bundleCounters)
-).let { it.copy(riskCounts = it.risks.toCounts()) }
+): AgentSummary = run {
+    val uncoveredRisks = risks.notCovered()
+    AgentSummary(
+        name = agentName,
+        buildVersion = agentKey.buildVersion,
+        coverage = stats.coverage,
+        methodCount = stats.methodCount,
+        coverageByType = stats.coverageByType,
+        scopeCount = stats.scopeCount,
+        arrow = parentCoverageCount.arrowType(stats.coverage),
+        riskCounts = uncoveredRisks.toCounts(),
+        risks = uncoveredRisks,
+        testDuration = coverageByTests?.all?.duration ?: 0L,
+        durationByType = coverageByTests?.byType?.groupBy { it.type }
+            ?.mapValues { (_, values) -> values.sumOf { it.summary.duration } }
+            ?: emptyMap(),
+        tests = tests.tests,
+        testsCoverage = testsCoverage ?: emptyList(),
+        testsToRun = testsToRun.withoutCoverage(bundleCounters)
+    )
+}
 
 internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
     id = agentId,

@@ -421,7 +421,7 @@ class Plugin(
         val risks = context.calculateRisks(storeClient, all)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            riskCount = Count(risks.notCovered(buildVersion).count(), risks.count())
+            riskCount = Count(risks.notCovered().count(), risks.count())
         )
         state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
