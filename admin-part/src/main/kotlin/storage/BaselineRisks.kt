@@ -17,7 +17,7 @@ package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.dsm.*
+import com.epam.kodux.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -44,7 +44,7 @@ internal data class Risk(
 @Serializable
 internal data class BaselineRisks(
     @Id
-    val baseline: AgentKey,
+    val baseline: String,
     val risks: Set<Risk> = emptySet(),
 )
 
@@ -56,5 +56,5 @@ internal data class RiskStat(
 
 
 internal suspend fun StoreClient.loadRisksByBaseline(
-    baseline: AgentKey,
+    baseline: String,
 ) = findById(baseline) ?: store(BaselineRisks(baseline))

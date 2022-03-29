@@ -78,7 +78,7 @@ internal fun CachedBuild.toSummary(
     val uncoveredRisks = risks.notCovered()
     AgentSummary(
         name = agentName,
-        buildVersion = agentKey.buildVersion,
+        buildVersion = version,
         coverage = stats.coverage,
         methodCount = stats.methodCount,
         coverageByType = stats.coverageByType,

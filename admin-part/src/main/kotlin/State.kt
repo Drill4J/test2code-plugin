@@ -185,7 +185,7 @@ internal class AgentState(
                     } ?: this
                 }
                 val testsToRun = parentBuild?.run {
-                    val baselineRisks = storeClient.loadRisksByBaseline(parentBuild.agentKey)
+                    val baselineRisks = storeClient.loadRisksByBaseline(parentBuild.version)
                     val coveredMethods = baselineRisks.risks.map { it.method }
                     val notCoveredMethods = methodChanges.modified.filterNot { coveredMethods.contains(it) }
                     bundleCounters.testsWith(notCoveredMethods)

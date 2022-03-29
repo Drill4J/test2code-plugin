@@ -19,6 +19,8 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.jvm.LAMBDA
+import com.epam.drill.plugins.test2code.storage.*
+import com.epam.drill.plugins.test2code.storage.Risk
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.kodux.*
 import kotlinx.serialization.*
@@ -129,8 +131,8 @@ internal suspend fun CoverContext.calculateRisks(
     bundleCounter: BundleCounter = build.bundleCounters.all,
 ): TypedRisks = bundleCounter.coveredMethods(methodChanges.new + methodChanges.modified).let { covered ->
     trackTime("Risk calculation") {
-        val buildVersion = build.agentKey.buildVersion
-        val baselineBuild = parentBuild?.agentKey ?: build.agentKey
+        val buildVersion = build.version
+        val baselineBuild = parentBuild?.version ?: buildVersion
 
         val baselineCoveredRisks = storeClient.loadRisksByBaseline(baselineBuild)
         val riskByMethod = baselineCoveredRisks.risks.map {
@@ -180,7 +182,7 @@ internal suspend fun CoverContext.risksDto(
     storeClient: StoreClient,
     associatedTests: Map<CoverageKey, List<TypedTest>> = emptyMap(),
 ): List<RiskDto> = run {
-    val buildVersion = build.agentKey.buildVersion
+    val buildVersion = build.version
     calculateRisks(storeClient).flatMap { (type, risks) ->
         risks.map { risk ->
             val currentCoverage = risk.status[buildVersion]?.coverage ?: zeroCount

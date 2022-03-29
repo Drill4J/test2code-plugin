@@ -59,9 +59,6 @@ class Plugin(
         val json = Json { encodeDefaults = true }
     }
 
-    val agentId = agentInfo.id
-    val buildVersion = agentInfo.buildVersion
-
     internal val logger = logger(agentInfo.id)
 
     internal val runtimeConfig = RuntimeConfig(id)
