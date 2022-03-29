@@ -105,8 +105,8 @@ internal fun AgentSummary.toDto(agentId: String) = AgentSummaryDto(
 
 internal fun AgentSummary.toDto() = SummaryDto(
     coverage = coverage.percentage(),
-    coverageCount = coverage,
-    methodCount = methodCount,
+    coverageCount = coverage.toDto(),
+    methodCount = methodCount.toDto(),
     scopeCount = scopeCount,
     arrow = arrow,
     risks = riskCounts.total, //TODO remove after changes on frontend

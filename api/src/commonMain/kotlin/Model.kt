@@ -461,8 +461,8 @@ data class BuildStatsDto(
 @Serializable
 data class SummaryDto(
     val coverage: Double = 0.0,
-    val coverageCount: Count = zeroCount,
-    val methodCount: Count = zeroCount,
+    val coverageCount: CountDto = zeroCountDto,
+    val methodCount: CountDto = zeroCountDto,
     val scopeCount: Int = 0,
     val arrow: ArrowType = ArrowType.UNCHANGED,
     val risks: Int = 0, //TODO remove after changes on frontend
