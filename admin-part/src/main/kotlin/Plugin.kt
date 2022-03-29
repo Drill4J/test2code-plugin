@@ -59,6 +59,9 @@ class Plugin(
         val json = Json { encodeDefaults = true }
     }
 
+    val agentId = agentInfo.id
+    val buildVersion = agentInfo.buildVersion
+
     internal val logger = logger(agentInfo.id)
 
     internal val runtimeConfig = RuntimeConfig(id)
@@ -415,10 +418,10 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.stats.coverage } ?: zeroCount
-        val risks = context.risks
+        val risks = context.calculateRisks(storeClient, all)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
-            riskCount = Count(risks.notCovered(all).count(), risks.count())
+            riskCount = Count(risks.notCovered(buildVersion).count(), risks.count())
         )
         state.updateBuildStats(buildCoverage, context)
         val cachedBuild = state.updateBuildTests(
@@ -470,7 +473,7 @@ class Plugin(
             send(buildVersion, Routes.Build.Summary.Tests.ByType(it), coverageByTests.byType)
         }
         val context = state.coverContext() //TODO remove context from this method
-        send(buildVersion, Routes.Build.Risks(buildRoute), context.risksDto())
+        send(buildVersion, Routes.Build.Risks(buildRoute), context.risksDto(storeClient))
         send(buildVersion, Routes.Build.TestsToRun(buildRoute), context.testsToRunDto())
         val testsToRunSummary = context.toTestsToRunSummary()
         state.storeClient.store(testsToRunSummary)
@@ -638,7 +641,9 @@ class Plugin(
                     sendScopeTree(it.id, associatedTests, treeCoverage)
                 }
             } ?: run {
-                send(buildVersion, Routes.Build.Risks(Routes.Build()), state.coverContext().risksDto(assocTestsMap))
+                send(buildVersion,
+                    Routes.Build.Risks(Routes.Build()),
+                    state.coverContext().risksDto(storeClient, assocTestsMap))
                 trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests) }
             }
         }
