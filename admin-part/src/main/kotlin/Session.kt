@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
@@ -58,11 +59,11 @@ class ActiveSession(
                     )
                 }
                 val manualTests = keys.filter { (id, _) -> id !in tests }.map { (id, name) ->
-                    TestOverview(testId = id, details = TestDetails(testName = name.weakIntern()))
+                    TestOverview(testId = id, details = TestDetails(testName = name.urlDecode().weakIntern()))
                 }
                 autotests + manualTests
             } ?: keys.map { (id, name) ->
-                TestOverview(testId = id, details = TestDetails(testName = name.weakIntern()))
+                TestOverview(testId = id, details = TestDetails(testName = name.urlDecode().weakIntern()))
             }
         }.toSet()
 
