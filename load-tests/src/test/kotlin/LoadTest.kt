@@ -95,7 +95,6 @@ class LoadTest : E2EPluginTest() {
 
     @Test
     fun `load test`() {
-
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 500) {
             connectAgent<CustomBuild> { plugUi, build ->
                 plugUi.buildCoverage()

@@ -32,12 +32,10 @@ import kotlin.test.*
 
 class RisksTest : E2EPluginTest() {
 
-    @Ignore //TODO Fix tests EPMDJ-10319
     @Test
     fun `cover all risks during 2 builds`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
-
                 plugUi.buildCoverage()!!.count.covered shouldBe 0
                 plugUi.activeScope()!!.coverage.count.covered shouldBe 0
 
