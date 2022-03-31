@@ -205,11 +205,9 @@ internal suspend fun CoverContext.risksDto(
 
 private fun Risk.previousRiskCoverage(
     buildVersion: String,
-) = status.filter { it.key != buildVersion }.entries.fold(null) { statDto: RiskStatDto?, (build, coverage) ->
+) = status.filter { it.key != buildVersion }.entries.fold(RiskStatDto("")) { statDto: RiskStatDto, (build, coverage) ->
     val percentage = coverage.coverage.percentage()
-    statDto?.let {
-        it.takeIf { it.coverage >= percentage } ?: RiskStatDto(build, percentage)
-    } ?: RiskStatDto(build, percentage)
+    statDto.takeIf { it.coverage >= percentage } ?: RiskStatDto(build, percentage)
 }
 
 
@@ -229,7 +227,7 @@ internal fun Map<Method, CoverMethod>.toSummary(
 )
 
 internal fun Map<Method, CoverMethod>.filterValues(
-    predicate: (Method) -> Boolean
+    predicate: (Method) -> Boolean,
 ) = filter { predicate(it.key) }.values.toList()
 
 private fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) {
