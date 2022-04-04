@@ -103,8 +103,8 @@ class Plugin(
         data: Any?,
     ): ActionResult = when (action) {
         is IsPossibleOffline -> {
-            if (action.payload is SwitchActiveScope){
-                ActionResult(code = StatusCodes.OK, data = "")
+            if (action.payload is OfflineAvailable) {
+                okResult
             } else ActionResult(code = StatusCodes.NOT_IMPLEMENTED, data = "")
         }
         is ToggleBaseline -> toggleBaseline()
@@ -146,14 +146,18 @@ class Plugin(
             logger.debug { "deleting filter with id '$filterId'" }
             storeClient.deleteById<StoredFilter>(filterId)//todo why not excute?
             sendFilterUpdates(filterId = filterId)
-            ActionResult(code = StatusCodes.OK, data = "")
+            okResult
         }
         is RemoveBuild -> {
             val version = action.payload.version
             if (version != buildVersion && version != state.coverContext().parentBuild?.agentKey?.buildVersion) {
                 storeClient.removeBuildData(AgentKey(agentId, version), state.scopeManager)
-                ActionResult(code = StatusCodes.OK, data = "")
+                okResult
             } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Can not remove a current or baseline build")
+        }
+        is RemovePluginData -> {
+            storeClient.removeAllPluginData(agentId)
+            okResult
         }
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
@@ -213,7 +217,7 @@ class Plugin(
                 if (isRealtime) {
                     activeScope.probesChanged()
                 }
-                ActionResult(StatusCodes.OK, "")
+                okResult
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
         is ExportCoverage -> exportCoverage(action.payload.version)

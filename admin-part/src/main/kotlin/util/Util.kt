@@ -15,6 +15,9 @@
  */
 package com.epam.drill.plugins.test2code.util
 
+import com.epam.drill.plugin.api.end.*
+import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.StatusCodes
 import com.epam.dsm.util.*
 import org.jacoco.core.internal.data.*
 import java.net.*

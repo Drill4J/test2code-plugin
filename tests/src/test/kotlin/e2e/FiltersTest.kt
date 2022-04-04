@@ -136,22 +136,6 @@ class FiltersTest : E2EPluginTest() {
                 }.join()
                 delay(100)
             }
-//                .reconnect<Build2> { plugUi, _ ->
-            //todo reconnect and Apply. Status is not online
-//                plugUi.buildCoverage()!!.apply {
-//                    percentage shouldBe 0.0
-//                    byTestType shouldBe emptyList()
-//                }
-//                delay(200)
-//                val applyFilter = ApplyFilter(
-//                    ApplyPayload(filterId)
-//                ).stringify()
-//                pluginAction(applyFilter) { status, content ->
-//                    println("status apply: $status $content")
-//                    status shouldBe HttpStatusCode.OK
-//                    assertEquals(listOf(FilterDto(updateName, filterId)), plugUi.filters())
-//                }.join()
-//            }
         }
     }
 

@@ -28,6 +28,8 @@ internal object StatusCodes {
     const val NOT_IMPLEMENTED = 501
 }
 
+internal val okResult = ActionResult(code = StatusCodes.OK, data = "")
+
 internal fun AgentAction.toActionResult() = ActionResult(
     code = StatusCodes.OK,
     agentAction = this,

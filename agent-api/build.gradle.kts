@@ -10,7 +10,7 @@ kotlin {
     sourceSets.commonMain {
         dependencies {
             compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core")
-            implementation("com.epam.drill.dsm:annotations:$drillDsmVersion")
+            api("com.epam.drill.dsm:annotations:$drillDsmVersion") { isTransitive = false }
         }
     }
 

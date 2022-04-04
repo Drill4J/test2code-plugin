@@ -20,6 +20,8 @@ import kotlinx.serialization.*
 @Serializable
 sealed class Action
 
+interface OfflineAvailable
+
 @SerialName("START")
 @Serializable
 data class StartNewSession(val payload: StartPayload) : Action()
@@ -62,7 +64,7 @@ object StopAllSessions : Action()
 
 @SerialName("SWITCH_ACTIVE_SCOPE")
 @Serializable
-data class SwitchActiveScope(val payload: ActiveScopeChangePayload) : Action()
+data class SwitchActiveScope(val payload: ActiveScopeChangePayload) : Action(), OfflineAvailable
 
 @SerialName("RENAME_SCOPE")
 @Serializable
@@ -95,6 +97,10 @@ data class DropScope(val payload: ScopePayload) : Action()
 @SerialName("REMOVE_BUILD")
 @Serializable
 data class RemoveBuild(val payload: BuildPayload) : Action()
+
+@SerialName("REMOVE_PLUGIN_DATA")
+@Serializable
+object RemovePluginData : Action(), OfflineAvailable
 
 @Serializable
 @SerialName("UPDATE_SETTINGS")
