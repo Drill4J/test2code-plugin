@@ -58,7 +58,7 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 data class ClassData(
     val agentKey: AgentKey,
     val packageTree: PackageTree = emptyPackageTree,
-    val methods: List<Method> = emptyList(),
+    @DeserializeWithPool val methods: List<Method> = emptyList(),
     val probeIds: Map<String, Long> = emptyMap()
 ) : AgentData() {
     companion object {
