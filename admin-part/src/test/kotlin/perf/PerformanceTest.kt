@@ -50,7 +50,7 @@ class PerformanceTest : PluginTest() {
         switchScopeWithProbes()
     }
 
-    @Ignore(value = "it takes a lot of time, remove it after EPMDJ-10318")
+    @Ignore(value = "Failed with OOM")
     @Test
     fun `perf check! should finish scope with 2 session and takes probes`() = runBlocking {
         switchScopeWithProbes(800)
