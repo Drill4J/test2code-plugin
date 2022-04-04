@@ -17,6 +17,7 @@ package com.epam.drill.plugins.test2code.coverage
 
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.dsm.*
 import kotlinx.serialization.*
 
 internal data class DiffMethods(
@@ -116,7 +117,7 @@ data class ClassCounter(
     val path: String,
     override val name: String,
     override val count: Count,
-    val methods: List<MethodCounter>,
+    @DeserializeWithPool val methods: List<MethodCounter>,
     val fullName: String,
     val probes: List<Boolean> = emptyList(),
 ) : NamedCounter()
