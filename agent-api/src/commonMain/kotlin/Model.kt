@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.common.api
 
+import com.epam.dsm.*
 import kotlinx.serialization.*
 
 const val DEFAULT_TEST_NAME = "unspecified"
@@ -67,7 +68,9 @@ data class AgentSessionTestsPayload(val sessionId: String, val tests: List<Strin
 data class ExecClassData(
     val id: Long? = null,
     val className: String,
-    @Serializable(with = BitSetSerializer::class) val probes: Probes,
+    @Serializable(with = BitSetSerializer::class)
+    @Column("probes", PostgresType.BIT_VARYING)
+    val probes: Probes,
     /**
      * Test name only use for global session/manual testing and in cases where we couldn't set testId(hash) in headers
      */
