@@ -43,7 +43,7 @@ dependencies {
     //provided by admin
     //TODO create a platform for admin dependencies
     api("com.epam.drill.dsm:core:$drillDsmVersion")
-    api("com.epam.drill.dsm:annotations:$drillDsmVersion")
+    api("com.epam.drill.dsm:annotations:$drillDsmVersion") { isTransitive = false }
     api("com.epam.drill:admin-analytics-core:$drillAdminVersion")
     //TODO replace with drill logging - EPMDJ-9548
     implementation("io.github.microutils:kotlin-logging-jvm:$muLogger")
