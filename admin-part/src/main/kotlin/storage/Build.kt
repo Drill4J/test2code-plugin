@@ -19,6 +19,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
+import com.epam.dsm.find.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -98,6 +99,7 @@ internal suspend fun StoreClient.removeBuild(
     deleteById<BuildStats>(agentKey)
     deleteById<StoredBundles>(agentKey)
     deleteById<StoredBuildTests>(agentKey)
+    deleteById<BaselineRisks>(agentKey)
 }
 
 
@@ -105,9 +107,27 @@ internal suspend fun StoreClient.removeBuildData(
     agentKey: AgentKey,
     scopeManager: ScopeManager,
 ) = executeInAsyncTransaction {
-    logger.debug { "starting to remove build '$agentKey' data..." }
-    removeClassData(agentKey)
-    removeBuild(agentKey)
-    scopeManager.deleteByVersion(agentKey)
+    trackTime("Remove build $agentKey") {
+        logger.debug { "starting to remove build '$agentKey' data..." }
+        removeClassData(agentKey)
+        removeBuild(agentKey)
+        scopeManager.deleteByVersion(agentKey)
+    }
+}
+
+internal suspend fun StoreClient.removeAllPluginData(
+    agent: String,
+) = executeInAsyncTransaction {
+    trackTime("Remove plugin data for $agent") {
+        logger.debug { "starting to remove all plugin data for '$agent'... " }
+        deleteBy<StoredClassData> { FieldPath(StoredClassData::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<BuildStats> { FieldPath(BuildStats::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<StoredBundles> { FieldPath(StoredBundles::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<StoredBuildTests> { FieldPath(StoredBuildTests::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<BaselineRisks> { FieldPath(BaselineRisks::baseline, AgentKey::agentId) eq agent }
+        deleteBy<FinishedScope> { FieldPath(FinishedScope::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<ScopeDataEntity> { FieldPath(ScopeDataEntity::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<StoredSession> { FieldPath(StoredSession::agentKey, AgentKey::agentId) eq agent }
+    }
 }
 
