@@ -148,7 +148,7 @@ fun groupProbes(
         val testIdPath = FieldPath(ExecClassData::testId).extractText()
         val sql = """
                 SELECT $testIdPath,
-                       json_agg($JSON_COLUMN)
+                       json_agg(${fullJson<ExecClassData>()})
                 from $probesTable
                 where $PARENT_ID_COLUMN ${sessionsIds.toSqlIn()}
                   and $testIdPath ${testIds.toSqlIn()}
