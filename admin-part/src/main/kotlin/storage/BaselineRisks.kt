@@ -23,7 +23,7 @@ import kotlinx.serialization.*
 @Serializable
 internal data class Risk(
     val method: Method,
-    val status: Map<String, RiskStat> = emptyMap(),
+    val buildStatuses: Map<String, RiskStat> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
