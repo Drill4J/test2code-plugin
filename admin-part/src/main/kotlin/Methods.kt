@@ -135,8 +135,8 @@ internal suspend fun CoverContext.calculateRisks(
         val baselineBuild = parentBuild?.version ?: buildVersion
 
         val baselineCoveredRisks = storeClient.loadRisksByBaseline(baselineBuild)
-        val riskByMethod = baselineCoveredRisks.risks.map {
-            it.copy(status = it.status - buildVersion)
+        val riskByMethod = baselineCoveredRisks.risks.mapNotNull { risk ->
+            risk.copy(status = risk.status - buildVersion).takeIf { it.status.isNotEmpty() }
         }.associateByTo(mutableMapOf()) { it.method }
         val newCovered = methodChanges.new.filterByCoverage(covered)
         val modifiedCovered = methodChanges.modified.filterByCoverage(covered)
