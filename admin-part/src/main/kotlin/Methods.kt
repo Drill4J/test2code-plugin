@@ -135,8 +135,8 @@ internal suspend fun CoverContext.calculateRisks(
         val baselineBuild = parentBuild?.version ?: buildVersion
 
         val baselineCoveredRisks = storeClient.loadRisksByBaseline(baselineBuild)
-        val riskByMethod = baselineCoveredRisks.risks.map {
-            it.copy(status = it.status - buildVersion)
+        val riskByMethod = baselineCoveredRisks.risks.mapNotNull { risk ->
+            risk.copy(buildStatuses = risk.buildStatuses - buildVersion).takeIf { it.buildStatuses.isNotEmpty() }
         }.associateByTo(mutableMapOf()) { it.method }
         val newCovered = methodChanges.new.filterByCoverage(covered)
         val modifiedCovered = methodChanges.modified.filterByCoverage(covered)
@@ -162,7 +162,7 @@ internal fun MutableMap<Method, Risk>.putRisks(
     status: RiskStatus = RiskStatus.COVERED,
 ) = methods.forEach { (method, coverage) ->
     get(method)?.let {
-        put(method, it.copy(status = it.status + (buildVersion to RiskStat(coverage, status))))
+        put(method, it.copy(buildStatuses = it.buildStatuses + (buildVersion to RiskStat(coverage, status))))
     } ?: put(method, Risk(method, mapOf(buildVersion to RiskStat(coverage, status))))
 }
 
@@ -172,7 +172,7 @@ internal fun TypedRisks.toCounts() = RiskCounts(
 ).run { copy(total = new + modified) }
 
 internal fun TypedRisks.notCovered() = asSequence().mapNotNull { (type, risks) ->
-    val uncovered = risks.filter { risk -> RiskStatus.COVERED !in risk.status.values.map { it.status } }
+    val uncovered = risks.filter { risk -> RiskStatus.COVERED !in risk.buildStatuses.values.map { it.status } }
     uncovered.takeIf { it.any() }?.let { type to it }
 }.toMap()
 
@@ -185,7 +185,7 @@ internal suspend fun CoverContext.risksDto(
     val buildVersion = build.version
     calculateRisks(storeClient).flatMap { (type, risks) ->
         risks.map { risk ->
-            val currentCoverage = risk.status[buildVersion]?.coverage ?: zeroCount
+            val currentCoverage = risk.buildStatuses[buildVersion]?.coverage ?: zeroCount
             val id = risk.method.key.crc64
             RiskDto(
                 id = id,
@@ -205,9 +205,9 @@ internal suspend fun CoverContext.risksDto(
 
 private fun Risk.previousRiskCoverage(
     buildVersion: String,
-) = status.filter { it.key != buildVersion }.entries.fold(RiskStatDto("")) { statDto: RiskStatDto, (build, coverage) ->
-    val percentage = coverage.coverage.percentage()
-    statDto.takeIf { it.coverage >= percentage } ?: RiskStatDto(build, percentage)
+) = buildStatuses.filter { it.key != buildVersion }.entries.fold(RiskStatDto("")) { statDto: RiskStatDto, (build, coverage) ->
+        val percentage = coverage.coverage.percentage()
+        statDto.takeIf { it.coverage >= percentage } ?: RiskStatDto(build, percentage)
 }
 
 
