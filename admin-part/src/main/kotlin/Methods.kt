@@ -31,7 +31,6 @@ data class Method(
     val name: String,
     val desc: String,
     val hash: String,
-    @Transient
     val lambdasHash: Map<String, String> = emptyMap(),
 ) : Comparable<Method> {
     val signature = signature(ownerClass, name, desc).intern()
@@ -44,12 +43,6 @@ data class Method(
         it != 0
     } ?: desc.compareTo(other.desc)
 }
-
-@Serializable
-internal data class LambdaHash(
-    @Id val buildVersion: String,
-    val hash: Map<String, Map<String, String>> = emptyMap(),
-)
 
 internal typealias TypedRisks = Map<RiskType, List<Risk>>
 
