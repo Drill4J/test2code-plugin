@@ -26,44 +26,42 @@ import com.epam.dsm.*
 import com.epam.dsm.find.*
 import com.epam.dsm.serializer.*
 import com.epam.dsm.util.*
-import kotlinx.serialization.json.*
-import kotlin.reflect.*
 
 private val logger = logger {}
 
 /**
  * @return List<testId> by filters
  */
-suspend fun findTestsByFilter(
+suspend fun findTestsByFilters(
     storeClient: StoreClient,
     sessionsIds: List<String>,
-    testOverviewFilter: List<TestOverviewFilter>,
+    testOverviewFilters: List<TestOverviewFilter>,
 ): List<String> {
-    val filters = toExprFilters(testOverviewFilter, sessionsIds)
+    val filters = toExprFilters(testOverviewFilters, sessionsIds)
     val testIds = storeClient.findBy(filters).getAndMap(TestOverview::testId)
-    logger.debug { "With filter '$testOverviewFilter' found tests: $testIds" }
+    logger.debug { "With filters '$testOverviewFilters' found tests: $testIds" }
     return testIds
 }
 
 private fun toExprFilters(
-    testOverviewFilter: List<TestOverviewFilter>,
+    inputFilters: List<TestOverviewFilter>,
     sessionsIds: List<String>,
 ): Expr<TestOverview>.() -> Unit = {
-    testOverviewFilter.fold(containsParentId(sessionsIds)) { filters: Expr<TestOverview>, filter: TestOverviewFilter ->
+    inputFilters.fold(containsParentId(sessionsIds)) { exprFilters: Expr<TestOverview>, filter: TestOverviewFilter ->
+        val values = filter.values.map { it.value }
         if (filter.isLabel) {
-            val values = filter.values.map { it.value }
             val fieldPath = FieldPath(TestOverview::details.name, TestDetails::labels.name)
             when (filter.valuesOp) {
                 OR -> {
                     val containValues = fieldPath.anyInCollection<Label> {
-                        (Label::name eq filter.fieldPath) and (Label::value contains values)
+                        (Label::name eqIgnoreCase filter.fieldPath) and (Label::value contains values)
                     }
-                    filters and containValues
+                    exprFilters and containValues
                 }
                 AND -> {
-                    val eqValues = values.fold(filters) { acc2, value ->
-                        acc2 and (fieldPath.anyInCollection<Label> {
-                            (Label::name eq filter.fieldPath) and (Label::value eq value)
+                    val eqValues = values.fold(exprFilters) { acc, value ->
+                        acc and (fieldPath.anyInCollection<Label> {
+                            (Label::name eqIgnoreCase filter.fieldPath) and (Label::value eqIgnoreCase value)
                         })
                     }
                     eqValues
@@ -71,15 +69,14 @@ private fun toExprFilters(
             }
         } else {
             val fieldPath = FieldPath(filter.fieldPath.split(PATH_DELIMITER))
-            val values = filter.values.map { it.value }
             when (filter.valuesOp) {
                 OR -> {
                     val containValues = fieldPath contains values
-                    filters and containValues
+                    exprFilters and containValues
                 }
                 AND -> {
-                    val eqValues = values.fold(filters) { acc2, value ->
-                        acc2 and (fieldPath eq value)
+                    val eqValues = values.fold(exprFilters) { acc, value ->
+                        acc and (fieldPath eq value)
                     }
                     eqValues
                 }

@@ -87,7 +87,7 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
 ) = run {
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
     val sessionsIds = storeClient.sessionIds(agentKey)
-    val testIds: List<String> = findTestsByFilter(storeClient, sessionsIds, this)
+    val testIds = findTestsByFilters(storeClient, sessionsIds, this)
     val byTestOverview: Map<TestKey, TestOverview> = findByTestType(storeClient, sessionsIds, testIds)
     val byTestType: Map<String, List<TestOverview>> = byTestOverview.toList().groupBy({ it.first.type }, { it.second })
     val allProbes: Sequence<ExecClassData> = findProbes(storeClient, sessionsIds, testIds).asSequence()
