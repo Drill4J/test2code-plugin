@@ -144,8 +144,8 @@ class Plugin(
         is DeleteFilter -> {
             val filterId = action.payload.id
             logger.debug { "deleting filter with id '$filterId'" }
-            storeClient.deleteById<StoredFilter>(filterId)//todo why not excute?
-            sendFilterUpdates(filterId = filterId)
+            storeClient.deleteById<StoredFilter>(filterId)
+            sendFilterUpdates(filterId)
             okResult
         }
         is RemoveBuild -> {
@@ -261,7 +261,7 @@ class Plugin(
     private suspend fun Plugin.calculateFilter(filter: StoredFilter): ActionResult {
         val filterId = calculateAndSendFilteredCoverageInBuild(filter)
         storeClient.store(filter)
-        sendFilterUpdates(filter, filterId)
+        sendFilterUpdates(filterId, filter)
         return ActionResult(code = StatusCodes.OK, data = filterId)
     }
 

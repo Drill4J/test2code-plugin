@@ -23,6 +23,7 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
 import kotlinx.serialization.Serializable
+import java.util.*
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 
@@ -40,7 +41,8 @@ suspend fun Plugin.sendLabels() {
     val staticLabels = storeClient.staticLabels(sessionIds)
 
     val labels = allLabels.fold(staticLabels) { acc, tag ->
-        acc[LabelMarker(tag.name)]?.add(tag.value) ?: acc.put(LabelMarker(tag.name), mutableSetOf(tag.value))
+        acc[LabelMarker(tag.name)]?.add(tag.value.lowercase(Locale.getDefault()))
+            ?: acc.put(LabelMarker(tag.name), mutableSetOf(tag.value))
         acc
     }
 
@@ -51,7 +53,7 @@ suspend fun Plugin.sendLabels() {
     )
 
     labels.forEach { (label, values) ->
-        logger.trace { "send tags '$label' values '$values'" }
+        logger.trace { "send tags for '$label' with values '$values'" }
         send(
             buildVersion,
             destination = AttributeValues(attributesRoute, label.name),

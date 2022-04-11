@@ -56,12 +56,12 @@ data class FilterDto(
     val id: String,
 )
 
-suspend fun Plugin.sendFilterUpdates(filter: StoredFilter? = null, filterId: String) {
+suspend fun Plugin.sendFilterUpdates(filterId: String, filter: StoredFilter? = null) {
     val filtersRoute = Routes.Build().let(Routes.Build::Filters)
     send(
         buildVersion,
         destination = Filter(id = filterId, filters = filtersRoute),
-        message = filter?.id?.ifEmpty { "" } ?: ""
+        message = filter ?: ""
     )
     val filters = storeClient.findBy<StoredFilter> { StoredFilter::agentId eq agentId }.get().map {
         FilterDto(
