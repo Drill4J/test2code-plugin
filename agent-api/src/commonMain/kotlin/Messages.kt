@@ -25,7 +25,7 @@ sealed class CoverMessage
 data class InitInfo(
     val classesCount: Int = 0,
     val message: String = "",
-    val init: Boolean = false
+    val init: Boolean = false,
 ) : CoverMessage()
 
 @SerialName("INIT_DATA_PART")
@@ -44,7 +44,7 @@ data class ScopeInitialized(
     val id: String,
     val name: String,
     val prevId: String,
-    val ts: Long
+    val ts: Long,
 ) : CoverMessage()
 
 @SerialName("SESSION_STARTED")
@@ -53,7 +53,7 @@ data class SessionStarted(
     val sessionId: String,
     val testType: String,
     val isRealtime: Boolean = false,
-    val ts: Long
+    val ts: Long,
 ) : CoverMessage()
 
 @SerialName("SESSION_CANCELLED")
@@ -80,6 +80,6 @@ data class SessionFinished(val sessionId: String, val ts: Long) : CoverMessage()
 @Serializable
 data class SessionsFinished(val ids: List<String>, val ts: Long) : CoverMessage()
 
-@SerialName("ACTIVE_SESSIONS")
+@SerialName("SYNC_MESSAGE")
 @Serializable
-data class SessionsState(val ids: Set<String>) : CoverMessage()
+data class SyncMessage(val activeSessions: Set<String>) : CoverMessage()

@@ -53,9 +53,7 @@ class Plugin(
     override fun onConnect() {
         val ids = instrContext.getActiveSessions()
         logger.info { "Send active sessions after reconnect: ${ids.count()}" }
-        ids.takeIf { it.any() }?.let {
-            sendMessage(SessionsState(ids))
-        }
+        sendMessage(SyncMessage(ids))
     }
 
     //TODO remove

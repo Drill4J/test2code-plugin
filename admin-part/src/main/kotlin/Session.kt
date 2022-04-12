@@ -45,6 +45,7 @@ class ActiveSession(
     override val testType: String,
     val isGlobal: Boolean = false,
     val isRealtime: Boolean = false,
+    val testName: String? = null,
     private val labels: Set<Label> = emptySet(),
 ) : Session() {
 
