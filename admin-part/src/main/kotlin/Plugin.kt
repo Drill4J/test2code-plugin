@@ -102,16 +102,9 @@ class Plugin(
         action: Action,
         data: Any?,
     ): ActionResult = when (action) {
-        is IsPossibleOffline -> {
-            if (action.payload is OfflineAvailable) {
-                okResult
-            } else ActionResult(code = StatusCodes.NOT_IMPLEMENTED, data = "")
-        }
         is ToggleBaseline -> toggleBaseline()
-        is SwitchActiveScope -> {
-            val changeActiveScope = changeActiveScope(action.payload)
+        is SwitchActiveScope -> changeActiveScope(action.payload).also {
             sendLabels()
-            changeActiveScope
         }
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
@@ -170,6 +163,7 @@ class Plugin(
                 testType,
                 isGlobal,
                 isRealtimeSession,
+                testName,
                 labels
             )?.run {
                 StartAgentSession(
@@ -323,14 +317,26 @@ class Plugin(
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
         }
-        is SessionsState -> message.run {
-            logger.info { "Active session ids from agent: $ids" }
-            ids.forEach { sessionId ->
-                sessionId.takeIf { it !in activeScope.activeSessions }?.let {
-                    AsyncJobDispatcher.launch {
-                        logger.info { "Attempting to cancel session: $it" }
-                        sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
-                    }
+        //TODO EPMDJ-10398 send on agent attach
+        is SyncMessage -> message.run {
+            logger.info { "Active session ids from agent: $activeSessions" }
+            activeSessions.filter { it !in activeScope.activeSessions }.forEach {
+                AsyncJobDispatcher.launch {
+                    logger.info { "Attempting to cancel session: $it" }
+                    sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
+                }
+            }
+            activeScope.activeSessions.map.filter { it.key !in activeSessions }.forEach { (id, session) ->
+                AsyncJobDispatcher.launch {
+                    val startSessionPayload = StartSessionPayload(
+                        sessionId = id,
+                        testType = session.testType,
+                        testName = session.testName,
+                        isGlobal = session.isGlobal,
+                        isRealtime = session.isRealtime,
+                    )
+                    logger.info { "Attempting to start session: $startSessionPayload" }
+                    sendAgentAction(StartAgentSession(startSessionPayload))
                 }
             }
         }
