@@ -84,7 +84,7 @@ class FiltersTest : E2EPluginTest() {
                         first().coverage shouldBeGreaterThan 0.0
                     }
                 }.join()
-                println("filters ${plugUi.filters()}")
+                println("init filters ${plugUi.filters()} ${plugUi.filters()}")
                 //create filter
                 val filterName = "new filter"
                 val createFilter = CreateFilter(
@@ -134,7 +134,6 @@ class FiltersTest : E2EPluginTest() {
                     status shouldBe HttpStatusCode.OK
                     assertEquals(null, plugUi.filters())
                 }.join()
-                delay(100)
             }
         }
     }

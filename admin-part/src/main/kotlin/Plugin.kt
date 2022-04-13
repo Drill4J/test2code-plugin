@@ -347,6 +347,7 @@ class Plugin(
         sendScopes()
         calculateAndSendCachedCoverage()
         sendLabels()
+        sendFilters()
         return initActiveScope() && initBundleHandler()
     }
 

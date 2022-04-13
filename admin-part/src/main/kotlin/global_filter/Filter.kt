@@ -19,6 +19,7 @@ import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.BetweenOp
 import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.api.routes.Routes.Build.*
 import com.epam.drill.plugins.test2code.api.routes.Routes.Build.Filters.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
@@ -27,7 +28,6 @@ import kotlinx.serialization.Serializable
 
 /**
  * @see FilterPayload
- * find by agentId; find by name
  */
 @Serializable
 data class StoredFilter(
@@ -36,7 +36,6 @@ data class StoredFilter(
     val name: String,
     val attributes: List<TestOverviewFilter>,
     val attributesOp: BetweenOp = BetweenOp.AND,
-    val buildVersion: String = "",
 )
 
 fun FilterPayload.toStoredFilter(
@@ -47,7 +46,6 @@ fun FilterPayload.toStoredFilter(
     name = name,
     attributes = attributes,
     attributesOp = attributesOp,
-    buildVersion = buildVersion
 )
 
 @Serializable
@@ -63,7 +61,31 @@ suspend fun Plugin.sendFilterUpdates(filterId: String, filter: StoredFilter? = n
         destination = Filter(id = filterId, filters = filtersRoute),
         message = filter ?: ""
     )
-    val filters = storeClient.findBy<StoredFilter> { StoredFilter::agentId eq agentId }.get().map {
+    sendFilters(agentFilters(), filtersRoute)
+}
+
+suspend fun Plugin.sendFilters() {
+    val filtersRoute = Routes.Build().let(Routes.Build::Filters)
+    val storedFilters = agentFilters()
+    storedFilters.forEach {
+        send(
+            buildVersion,
+            destination = Filter(id = it.id, filters = filtersRoute),
+            message = it
+        )
+    }
+    sendFilters(storedFilters, filtersRoute)
+}
+
+private suspend fun Plugin.agentFilters() = storeClient.findBy<StoredFilter> {
+    StoredFilter::agentId eq agentId
+}.get()
+
+private suspend fun Plugin.sendFilters(
+    storedFilters: List<StoredFilter>,
+    filtersRoute: Filters,
+) {
+    val filters = storedFilters.map {
         FilterDto(
             name = it.name,
             id = it.id
