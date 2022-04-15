@@ -108,11 +108,9 @@ class ActiveScope(
 
     private val bundleCacheJob = AsyncJobDispatcher.launch {
         while (true) {
-            _bundleCacheHandler.value?.let {
+            val tests = activeSessions.values.flatMap { it.updatedTests }
+            _bundleCacheHandler.value.takeIf { tests.any() }?.let {
                 val probes = this@ActiveScope + activeSessions.values
-                val tests = activeSessions.values.flatMap { session ->
-                    session.tests.map { it.testId.testKey(session.testType) }
-                }
                 val probesByTests = probes.groupBy { it.testType }.map { (testType, sessions) ->
                     sessions.asSequence().flatten()
                         .groupBy { it.testId.testKey(testType) }
@@ -123,7 +121,7 @@ class ActiveScope(
                 } ?: emptyMap()
                 it(probesByTests)
             }
-            delay(3000)
+            delay(2000)
         }
     }
 
@@ -219,6 +217,10 @@ class ActiveScope(
         finish().also { finished ->
             if (finished.probes.any()) {
                 val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
+                _bundleByTests.update {
+                    val current = it.get() ?: persistentMapOf()
+                    SoftReference(current - updatedTests)
+                }
                 _summary.update { it.copy(sessionsFinished = updatedSessions.count()) }
                 _change.value = Change.ALL
             } else sessionsChanged()
