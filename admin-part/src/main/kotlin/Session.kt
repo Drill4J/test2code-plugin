@@ -80,6 +80,11 @@ class ActiveSession(
 
     private val _testTestInfo = atomic<PersistentMap<String, TestInfo>>(persistentHashMapOf())
 
+    private val _updatedTests = atomic<Set<String>>(setOf())
+
+    val updatedTests: Set<TestKey>
+        get() = _updatedTests.getAndUpdate { setOf() }.mapTo(mutableSetOf()) { it.testKey(testType) }
+
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
@@ -92,19 +97,24 @@ class ActiveSession(
                         testData.getValue(probeId).run {
                             val merged = probes.merge(probe.probes)
                             merged.takeIf { it != probes }?.let {
+                                addUpdatedTest(probe.testId)
                                 testData.put(probeId, copy(probes = merged))
                             }
                         }
-                    } else testData.put(probeId, probe)
+                    } else testData.put(probeId, probe).also { addUpdatedTest(probe.testId) }
                 }?.let { map.put(test, it) } ?: map
             }
         }
     }
 
+    private fun addUpdatedTest(testId: String) {
+        if (testId in _testTestInfo.value) _updatedTests.update { it + testId }
+    }
+
     fun addTests(testRun: List<TestInfo>) {
-        _testTestInfo.update { current ->
-            current.putAll(testRun.associateBy { it.id })
-        }
+        val testMap = testRun.associateBy { it.id }
+        _testTestInfo.update { current -> current.putAll(testMap) }
+        _updatedTests.update { it + testMap.keys }
     }
 
     override fun iterator(): Iterator<ExecClassData> = Sequence {
