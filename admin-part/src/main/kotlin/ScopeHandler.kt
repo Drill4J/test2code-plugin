@@ -51,7 +51,7 @@ internal fun Plugin.initBundleHandler(): Boolean = activeScope.initBundleHandler
         BundleCounter.empty
     }
     val calculated = tests.mapValuesTo(preparedBundle) {
-        it.value.bundle(context, state.classBytes(buildVersion))
+        it.value.bundle(context, state.classBytes(buildVersion), "${it.key}", activeScope.bundleData.value)
     }
     addBundleCache(calculated)
 }

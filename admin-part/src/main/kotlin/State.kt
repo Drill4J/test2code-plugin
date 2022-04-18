@@ -169,7 +169,7 @@ internal class AgentState(
                     bundleCounters.testsWith(notCoveredMethods)
                 }.orEmpty()
                 val deletedWithCoverage: Map<Method, Count> = parentBuild?.run {
-                    bundleCounters.all.coveredMethods(methodChanges.deleted)
+                    bundleCounters.coveredMethods(bundleCounters.all.name, methodChanges.deleted)
                 }.orEmpty()
                 val testsToRunParentDurations = parentBuild?.let {
                     TestDurations(

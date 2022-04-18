@@ -53,7 +53,9 @@ class ActiveScope(
     name: String = "$DEFAULT_SCOPE_NAME $nth".weakIntern(),
     sessions: List<FinishedSession> = emptyList(),
 ) : Scope {
+
     private val _bundleByTests = atomic<SoftBundleByTests>(SoftReference(persistentMapOf()))
+    val bundleData = atomic<MutableList<PackageCounter>>(mutableListOf())
 
     val bundleByTests: PersistentMap<TestKey, BundleCounter>
         get() = _bundleByTests.value.get() ?: persistentMapOf()
@@ -182,6 +184,7 @@ class ActiveScope(
     ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
 
     fun addBundleCache(bundleByTests: Map<TestKey, BundleCounter>) {
+
         _bundleByTests.update {
             val bundles = (it.get() ?: persistentMapOf()).putAll(bundleByTests)
             SoftReference(bundles)

@@ -59,15 +59,17 @@ internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
 }
 
 internal fun Iterable<PackageCounter>.toPackages(
-    parsedClasses: Map<String, List<Method>>
+    parsedClasses: Map<String, List<Method>>,
+    bundleName: String,
 ): List<JavaPackageCoverage> = mapNotNull { packageCoverage ->
-    packageCoverage.classes.classTree(parsedClasses).takeIf { it.any() }?.let { classes ->
+    packageCoverage.classes.classTree(bundleName, parsedClasses).takeIf { it.any() }?.let { classes ->
+        val coverage = packageCoverage.bundleCount[bundleName] ?: PackageInfo.empty
         JavaPackageCoverage(
             id = packageCoverage.coverageKey().id,
             name = packageCoverage.name,
             totalClassesCount = classes.count(),
             totalMethodsCount = classes.sumOf { it.totalMethodsCount },
-            totalCount = packageCoverage.count.total,
+            totalCount = coverage.count.total,
             classes = classes
         )
     }
@@ -75,29 +77,32 @@ internal fun Iterable<PackageCounter>.toPackages(
 
 
 internal fun Iterable<JavaPackageCoverage>.treeCoverage(
-    bundle: BundleCounter,
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>
+    bundleName: String,
+    bundleData: List<PackageCounter>,
+    assocTestsMap: Map<CoverageKey, List<TypedTest>>,
 ): List<JavaPackageCoverage> = run {
-    val bundleMap = bundle.packages.associateBy { it.coverageKey().id }
+    val bundleMap = bundleData.associateBy { it.coverageKey().id }
     map { pkg ->
         bundleMap[pkg.id]?.run {
+            val packageInfo = bundleCount[bundleName] ?: PackageInfo.empty
             pkg.copy(
-                coverage = count.copy(total = pkg.totalCount).percentage(),
-                coveredClassesCount = classCount.covered,
-                coveredMethodsCount = methodCount.covered,
+                coverage = packageInfo.count.copy(total = pkg.totalCount).percentage(),
+                coveredClassesCount = packageInfo.classCount.covered,
+                coveredMethodsCount = packageInfo.methodCount.covered,
                 assocTestsCount = assocTestsMap[coverageKey()]?.count() ?: 0,
-                classes = pkg.classes.classCoverage(classes, assocTestsMap)
+                classes = pkg.classes.classCoverage(bundleName, classes, assocTestsMap)
             )
         } ?: pkg
     }
 }
 
 private fun Collection<ClassCounter>.classTree(
-    parsedClasses: Map<String, List<Method>>
+    bundleName: String,
+    parsedClasses: Map<String, List<Method>>,
 ): List<JavaClassCoverage> = mapNotNull { classCoverage ->
     parsedClasses[classCoverage.fullName]?.let { parsedMethods ->
         val classKey = classCoverage.coverageKey()
-        val methods = classCoverage.toMethodCoverage { methodCov ->
+        val methods = classCoverage.toMethodCoverage(bundleName) { methodCov ->
             parsedMethods.any { it.signature == methodCov.sign }
         }
         JavaClassCoverage(
@@ -112,38 +117,42 @@ private fun Collection<ClassCounter>.classTree(
 }.toList()
 
 private fun List<JavaClassCoverage>.classCoverage(
+    bundleName: String,
     classCoverages: Collection<ClassCounter>,
-    assocTestsMap: Map<CoverageKey, List<TypedTest>>
+    assocTestsMap: Map<CoverageKey, List<TypedTest>>,
 ): List<JavaClassCoverage> = run {
     val bundleMap = classCoverages.associateBy { it.coverageKey().id }
     map { classCov ->
         bundleMap[classCov.id]?.run {
+            val packageInfo = bundleCount[bundleName] ?: ClassInfo.empty
             classCov.copy(
-                coverage = count.percentage(),
-                coveredMethodsCount = methods.count { it.count.covered > 0 },
+                coverage = packageInfo.count.percentage(),
+                coveredMethodsCount = methods.count { (it.bundleCount[bundleName]?.covered ?: 0) > 0 },
                 assocTestsCount = assocTestsMap[coverageKey()]?.count() ?: 0,
-                methods = toMethodCoverage(assocTestsMap, classCov.methods),
-                probes = probes,
+                methods = toMethodCoverage(bundleName, assocTestsMap, classCov.methods),
+                probes = packageInfo.probes,
             )
         } ?: classCov
     }
 }
 
 internal fun ClassCounter.toMethodCoverage(
+    bundleName: String,
     assocTestsMap: Map<CoverageKey, List<TypedTest>> = emptyMap(),
     astMethods: List<JavaMethodCoverage> = emptyList(),
-    filter: (MethodCounter) -> Boolean = { true }
+    filter: (MethodCounter) -> Boolean = { true },
 ): List<JavaMethodCoverage> {
     val astMethodsMap = astMethods.associateBy { it.id }
     return methods.filter(filter).map { methodCoverage ->
         val methodKey = methodCoverage.coverageKey(this)
+        val count = methodCoverage.bundleCount[bundleName] ?: zeroCount
         JavaMethodCoverage(
             id = methodKey.id,
             name = methodCoverage.name,
             desc = methodCoverage.desc,
             decl = methodCoverage.decl,
-            coverage = methodCoverage.count.percentage(),
-            probesCount = methodCoverage.count.total,
+            coverage = count.percentage(),
+            probesCount = count.total,
             assocTestsCount = assocTestsMap[methodKey]?.count() ?: 0,
             probeRange = astMethodsMap[methodKey.id]?.probeRange ?: ProbeRange.EMPTY,
         )

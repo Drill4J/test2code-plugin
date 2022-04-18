@@ -33,8 +33,7 @@ internal fun BundleCounters.testsWith(
     val lazyPackageSet = lazy(LazyThreadSafetyMode.NONE) { methods.toPackageSet() }
     mapNotNull { (test, counter) ->
         test.takeIf {
-            val packageSeq = counter.packages.asSequence()
-            packageSeq.toCoveredMethods(lazyMethodMap::value, lazyPackageSet::value).any()
+            bundleCountData.asSequence().toCoveredMethods(counter.name,lazyMethodMap::value, lazyPackageSet::value).any()
         }
     }.distinct().groupBy(TestKey::type) {
         TestData(
