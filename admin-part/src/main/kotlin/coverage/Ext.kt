@@ -46,7 +46,6 @@ internal infix fun Count.subtraction(other: Count): Pair<Long, Long> = takeIf { 
     }
 } ?: (covered.toLong() to total.toLong())
 
-internal fun NamedCounter.hasCoverage(): Boolean = count.covered > 0
 
 internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey = when (this) {
     is MethodCounter -> CoverageKey(
@@ -69,12 +68,13 @@ internal fun NamedCounter.coverageKey(parent: NamedCounter? = null): CoverageKey
     else -> CoverageKey(name.crc64)
 }
 
-internal fun BundleCounter.coverageKeys(
+internal fun List<PackageCounter>.coverageKeys(
+    bundleName: String,
     onlyPackages: Boolean = true,
-): Stream<CoverageKey> = packages.stream().flatMap { p ->
+): Stream<CoverageKey> = stream().flatMap { p ->
     Stream.concat(Stream.of(p.coverageKey()), p.classes.takeIf { !onlyPackages }?.stream()?.flatMap { c ->
         Stream.concat(Stream.of(c.coverageKey()), c.methods.stream().map { m ->
-            m.takeIf { it.count.covered > 0 }?.coverageKey(c)
+            m.takeIf { (it.bundleCount[bundleName]?.covered ?: 0) > 0 }?.coverageKey(c)
         }.filter { it != null })
     } ?: Stream.empty())
 }
@@ -90,14 +90,15 @@ internal fun BundleCounter.toCoverDto(
 }
 
 internal fun CoverContext.toCoverMap(
-    bundle: BundleCounter,
+    bundleName: String,
+    bundleData: List<PackageCounter>,
     onlyCovered: Boolean,
-): Map<Method, CoverMethod> = bundle.packages.let { packages ->
+): Map<Method, CoverMethod> = bundleData.let { packages ->
     val map = packages.parallelStream().flatMap { it.classes.stream() }.flatMap { c ->
         c.methods.stream().map { m -> m.fullName to m }
     }.collect(Collectors.toMap({ it.first }, { it.second }, { first, _ -> first }))
     methods.parallelStream().map { method ->
-        val covered = method.toCovered(methodType(method), map[method.key])
+        val covered = method.toCovered(methodType(method), map[method.key]?.bundleCount?.get(bundleName))
         covered.takeIf { !onlyCovered || it.count.covered > 0 }?.let { method to it }
     }.filter { it?.first != null }.collect(Collectors.toMap({ it!!.first }, { it!!.second }, { first, _ -> first }))
 }
@@ -109,32 +110,35 @@ internal fun CoverContext.methodType(method: Method) = when (method) {
     else -> MethodType.UNAFFECTED
 }
 
-internal fun BundleCounter.coveredMethods(
+internal fun BundleCounters.coveredMethods(
+    bundleName: String,
     methods: Iterable<Method>,
-): Map<Method, Count> = packages.asSequence().takeIf { p ->
+): Map<Method, Count> = bundleCountData.asSequence().takeIf { p ->
     p.any { it.classes.any() }
 }?.run {
     toCoveredMethods(
+        bundleName,
         { methods.groupBy(Method::ownerClass) },
         { methods.toPackageSet() }
     ).toMap()
 }.orEmpty()
 
 internal fun Sequence<PackageCounter>.toCoveredMethods(
+    bundleName: String,
     methodMapPrv: () -> Map<String, List<Method>>,
     packageSetPrv: () -> Set<String>,
 ): Sequence<Pair<Method, Count>> = takeIf { it.any() }?.run {
     val packageSet = packageSetPrv()
-    filter { it.name in packageSet && it.hasCoverage() }.run {
+    filter { it.name in packageSet && it.hasCoverage(bundleName) }.run {
         val methodMap = methodMapPrv()
-        flatMap {
-            it.classes.asSequence().filter(NamedCounter::hasCoverage)
+        flatMap { packageCounter ->
+            packageCounter.classes.asSequence().filter { it.hasCoverage(bundleName) }
         }.mapNotNull { c ->
             methodMap[c.fullName]?.run {
                 val covered: Map<String, MethodCounter> = c.methods.asSequence()
-                    .filter(NamedCounter::hasCoverage)
+                    .filter { it.hasCoverage(bundleName) }
                     .associateBy(MethodCounter::sign)
-                mapNotNull { m -> covered[m.signature]?.let { m to it.count } }.asSequence()
+                mapNotNull { m -> covered[m.signature]?.let { m to (it.bundleCount[bundleName] ?: 0) } }.asSequence()
             }
         }.flatten()
     }
@@ -157,10 +161,6 @@ internal fun Method.toCovered(methodType: MethodType, count: Count?) = CoverMeth
     coverageRate = count?.coverageRate() ?: CoverageRate.MISSED
 )
 
-internal fun Method.toCovered(
-    methodType: MethodType,
-    counter: MethodCounter? = null,
-): CoverMethod = toCovered(methodType, counter?.count)
 
 @Serializable
 data class TestKey(

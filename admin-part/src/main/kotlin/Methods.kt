@@ -119,8 +119,9 @@ internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
  */
 internal suspend fun CoverContext.calculateRisks(
     storeClient: StoreClient,
-    bundleCounter: BundleCounter = build.bundleCounters.all,
-): TypedRisks = bundleCounter.coveredMethods(methodChanges.new + methodChanges.modified).let { covered ->
+    bundleCounters: BundleCounters = build.bundleCounters,
+    bundleName: String = build.bundleCounters.all.name,
+): TypedRisks = bundleCounters.coveredMethods(bundleName, methodChanges.new + methodChanges.modified).let { covered ->
     trackTime("Risk calculation") {
         val buildVersion = build.agentKey.buildVersion
         val baselineBuild = parentBuild?.agentKey ?: build.agentKey

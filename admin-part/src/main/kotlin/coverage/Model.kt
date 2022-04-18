@@ -84,55 +84,118 @@ class BundleCounters(
     val overlap: BundleCounter,
     val byTestType: Map<String, BundleCounter> = emptyMap(),
     val byTest: Map<TestKey, BundleCounter> = emptyMap(),
+    val bundleCountData: List<PackageCounter> = emptyList(),
     /**
      * All test (auto, manual, tests without coverage)
      */
     val byTestOverview: Map<TestKey, TestOverview> = emptyMap(),
 ) {
     companion object {
-        val empty = BundleCounter("").let {
-            BundleCounters(all = it, testTypeOverlap = it, overlap = it)
-        }
+        val empty = BundleCounters(
+            all = BundleCounter.empty,
+            testTypeOverlap = BundleCounter.empty,
+            overlap = BundleCounter.empty
+        )
     }
 }
 
 sealed class NamedCounter {
     abstract val name: String
-    abstract val count: Count
+    abstract fun hasCoverage(bundleName: String): Boolean
 }
 
 @Serializable
 data class BundleCounter(
     override val name: String,
-    override val count: Count = zeroCount,
+    val count: Count = zeroCount,
     val methodCount: Count = zeroCount,
     val classCount: Count = zeroCount,
     val packageCount: Count = zeroCount,
-    val packages: List<PackageCounter> = emptyList(),
 ) : NamedCounter() {
     companion object {
         val empty = BundleCounter("")
     }
+
+    override fun hasCoverage(bundleName: String): Boolean = count.covered > 0
 }
 
 @Serializable
 data class PackageCounter(
     override val name: String,
-    override val count: Count,
+    val bundleCount: MutableMap<String, PackageInfo> = mutableMapOf(),
+    val classes: MutableList<ClassCounter> = mutableListOf(),
+) : NamedCounter() {
+
+    override fun hasCoverage(bundleName: String): Boolean = (bundleCount[bundleName]?.count?.covered ?: 0) > 0
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PackageCounter
+
+        if (name != other.name) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
+}
+
+@Serializable
+data class PackageInfo(
+    val count: Count,
     val classCount: Count,
     val methodCount: Count,
-    val classes: List<ClassCounter>,
-) : NamedCounter()
+) {
+    companion object {
+        val empty = PackageInfo(zeroCount, zeroCount, zeroCount)
+    }
+}
 
 @Serializable
 data class ClassCounter(
     val path: String,
     override val name: String,
-    override val count: Count,
-    @DeserializeWithPool val methods: List<MethodCounter>,
     val fullName: String,
+    val methods: MutableList<MethodCounter> = mutableListOf(),
+    val bundleCount: MutableMap<String, ClassInfo> = mutableMapOf(),
+) : NamedCounter() {
+
+    override fun hasCoverage(bundleName: String): Boolean = (bundleCount[bundleName]?.count?.covered ?: 0) > 0
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ClassCounter
+
+        if (path != other.path) return false
+        if (name != other.name) return false
+        if (fullName != other.fullName) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = path.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + fullName.hashCode()
+        return result
+    }
+}
+
+@Serializable
+data class ClassInfo(
+    val count: Count,
     val probes: List<Boolean> = emptyList(),
-) : NamedCounter()
+) {
+    companion object {
+        val empty = ClassInfo(zeroCount)
+    }
+}
 
 @Serializable
 data class MethodCounter(
@@ -141,5 +204,34 @@ data class MethodCounter(
     val decl: String,
     val sign: String,
     val fullName: String,
-    override val count: Count,
-) : NamedCounter()
+    val bundleCount: MutableMap<String, Count> = mutableMapOf(),
+) : NamedCounter() {
+
+    override fun hasCoverage(bundleName: String): Boolean = (bundleCount[bundleName]?.covered ?: 0) > 0
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as MethodCounter
+
+        if (name != other.name) return false
+        if (desc != other.desc) return false
+        if (decl != other.decl) return false
+        if (sign != other.sign) return false
+        if (fullName != other.fullName) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + desc.hashCode()
+        result = 31 * result + decl.hashCode()
+        result = 31 * result + sign.hashCode()
+        result = 31 * result + fullName.hashCode()
+        return result
+    }
+}
+
+

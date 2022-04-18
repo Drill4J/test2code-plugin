@@ -55,14 +55,17 @@ internal fun Sequence<Session>.calcBundleCounters(
     } else emptySequence()
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
     val execClassData = flatten()
+    val bundleData = mutableListOf<PackageCounter>()
     BundleCounters(
-        all = execClassData.bundle(context, classBytes),
-        testTypeOverlap = testTypeOverlap.bundle(context, classBytes),
-        overlap = execClassData.overlappingBundle(context, classBytes),
+        all = execClassData.bundle(context, classBytes, BundleCounters::all.name, bundleData),
+        testTypeOverlap = testTypeOverlap.bundle(context, classBytes, BundleCounters::testTypeOverlap.name, bundleData),
+        overlap = execClassData.overlappingBundle(context, classBytes, BundleCounters::overlap.name, bundleData),
         byTestType = probesByTestType.mapValues {
-            it.value.asSequence().flatten().bundle(context, classBytes)
+            it.value.asSequence().flatten().bundle(context, classBytes, it.key, bundleData)
         },
-        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
+        byTest = trackTime("bundlesByTests") {
+            probesByTestType.bundlesByTests(context, classBytes, bundleData, cache)
+        },
         byTestOverview = fold(mutableMapOf()) { map, session ->
             session.tests.forEach { overview ->
                 val testKey = TestKey(id = overview.testId, type = session.testType)
@@ -76,6 +79,7 @@ internal fun Sequence<Session>.calcBundleCounters(
             }
             map
         },
+        bundleCountData = bundleData
     )
 }
 
@@ -92,19 +96,22 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
     val byTestType: Map<String, List<TestOverview>> = byTestOverview.toList().groupBy({ it.first.type }, { it.second })
     val allProbes: Sequence<ExecClassData> = findProbes(storeClient, sessionsIds, testIds).asSequence()
     val probesByTestId = groupProbes(storeClient, sessionsIds, testIds)
+    val bundleData = mutableListOf<PackageCounter>()
     BundleCounters(
-        all = allProbes.bundle(context, classBytes),
+        all = allProbes.bundle(context, classBytes, BundleCounters::all.name, bundleData),
         testTypeOverlap = BundleCounter.empty,
         overlap = BundleCounter.empty,
         byTestType = byTestType.map {
             val tests: List<String> = it.value.map { overview -> overview.testId }
             val probes = findProbes(storeClient, sessionsIds, tests).asSequence()
-            it.key to probes.bundle(context, classBytes)
+            it.key to probes.bundle(context, classBytes, it.key, bundleData)
         }.toMap(),
         byTest = byTestOverview.map {
-            it.key to (probesByTestId[it.key.id]?.bundle(context, classBytes) ?: BundleCounter.empty)
+            it.key to (probesByTestId[it.key.id]?.bundle(context, classBytes, "${it.key}", bundleData)
+                ?: BundleCounter.empty)
         }.toMap(),
         byTestOverview = byTestOverview,
+        bundleCountData = bundleData,
     )
 }
 
@@ -162,9 +169,11 @@ internal fun BundleCounters.calculateCoverageData(
     }
     logger.info { coverageBlock }
 
-    val buildMethods = trackTime("calculateBundleMethods") { context.calculateBundleMethods(bundle) }
+    val buildMethods = trackTime("calculateBundleMethods") {
+        context.calculateBundleMethods(bundle.name, bundleCountData)
+    }
 
-    val packageCoverage = tree.packages.treeCoverage(bundle, assocTestsMap)
+    val packageCoverage = tree.packages.treeCoverage(bundle.name, bundleCountData, assocTestsMap)
 
     val tests = bundlesByTests.map { (testKey, bundle) ->
         val testOverview = byTestOverview[testKey] ?: TestOverview.empty
@@ -205,6 +214,7 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
+    bundleData: MutableList<PackageCounter>,
     cache: Map<TestKey, BundleCounter>,
 ): Map<TestKey, BundleCounter> = run {
     val bundleByTests = values.asSequence().flatten().testsWithBundle()
@@ -216,7 +226,7 @@ private fun Map<String, List<Session>>.bundlesByTests(
             }
             .groupBy(Pair<TestKey, ExecClassData>::first) { it.second }
             .mapValuesTo(bundleByTests) {
-                it.value.asSequence().bundle(context, classBytes)
+                it.value.asSequence().bundle(context, classBytes, "${it.key}", bundleData)
             }
     }.takeIf { it.isNotEmpty() }?.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
@@ -235,26 +245,32 @@ private fun Sequence<Session>.testsWithBundle(
 internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
+    bundleName: String,
+    bundleData: MutableList<PackageCounter>,
 ): BundleCounter = context.build.probes.intersect(this).run {
     values.asSequence()
-}.bundle(context, classBytes)
+}.bundle(context, classBytes, bundleName, bundleData)
 
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
+    bundleName: String,
+    bundleData: MutableList<PackageCounter>,
 ): BundleCounter = when (context.agentType) {
     "JAVA" -> bundle(
         probeIds = context.probeIds,
-        classBytes = classBytes
+        classBytes = classBytes,
+        bundleName = bundleName,
+        bundleData = bundleData
     )
-    else -> bundle(context.packageTree)
+    else -> bundle(bundleName, bundleData, context.packageTree)
 }
 
 internal fun BundleCounters.associatedTests(
     onlyPackages: Boolean = true,
 ): Map<CoverageKey, List<TypedTest>> = byTest.entries.parallelStream().flatMap { (test, bundle) ->
     val typedTest = byTestOverview[test]?.details?.typedTest(test.type) ?: TypedTest(test.type)
-    bundle.coverageKeys(onlyPackages).map { it to typedTest }.distinct()
+    bundleCountData.coverageKeys(bundle.name, onlyPackages).map { it to typedTest }.distinct()
 }.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
 internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatching {
@@ -302,7 +318,7 @@ internal suspend fun Plugin.importCoverage(
     val execDatum = jacocoFile.executionDataStore.contents.map {
         ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
     }.asSequence()
-    execDatum.bundle(probeIds, classBytes) { bytes, execData ->
+    execDatum.bundle(probeIds, classBytes, "import", mutableListOf()) { bytes, execData ->
         analyzeClass(bytes, execData.name)
     }
     activeScope.addProbes(sessionId) { execDatum.toList() }

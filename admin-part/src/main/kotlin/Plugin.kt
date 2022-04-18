@@ -513,7 +513,7 @@ class Plugin(
     ) {
         val coverageInfoSet = calculateCoverageData(context)
         val parentCoverageCount = context.parentBuild?.let { context.parentBuild.stats.coverage } ?: zeroCount
-        val risks = context.calculateRisks(storeClient, all)
+        val risks = context.calculateRisks(storeClient, this)
         val buildCoverage = (coverageInfoSet.coverage as BuildCoverage).copy(
             finishedScopesCount = scopeCount,
             riskCount = Count(risks.notCovered().count(), risks.count())
@@ -749,7 +749,7 @@ class Plugin(
                 assocTestsMap.getAssociatedTests()
             }
             val treeCoverage = trackTime("assocTestsJob getTreeCoverage") {
-                state.coverContext().packageTree.packages.treeCoverage(all, assocTestsMap)
+                state.coverContext().packageTree.packages.treeCoverage(all.name, bundleCountData, assocTestsMap)
             }
             logger.debug { "Sending all associated tests..." }
             scope?.let {
@@ -775,7 +775,7 @@ class Plugin(
             byTest.entries.parallelStream().forEach { (testKey, bundle) ->
                 val testId = testKey.id()
                 val typedTest = byTestOverview[testKey]?.details?.typedTest(testKey.type) ?: TypedTest(testKey.type)
-                val coveredMethods = context.toCoverMap(bundle, true)
+                val coveredMethods = context.toCoverMap(bundle.name, bundleCountData, true)
                 val summary = coveredMethods.toSummary(testId, typedTest, context)
                 val all = coveredMethods.values.toList()
                 val modified = coveredMethods.filterValues { it in context.methodChanges.modified }

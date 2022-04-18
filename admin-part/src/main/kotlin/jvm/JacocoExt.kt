@@ -34,18 +34,20 @@ internal typealias ClassBytes = Map<String, ByteArray>
 internal inline fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     classBytes: ClassBytes,
-    crossinline analyze: Analyzer.(ByteArray, ExecutionData) -> Unit? = Analyzer::analyze
+    bundleName: String,
+    bundleData: MutableList<PackageCounter>,
+    crossinline analyze: Analyzer.(ByteArray, ExecutionData) -> Unit? = Analyzer::analyze,
 ): BundleCounter = bundle(probeIds) { analyzer ->
     contents.parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
             analyzer.analyze(classesBytes, execData)
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
-}.toCounter()
+}.toCounter(bundleName = bundleName, bundleData = bundleData)
 
 private fun Analyzer.analyze(
     classesBytes: ByteArray,
-    execData: ExecutionData
+    execData: ExecutionData,
 ): Unit? = runCatching {
     analyzeClass(classesBytes, execData.name)
 }.onFailure {
@@ -55,9 +57,11 @@ private fun Analyzer.analyze(
 internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,
     probeIds: Map<String, Long>,
+    bundleName: String,
+    bundleData: MutableList<PackageCounter>,
 ): BundleCounter = emptySequence<ExecClassData>().bundle(probeIds) { analyzer ->
     forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
-}.toCounter(false)
+}.toCounter(false, bundleName, bundleData)
 
 private fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
@@ -84,13 +88,13 @@ internal fun Sequence<ExecClassData>.execDataStore(
     }
 }
 
-internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
-    name = "",
-    count = instructionCounter.toCount(),
-    methodCount = methodCounter.toCount(),
-    classCount = classCounter.toCount(),
-    packageCount = packages.run { Count(count { it.classCounter.coveredCount > 0 }, count()) },
-    packages = packages.mapNotNull { p ->
+internal fun IBundleCoverage.toCounter(
+    filter: Boolean = true,
+    bundleName: String,
+    bundleData: MutableList<PackageCounter>,
+): BundleCounter = run {
+    val associatedPackage = bundleData.associateBy { it }
+    packages.forEach { p ->
         val classesWithMethods = p.classes.filter { c ->
             c.methods.any().also {
                 if (!it) {
@@ -100,34 +104,53 @@ internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
             } && c.methods.takeIf { filter }?.any { it.instructionCounter.coveredCount > 0 } ?: true
         }
         if (classesWithMethods.any()) {
-            PackageCounter(
-                name = p.name.weakIntern(),
+            val packageName = p.name.weakIntern()
+            val packageCounter = associatedPackage[PackageCounter(packageName)] ?: PackageCounter(packageName).also {
+                bundleData.add(it)
+            }
+            packageCounter.bundleCount[bundleName] = PackageInfo(
                 count = p.instructionCounter.toCount(),
                 classCount = p.classCounter.toCount(),
-                methodCount = p.methodCounter.toCount(),
-                classes = classesWithMethods.map { c ->
-                    val classFullName = c.name.weakIntern()
-                    ClassCounter(
-                        path = p.name.weakIntern(),
-                        name = classname(c.name),
-                        count = c.instructionCounter.toCount(),
-                        fullName = classFullName,
-                        methods = c.methods.map { m ->
-                            MethodCounter(
-                                name = methodName(m.name, classFullName),
-                                desc = m.desc.weakIntern(),
-                                decl = m.desc.weakIntern(),//declaration(m.desc), //TODO Regex has a big impact on performance
-                                sign = signature(classFullName, m.name, m.desc),
-                                fullName = fullMethodName(classFullName, m.name, m.desc),
-                                count = m.instructionCounter.toCount()
-                            )
-                        }
-                    )
-                }.run { takeIf { filter }?.filter { it.count.covered > 0 } ?: this }
+                methodCount = p.methodCounter.toCount()
             )
-        } else null
+            val associatedClasses = packageCounter.classes.associateBy { it }
+            classesWithMethods.map { c ->
+                val classFullName = c.name.weakIntern()
+                val classCounterKey = ClassCounter(
+                    path = packageName,
+                    name = classname(c.name),
+                    fullName = classFullName
+                )
+                val classBundle = associatedClasses[classCounterKey] ?: classCounterKey.also {
+                    packageCounter.classes.add(it)
+                }
+                classBundle.bundleCount[bundleName] = ClassInfo(count = c.instructionCounter.toCount())
+                val associatedMethods = classBundle.methods.associateBy { it }
+                c.methods.map { m ->
+                    val methodCounterKey = MethodCounter(
+                        name = methodName(m.name, classFullName),
+                        desc = m.desc.weakIntern(),
+                        decl = m.desc.weakIntern(),//declaration(m.desc), //TODO Regex has a big impact on performance
+                        sign = signature(classFullName, m.name, m.desc),
+                        fullName = fullMethodName(classFullName, m.name, m.desc),
+                    )
+                    val methodBundle = associatedMethods[methodCounterKey] ?: methodCounterKey.also {
+                        classBundle.methods.add(it)
+                    }
+                    methodBundle.bundleCount[bundleName] = m.instructionCounter.toCount()
+                }
+            }
+        }
     }
-)
+
+    BundleCounter(
+        name = bundleName,
+        count = instructionCounter.toCount(),
+        methodCount = methodCounter.toCount(),
+        classCount = classCounter.toCount(),
+        packageCount = packages.run { Count(count { it.classCounter.coveredCount > 0 }, count()) },
+    )
+}
 
 fun ICoverageNode.coverage(total: Int = instructionCounter.totalCount): Double =
     instructionCounter.coveredCount percentOf total

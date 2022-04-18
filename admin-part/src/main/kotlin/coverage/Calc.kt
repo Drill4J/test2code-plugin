@@ -21,8 +21,11 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 
 internal fun Sequence<ExecClassData>.bundle(
-    tree: PackageTree
+    bundleName: String,
+    bundleData: MutableList<PackageCounter>,
+    tree: PackageTree,
 ): BundleCounter = run {
+    val associatedPackage = bundleData.associateBy { it }
     val probeCounts: Map<String, Int> = tree.packages.run {
         flatMap { it.classes }.associateBy({ fullClassname(it.path, it.name) }) { it.totalCount }
     }
@@ -37,54 +40,67 @@ internal fun Sequence<ExecClassData>.bundle(
     val classMethods = tree.packages.flatMap { it.classes }.associate {
         fullClassname(it.path, it.name) to it.methods
     }
-    val covered = probesByClasses.values.sumBy { probes -> probes.count { it } }
+    val covered = probesByClasses.values.sumOf { probes -> probes.count { it } }
     val packages = probesByClasses.keys.groupBy { classPath(it) }.map { (pkgName, classNames) ->
-        val classes = classNames.map { fullClassname ->
-            val probes = probesByClasses.getValue(fullClassname)
-            ClassCounter(
-                path = pkgName.weakIntern(),
-                name = classname(fullClassname),
-                count = probes.toCount(),
-                fullName = fullClassname,
-                probes = probes,
-                methods = classMethods.getValue(fullClassname).map {
-                    val methodProbes = probes.slice(it.probeRange)
-                    val sign = signature(fullClassname, it.name, it.desc)
-                    MethodCounter(
-                        it.name, it.desc, it.decl,
-                        sign = sign,
-                        fullName = fullMethodName(fullClassname, it.name, it.desc),
-                        count = methodProbes.toCount()
-                    )
-                }
-            )
+        val packageName = pkgName.weakIntern()
+        val packageCounter = associatedPackage[PackageCounter(packageName)] ?: PackageCounter(packageName).also {
+            bundleData.add(it)
         }
-        PackageCounter(
-            name = pkgName,
+        val associatedClasses = packageCounter.classes.associateBy { it }
+        val classes = classNames.map { fullClassname ->
+            val classFullName = fullClassname.weakIntern()
+            val classCounterKey = ClassCounter(
+                path = packageName,
+                name = classname(fullClassname),
+                fullName = classFullName
+            )
+            val classBundle = associatedClasses[classCounterKey] ?: classCounterKey.also {
+                packageCounter.classes.add(it)
+            }
+            val probes = probesByClasses.getValue(fullClassname)
+            classBundle.bundleCount[bundleName] = ClassInfo(count = probes.toCount(), probes = probes)
+            val associatedMethods = classBundle.methods.associateBy { it }
+            classMethods.getValue(fullClassname).map {
+                val methodProbes = probes.slice(it.probeRange)
+                val sign = signature(fullClassname, it.name, it.desc)
+                val methodCounterKey = MethodCounter(
+                    it.name, it.desc, it.decl,
+                    sign = sign,
+                    fullName = fullMethodName(fullClassname, it.name, it.desc),
+                )
+                val methodBundle = associatedMethods[methodCounterKey] ?: methodCounterKey.also {
+                    classBundle.methods.add(it)
+                }
+                methodBundle.bundleCount[bundleName] = methodProbes.toCount()
+            }
+            classCounterKey
+        }
+        packageCounter.bundleCount[bundleName] = PackageInfo(
             count = classNames.flatMap { probesByClasses[it] ?: emptyList() }.toCount(),
             classCount = Count(
                 classNames.count { name -> probesByClasses.getValue(name).any { it } },
                 classNames.size
             ),
             methodCount = Count(
-                classes.sumOf { c -> c.methods.count { it.count.covered > 0 } },
+                classes.sumOf { c -> c.methods.count { (it.bundleCount[bundleName]?.covered ?: 0) > 0 } },
                 classes.sumOf { it.methods.count() }
             ),
-            classes = classes
         )
+        packageCounter
     }
     BundleCounter(
-        name = "",
+        name = bundleName,
         count = Count(covered, tree.totalCount),
         methodCount = packages.run {
-            Count(sumOf { it.methodCount.covered }, sumOf { it.methodCount.total })
+            Count(sumOf { it.bundleCount[bundleName]?.methodCount?.covered ?: 0 },
+                sumOf { it.bundleCount[bundleName]?.methodCount?.total ?: 0 })
         },
         classCount = packages.run {
-            Count(sumOf { it.classCount.covered }, sumOf { it.classCount.total })
+            Count(sumOf { it.bundleCount[bundleName]?.classCount?.covered ?: 0 },
+                sumOf { it.bundleCount[bundleName]?.classCount?.total ?: 0 })
         },
         packageCount = packages.run {
-            Count(count { it.classCount.covered > 0 }, count())
+            Count(count { (it.bundleCount[bundleName]?.classCount?.covered ?: 0) > 0 }, count())
         },
-        packages = packages
     )
 }

@@ -23,15 +23,13 @@ import org.jacoco.core.internal.data.*
 
 fun Map<String, ByteArray>.parseClassBytes(agentKey: AgentKey): ClassData = run {
     val probeIds: Map<String, Long> = mapValues { CRC64.classId(it.value) }
-    val bundleCoverage = keys.bundle(this, probeIds)
-    val sortedPackages = bundleCoverage.packages.asSequence().run {
-        mapNotNull { pc ->
-            val classes = pc.classes.filter { it.methods.any() }
-            if (classes.any()) {
-                pc.copy(classes = classes.sortedBy(ClassCounter::name))
-            } else null
-        }.sortedBy(PackageCounter::name)
-    }.toList()
+    val bundleData = mutableListOf<PackageCounter>()
+    val bundleCoverage = keys.bundle(this, probeIds, "parseClassBytes", bundleData)
+    val sortedPackages = bundleData.asSequence().apply {
+        forEach { pc ->
+            pc.classes.filter { it.methods.any() }.sortedBy(ClassCounter::name)
+        }
+    }.sortedBy(PackageCounter::name).toList()
     val classCounters = sortedPackages.asSequence().flatMap {
         it.classes.asSequence()
     }
@@ -41,7 +39,7 @@ fun Map<String, ByteArray>.parseClassBytes(agentKey: AgentKey): ClassData = run 
         name to classCounter.parseMethods(bytes).sorted()
     }
     val methods = groupedMethods.flatMap { it.value }
-    val packages = sortedPackages.toPackages(groupedMethods)
+    val packages = sortedPackages.toPackages(groupedMethods, bundleCoverage.name)
     PackageTree(
         totalCount = packages.sumOf { it.totalCount },
         totalMethodCount = groupedMethods.values.sumOf { it.count() },
