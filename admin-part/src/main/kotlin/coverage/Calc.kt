@@ -47,13 +47,20 @@ internal fun Sequence<ExecClassData>.bundle(
                 count = probes.toCount(),
                 fullName = fullClassname,
                 probes = probes,
-                methods = classMethods.getValue(fullClassname).map {
-                    val methodProbes = probes.slice(it.probeRange)
-                    val sign = signature(fullClassname, it.name, it.desc)
+                methods = classMethods.getValue(fullClassname).map { method ->
+                    val sign = signature(fullClassname, method.name, method.desc)
+                    val methodProbes = runCatching {  probes.slice(method.probeRange) }.onFailure {
+                        com.epam.drill.plugins.test2code.util.logger.error(it) {
+                            """
+                                Error in package: $pkgName , class: ${classname(fullClassname)}, method: ${fullMethodName(fullClassname, method.name, method.desc)}
+                                Probes $probes
+                            """.trimIndent()
+                        }
+                    }.getOrThrow()
                     MethodCounter(
-                        it.name, it.desc, it.decl,
+                        method.name, method.desc, method.decl,
                         sign = sign,
-                        fullName = fullMethodName(fullClassname, it.name, it.desc),
+                        fullName = fullMethodName(fullClassname, method.name, method.desc),
                         count = methodProbes.toCount()
                     )
                 }
