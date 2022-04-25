@@ -29,6 +29,7 @@ import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
+import com.epam.dsm.find.Expr.Companion.ANY
 import com.epam.dsm.util.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
@@ -117,6 +118,22 @@ class Plugin(
             if (isNotExistFilter) {
                 calculateFilter(newFilter.toStoredFilter(agentId))
             } else ActionResult(code = StatusCodes.CONFLICT, data = "Filter with this name already exists")
+        }
+        is DuplicateFilter -> {
+            val filterId = action.payload.id
+            val filter = storeClient.findById<StoredFilter>(filterId)
+            logger.debug { "duplicate name $filter..." }
+            filter?.let { storedFilter ->
+                val filterName = storedFilter.name
+                val maxIndex = storeClient.findBy<StoredFilter> {
+                    StoredFilter::name like "$filterName($ANY)"
+                }.getAndMap(StoredFilter::name).maxOfOrNull {
+                    it.substringAfterLast("(").substringBeforeLast(")").toInt()
+                } ?: 0
+                val duplicateName = "$filterName(${maxIndex + 1})"
+                logger.debug { "from $filterName is created new name: $duplicateName" }
+                ActionResult(code = StatusCodes.OK, data = duplicateName)
+            } ?: ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this id is not found")
         }
         is UpdateFilter -> {
             val updateFilter = action.payload

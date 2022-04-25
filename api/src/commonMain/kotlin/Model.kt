@@ -141,6 +141,11 @@ data class ApplyPayload(
     val buildVersion: String = "",//todo EPMDJ-8975 use the filter by buildVersion
 )
 
+@Serializable
+data class DuplicatePayload(
+    val id: String,
+)
+
 enum class BetweenOp { AND, OR }
 
 const val PATH_DELIMITER = "->"
