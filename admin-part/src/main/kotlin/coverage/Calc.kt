@@ -37,10 +37,18 @@ internal fun Sequence<ExecClassData>.bundle(
     val classMethods = tree.packages.flatMap { it.classes }.associate {
         fullClassname(it.path, it.name) to it.methods
     }
+    com.epam.drill.plugins.test2code.util.logger.info {
+        "Probes by classes: ${
+            probesByClasses.entries.joinToString { (classname, booleans) ->
+                "$classname to ${booleans.count()}"
+            }
+        }"
+    }
     val covered = probesByClasses.values.sumBy { probes -> probes.count { it } }
     val packages = probesByClasses.keys.groupBy { classPath(it) }.map { (pkgName, classNames) ->
         val classes = classNames.map { fullClassname ->
             val probes = probesByClasses.getValue(fullClassname)
+            com.epam.drill.plugins.test2code.util.logger.info { "Are there probes for $fullClassname: ${probes.any()}" }
             ClassCounter(
                 path = pkgName.weakIntern(),
                 name = classname(fullClassname),
@@ -49,10 +57,16 @@ internal fun Sequence<ExecClassData>.bundle(
                 probes = probes,
                 methods = classMethods.getValue(fullClassname).map { method ->
                     val sign = signature(fullClassname, method.name, method.desc)
-                    val methodProbes = runCatching {  probes.slice(method.probeRange) }.onFailure {
+                    val methodProbes = runCatching { probes.slice(method.probeRange) }.onFailure {
                         com.epam.drill.plugins.test2code.util.logger.error(it) {
                             """
-                                Error in package: $pkgName , class: ${classname(fullClassname)}, method: ${fullMethodName(fullClassname, method.name, method.desc)}
+                                Error in package: $pkgName , class: ${classname(fullClassname)}, method: ${
+                                fullMethodName(
+                                    fullClassname,
+                                    method.name,
+                                    method.desc
+                                )
+                            }
                                 Probes $probes
                             """.trimIndent()
                         }
