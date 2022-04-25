@@ -76,6 +76,10 @@ data class ToggleScope(val payload: ScopePayload) : Action()
 @Serializable
 data class CreateFilter(val payload: FilterPayload) : Action()
 
+@SerialName("DUPLICATE_FILTER")
+@Serializable
+data class DuplicateFilter(val payload: DuplicatePayload) : Action()
+
 @SerialName("UPDATE_FILTER")
 @Serializable
 data class UpdateFilter(val payload: FilterPayload) : Action()
