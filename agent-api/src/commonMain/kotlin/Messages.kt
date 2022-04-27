@@ -79,7 +79,3 @@ data class SessionFinished(val sessionId: String, val ts: Long) : CoverMessage()
 @SerialName("SESSIONS_FINISHED")
 @Serializable
 data class SessionsFinished(val ids: List<String>, val ts: Long) : CoverMessage()
-
-@SerialName("SYNC_MESSAGE")
-@Serializable
-data class SyncMessage(val activeSessions: Set<String>) : CoverMessage()

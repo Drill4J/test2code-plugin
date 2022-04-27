@@ -50,12 +50,6 @@ class Plugin(
 
     private val _retransformed = atomic(false)
 
-    override fun onConnect() {
-        val ids = instrContext.getActiveSessions()
-        logger.info { "Send active sessions after reconnect: ${ids.count()}" }
-        sendMessage(SyncMessage(ids))
-    }
-
     //TODO remove
     override fun setEnabled(enabled: Boolean) {
         _enabled.value = enabled
@@ -157,6 +151,18 @@ class Plugin(
                 val cancelled = instrContext.cancelAll()
                 logger.info { "Cancellation of recording for sessions $cancelled" }
                 sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
+            }
+            is SyncMessage -> action.run {
+                val activeSessions = instrContext.getActiveSessions()
+                val adminSessions = sessions.map { it.sessionId }
+                activeSessions.filter { it !in adminSessions }.forEach {
+                    doAction(CancelAgentSession(AgentSessionPayload(it)))
+                    logger.info { "Session $it was cancelled" }
+                }
+                sessions.filter { it.sessionId !in activeSessions }.forEach {
+                    doAction(StartAgentSession(it))
+                    logger.info { "Session ${it.sessionId} started" }
+                }
             }
             else -> Unit
         }

@@ -84,6 +84,23 @@ class Plugin(
         }
     }
 
+    override fun syncState() {
+        AsyncJobDispatcher.launch {
+            val activeSessions = activeScope.activeSessions
+            logger.info { "Send active sessions to agent: $activeSessions" }
+            val startSessionPayload = activeSessions.values.mapTo(mutableSetOf()) { session ->
+                StartSessionPayload(
+                    sessionId = session.id,
+                    testType = session.testType,
+                    testName = session.testName,
+                    isGlobal = session.isGlobal,
+                    isRealtime = session.isRealtime,
+                )
+            }
+            sendAgentAction(SyncMessage(startSessionPayload))
+        }
+    }
+
     override fun close() {
         _state.getAndUpdate { null }?.close()
     }
@@ -202,10 +219,12 @@ class Plugin(
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 this.data.map { probes ->
-                    ExecClassData(className = probes.name,
+                    ExecClassData(
+                        className = probes.name,
                         testName = probes.test,
                         testId = probes.testId,
-                        probes = probes.probes.toBitSet())
+                        probes = probes.probes.toBitSet()
+                    )
                 }
             }?.run {
                 if (isRealtime) {
@@ -316,29 +335,6 @@ class Plugin(
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
-        }
-        //TODO EPMDJ-10398 send on agent attach
-        is SyncMessage -> message.run {
-            logger.info { "Active session ids from agent: $activeSessions" }
-            activeSessions.filter { it !in activeScope.activeSessions }.forEach {
-                AsyncJobDispatcher.launch {
-                    logger.info { "Attempting to cancel session: $it" }
-                    sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
-                }
-            }
-            activeScope.activeSessions.map.filter { it.key !in activeSessions }.forEach { (id, session) ->
-                AsyncJobDispatcher.launch {
-                    val startSessionPayload = StartSessionPayload(
-                        sessionId = id,
-                        testType = session.testType,
-                        testName = session.testName,
-                        isGlobal = session.isGlobal,
-                        isRealtime = session.isRealtime,
-                    )
-                    logger.info { "Attempting to start session: $startSessionPayload" }
-                    sendAgentAction(StartAgentSession(startSessionPayload))
-                }
-            }
         }
         else -> logger.info { "$instanceId: Message is not supported! $message" }
     }
@@ -483,7 +479,8 @@ class Plugin(
             context,
             adminData.loadClassBytes(buildVersion),
             storeClient,
-            agentKey)
+            agentKey
+        )
         context = context.updateBundleCounters(bundleCounters)
         logger.debug { "Starting to calculate coverage by filter..." }
         val filterId = filter.id
@@ -533,10 +530,12 @@ class Plugin(
             state.updateBuildTests(testsNew)
             context
         } else {
-            context.copy(build = context.build.copy(
-                stats = buildCoverage.toCachedBuildStats(context),
-                tests = context.build.tests.copy(tests = testsNew)
-            ))
+            context.copy(
+                build = context.build.copy(
+                    stats = buildCoverage.toCachedBuildStats(context),
+                    tests = context.build.tests.copy(tests = testsNew)
+                )
+            )
         }
         val summary = newContext.build.toSummary(
             agentInfo.name,
@@ -591,10 +590,12 @@ class Plugin(
             state.storeClient.store(testsToRunSummary)
         }
         Routes.Build.Summary(buildRoute).let {
-            send(buildVersion,
+            send(
+                buildVersion,
                 Routes.Build.Summary.TestsToRun(it),
                 testsToRunSummary.toTestsToRunSummaryDto(),
-                filterId)
+                filterId
+            )
         }
     }
 
@@ -700,10 +701,12 @@ class Plugin(
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) }, filterId)
         packages.forEach {
             AsyncJobDispatcher.launch {
-                send(buildVersion,
+                send(
+                    buildVersion,
                     Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
                     it,
-                    filterId)
+                    filterId
+                )
             }
         }
     }
@@ -763,10 +766,12 @@ class Plugin(
                     sendScopeTree(it.id, associatedTests, treeCoverage, filterId)
                 }
             } ?: run {
-                send(buildVersion,
+                send(
+                    buildVersion,
                     Routes.Build.Risks(Routes.Build()),
                     state.coverContext().risksDto(storeClient, assocTestsMap),
-                    filterId)
+                    filterId
+                )
                 trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests, filterId) }
             }
         }

@@ -47,3 +47,7 @@ data class CancelAgentSession(val payload: AgentSessionPayload) : AgentAction()
 @SerialName("CANCEL_ALL")
 @Serializable
 object CancelAllAgentSessions : AgentAction()
+
+@SerialName("SYNC_MESSAGE")
+@Serializable
+data class SyncMessage(val sessions: Set<StartSessionPayload>) : AgentAction()
