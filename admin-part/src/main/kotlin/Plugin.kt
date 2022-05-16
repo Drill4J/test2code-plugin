@@ -548,7 +548,7 @@ class Plugin(
         val newContext = if (filterId.isEmpty()) {
             state.updateBuildStats(buildCoverage, context)
             state.updateBuildTests(testsNew)
-            context
+            state.coverContext()
         } else {
             context.copy(build = context.build.copy(
                 stats = buildCoverage.toCachedBuildStats(context),
