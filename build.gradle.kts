@@ -5,6 +5,7 @@ plugins {
     kotlin("jvm") apply false
     id("com.github.hierynomus.license")
     id("org.jetbrains.kotlin.plugin.noarg")
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
 val drillPluginId: String by project

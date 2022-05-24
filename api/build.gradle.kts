@@ -35,7 +35,7 @@ kotlin {
 val kt2dts by configurations.creating
 
 dependencies {
-    kt2dts("com.epam.drill.ts:kt2dts-cli:0.4.0")
+    kt2dts("com.epam.drill.ts:kt2dts-cli:0.4.1")
 }
 
 val genTsd by tasks.registering(JavaExec::class) {
