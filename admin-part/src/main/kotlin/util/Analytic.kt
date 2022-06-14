@@ -21,10 +21,14 @@ import com.epam.drill.analytics.item.*
 import com.epam.drill.plugins.test2code.*
 
 
+private val loggerGA = logger {}
+
 internal suspend fun TestsToRunSummary.sendTotalSavedTime() = stats.run {
     val totalSavedTime = parentDuration - duration
-    if (totalSavedTime > 0) {
-        val percentage = (parentDuration.toDouble() / duration) * 100
+    loggerGA.trace { "check totalSavedTime '$totalSavedTime' and current duration '$duration'" }
+    if (totalSavedTime > 0 && duration > 0) {
+        val percentage = (totalSavedTime.toDouble() / parentDuration) * 100
+        loggerGA.info { "sending saved time '$totalSavedTime', percentage '$percentage'" }
         val event = StatisticsEvent.StatisticsEventBuilder()
             .withCategory("KPI")
             .withAction("Tests saved time")
