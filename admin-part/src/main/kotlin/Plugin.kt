@@ -210,8 +210,10 @@ class Plugin(
                 ActionResult(
                     code = StatusCodes.OK,
                     data = "Successfully received session data",
-                    agentAction = AddAgentSessionData(
-                        payload = AgentSessionDataPayload(sessionId = session.id, data = this.data)
+                    agentAction = mapOf<String, Any>(
+                        "session" to session.id,
+                        "data" to this.data,
+                        "skipSerialize" to true
                     )
                 )
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
