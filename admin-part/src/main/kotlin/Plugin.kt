@@ -321,7 +321,11 @@ class Plugin(
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
         is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
-            activeScope.addProbes(message.sessionId) { message.data }
+            activeScope.addProbes(message.sessionId) { message.data }?.run {
+                if (isRealtime) {
+                    activeScope.probesChanged()
+                }
+            }
         } ?: logger.debug { "Attempting to add coverage in non-existent active session" }
         is SessionChanged -> activeScope.takeIf { scope ->
             scope.activeSessions.values.any { it.isRealtime }
