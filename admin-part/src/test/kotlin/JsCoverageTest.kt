@@ -104,7 +104,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
         }
     }
 
-    private suspend fun calculateCoverage(addProbes: suspend ActiveScope.() -> Unit): CoverageInfoSet {
+    private suspend fun calculateCoverage(addProbes: suspend Scope.() -> Unit): CoverageInfoSet {
         val adminData = object : AdminData {
             override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
             override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
@@ -123,7 +123,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
         return bundleCounters.calculateCoverageData(context)
     }
 
-    private suspend fun ActiveScope.execSession(testType: String, block: suspend ActiveScope.(String) -> Unit) {
+    private suspend fun Scope.execSession(testType: String, block: suspend Scope.(String) -> Unit) {
         val sessionId = genUuid()
         startSession(sessionId = sessionId, testType = testType)
         block(sessionId)

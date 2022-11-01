@@ -22,17 +22,16 @@ import com.epam.dsm.find.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
-fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
 
 class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byVersion(
         agentKey: AgentKey,
         withData: Boolean = false,
-    ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
+    ): Sequence<Scope> = storage.executeInAsyncTransaction {
         val transaction = this
-        transaction.findBy<FinishedScope> {
-            FinishedScope::agentKey eq agentKey
+        transaction.findBy<Scope> {
+            Scope::agentKey eq agentKey
         }.get().run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
@@ -44,45 +43,23 @@ class ScopeManager(private val storage: StoreClient) {
         }
     }.asSequence()
 
-    suspend fun store(scope: FinishedScope) {
+    suspend fun store(scope: Scope) {
         storage.executeInAsyncTransaction {
-            trackTime("Store FinishedScope") {
+            trackTime("Store Scope") {
                 store(scope.copy(data = ScopeData.empty))
                 scope.takeIf { it.any() }?.let {
-                    store(ScopeDataEntity(it.id, it.agentKey, it.data))
+                    store(ScopeDataEntity(it.id, it.agentKey))
                 }
             }
         }
     }
 
-    suspend fun deleteById(scopeId: String): FinishedScope? = storage.executeInAsyncTransaction {
-        findById<FinishedScope>(id = scopeId)?.also {
-            this.deleteById<FinishedScope>(scopeId)
-            this.deleteById<ScopeDataEntity>(scopeId)
-        }
-    }
-
     suspend fun deleteByVersion(agentKey: AgentKey) {
         storage.executeInAsyncTransaction {
-            deleteBy<FinishedScope> { FinishedScope::agentKey eq agentKey }
+            deleteBy<Scope> { Scope::agentKey eq agentKey }
             deleteBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }
         }
     }
-
-    suspend fun byId(
-        scopeId: String,
-        withProbes: Boolean = false,
-    ): FinishedScope? = storage.run {
-        takeIf { withProbes }?.executeInAsyncTransaction {
-            findById<FinishedScope>(scopeId)?.run {
-                withProbes(findById(scopeId), storage)
-            }
-        } ?: findById(scopeId)
-    }
-
-    internal suspend fun counter(agentKey: AgentKey): ActiveScopeInfo? = storage.findById(agentKey)
-
-    internal suspend fun storeCounter(activeScopeInfo: ActiveScopeInfo) = storage.store(activeScopeInfo)
 }
 
 @Serializable
@@ -90,13 +67,13 @@ class ScopeManager(private val storage: StoreClient) {
 internal class ScopeDataEntity(
     @Id val id: String,
     val agentKey: AgentKey,
-    val bytes: ScopeData,
+    val bytes: ScopeData
 )
 
-private suspend fun FinishedScope.withProbes(
+private suspend fun Scope.withProbes(
     data: ScopeDataEntity?,
     storeClient: StoreClient,
-): FinishedScope = data?.let {
+): Scope = data?.let {
     val scopeData: ScopeData = it.bytes
     val sessions = storeClient.loadSessions(id)
     logger.debug { "take scope $id $name with sessions size ${sessions.size}" }

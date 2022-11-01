@@ -61,12 +61,12 @@ class PerformanceTest : PluginTest() {
         val plugin: Plugin = initPlugin(buildVersion)
         finishedSession(plugin, "sessionId", countAddProbes)
         finishedSession(plugin, "sessionId2", countAddProbes)
-        val res = plugin.changeActiveScope(ActiveScopeChangePayload("new scope", true))
+//        val res = plugin.changeActiveScope(ActiveScopeChangePayload("new scope", true))
         val scopes = plugin.state.scopeManager.run {
             byVersion(AgentKey(agentId, buildVersion), withData = true)
         }
-        assertEquals(200, res.code)
-        assertEquals(2, scopes.first().data.sessions.size)
+//        assertEquals(200, res.code)
+        assertEquals(1, scopes.first().data.sessions.size)
     }
 
     private suspend fun finishedSession(
@@ -76,7 +76,7 @@ class PerformanceTest : PluginTest() {
         sizeExec: Int = 100,
         sizeProbes: Int = 10_000,
     ): FinishedSession? {
-        plugin.activeScope.startSession(
+        plugin.scope.startSession(
             sessionId = sessionId,
             testType = "MANUAL",
         )
@@ -109,7 +109,7 @@ class PerformanceTest : PluginTest() {
                     testName = "$index/$it"
                 )
             }
-            plugin.activeScope.addProbes(sessionId) { execClassData }
+            plugin.scope.addProbes(sessionId) { execClassData }
         }
     }
 

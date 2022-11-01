@@ -21,16 +21,6 @@ import io.ktor.locations.*
 @Suppress("unused")
 class Routes {
 
-    @Location("/active-scope")
-    class ActiveScope {
-
-        @Location("/summary/active-sessions")
-        class ActiveSessionSummary(val activeScope: ActiveScope)
-
-        @Location("/active-sessions")
-        class ActiveSessions(val activeScope: ActiveScope)
-    }
-
     @Location("/build")
     class Build {
         @Location("/filters")
@@ -126,8 +116,8 @@ class Routes {
             @Location("/finished")
             class FinishedScopes(val scopes: Scopes)
 
-            @Location("/{scopeId}")
-            class Scope(val scopeId: String, val scopes: Scopes) {
+            @Location("/scope")
+            class Scope(val scopes: Scopes) {
                 @Location("/coverage")
                 class Coverage(val scope: Scope) {
                     @Location("/packages")

@@ -390,7 +390,7 @@ class JavaCoverageTest : PluginTest() {
 
     private suspend fun calculateCoverage(
         sessionId: String,
-        addProbes: suspend ActiveScope.() -> Unit,
+        addProbes: suspend Scope.() -> Unit,
     ): Pair<CoverageInfoSet, CoverContext> {
         val plugin = initPlugin("0.1.0", classEmptyBody)
         plugin.initialize()
@@ -406,14 +406,14 @@ class JavaCoverageTest : PluginTest() {
         return bundleCounters.calculateCoverageData(context) to context
     }
 
-    private suspend fun ActiveScope.execSession(
+    private suspend fun Scope.execSession(
         testName: String,
         sessionId: String,
         testType: String,
         session: ActiveSession? = null,
         result: TestResult = PASSED,
         labels: Set<Label> = emptySet(),
-        block: suspend ActiveScope.(String) -> Unit,
+        block: suspend Scope.(String) -> Unit,
     ) {
         val startSessionNew = session ?: startSession(sessionId = sessionId, testType = testType)
         block(sessionId)
