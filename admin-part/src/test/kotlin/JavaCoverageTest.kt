@@ -396,7 +396,7 @@ class JavaCoverageTest : PluginTest() {
         plugin.initialize()
         val state = plugin.state
 
-        val activeScope = state.activeScope
+        val activeScope = state.scope
         activeScope.addProbes()
         state.finishSession(sessionId)
         val finishedScope = activeScope.finish(enabled = true)

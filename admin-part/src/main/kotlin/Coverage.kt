@@ -148,6 +148,7 @@ internal fun BundleCounters.calculateCoverageData(
                 byTestType = coverageByTests.byType
             )
         }
+
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
             count = coverageCount,
@@ -246,6 +247,7 @@ internal fun Sequence<ExecClassData>.bundle(
         probeIds = context.probeIds,
         classBytes = classBytes
     )
+
     else -> bundle(context.packageTree)
 }
 
@@ -263,7 +265,9 @@ internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatc
         val executionDataWriter = ExecutionDataWriter(outputStream)
         val classBytes = adminData.loadClassBytes(exportBuildVersion)
         val allFinishedScopes = state.scopeManager.byVersion(AgentKey(agentId, exportBuildVersion), true)
-        allFinishedScopes.writeCoverage(executionDataWriter, classBytes)
+        allFinishedScopes.flatMap { _ ->
+            state.scope.sessions.flatMap { it.probes }
+        }.writeCoverage(executionDataWriter, classBytes)
         if (buildVersion == exportBuildVersion) {
             scope.flatMap {
                 it.probes
@@ -306,7 +310,7 @@ internal suspend fun Plugin.importCoverage(
     state.finishSession(sessionId)
     ActionResult(StatusCodes.OK, "Coverage successfully imported")
 }.getOrElse {
-    state.activeScope.cancelSession(sessionId)
+    state.scope.cancelSession(sessionId)
     logger.error { "Can't import coverage. Session was cancelled." }
     ActionResult(StatusCodes.ERROR, "Can't import coverage. An error occurred: ${it.message}")
 }

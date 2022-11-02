@@ -115,7 +115,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
         state.init()
         (state.data as DataBuilder) += ast
         state.initialized()
-        val active = state.activeScope
+        val active = state.scope
         active.addProbes()
         val finished = active.finish(enabled = true)
         val context = state.coverContext()

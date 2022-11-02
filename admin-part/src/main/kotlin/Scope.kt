@@ -15,17 +15,27 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.storage.*
-import com.epam.drill.plugins.test2code.util.*
-import com.epam.dsm.util.*
-import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
-import kotlinx.coroutines.*
-import kotlinx.serialization.*
-import java.lang.ref.*
+import com.epam.drill.plugins.test2code.api.Label
+import com.epam.drill.plugins.test2code.common.api.ExecClassData
+import com.epam.drill.plugins.test2code.coverage.BundleCounter
+import com.epam.drill.plugins.test2code.coverage.TestKey
+import com.epam.drill.plugins.test2code.coverage.testKey
+import com.epam.drill.plugins.test2code.storage.AgentKey
+import com.epam.drill.plugins.test2code.util.AtomicCache
+import com.epam.drill.plugins.test2code.util.genUuid
+import com.epam.drill.plugins.test2code.util.values
+import com.epam.dsm.util.weakIntern
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.getAndUpdate
+import kotlinx.atomicfu.update
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.minus
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import java.lang.ref.SoftReference
 
 
 typealias SoftBundleByTests = SoftReference<PersistentMap<TestKey, BundleCounter>>
@@ -36,13 +46,31 @@ typealias BundleCacheHandler = suspend Scope.(Map<TestKey, Sequence<ExecClassDat
 
 private val logger = logger {}
 
-class Scope(
+@Serializable
+data class Scope(
     val id: String = genUuid(),
     val agentKey: AgentKey,
     val name: String = "One Scope".weakIntern(),
-    sessions: List<FinishedSession> = emptyList()
+    val sessions: List<FinishedSession> = emptyList(),
+    val data: ScopeData = ScopeData.empty
 ) : Sequence<FinishedSession> {
+    @Transient
     private val _bundleByTests = atomic<SoftBundleByTests>(SoftReference(persistentMapOf()))
+
+    @Transient
+    val activeSessions = AtomicCache<String, ActiveSession>()
+
+    @Transient
+    private val _sessions = atomic(sessions.toMutableList())
+
+    @Transient
+    private val _realtimeCoverageHandler = atomic<CoverageHandler?>(null)
+
+    @Transient
+    private val _bundleCacheHandler = atomic<BundleCacheHandler?>(null)
+
+    @Transient
+    private val _change = atomic<Change?>(null)
 
     val bundleByTests: PersistentMap<TestKey, BundleCounter>
         get() = _bundleByTests.value.get() ?: persistentMapOf()
@@ -52,16 +80,6 @@ class Scope(
         ONLY_PROBES(false, true),
         ALL(true, true)
     }
-
-    val activeSessions = AtomicCache<String, ActiveSession>()
-
-    private val _sessions = atomic(sessions.toMutableList())
-
-    private val _realtimeCoverageHandler = atomic<CoverageHandler?>(null)
-    private val _bundleCacheHandler = atomic<BundleCacheHandler?>(null)
-
-
-    private val _change = atomic<Change?>(null)
 
     private val realtimeCoverageJob = AsyncJobDispatcher.launch {
         while (true) {

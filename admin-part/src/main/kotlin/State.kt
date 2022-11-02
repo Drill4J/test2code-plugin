@@ -53,7 +53,7 @@ internal class AgentState(
 
     val scopeManager = ScopeManager(storeClient)
 
-    val activeScope get() = _scope.value
+    val scope get() = _scope.value
 
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
 
@@ -64,7 +64,7 @@ internal class AgentState(
     private val agentKey = AgentKey(agentInfo.id, agentInfo.buildVersion)
     private val _scope = atomic(
         Scope(
-            agentKey = agentKey,
+            agentKey = agentKey
         )
     )
 
@@ -93,8 +93,8 @@ internal class AgentState(
     }
 
     fun close() {
-        logger.debug { "close active scope id=${activeScope.id}" }
-        activeScope.close()
+        logger.debug { "close active scope id=${scope.id}" }
+        scope.close()
     }
 
     private val mutex = Mutex()
@@ -208,29 +208,29 @@ internal class AgentState(
 
     internal suspend fun finishSession(
         sessionId: String,
-    ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
+    ): FinishedSession? = scope.finishSession(sessionId)?.also {
         if (it.any()) {
             logger.debug { "FinishSession. size of exec data = ${it.probes.size}" }.also { logPoolStats() }
             trackTime("session storing") {
                 storeClient.storeSession(
-                    activeScope.id,
+                    scope.id,
                     agentKey,
                     it
                 )
             }
             logger.debug { "Session $sessionId finished." }.also { logPoolStats() }
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
-        if (activeScope.activeSessions.isEmpty()) {
+        if (scope.activeSessions.isEmpty()) {
             _classBytes.update { emptyMap() }
             logger.trace { "Class bytes have been cleared" }
         }
     }
 
     internal fun updateProbes(
-        buildScopes: Sequence<Scope>,
+        buildScopes: Scope,
     ) {
         _coverContext.update {
-            it?.copy(build = it.build.copy(probes = buildScopes.flatten().flatten().merge()))
+            it?.copy(build = it.build.copy(probes = buildScopes.flatten().merge()))
         }
     }
 

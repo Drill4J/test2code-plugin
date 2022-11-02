@@ -71,7 +71,7 @@ class Plugin(
 
     internal val state: AgentState get() = _state.value!!
 
-    val scope: Scope get() = state.activeScope
+    val scope: Scope get() = state.scope
 
     val agentKey = AgentKey(agentId, buildVersion)
 
@@ -175,7 +175,8 @@ class Plugin(
             storeClient.removeAllPluginData(agentId)
             okResult
         }
-//        is DropScope -> dropScope(action.payload.scopeId)
+
+        is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
@@ -401,8 +402,26 @@ class Plugin(
         calculateAndSendCachedCoverage()
         sendLabels()
         sendFilters()
-        return initBundleHandler()
+        return initScope() && initBundleHandler()
     }
+
+    internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
+        val scope = state.scopeManager.byVersion(AgentKey(agentId, buildVersion))
+        sendScopes(buildVersion, scope)
+    }
+
+    private suspend fun sendScopes(
+        buildVersion: String,
+        scope: Scope,
+    ) = sender.send(
+        context = AgentSendContext(
+            agentId,
+            buildVersion,
+            filterId = "",
+        ),
+        destination = Routes.Build.Scopes(Routes.Build()).let { Routes.Build.Scopes.FinishedScopes(it) },
+        message = scope
+    )
 
     private suspend fun sendParentBuild() = send(
         buildVersion,
@@ -431,19 +450,18 @@ class Plugin(
     }
 
     private suspend fun calculateAndSendCachedCoverage() = state.coverContext().build.let { build ->
-        val scopes = state.scopeManager.byVersion(
+        val scope = state.scopeManager.byVersion(
             agentKey, withData = true
         )
-        state.updateProbes(scopes)
+        state.updateProbes(scope)
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
-        scopes.forEach { scope: Scope ->
-            val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
-            val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
-            coverageInfoSet.sendScopeCoverage(buildVersion)
-            bundleCounters.assocTestsJob(scope)
-            bundleCounters.coveredMethodsJob(scope)
-        }
+
+        val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
+        val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
+        coverageInfoSet.sendScopeCoverage(buildVersion)
+        bundleCounters.assocTestsJob(scope)
+        bundleCounters.coveredMethodsJob(scope)
     }
 
     internal suspend fun sendActiveSessions() {
@@ -513,10 +531,10 @@ class Plugin(
         scope.calculateAndSendBuildCoverage(state.coverContext())
     }
 
-    private suspend fun Sequence<Scope>.calculateAndSendBuildCoverage(context: CoverContext) {
+    private suspend fun Scope.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
-        val bundleCounters = flatten().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
+        val bundleCounters = calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         state.updateBundleCounters(bundleCounters)
         logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())

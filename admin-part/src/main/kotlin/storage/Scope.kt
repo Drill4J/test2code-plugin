@@ -22,13 +22,12 @@ import com.epam.dsm.find.*
 import kotlinx.serialization.*
 
 private val logger = logger {}
-
 class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byVersion(
         agentKey: AgentKey,
         withData: Boolean = false,
-    ): Sequence<Scope> = storage.executeInAsyncTransaction {
+    ): Scope = storage.executeInAsyncTransaction {
         val transaction = this
         transaction.findBy<Scope> {
             Scope::agentKey eq agentKey
@@ -41,18 +40,7 @@ class ScopeManager(private val storage: StoreClient) {
                 map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
         }
-    }.asSequence()
-
-    suspend fun store(scope: Scope) {
-        storage.executeInAsyncTransaction {
-            trackTime("Store Scope") {
-                store(scope.copy(data = ScopeData.empty))
-                scope.takeIf { it.any() }?.let {
-                    store(ScopeDataEntity(it.id, it.agentKey))
-                }
-            }
-        }
-    }
+    }[0]
 
     suspend fun deleteByVersion(agentKey: AgentKey) {
         storage.executeInAsyncTransaction {
@@ -60,6 +48,25 @@ class ScopeManager(private val storage: StoreClient) {
             deleteBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }
         }
     }
+
+    suspend fun deleteById(scopeId: String): Scope? = storage.executeInAsyncTransaction {
+        findById<Scope>(id = scopeId)?.also {
+            this.deleteById<Scope>(scopeId)
+            this.deleteById<ScopeDataEntity>(scopeId)
+        }
+    }
+
+    suspend fun byId(
+        scopeId: String,
+        withProbes: Boolean = false,
+    ): Scope? = storage.run {
+        takeIf { withProbes }?.executeInAsyncTransaction {
+            findById<Scope>(scopeId)?.run {
+                withProbes(findById(scopeId), storage)
+            }
+        } ?: findById(scopeId)
+    }
+
 }
 
 @Serializable
@@ -76,6 +83,6 @@ private suspend fun Scope.withProbes(
 ): Scope = data?.let {
     val scopeData: ScopeData = it.bytes
     val sessions = storeClient.loadSessions(id)
-    logger.debug { "take scope $id $name with sessions size ${sessions.size}" }
+    logger.debug { "take scope $id with sessions size ${sessions.size}" }
     copy(data = scopeData.copy(sessions = sessions))
 } ?: this
