@@ -111,62 +111,56 @@ class Routes {
             class Unaffected(val test: MethodsCoveredByTest)
         }
 
+
         @Location("/scopes")
-        class Scopes(val build: Build) {
-            @Location("/finished")
-            class FinishedScopes(val scopes: Scopes)
-
-            @Location("/scope")
-            class Scope(val scopes: Scopes) {
-                @Location("/coverage")
-                class Coverage(val scope: Scope) {
-                    @Location("/packages")
-                    class Packages(val coverage: Coverage) {
-                        @Location("/{path}")
-                        class Package(val path: String, val packages: Packages)
-                    }
-                }
-
-                @Location("/tests/associatedWith/{id}")
-                class AssociatedTests(val id: String, val scope: Scope)
-
-                @Location("/methods")
-                class Methods(val scope: Scope)
-
-                @Location("/summary")
-                class Summary(val build: Scope) {
-                    @Location("/tests")
-                    class Tests(val parent: Summary) {
-                        @Location("/all")
-                        class All(val tests: Tests)
-
-                        @Location("/by-type")
-                        class ByType(val tests: Tests)
-                    }
-                }
-
-                @Location("/tests")
-                class Tests(val scope: Scope)
-
-                @Location("/tests/{testId}/methods")
-                class MethodsCoveredByTest(val testId: String, val scope: Scope) {
-                    @Location("/summary")
-                    class Summary(val test: MethodsCoveredByTest)
-
-                    @Location("/all")
-                    class All(val test: MethodsCoveredByTest)
-
-                    @Location("/new")
-                    class New(val test: MethodsCoveredByTest)
-
-                    @Location("/modified")
-                    class Modified(val test: MethodsCoveredByTest)
-
-                    @Location("/unaffected")
-                    class Unaffected(val test: MethodsCoveredByTest)
+        class Scope(val scopeId: String) {
+            @Location("/coverage")
+            class Coverage(val scope: Scope) {
+                @Location("/packages")
+                class Packages(val coverage: Coverage) {
+                    @Location("/{path}")
+                    class Package(val path: String, val packages: Packages)
                 }
             }
 
+            @Location("/tests/associatedWith/{id}")
+            class AssociatedTests(val id: String, val scope: Scope)
+
+            @Location("/methods")
+            class Methods(val scope: Scope)
+
+            @Location("/summary")
+            class Summary(val build: Scope) {
+                @Location("/tests")
+                class Tests(val parent: Summary) {
+                    @Location("/all")
+                    class All(val tests: Tests)
+
+                    @Location("/by-type")
+                    class ByType(val tests: Tests)
+                }
+            }
+
+            @Location("/tests")
+            class Tests(val scope: Scope)
+
+            @Location("/tests/{testId}/methods")
+            class MethodsCoveredByTest(val testId: String, val scope: Scope) {
+                @Location("/summary")
+                class Summary(val test: MethodsCoveredByTest)
+
+                @Location("/all")
+                class All(val test: MethodsCoveredByTest)
+
+                @Location("/new")
+                class New(val test: MethodsCoveredByTest)
+
+                @Location("/modified")
+                class Modified(val test: MethodsCoveredByTest)
+
+                @Location("/unaffected")
+                class Unaffected(val test: MethodsCoveredByTest)
+            }
         }
     }
 

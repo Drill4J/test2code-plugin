@@ -16,6 +16,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.Label
+import com.epam.drill.plugins.test2code.api.routes.Routes
 import com.epam.drill.plugins.test2code.common.api.ExecClassData
 import com.epam.drill.plugins.test2code.coverage.BundleCounter
 import com.epam.drill.plugins.test2code.coverage.TestKey
@@ -54,6 +55,7 @@ data class Scope(
     val sessions: List<FinishedSession> = emptyList(),
     val data: ScopeData = ScopeData.empty
 ) : Sequence<FinishedSession> {
+
     @Transient
     private val _bundleByTests = atomic<SoftBundleByTests>(SoftReference(persistentMapOf()))
 
@@ -238,3 +240,6 @@ data class ScopeData(
     }
 }
 
+fun getRouteScope(scopeId: String) = Routes.Build.Scope(scopeId).let {
+    Routes.Build.Scope(scopeId)
+}

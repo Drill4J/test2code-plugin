@@ -179,6 +179,7 @@ class Plugin(
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
+            println(scope)
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
             val labels = labels + Label("Session", newSessionId)
@@ -419,7 +420,7 @@ class Plugin(
             buildVersion,
             filterId = "",
         ),
-        destination = Routes.Build.Scopes(Routes.Build()).let { Routes.Build.Scopes.FinishedScopes(it) },
+        destination = Routes.Build.Scope(scopeId = scope.id),
         message = scope
     )
 
@@ -459,9 +460,9 @@ class Plugin(
 
         val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
         val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
-        coverageInfoSet.sendScopeCoverage(buildVersion)
+        coverageInfoSet.sendScopeCoverage(buildVersion, scope.id())
         bundleCounters.assocTestsJob(scope)
-        bundleCounters.coveredMethodsJob(scope)
+        bundleCounters.coveredMethodsJob(scope.id)
     }
 
     internal suspend fun sendActiveSessions() {
@@ -703,9 +704,9 @@ class Plugin(
         val bundleCounters = scope.calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
 
-        coverageInfoSet.sendScopeCoverage(buildVersion)
+        coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         bundleCounters.assocTestsJob(scope)
-        bundleCounters.coveredMethodsJob(scope)
+        bundleCounters.coveredMethodsJob(scope.id)
     }
 
     private suspend fun sendScopeTree(
@@ -713,25 +714,25 @@ class Plugin(
         treeCoverage: List<JavaPackageCoverage>,
         filterId: String = "",
     ) {
-        val scopeRoute = Routes.Build.Scopes.Scope(Routes.Build.Scopes(Routes.Build()))
+        val scopeRoute = Routes.Build.Scope(scope.id)
         if (associatedTests.isNotEmpty()) {
             logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             associatedTests.forEach { assocTests ->
                 AsyncJobDispatcher.launch {
-                    val assocTestsRoute = Routes.Build.Scopes.Scope.AssociatedTests(assocTests.id, scopeRoute)
+                    val assocTestsRoute = Routes.Build.Scope.AssociatedTests(assocTests.id, scopeRoute)
                     send(buildVersion, assocTestsRoute, assocTests, filterId)
                 }
             }
         }
-        val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scopeRoute)
-        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
+        val coverageRoute = Routes.Build.Scope.Coverage(scopeRoute)
+        val pkgsRoute = Routes.Build.Scope.Coverage.Packages(coverageRoute)
         val packages = treeCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) }, filterId)
         packages.forEach {
             AsyncJobDispatcher.launch {
                 send(
                     buildVersion,
-                    Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
+                    Routes.Build.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
                     it,
                     filterId
                 )
@@ -740,16 +741,17 @@ class Plugin(
     }
 
     internal suspend fun CoverageInfoSet.sendScopeCoverage(
+        scopeId: String,
         buildVersion: String
-    ) = scope.let { scope ->
-        val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
+    ) = getRouteScope(scopeId).let { scope ->
+        val coverageRoute = Routes.Build.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
-        send(buildVersion, Routes.Build.Scopes.Scope.Methods(scope), buildMethods.toSummaryDto())
+        send(buildVersion, Routes.Build.Scope.Methods(scope), buildMethods.toSummaryDto())
         sendScopeTree(associatedTests.getAssociatedTests(), packageCoverage)
-        send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), tests)
-        Routes.Build.Scopes.Scope.Summary.Tests(Routes.Build.Scopes.Scope.Summary(scope)).let {
-            send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
-            send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
+        send(buildVersion, Routes.Build.Scope.Tests(scope), tests)
+        Routes.Build.Scope.Summary.Tests(Routes.Build.Scope.Summary(scope)).let {
+            send(buildVersion, Routes.Build.Scope.Summary.Tests.All(it), coverageByTests.all)
+            send(buildVersion, Routes.Build.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
         }
     }
 
@@ -805,7 +807,7 @@ class Plugin(
     }
 
     internal suspend fun BundleCounters.coveredMethodsJob(
-        scope: Scope? = null,
+        scopeId: String? = null,
         context: CoverContext = state.coverContext(),
         filterId: String = "",
     ) = AsyncJobDispatcher.launch {
@@ -820,27 +822,29 @@ class Plugin(
                 val new = coveredMethods.filterValues { it in context.methodChanges.new }
                 val unaffected = coveredMethods.filterValues { it in context.methodChanges.unaffected }
                 AsyncJobDispatcher.launch {
-                    Routes.Build.Scopes.Scope.MethodsCoveredByTest(testId, scope).let { test ->
-                        send(
-                            buildVersion,
-                            Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test),
-                            summary,
-                            filterId
-                        )
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all, filterId)
-                        send(
-                            buildVersion,
-                            Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test),
-                            modified,
-                            filterId
-                        )
-                        send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new, filterId)
-                        send(
-                            buildVersion,
-                            Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
-                            unaffected,
-                            filterId
-                        )
+                    scopeId?.let {
+                        Routes.Build.Scope.MethodsCoveredByTest(testId, getRouteScope(scopeId)).let { test ->
+                            send(
+                                buildVersion,
+                                Routes.Build.Scope.MethodsCoveredByTest.Summary(test),
+                                summary,
+                                filterId
+                            )
+                            send(buildVersion, Routes.Build.Scope.MethodsCoveredByTest.All(test), all, filterId)
+                            send(
+                                buildVersion,
+                                Routes.Build.Scope.MethodsCoveredByTest.Modified(test),
+                                modified,
+                                filterId
+                            )
+                            send(buildVersion, Routes.Build.Scope.MethodsCoveredByTest.New(test), new, filterId)
+                            send(
+                                buildVersion,
+                                Routes.Build.Scope.MethodsCoveredByTest.Unaffected(test),
+                                unaffected,
+                                filterId
+                            )
+                        }
                     }
                 }
             }

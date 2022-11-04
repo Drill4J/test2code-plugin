@@ -70,7 +70,6 @@ internal class AgentState(
 
     private val _classBytes = atomic<Map<String, ByteArray>>(emptyMap())
 
-
     suspend fun classBytes(buildVersion: String) = _classBytes.value.takeIf {
         it.isNotEmpty()
     } ?: adminData.loadClassBytes(buildVersion).also { loaded ->

@@ -46,24 +46,23 @@ internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
     )
 }
 
-
-private suspend fun Plugin.cleanTopics(scopeId: String) = scope.let { scope ->
-    val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
+private suspend fun Plugin.cleanTopics(scopeId: String) = getRouteScope(scopeId).let { scope ->
+    val coverageRoute = Routes.Build.Scope.Coverage(scope)
     send(buildVersion, coverageRoute, "")
     state.classDataOrNull()?.let { classData ->
-        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
+        val pkgsRoute = Routes.Build.Scope.Coverage.Packages(coverageRoute)
         classData.packageTree.packages.forEach { p ->
-            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(p.name, pkgsRoute), "")
-            send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(p.id, scope), "")
+            send(buildVersion, Routes.Build.Scope.Coverage.Packages.Package(p.name, pkgsRoute), "")
+            send(buildVersion, Routes.Build.Scope.AssociatedTests(p.id, scope), "")
             p.classes.forEach { c ->
-                send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(c.id, scope), "")
+                send(buildVersion, Routes.Build.Scope.AssociatedTests(c.id, scope), "")
                 c.methods.forEach { m ->
-                    send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(m.id, scope), "")
+                    send(buildVersion, Routes.Build.Scope.AssociatedTests(m.id, scope), "")
                 }
             }
         }
     }
-    send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), "")
+    send(buildVersion, Routes.Build.Scope.Tests(scope), "")
 }
 
 private suspend fun Plugin.handleChange(scope: Scope) {
@@ -87,7 +86,7 @@ internal fun Plugin.initScope(): Boolean = scope.initRealtimeHandler { sessionCh
         val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)
         }.also { logPoolStats() }
-        coverageInfoSet.sendScopeCoverage(buildVersion)
+        coverageInfoSet.sendScopeCoverage(id, buildVersion)
         if (sessionChanged) {
             bundleCounters.assocTestsJob(this)
             bundleCounters.coveredMethodsJob()
