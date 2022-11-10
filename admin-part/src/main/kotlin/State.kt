@@ -226,10 +226,12 @@ internal class AgentState(
     }
 
     internal fun updateProbes(
-        buildScopes: Scope,
+        buildScopes: Scope?,
     ) {
-        _coverContext.update {
-            it?.copy(build = it.build.copy(probes = buildScopes.flatten().merge()))
+        if (buildScopes != null) {
+            _coverContext.update {
+                it?.copy(build = it.build.copy(probes = buildScopes.flatten().merge()))
+            }
         }
     }
 

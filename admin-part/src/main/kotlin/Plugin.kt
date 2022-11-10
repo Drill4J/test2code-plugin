@@ -413,16 +413,18 @@ class Plugin(
 
     private suspend fun sendScopes(
         buildVersion: String,
-        scope: Scope,
-    ) = sender.send(
-        context = AgentSendContext(
-            agentId,
-            buildVersion,
-            filterId = "",
-        ),
-        destination = Routes.Build.Scope(scopeId = scope.id),
-        message = scope
-    )
+        scope: Scope?,
+    ) = scope?.let {
+        sender.send(
+            context = AgentSendContext(
+                agentId,
+                buildVersion,
+                filterId = "",
+            ),
+            destination = Routes.Build.Scope(scopeId = it.id),
+            message = it
+        )
+    }
 
     private suspend fun sendParentBuild() = send(
         buildVersion,
@@ -458,11 +460,11 @@ class Plugin(
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
 
-        val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
-        val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
-        coverageInfoSet.sendScopeCoverage(buildVersion, scope.id())
-        bundleCounters.assocTestsJob(scope)
-        bundleCounters.coveredMethodsJob(scope.id)
+        val bundleCounters = scope?.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
+        val coverageInfoSet = bundleCounters?.calculateCoverageData(coverContext, scope)
+        coverageInfoSet?.sendScopeCoverage(buildVersion, scope.id())
+        bundleCounters?.assocTestsJob(scope)
+        bundleCounters?.coveredMethodsJob(scope.id)
     }
 
     internal suspend fun sendActiveSessions() {
@@ -526,10 +528,9 @@ class Plugin(
     }
 
     internal suspend fun calculateAndSendBuildCoverage() {
-        val scope = state.scopeManager.run {
+        state.scopeManager.run {
             byVersion(agentKey, withData = true)
-        }
-        scope.calculateAndSendBuildCoverage(state.coverContext())
+        }.let { scope.calculateAndSendBuildCoverage(state.coverContext()) }
     }
 
     private suspend fun Scope.calculateAndSendBuildCoverage(context: CoverContext) {

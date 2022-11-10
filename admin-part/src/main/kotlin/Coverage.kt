@@ -265,7 +265,7 @@ internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatc
         val executionDataWriter = ExecutionDataWriter(outputStream)
         val classBytes = adminData.loadClassBytes(exportBuildVersion)
         val allFinishedScopes = state.scopeManager.byVersion(AgentKey(agentId, exportBuildVersion), true)
-        allFinishedScopes.flatMap { _ ->
+        allFinishedScopes!!.flatMap { _ ->
             state.scope.sessions.flatMap { it.probes }
         }.writeCoverage(executionDataWriter, classBytes)
         if (buildVersion == exportBuildVersion) {

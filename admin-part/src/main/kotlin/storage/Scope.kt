@@ -27,7 +27,7 @@ class ScopeManager(private val storage: StoreClient) {
     suspend fun byVersion(
         agentKey: AgentKey,
         withData: Boolean = false,
-    ): Scope = storage.executeInAsyncTransaction {
+    ): Scope? = storage.executeInAsyncTransaction {
         val transaction = this
         transaction.findBy<Scope> {
             Scope::agentKey eq agentKey
@@ -40,7 +40,7 @@ class ScopeManager(private val storage: StoreClient) {
                 map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
         }
-    }[0]
+    }.getOrNull(0)
 
     suspend fun deleteByVersion(agentKey: AgentKey) {
         storage.executeInAsyncTransaction {
