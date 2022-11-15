@@ -89,6 +89,7 @@ internal suspend fun StoreClient.removeBuild(
     deleteById<StoredBundles>(agentKey)
     deleteById<StoredBuildTests>(agentKey)
     deleteById<BaselineRisks>(agentKey)
+    deleteById<StoredSession>(agentKey)
 }
 
 
