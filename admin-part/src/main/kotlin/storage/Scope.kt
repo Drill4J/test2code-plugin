@@ -15,58 +15,78 @@
  */
 package com.epam.drill.plugins.test2code.storage
 
-import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.util.*
+import com.epam.drill.plugins.test2code.ScopeInfo
+import com.epam.drill.plugins.test2code.FinishedScope
+import com.epam.drill.plugins.test2code.ScopeData
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.trackTime
 import com.epam.dsm.*
-import com.epam.dsm.find.*
-import kotlinx.serialization.*
+import com.epam.dsm.find.get
+import kotlinx.serialization.Serializable
 
 private val logger = logger {}
+fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
+
 class ScopeManager(private val storage: StoreClient) {
 
     suspend fun byVersion(
         agentKey: AgentKey,
         withData: Boolean = false,
-    ): Scope? = storage.executeInAsyncTransaction {
+    ): Sequence<FinishedScope> = storage.executeInAsyncTransaction {
         val transaction = this
-        transaction.findBy<Scope> {
-            Scope::agentKey eq agentKey
+        transaction.findBy<FinishedScope> {
+            FinishedScope::agentKey eq agentKey
         }.get().run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
-                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.get().takeIf { it.any() }
+                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.get()
+                        .takeIf { it.any() }
                 }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
             } ?: this
         }
-    }.getOrNull(0)
+    }.asSequence()
 
-    suspend fun deleteByVersion(agentKey: AgentKey) {
+    suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
-            deleteBy<Scope> { Scope::agentKey eq agentKey }
-            deleteBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }
+            trackTime("Store FinishedScope") {
+                store(scope.copy(data = ScopeData.empty))
+                scope.takeIf { it.any() }?.let {
+                    store(ScopeDataEntity(it.id, it.agentKey, it.data))
+                }
+            }
         }
     }
 
-    suspend fun deleteById(scopeId: String): Scope? = storage.executeInAsyncTransaction {
-        findById<Scope>(id = scopeId)?.also {
-            this.deleteById<Scope>(scopeId)
+    suspend fun deleteById(scopeId: String): FinishedScope? = storage.executeInAsyncTransaction {
+        findById<FinishedScope>(id = scopeId)?.also {
+            this.deleteById<FinishedScope>(scopeId)
             this.deleteById<ScopeDataEntity>(scopeId)
+        }
+    }
+
+    suspend fun deleteByVersion(agentKey: AgentKey) {
+        storage.executeInAsyncTransaction {
+            deleteBy<FinishedScope> { FinishedScope::agentKey eq agentKey }
+            deleteBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }
         }
     }
 
     suspend fun byId(
         scopeId: String,
         withProbes: Boolean = false,
-    ): Scope? = storage.run {
+    ): FinishedScope? = storage.run {
         takeIf { withProbes }?.executeInAsyncTransaction {
-            findById<Scope>(scopeId)?.run {
+            findById<FinishedScope>(scopeId)?.run {
                 withProbes(findById(scopeId), storage)
             }
         } ?: findById(scopeId)
     }
 
+    internal suspend fun counter(agentKey: AgentKey): ScopeInfo? = storage.findById(agentKey)
+
+    internal suspend fun storeCounter(scopeInfo: ScopeInfo) = storage.store(scopeInfo)
 }
 
 @Serializable
@@ -74,15 +94,15 @@ class ScopeManager(private val storage: StoreClient) {
 internal class ScopeDataEntity(
     @Id val id: String,
     val agentKey: AgentKey,
-    val bytes: ScopeData
+    val bytes: ScopeData,
 )
 
-private suspend fun Scope.withProbes(
+private suspend fun FinishedScope.withProbes(
     data: ScopeDataEntity?,
     storeClient: StoreClient,
-): Scope = data?.let {
+): FinishedScope = data?.let {
     val scopeData: ScopeData = it.bytes
     val sessions = storeClient.loadSessions(id)
-    logger.debug { "take scope $id with sessions size ${sessions.size}" }
+    logger.debug { "take scope $id $name with sessions size ${sessions.size}" }
     copy(data = scopeData.copy(sessions = sessions))
 } ?: this

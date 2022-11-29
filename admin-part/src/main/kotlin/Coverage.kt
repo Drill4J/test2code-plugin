@@ -110,7 +110,7 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
 
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
-    scope: Scope? = null,
+    scope: IScope? = null,
 ): CoverageInfoSet {
     val bundle = all
     val bundlesByTests = byTest
@@ -149,6 +149,7 @@ internal fun BundleCounters.calculateCoverageData(
             )
         }
 
+        is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
             count = coverageCount,
@@ -265,8 +266,8 @@ internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatc
         val executionDataWriter = ExecutionDataWriter(outputStream)
         val classBytes = adminData.loadClassBytes(exportBuildVersion)
         val allFinishedScopes = state.scopeManager.byVersion(AgentKey(agentId, exportBuildVersion), true)
-        allFinishedScopes!!.flatMap { _ ->
-            state.scope.sessions.flatMap { it.probes }
+        allFinishedScopes.filter { it.enabled }.flatMap { finishedScope ->
+            finishedScope.data.sessions.flatMap { it.probes }
         }.writeCoverage(executionDataWriter, classBytes)
         if (buildVersion == exportBuildVersion) {
             scope.flatMap {

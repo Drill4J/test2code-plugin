@@ -42,6 +42,7 @@ import kotlinx.coroutines.sync.withLock
  * In case of inconsistencies of the data a ClassCastException is thrown.
  */
 
+
 internal class AgentState(
     val storeClient: StoreClient,
     val agentInfo: AgentInfo,
@@ -64,7 +65,7 @@ internal class AgentState(
     private val agentKey = AgentKey(agentInfo.id, agentInfo.buildVersion)
     private val _scope = atomic(
         Scope(
-            agentKey = agentKey
+            agentKey = agentKey,
         )
     )
 
@@ -203,6 +204,7 @@ internal class AgentState(
             storeClient.store(GlobalAgentData(agentId, baseline))
             logger.debug { "(buildVersion=$buildVersion) Stored initial baseline $baseline." }
         }
+        initScope()
     }
 
     internal suspend fun finishSession(
@@ -226,12 +228,10 @@ internal class AgentState(
     }
 
     internal fun updateProbes(
-        buildScopes: Scope?,
+        buildScopes: Sequence<FinishedScope>,
     ) {
-        if (buildScopes != null) {
-            _coverContext.update {
-                it?.copy(build = it.build.copy(probes = buildScopes.flatten().merge()))
-            }
+        _coverContext.update {
+            it?.copy(build = it.build.copy(probes = buildScopes.flatten().flatten().merge()))
         }
     }
 
@@ -266,83 +266,91 @@ internal class AgentState(
         trackTime("storeBuild") { _coverContext.value?.build?.store(storeClient) }
     }
 
-//    suspend fun renameScope(id: String, newName: String): ScopeSummary? = when (id) {
-//        activeScope.id -> activeScope.rename(newName.trim()).also { storeActiveScopeInfo() }
-//        else -> scopeManager.byId(id)?.let { scope ->
-//            scope.copy(name = newName, summary = scope.summary.copy(name = newName.trim())).also {
-//                scopeManager.store(it)
-//            }.summary
-//        }
-//    }
+    suspend fun renameScope(id: String, newName: String): ScopeSummary? = when (id) {
+        scope.id -> scope.rename(newName.trim()).also { storeScopeInfo() }
+        else -> scopeManager.byId(id)?.let { scope ->
+            scope.copy(name = newName, summary = scope.summary.copy(name = newName.trim())).also {
+                scopeManager.store(it)
+            }.summary
+        }
+    }
 
-//    suspend fun toggleScope(id: String) {
-//        scopeManager.byId(id)?.apply {
-//            scopeManager.store(copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
-//        }
-//    }
+    suspend fun toggleScope(id: String) {
+        scopeManager.byId(id)?.apply {
+            scopeManager.store(copy(enabled = !enabled, summary = this.summary.copy(enabled = !enabled)))
+        }
+    }
 
-//    suspend fun scopeByName(name: String): Scope? = when (name) {
-//        activeScope.name -> activeScope
-//        else -> scopeManager.byVersion(agentKey).firstOrNull { it.name == name }
-//    }
-//
-//    suspend fun scopeById(id: String): Scope? = when (id) {
-//        activeScope.id -> activeScope
-//        else -> scopeManager.byId(id)
-//    }
+    suspend fun scopeByName(name: String): IScope? = when (name) {
+        scope.name -> scope
+        else -> scopeManager.byVersion(agentKey).firstOrNull { it.name == name }
+    }
+
+    suspend fun scopeById(id: String): IScope? = when (id) {
+        scope.id -> scope
+        else -> scopeManager.byId(id)
+    }
 
     internal fun coverContext(): CoverContext = _coverContext.value!!
 
     internal fun classDataOrNull(): ClassData? = _data.value as? ClassData
 
-//    private suspend fun initActiveScope() {
-//        readActiveScopeInfo()?.run {
-//            val sessions = storeClient.loadSessions(id)
-//            logger.debug { "load sessions for active scope with id=$id" }.also { logPoolStats() }
-//            _activeScope.update {
-//                ActiveScope(
-//                    id = id,
-//                    nth = nth,
-//                    agentKey = agentKey,
-//                    name = name,
-//                    sessions = sessions,
-//                ).apply {
-//                    updateSummary {
-//                        it.copy(started = startedAt)
-//                    }
-//                }
-//            }
-//        } ?: storeActiveScopeInfo()
-//    }
+    private suspend fun initScope() {
+        readActiveScopeInfo()?.run {
+            val sessions = storeClient.loadSessions(id)
+            logger.debug { "load sessions for active scope with id=$id" }.also { logPoolStats() }
+            _scope.update {
+                Scope(
+                    id = id,
+                    agentKey = agentKey,
+                    sessions = sessions,
+                ).apply {
+                    updateSummary {
+                        it.copy(started = startedAt)
+                    }
+                }
+            }
+        } ?: storeScopeInfo()
+    }
 
-//    fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
-//        ActiveScope(
-//            nth = it.nth.inc(),
-//            name = scopeName(name),
-//            agentKey = agentKey,
-//        )
-//    }.apply { close() }
+    fun changeActiveScope(): Scope = _scope.getAndUpdate {
+        Scope(
+            agentKey = agentKey,
+        )
+    }.apply { close() }
 
-//    private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentKey)
+    suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
+        scopeManager.storeCounter(
+            scope.run {
+                ScopeInfo(
+                    agentKey = AgentKey(agentInfo.id, agentKey.buildVersion),
+                    id = id,
+                    name = name,
+                    startedAt = summary.started
+                )
+            }
+        )
+    }
 
-//    suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
-//        scopeManager.storeCounter(
-//            activeScope.run {
-//                ActiveScopeInfo(
-//                    agentKey = AgentKey(agentInfo.id, agentKey.buildVersion),
-//                    id = id,
-//                    nth = nth,
-//                    name = name,
-//                    startedAt = summary.started
-//                )
-//            }
-//        )
-//    }
-//
-//    private fun scopeName(name: String) = when (val trimmed = name.trim()) {
-//        "" -> "$DEFAULT_SCOPE_NAME ${activeScope.nth + 1}"
-//        else -> trimmed
-//    }
+    private suspend fun readActiveScopeInfo(): ScopeInfo? = scopeManager.counter(agentKey)
+
+    suspend fun storeScopeInfo() = trackTime("storeActiveScopeInfo") {
+        scopeManager.storeCounter(
+            scope.run {
+                ScopeInfo(
+                    agentKey = AgentKey(agentInfo.id, agentKey.buildVersion),
+                    id = id,
+                    name = name,
+                    startedAt = summary.started
+                )
+            }
+        )
+    }
+
+    private fun scopeName(name: String) = when (val trimmed = name.trim()) {
+        "" -> "Single scope"
+        else -> trimmed
+    }
 
     internal suspend fun toggleBaseline(): String? = run {
         val agentId = agentInfo.id

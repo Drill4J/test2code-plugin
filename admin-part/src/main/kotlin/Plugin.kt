@@ -104,11 +104,12 @@ class Plugin(
         data: Any?,
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
-//        is SwitchActiveScope -> changeActiveScope(action.payload).also {
-//            sendLabels()
-//        }
-//        is RenameScope -> renameScope(action.payload)
-//        is ToggleScope -> toggleScope(action.payload.scopeId)
+        is SwitchActiveScope -> changeActiveScope(action.payload).also {
+            sendLabels()
+        }
+
+        is RenameScope -> renameScope(action.payload)
+        is ToggleScope -> toggleScope(action.payload.scopeId)
         is CreateFilter -> {
             val newFilter = action.payload
             logger.debug { "creating filter with $newFilter..." }
@@ -179,7 +180,6 @@ class Plugin(
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
-            println(scope)
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
             val labels = labels + Label("Session", newSessionId)
@@ -357,9 +357,16 @@ class Plugin(
 
         is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
-            state.finishSession(message.sessionId) ?: logger.info {
+            state.finishSession(message.sessionId)
+                .also {
+                    changeActiveScope(ActiveScopeChangePayload("", true, true, false))
+                        .also {
+                            sendLabels()
+                        }
+                } ?: logger.info {
                 "$instanceId: No active session with id ${message.sessionId}."
             }
+
         }
 
         is SessionsFinished -> {
@@ -400,30 +407,11 @@ class Plugin(
         sendBaseline()
         sendParentTestsToRunStats()
         state.classDataOrNull()?.sendBuildStats()
+        sendScopes()
         calculateAndSendCachedCoverage()
         sendLabels()
         sendFilters()
-        return initScope() && initBundleHandler()
-    }
-
-    internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        val scope = state.scopeManager.byVersion(AgentKey(agentId, buildVersion))
-        sendScopes(buildVersion, scope)
-    }
-
-    private suspend fun sendScopes(
-        buildVersion: String,
-        scope: Scope?,
-    ) = scope?.let {
-        sender.send(
-            context = AgentSendContext(
-                agentId,
-                buildVersion,
-                filterId = "",
-            ),
-            destination = Routes.Build.Scope(scopeId = it.id),
-            message = it
-        )
+        return initActiveScope() && initBundleHandler()
     }
 
     private suspend fun sendParentBuild() = send(
@@ -453,18 +441,24 @@ class Plugin(
     }
 
     private suspend fun calculateAndSendCachedCoverage() = state.coverContext().build.let { build ->
-        val scope = state.scopeManager.byVersion(
+        val scopes = state.scopeManager.byVersion(
             agentKey, withData = true
         )
-        state.updateProbes(scope)
+        state.updateProbes(scopes.enabled())
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
+        scopes.forEach { scope ->
+            val bundleCounters = scope.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
+            val coverageInfoSet = bundleCounters.calculateCoverageData(coverContext, scope)
+            coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
+            bundleCounters.assocTestsJob(scope)
+            bundleCounters.coveredMethodsJob(scope.id)
+        }
+    }
 
-        val bundleCounters = scope?.calcBundleCounters(coverContext, adminData.loadClassBytes(buildVersion))
-        val coverageInfoSet = bundleCounters?.calculateCoverageData(coverContext, scope)
-        coverageInfoSet?.sendScopeCoverage(buildVersion, scope.id())
-        bundleCounters?.assocTestsJob(scope)
-        bundleCounters?.coveredMethodsJob(scope.id)
+    internal suspend fun sendScopeMessages(buildVersion: String) {
+        sendScope()
+        sendScopes(buildVersion)
     }
 
     internal suspend fun sendActiveSessions() {
@@ -477,14 +471,14 @@ class Plugin(
                 isRealtime = it.isRealtime
             )
         }
-//        val summary = ActiveSessions(
-//            count = sessions.count(),
-//            testTypes = sessions.groupBy { it.testType }.keys
-//        )
-//        Routes.ActiveScope().let {
-//            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
-//            send(buildVersion, Routes.ActiveScope.ActiveSessions(it), sessions)
-//        }
+        val summary = ActiveSessions(
+            count = sessions.count(),
+            testTypes = sessions.groupBy { it.testType }.keys
+        )
+        Routes.ActiveScope().let {
+            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
+            send(buildVersion, Routes.ActiveScope.ActiveSessions(it), sessions)
+        }
         val serviceGroup = agentInfo.serviceGroup
         if (serviceGroup.any()) {
             val aggregatedSessions = sessionAggregator(serviceGroup, agentId, sessions) ?: sessions
@@ -494,6 +488,44 @@ class Plugin(
             )
         }
     }
+
+    internal suspend fun sendActiveScope() {
+        val summary = scope.summary
+        send(buildVersion, Routes.ActiveScope(), summary)
+        sendScopeSummary(summary)
+    }
+
+    internal suspend fun sendScope() {
+        val summary = scope.summary
+        send(buildVersion, Routes.ActiveScope(), summary)
+        sendScopeSummary(summary)
+    }
+
+    internal suspend fun sendScopeSummary(
+        scopeSummary: ScopeSummary,
+        buildVersion: String = this.buildVersion,
+    ) {
+        send(buildVersion, scopeById(scopeSummary.id), scopeSummary)
+    }
+
+    internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
+        val scopes = state.scopeManager.byVersion(AgentKey(agentId, buildVersion))
+        sendScopes(buildVersion, scopes)
+    }
+
+    private suspend fun sendScopes(
+        buildVersion: String,
+        scopes: Sequence<FinishedScope>,
+    ) = sender.send(
+        context = AgentSendContext(
+            agentId,
+            buildVersion,
+            filterId = "",
+        ),
+        destination = Routes.Build.Scopes(Routes.Build()).let { Routes.Build.Scopes.FinishedScopes(it) },
+        message = scopes.summaries()
+    )
+
 
     /**
      * filter in current build using:
@@ -527,16 +559,18 @@ class Plugin(
         return filterId
     }
 
+    //TODO get the only one scope and calculate build coverage
     internal suspend fun calculateAndSendBuildCoverage() {
-        state.scopeManager.run {
-            byVersion(agentKey, withData = true)
-        }.let { scope.calculateAndSendBuildCoverage(state.coverContext()) }
+        val scopes = state.scopeManager.run {
+            byVersion(agentKey, withData = true).enabled()
+        }
+        scopes.calculateAndSendBuildCoverage(state.coverContext())
     }
 
-    private suspend fun Scope.calculateAndSendBuildCoverage(context: CoverContext) {
+    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
-        val bundleCounters = calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
+        val bundleCounters = flatten().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         state.updateBundleCounters(bundleCounters)
         logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())
@@ -704,36 +738,39 @@ class Plugin(
         val context = state.coverContext()
         val bundleCounters = scope.calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
-
+        this.scope.updateSummary {
+            it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage)
+        }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
         bundleCounters.assocTestsJob(scope)
         bundleCounters.coveredMethodsJob(scope.id)
     }
 
     private suspend fun sendScopeTree(
+        scopeId: String,
         associatedTests: List<AssociatedTests>,
         treeCoverage: List<JavaPackageCoverage>,
         filterId: String = "",
     ) {
-        val scopeRoute = Routes.Build.Scope(scope.id)
+        val scopeRoute = Routes.Build.Scopes.Scope(scopeId, Routes.Build.Scopes(Routes.Build()))
         if (associatedTests.isNotEmpty()) {
             logger.info { "Assoc tests - ids count: ${associatedTests.count()}" }
             associatedTests.forEach { assocTests ->
                 AsyncJobDispatcher.launch {
-                    val assocTestsRoute = Routes.Build.Scope.AssociatedTests(assocTests.id, scopeRoute)
+                    val assocTestsRoute = Routes.Build.Scopes.Scope.AssociatedTests(assocTests.id, scopeRoute)
                     send(buildVersion, assocTestsRoute, assocTests, filterId)
                 }
             }
         }
-        val coverageRoute = Routes.Build.Scope.Coverage(scopeRoute)
-        val pkgsRoute = Routes.Build.Scope.Coverage.Packages(coverageRoute)
+        val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scopeRoute)
+        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
         val packages = treeCoverage.takeIf { runtimeConfig.sendPackages } ?: emptyList()
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) }, filterId)
         packages.forEach {
             AsyncJobDispatcher.launch {
                 send(
                     buildVersion,
-                    Routes.Build.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
+                    Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
                     it,
                     filterId
                 )
@@ -742,17 +779,17 @@ class Plugin(
     }
 
     internal suspend fun CoverageInfoSet.sendScopeCoverage(
+        buildVersion: String,
         scopeId: String,
-        buildVersion: String
-    ) = getRouteScope(scopeId).let { scope ->
-        val coverageRoute = Routes.Build.Scope.Coverage(scope)
+    ) = scopeById(scopeId).let { scope ->
+        val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
         send(buildVersion, coverageRoute, coverage)
-        send(buildVersion, Routes.Build.Scope.Methods(scope), buildMethods.toSummaryDto())
-        sendScopeTree(associatedTests.getAssociatedTests(), packageCoverage)
-        send(buildVersion, Routes.Build.Scope.Tests(scope), tests)
-        Routes.Build.Scope.Summary.Tests(Routes.Build.Scope.Summary(scope)).let {
-            send(buildVersion, Routes.Build.Scope.Summary.Tests.All(it), coverageByTests.all)
-            send(buildVersion, Routes.Build.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
+        send(buildVersion, Routes.Build.Scopes.Scope.Methods(scope), buildMethods.toSummaryDto())
+        sendScopeTree(scopeId, associatedTests.getAssociatedTests(), packageCoverage)
+        send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), tests)
+        Routes.Build.Scopes.Scope.Summary.Tests(Routes.Build.Scopes.Scope.Summary(scope)).let {
+            send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.All(it), coverageByTests.all)
+            send(buildVersion, Routes.Build.Scopes.Scope.Summary.Tests.ByType(it), coverageByTests.byType)
         }
     }
 
@@ -760,7 +797,7 @@ class Plugin(
         sender.send(AgentSendContext(agentId, buildVersion, filterId), destination, message)
     }
 
-    private suspend fun sendAgentAction(message: AgentAction) {
+    private suspend fun Plugin.sendAgentAction(message: AgentAction) {
         sender.sendAgentAction(agentId, id, message)
     }
 
@@ -776,7 +813,7 @@ class Plugin(
     }
 
     internal suspend fun BundleCounters.assocTestsJob(
-        scope: Scope? = null,
+        scope: IScope? = null,
         filterId: String = "",
     ) = AsyncJobDispatcher.launch {
         trackTime("assocTestsJob") {
@@ -793,7 +830,7 @@ class Plugin(
             logger.debug { "Sending all associated tests..." }
             scope?.let {
                 trackTime("assocTestsJob sendScopeTree") {
-                    sendScopeTree(associatedTests, treeCoverage, filterId)
+                    sendScopeTree(it.id, associatedTests, treeCoverage, filterId)
                 }
             } ?: run {
                 send(
@@ -824,32 +861,39 @@ class Plugin(
                 val unaffected = coveredMethods.filterValues { it in context.methodChanges.unaffected }
                 AsyncJobDispatcher.launch {
                     scopeId?.let {
-                        Routes.Build.Scope.MethodsCoveredByTest(testId, getRouteScope(scopeId)).let { test ->
+                        Routes.Build.Scopes.Scope.MethodsCoveredByTest(testId, scopeById(it)).let { test ->
                             send(
                                 buildVersion,
-                                Routes.Build.Scope.MethodsCoveredByTest.Summary(test),
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(test),
                                 summary,
                                 filterId
                             )
-                            send(buildVersion, Routes.Build.Scope.MethodsCoveredByTest.All(test), all, filterId)
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.All(test), all, filterId)
                             send(
                                 buildVersion,
-                                Routes.Build.Scope.MethodsCoveredByTest.Modified(test),
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Modified(test),
                                 modified,
                                 filterId
                             )
-                            send(buildVersion, Routes.Build.Scope.MethodsCoveredByTest.New(test), new, filterId)
+                            send(buildVersion, Routes.Build.Scopes.Scope.MethodsCoveredByTest.New(test), new, filterId)
                             send(
                                 buildVersion,
-                                Routes.Build.Scope.MethodsCoveredByTest.Unaffected(test),
+                                Routes.Build.Scopes.Scope.MethodsCoveredByTest.Unaffected(test),
                                 unaffected,
                                 filterId
                             )
+                        }
+                    } ?: run {
+                        Routes.Build.MethodsCoveredByTest(testId, Routes.Build()).let { test ->
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.Summary(test), summary, filterId)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.All(test), all, filterId)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.Modified(test), modified, filterId)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.New(test), new, filterId)
+                            send(buildVersion, Routes.Build.MethodsCoveredByTest.Unaffected(test), unaffected, filterId)
                         }
                     }
                 }
             }
         }
     }
-
 }
