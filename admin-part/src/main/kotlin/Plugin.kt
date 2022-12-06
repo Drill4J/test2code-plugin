@@ -359,10 +359,11 @@ class Plugin(
             delay(500L) //TODO remove after multi-instance core is implemented
             state.finishSession(message.sessionId)
                 .also {
-                    changeActiveScope(ActiveScopeChangePayload("", true, true, false))
-                        .also {
-                            sendLabels()
-                        }
+                    //TODO save only coverage from the session
+                    //TODO multi user problem
+                    calculateAndSendBuildCoverage()
+                    sendActiveSessions()
+                    sendLabels()
                 } ?: logger.info {
                 "$instanceId: No active session with id ${message.sessionId}."
             }
@@ -444,7 +445,7 @@ class Plugin(
         val scopes = state.scopeManager.byVersion(
             agentKey, withData = true
         )
-        state.updateProbes(scopes.enabled())
+        state.updateProbes(scopes.flatten())
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
@@ -471,12 +472,12 @@ class Plugin(
                 isRealtime = it.isRealtime
             )
         }
-        val summary = ActiveSessions(
-            count = sessions.count(),
-            testTypes = sessions.groupBy { it.testType }.keys
-        )
+//        val summary = ActiveSessions(
+//            count = sessions.count(),
+//            testTypes = sessions.groupBy { it.testType }.keys
+//        )
         Routes.ActiveScope().let {
-            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
+//            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
             send(buildVersion, Routes.ActiveScope.ActiveSessions(it), sessions)
         }
         val serviceGroup = agentInfo.serviceGroup
@@ -561,16 +562,18 @@ class Plugin(
 
     //TODO get the only one scope and calculate build coverage
     internal suspend fun calculateAndSendBuildCoverage() {
-        val scopes = state.scopeManager.run {
-            byVersion(agentKey, withData = true).enabled()
-        }
-        scopes.calculateAndSendBuildCoverage(state.coverContext())
+//        val scopes = state.scopeManager.run {
+//            byVersion(agentKey, withData = true).enabled()
+//        }
+//        scopes.calculateAndSendBuildCoverage(state.coverContext())
+        val sessions = state.scope.sessions().asSequence()
+        sessions.calculateAndSendBuildCoverage(state.coverContext())
     }
 
-    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
+    private suspend fun Sequence<FinishedSession>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
-        val bundleCounters = flatten().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
+        val bundleCounters = calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         state.updateBundleCounters(bundleCounters)
         logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())

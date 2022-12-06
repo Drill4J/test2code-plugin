@@ -152,6 +152,7 @@ class Scope(
     } == null
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
+    fun sessions(): MutableList<FinishedSession> = _sessions.value
 
     fun startSession(
         sessionId: String,
@@ -230,6 +231,7 @@ class Scope(
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
+                val sessionsVal = _sessions.value
                 val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
                 _bundleByTests.update {
                     val current = it.get() ?: persistentMapOf()

@@ -143,6 +143,7 @@ internal class AgentState(
 
     private suspend fun initialized(classData: ClassData) {
         val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
+//        val probes = scopeManager.byVersion(agentKey, withData = true)
         val probes = scopeManager.byVersion(agentKey, withData = true)
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
@@ -152,7 +153,7 @@ internal class AgentState(
             build = build
         )
         _coverContext.value = coverContext
-        updateProbes(probes)
+        updateProbes(probes.flatten())
         val (agentId, buildVersion) = agentKey
         logger.debug { "$agentKey initializing..." }
         storeClient.findById<GlobalAgentData>(agentId)?.baseline?.let { baseline ->
@@ -228,10 +229,10 @@ internal class AgentState(
     }
 
     internal fun updateProbes(
-        buildScopes: Sequence<FinishedScope>,
+        buildSession: Sequence<FinishedSession>,
     ) {
         _coverContext.update {
-            it?.copy(build = it.build.copy(probes = buildScopes.flatten().flatten().merge()))
+            it?.copy(build = it.build.copy(probes = buildSession.flatten().merge()))
         }
     }
 
@@ -317,7 +318,7 @@ internal class AgentState(
         Scope(
             agentKey = agentKey,
         )
-    }.apply { close() }
+    }
 
     suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
         scopeManager.storeCounter(
