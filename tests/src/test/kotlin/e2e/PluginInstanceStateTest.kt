@@ -30,6 +30,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlin.test.*
 
+@Ignore
 class PluginInstanceStateTest : E2EPluginTest() {
 
     @Test

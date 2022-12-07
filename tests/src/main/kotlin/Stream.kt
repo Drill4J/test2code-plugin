@@ -108,8 +108,7 @@ class CoverageSocketStreams : PluginStreams() {
                         val json = frame.readText().parseJson() as JsonObject
                         if (isDebugStream)
                             println("PLUGIN: $json")
-                        val messageType =
-                            WsMessageType.valueOf((json[WsSendMessage::type.name] as JsonPrimitive).content)
+                        val messageType = WsMessageType.valueOf((json[WsSendMessage::type.name] as JsonPrimitive).content)
                         val url = (json[WsSendMessage::destination.name] as JsonPrimitive).content
                         val jsonMessage = json[WsSendMessage::message.name]
                         val content = jsonMessage?.run { toString() }
@@ -118,24 +117,24 @@ class CoverageSocketStreams : PluginStreams() {
                             WsMessageType.MESSAGE -> {
 
                                 when (val resolved = app.resolve(url)) {
-//
-//                                    is Routes.ActiveScope -> {
-//                                        activeScope.send(ScopeSummary.serializer(), content)
-//                                    }
-//                                    is Routes.ActiveScope.ActiveSessionSummary -> {
-//                                        activeSessions.send(ActiveSessions.serializer(), content)
-//                                    }
 
-//                                    is Routes.Build.Scope.FinishedScopes -> {
-//                                        scopes.send(ListSerializer(ScopeSummary.serializer()), content)
-//                                    }
-                                    is Routes.Build.Scope -> {
+                                    is Routes.ActiveScope -> {
+                                        activeScope.send(ScopeSummary.serializer(), content)
+                                    }
+                                    is Routes.ActiveScope.ActiveSessionSummary -> {
+                                        activeSessions.send(ActiveSessions.serializer(), content)
+                                    }
+
+                                    is Routes.Build.Scopes.FinishedScopes -> {
+                                        scopes.send(ListSerializer(ScopeSummary.serializer()), content)
+                                    }
+                                    is Routes.Build.Scopes.Scope -> {
                                         val scope =
                                             scopeSubscriptions.getValue(resolved.scopeId).first.scope
                                         scope.send(ScopeSummary.serializer(), content)
                                     }
 
-                                    is Routes.Build.Scope.Methods -> {
+                                    is Routes.Build.Scopes.Scope.Methods -> {
                                         val methods =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.methods
                                         methods.send(
@@ -143,7 +142,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Build.Scope.Tests -> {
+                                    is Routes.Build.Scopes.Scope.Tests -> {
                                         val tests =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.tests
                                         tests.send(
@@ -151,7 +150,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Build.Scope.Coverage.Packages -> {
+                                    is Routes.Build.Scopes.Scope.Coverage.Packages -> {
                                         val coveragePackages = run {
                                             scopeSubscriptions.getValue(
                                                 resolved.coverage.scope.scopeId
@@ -162,7 +161,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Build.Scope.MethodsCoveredByTest.Summary -> {
+                                    is Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary -> {
                                         val methodsCoveredByTest = testSubscriptions
                                             .getValue(resolved.test.scope.scopeId)
                                             .first
@@ -172,7 +171,7 @@ class CoverageSocketStreams : PluginStreams() {
                                         )
                                     }
 
-                                    is Routes.Build.Scope.Coverage -> {
+                                    is Routes.Build.Scopes.Scope.Coverage -> {
                                         val coverage =
                                             scopeSubscriptions.getValue(resolved.scope.scopeId).first.coverage
                                         coverage.send(ScopeCoverage.serializer(), content)
@@ -205,20 +204,16 @@ class CoverageSocketStreams : PluginStreams() {
                                     is Routes.Group.Summary -> {
                                         summary.send(SummaryDto.serializer(), content)
                                     }
-
                                     is Routes.Build.Filters -> {
                                         filters.send(ListSerializer(FilterDto.serializer()), content)
                                     }
-
                                     else -> println("!!!$url ignored")
                                 }
 
                             }
-
                             else -> println("!!!!!$messageType not supported!")
                         }
                     }
-
                     else -> println("!!!!${frame.frameType} not supported!")
                 }
             }
@@ -244,18 +239,18 @@ class CoverageSocketStreams : PluginStreams() {
         buildVersion: String = info.buildVersionHash,
         block: suspend ScopeContext.() -> Unit
     ) {
-        val scope = getRouteScope(scopeId)
-        val coverage = Routes.Build.Scope.Coverage(scope)
+        val scope = scopeById(scopeId)
+        val coverage = Routes.Build.Scopes.Scope.Coverage(scope)
 
         val scopeContext = ScopeContext()
         scopeSubscriptions[scopeId] = scopeContext to block
 
         arrayOf(
             scope,
-            Routes.Build.Scope.Methods(scope),
+            Routes.Build.Scopes.Scope.Methods(scope),
             coverage,
-            Routes.Build.Scope.Coverage.Packages(coverage),
-            Routes.Build.Scope.Tests(scope)
+            Routes.Build.Scopes.Scope.Coverage.Packages(coverage),
+            Routes.Build.Scopes.Scope.Tests(scope)
         ).forEach {
             iut.send(
                 Subscribe(
@@ -277,9 +272,9 @@ class CoverageSocketStreams : PluginStreams() {
         buildVersion: String = info.buildVersionHash,
         block: suspend TestChannels.() -> Unit
     ) {
-        val scope = getRouteScope(scopeId)
-        Routes.Build.Scope.MethodsCoveredByTest(testId, scope).let {
-            Routes.Build.Scope.MethodsCoveredByTest.Summary(it)
+        val scope = scopeById(scopeId)
+        Routes.Build.Scopes.Scope.MethodsCoveredByTest(testId, scope).let {
+            Routes.Build.Scopes.Scope.MethodsCoveredByTest.Summary(it)
         }.also {
             iut.send(
                 Subscribe(

@@ -29,6 +29,7 @@ import kotlinx.coroutines.*
 import java.util.*
 import kotlin.test.*
 
+@Ignore
 class SessionTest : E2EPluginTest() {
 
 

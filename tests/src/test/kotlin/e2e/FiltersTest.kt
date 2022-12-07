@@ -34,6 +34,7 @@ import kotlinx.coroutines.*
 import kotlin.test.*
 
 
+@Ignore
 class FiltersTest : E2EPluginTest() {
 
     @Test

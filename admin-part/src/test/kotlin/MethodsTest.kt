@@ -15,7 +15,8 @@
  */
 package com.epam.drill.plugins.test2code
 
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class MethodsTest {
     @Test
