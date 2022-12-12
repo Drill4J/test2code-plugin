@@ -231,7 +231,6 @@ class Scope(
     ): FinishedSession? = removeSession(sessionId)?.run {
         finish().also { finished ->
             if (finished.probes.any()) {
-                val sessionsVal = _sessions.value
                 val updatedSessions = _sessions.updateAndGet { it.apply { add(finished) } }
                 _bundleByTests.update {
                     val current = it.get() ?: persistentMapOf()

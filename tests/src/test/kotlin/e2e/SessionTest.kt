@@ -71,68 +71,6 @@ class SessionTest : E2EPluginTest() {
     }
 
     @Test
-    fun `finish active scope without stopping session`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams> {
-            connectAgent<Build1> { plugUi, build ->
-
-                plugUi.activeSessions()!!.run {
-                    count shouldBe 0
-                    testTypes shouldBe emptySet()
-                }
-
-                plugUi.activeScope()!!.coverage.count.covered shouldBe 0
-                plugUi.buildCoverage()!!.count.covered shouldBe 0
-
-                "${UUID.randomUUID()}".let { sessionId ->
-                    val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE, sessionId)).stringify()
-                    pluginAction(startNewSession) { status, _ ->
-                        status shouldBe HttpStatusCode.OK
-
-                        plugUi.activeSessions()!!.run { count shouldBe 1 }
-
-                        runWithSession(sessionId) {
-                            val gt = build.entryPoint()
-                            gt.test1()
-                            gt.test2()
-                        }
-                    }.join()
-
-                    val stopSession = StopSession(StopSessionPayload(sessionId)).stringify()
-                    pluginAction(stopSession).join()
-                    plugUi.activeSessions()!!.count shouldBe 0
-                    plugUi.activeScope()!!.coverage.count shouldBe Count(11, 15)
-                }
-
-                "${UUID.randomUUID()}".let { sessionId ->
-                    val startSession = StartNewSession(StartPayload(AUTO_TEST_TYPE, sessionId)).stringify()
-                    pluginAction(startSession) { status, _ ->
-                        status shouldBe HttpStatusCode.OK
-
-                        plugUi.activeSessions()!!.run { count shouldBe 1 }
-
-                        runWithSession(sessionId) {
-                            val gt = build.entryPoint()
-                            gt.test3()
-                        }
-                    }.join()
-                }
-                val switchScope = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new scope 2",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope).join()
-
-                plugUi.activeSessions()!!.count shouldBe 0
-                plugUi.activeScope()!!.coverage.count.covered shouldBe 0
-                plugUi.buildCoverage()!!.count shouldBe Count(11, 15)
-            }
-        }
-    }
-
-    @Test
     fun `start and finish 2 sessions`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->

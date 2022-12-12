@@ -48,7 +48,6 @@ class CoverageTest : E2EPluginTest() {
     }
 
     @Test
-    @Ignore
     fun `coverage should not float when a test with the same name is called twice`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->

@@ -359,8 +359,6 @@ class Plugin(
             delay(500L) //TODO remove after multi-instance core is implemented
             state.finishSession(message.sessionId)
                 .also {
-                    //TODO save only coverage from the session
-                    //TODO multi user problem
                     calculateAndSendBuildCoverage()
                     sendActiveSessions()
                     sendLabels()
@@ -472,12 +470,12 @@ class Plugin(
                 isRealtime = it.isRealtime
             )
         }
-//        val summary = ActiveSessions(
-//            count = sessions.count(),
-//            testTypes = sessions.groupBy { it.testType }.keys
-//        )
+        val summary = ActiveSessions(
+            count = sessions.count(),
+            testTypes = sessions.groupBy { it.testType }.keys
+        )
         Routes.ActiveScope().let {
-//            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
+            send(buildVersion, Routes.ActiveScope.ActiveSessionSummary(it), summary)
             send(buildVersion, Routes.ActiveScope.ActiveSessions(it), sessions)
         }
         val serviceGroup = agentInfo.serviceGroup
@@ -562,10 +560,6 @@ class Plugin(
 
     //TODO get the only one scope and calculate build coverage
     internal suspend fun calculateAndSendBuildCoverage() {
-//        val scopes = state.scopeManager.run {
-//            byVersion(agentKey, withData = true).enabled()
-//        }
-//        scopes.calculateAndSendBuildCoverage(state.coverContext())
         val sessions = state.scope.sessions().asSequence()
         sessions.calculateAndSendBuildCoverage(state.coverContext())
     }
