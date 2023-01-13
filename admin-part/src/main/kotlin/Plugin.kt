@@ -162,6 +162,8 @@ class Plugin(
             val version = action.payload.version
             if (version != buildVersion && version != state.coverContext().parentBuild?.agentKey?.buildVersion) {
                 storeClient.removeBuildData(AgentKey(agentId, version), state.scopeManager)
+                //TODO
+                // get cache and clean up by agentKey
                 okResult
             } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Can not remove a current or baseline build")
         }
