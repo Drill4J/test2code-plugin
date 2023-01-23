@@ -20,6 +20,7 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
+import com.epam.dsm.serializer.cleanUpBinaryTable
 import kotlinx.serialization.*
 
 @Serializable
@@ -85,6 +86,7 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
 internal suspend fun StoreClient.removeBuild(
     agentKey: AgentKey,
 ) = executeInAsyncTransaction {
+    cleanUpBinaryTable("${agentKey.agentId}:${agentKey.buildVersion}")
     deleteById<BuildStats>(agentKey)
     deleteById<StoredBundles>(agentKey)
     deleteById<StoredBuildTests>(agentKey)
