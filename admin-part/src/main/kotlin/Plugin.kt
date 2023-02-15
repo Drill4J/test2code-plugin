@@ -174,15 +174,15 @@ class Plugin(
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
-            val labels = labels + Label("Session", newSessionId)
             activeScope.startSession(
                 newSessionId,
                 testType,
                 isGlobal,
+                envId = "",
                 isRealtimeSession,
                 testName,
                 labels
-            )?.run {
+            ).run {
                 StartAgentSession(
                     payload = StartSessionPayload(
                         sessionId = id,
@@ -191,19 +191,8 @@ class Plugin(
                         isGlobal = isGlobal,
                         isRealtime = isRealtime
                     )
-                ).toActionResult()
-            } ?: if (isGlobal && activeScope.hasActiveGlobalSession()) {
-                ActionResult(
-                    code = StatusCodes.CONFLICT,
-                    data = listOf(
-                        "Error! Only one active global session is allowed.",
-                        "Please finish the active one in order to start new."
-                    ).joinToString(" ")
                 )
-            } else FieldErrorDto(
-                field = "sessionId",
-                message = "Session with such ID already exists. Please choose a different ID."
-            ).toActionResult(StatusCodes.CONFLICT)
+            }.toActionResult()
         }
         is AddSessionData -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
@@ -221,10 +210,12 @@ class Plugin(
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 this.data.map { probes ->
-                    ExecClassData(className = probes.name,
+                    ExecClassData(
+                        className = probes.name,
                         testName = probes.test,
                         testId = probes.testId,
-                        probes = probes.probes.toBitSet())
+                        probes = probes.probes.toBitSet()
+                    )
                 }
             }?.run {
                 if (isRealtime) {
@@ -506,7 +497,8 @@ class Plugin(
             context,
             adminData.loadClassBytes(buildVersion),
             storeClient,
-            agentKey)
+            agentKey
+        )
         context = context.updateBundleCounters(bundleCounters)
         logger.debug { "Starting to calculate coverage by filter..." }
         val filterId = filter.id
@@ -556,10 +548,12 @@ class Plugin(
             state.updateBuildTests(testsNew)
             state.coverContext()
         } else {
-            context.copy(build = context.build.copy(
-                stats = buildCoverage.toCachedBuildStats(context),
-                tests = context.build.tests.copy(tests = testsNew)
-            ))
+            context.copy(
+                build = context.build.copy(
+                    stats = buildCoverage.toCachedBuildStats(context),
+                    tests = context.build.tests.copy(tests = testsNew)
+                )
+            )
         }
         val summary = newContext.build.toSummary(
             agentInfo.name,
@@ -614,10 +608,12 @@ class Plugin(
             state.storeClient.store(testsToRunSummary)
         }
         Routes.Build.Summary(buildRoute).let {
-            send(buildVersion,
+            send(
+                buildVersion,
                 Routes.Build.Summary.TestsToRun(it),
                 testsToRunSummary.toTestsToRunSummaryDto(),
-                filterId)
+                filterId
+            )
         }
     }
 
@@ -723,10 +719,12 @@ class Plugin(
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) }, filterId)
         packages.forEach {
             AsyncJobDispatcher.launch {
-                send(buildVersion,
+                send(
+                    buildVersion,
                     Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
                     it,
-                    filterId)
+                    filterId
+                )
             }
         }
     }
@@ -786,10 +784,12 @@ class Plugin(
                     sendScopeTree(it.id, associatedTests, treeCoverage, filterId)
                 }
             } ?: run {
-                send(buildVersion,
+                send(
+                    buildVersion,
                     Routes.Build.Risks(Routes.Build()),
                     state.coverContext().risksDto(storeClient, assocTestsMap),
-                    filterId)
+                    filterId
+                )
                 trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests, filterId) }
             }
         }

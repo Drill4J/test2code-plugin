@@ -36,6 +36,15 @@ internal fun AgentAction.toActionResult() = ActionResult(
     data = this
 )
 
+internal data class FieldError(val name: String, override val message: String) : Exception(message) {
+    internal fun toActionResult() = ActionResult(
+        code = StatusCodes.BAD_REQUEST,
+        data = this,
+        //        agentAction = this,
+    )
+}
+
+
 internal fun FieldErrorDto.toActionResult(code: Int) = listOf(this).toActionResult(code)
 
 internal fun List<FieldErrorDto>.toActionResult(code: Int) = ActionResult(

@@ -37,17 +37,30 @@ sealed class Session : Sequence<ExecClassData> {
     abstract val tests: Set<TestOverview>
 }
 
-
 private typealias ProbeKey = Pair<String, String>
 
 class ActiveSession(
     override val id: String,
     override val testType: String,
     val isGlobal: Boolean = false,
+    private val envId: String?,
     val isRealtime: Boolean = false,
     val testName: String? = null,
-    private val labels: Set<Label> = emptySet(),
+    private val labels: MutableSet<Label> = mutableSetOf<Label>(),
 ) : Session() {
+
+    init {
+        if (isGlobal) {
+            if (envId.isNullOrEmpty()) {
+                throw IllegalArgumentException("Missing envId. To create global session you must supply envId")
+            }
+            labels.add(Label("Environment", envId))
+        }
+    }
+
+    init {
+        labels.add(Label("Session", id))
+    }
 
     override val tests: Set<TestOverview>
         get() = _probes.value.run {
@@ -130,6 +143,11 @@ class ActiveSession(
             tests = tests,
             probes = values.flatMap { it.values },
         )
+    }
+
+    fun getKey(): String {
+        if (isGlobal) return envId as String
+        return id
     }
 }
 

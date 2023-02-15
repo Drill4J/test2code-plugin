@@ -159,16 +159,31 @@ class ActiveScope(
         sessionId: String,
         testType: String,
         isGlobal: Boolean = false,
+        envId: String? = "", // TODO set no default
         isRealtime: Boolean = false,
         testName: String? = null,
-        labels: Set<Label> = emptySet(),
-    ) = ActiveSession(sessionId, testType, isGlobal, isRealtime, testName, labels).takeIf { newSession ->
-        val key = if (isGlobal) "" else sessionId
+        labels: MutableSet<Label> = mutableSetOf<Label>(),
+    ): ActiveSession {
+        val newSession = ActiveSession(sessionId, testType, isGlobal, envId, isRealtime, testName, labels)
+        val key = newSession.getKey()
         activeSessions(key) { existing ->
-            existing ?: newSession.takeIf { activeSessionOrNull(it.id) == null }
-        } === newSession
-    }?.also {
+            if (existing !== null) {
+                if (existing.isGlobal) {
+                    throw FieldError(
+                        name = "envId",
+                        message = "Session for env $key is already started."
+                    )
+                } else {
+                    throw FieldError(
+                        name = "sessionId",
+                        message = "Session with such id $key is already started"
+                    )
+                }
+            }
+            newSession
+        }
         sessionsChanged()
+        return newSession
     }
 
     fun activeSessionOrNull(id: String): ActiveSession? = activeSessions.run {

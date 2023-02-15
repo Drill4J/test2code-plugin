@@ -295,7 +295,7 @@ private fun Sequence<ExecClassData>.writeCoverage(
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
     sessionId: String = genUuid(),
-) = activeScope.startSession(sessionId, "UNIT").runCatching {
+) = activeScope.startSession(sessionId, "UNIT", envId = "").runCatching {
     val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
     val classBytes = adminData.loadClassBytes()
     val probeIds = state.coverContext().probeIds

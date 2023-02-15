@@ -46,7 +46,7 @@ subprojects {
     group = "${rootProject.group}.$drillPluginId"
 
     val constraints = listOf(
-        "com.epam.drill:common:$drillApiVersion",
+        "com.epam.drill:common:0.8.0-12-env.0",
         "com.epam.drill:drill-admin-part:$drillApiVersion",
         "com.epam.drill:drill-agent-part:$drillApiVersion",
         "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
