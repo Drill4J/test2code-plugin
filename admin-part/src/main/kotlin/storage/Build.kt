@@ -16,12 +16,18 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.api.JavaClassCoverage
+import com.epam.drill.plugins.test2code.api.JavaMethodCoverage
+import com.epam.drill.plugins.test2code.api.Label
+import com.epam.drill.plugins.test2code.api.TestOverview
+import com.epam.drill.plugins.test2code.common.api.ExecClassData
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.util.*
+import com.epam.drill.plugins.test2code.util.logger
+import com.epam.drill.plugins.test2code.util.trackTime
 import com.epam.dsm.*
-import com.epam.dsm.find.*
+import com.epam.dsm.find.FieldPath
 import com.epam.dsm.serializer.cleanUpBinaryTable
-import kotlinx.serialization.*
+import kotlinx.serialization.Serializable
 
 @Serializable
 @StreamSerialization
@@ -86,7 +92,32 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
 internal suspend fun StoreClient.removeBuild(
     agentKey: AgentKey,
 ) = executeInAsyncTransaction {
-    cleanUpBinaryTable("${agentKey.agentId}:${agentKey.buildVersion}")
+    deleteById<ActiveScopeInfo>(agentKey)
+    deleteById<TestsToRunSummary>(agentKey)
+
+    val agentKeyHashCode = agentKey.hashCode()
+    deleteByParentId<ClassCounter>(agentKeyHashCode)
+    deleteByParentId<JavaClassCoverage>(agentKeyHashCode)
+    deleteByParentId<MethodCounter>(agentKeyHashCode)
+    deleteByParentId<JavaMethodCoverage>(agentKeyHashCode)
+
+    // clean-up tables related to sessions from deleted build
+    sessionIds(agentKey).forEach {
+        deleteBy<StoredSession> { FieldPath(StoredSession::agentKey, AgentKey::agentId) eq agentKey.agentId }
+        deleteByParentId<ExecClassData>(it)
+        deleteByParentId<Label>(it)
+        deleteByParentId<TestOverview>(it)
+    }
+    cleanUpBinaryTable("agent::${agentKey.agentId}:${agentKey.buildVersion}:")
+    //clean up string_to_bundlecounter
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(String::class, BundleCounter::class))
+    //clean up testkey_to_bundlecounter
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(TestKey::class, BundleCounter::class))
+    //clean up testkey_to_testoverview
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(TestKey::class, TestOverview::class))
+    //clean up string_to_list
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(String::class, List::class))
+
     deleteById<BuildStats>(agentKey)
     deleteById<StoredBundles>(agentKey)
     deleteById<StoredBuildTests>(agentKey)
