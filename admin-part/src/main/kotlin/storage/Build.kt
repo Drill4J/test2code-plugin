@@ -95,20 +95,21 @@ internal suspend fun StoreClient.removeBuild(
     deleteById<ActiveScopeInfo>(agentKey)
     deleteById<TestsToRunSummary>(agentKey)
 
-    val agentKeyHashCode = agentKey.hashCode()
-    deleteByParentId<ClassCounter>(agentKeyHashCode)
-    deleteByParentId<JavaClassCoverage>(agentKeyHashCode)
-    deleteByParentId<MethodCounter>(agentKeyHashCode)
-    deleteByParentId<JavaMethodCoverage>(agentKeyHashCode)
+    val agentKeyHashCode = "${agentKey.hashCode()}"
+    deleteBy<ClassCounter> { containsParentId(listOf(agentKeyHashCode)) }
+    deleteBy<JavaClassCoverage> { containsParentId(listOf(agentKeyHashCode)) }
+    deleteBy<MethodCounter> { containsParentId(listOf(agentKeyHashCode)) }
+    deleteBy<JavaMethodCoverage> { containsParentId(listOf(agentKeyHashCode)) }
 
-    // clean-up tables related to sessions from deleted build
     sessionIds(agentKey).forEach {
         deleteBy<StoredSession> { FieldPath(StoredSession::agentKey, AgentKey::agentId) eq agentKey.agentId }
-        deleteByParentId<ExecClassData>(it)
-        deleteByParentId<Label>(it)
-        deleteByParentId<TestOverview>(it)
+        deleteBy<ExecClassData> { containsParentId(listOf(it)) }
+        deleteBy<Label> { containsParentId(listOf(it)) }
+        deleteBy<TestOverview> { containsParentId(listOf(it)) }
     }
+
     cleanUpBinaryTable("agent::${agentKey.agentId}:${agentKey.buildVersion}:")
+
     //clean up string_to_bundlecounter
     deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(String::class, BundleCounter::class))
     //clean up testkey_to_bundlecounter
