@@ -32,10 +32,10 @@ buildscript {
 allprojects {
     apply(from = rootProject.uri("$scriptUrl/git-version.gradle.kts"))
     repositories {
-//        apply(from = rootProject.uri("$scriptUrl/maven-repo.gradle.kts"))
+        apply(from = rootProject.uri("$scriptUrl/maven-repo.gradle.kts"))
         mavenLocal()
         mavenCentral()
-//        jcenter()
+        jcenter()
     }
 }
 
