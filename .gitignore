@@ -1,10 +1,5 @@
-.gradle/
-**/.idea/*
-!/.idea/codeStyles
-!/.idea/fileTemplates
 build/
-distr/
-test-storage/
-work/
-.kotlintest/
-/build-cache/
+.gradle/
+.idea/
+*.iml
+/lib-jvm-shared/
