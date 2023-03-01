@@ -1,15 +1,15 @@
-val drillPluginId: String by settings
-rootProject.name = "$drillPluginId-plugin"
+rootProject.name = "test2code-plugin"
 
-apply(from = "plugins.settings.gradle.kts")
-
-include(":api")
-include(":agent-api")
-include(":admin-part")
-include(":agent-part")
-include(":tests")
-include(":load-tests")
-include(":benchmarks")
-include(":plugin-runner")
-include(":jacoco")
-include(":cli")
+pluginManagement {
+    val kotlinVersion: String by extra
+    val licenseVersion: String by extra
+    plugins {
+        kotlin("jvm") version kotlinVersion
+        id("com.github.hierynomus.license") version licenseVersion
+    }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
