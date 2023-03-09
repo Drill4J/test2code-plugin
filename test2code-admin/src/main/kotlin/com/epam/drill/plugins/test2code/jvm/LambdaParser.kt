@@ -192,7 +192,7 @@ class LambdaParser(
             }
             Const.INVOKESPECIAL, Const.INVOKESTATIC -> {
                 index = bytes.readUnsignedShort()
-                val c = constant_pool.getConstant(index)
+                val c = constant_pool.getConstant(index, Constant::class.java)
                 // With Java8 operand may be either a CONSTANT_Methodref
                 // or a CONSTANT_InterfaceMethodref.   (markro)
                 buf.append("\t").append(
@@ -219,7 +219,7 @@ class LambdaParser(
             }
             Const.INVOKEDYNAMIC -> {
                 index = bytes.readUnsignedShort()
-                val const = constant_pool.getConstant(index, Const.CONSTANT_InvokeDynamic)
+                val const = constant_pool.getConstant(index, Const.CONSTANT_InvokeDynamic, Constant::class.java)
                 (const as? ConstantInvokeDynamic)?.bootstrapMethodAttrIndex?.also { bootstrapIndex ->
                     bootstrapMethods.getOrNull(bootstrapIndex)?.let { constant_pool.parse(it) }
                         ?.let { bootstrapMethodSignature ->
@@ -241,7 +241,7 @@ class LambdaParser(
                 index = bytes.readUnsignedShort()
                 buf.append("\t\t").append(
                     constant_pool.constantToString(
-                        index, constant_pool.getConstant(index)
+                        index, constant_pool.getConstant(index, Constant::class.java)
                             .tag
                     )
                 ).append(if (verbose) " ($index)" else "")
@@ -250,7 +250,7 @@ class LambdaParser(
                 index = bytes.readUnsignedByte()
                 buf.append("\t\t").append(
                     constant_pool.constantToString(
-                        index, constant_pool.getConstant(index)
+                        index, constant_pool.getConstant(index, Constant::class.java)
                             .tag
                     )
                 ).append(if (verbose) " ($index)" else "")

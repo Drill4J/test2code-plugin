@@ -29,10 +29,15 @@ val includeSharedLib: Settings.(String) -> Unit = {
     project(":$it").projectDir = file("lib-jvm-shared/$it")
 }
 
+includeSharedLib("dsm")
 includeSharedLib("dsm-annotations")
+includeSharedLib("dsm-test-framework")
 includeSharedLib("kt2dts")
 includeSharedLib("kt2dts-cli")
 includeSharedLib("kt2dts-api-sample")
+includeSharedLib("admin-analytics")
+includeSharedLib("plugin-api-admin")
 include("jacoco")
 include("test2code-common")
 include("test2code-api")
+include("test2code-admin")
