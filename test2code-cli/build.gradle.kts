@@ -1,48 +1,78 @@
+import java.net.URI
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.hierynomus.gradle.license.tasks.LicenseCheck
+import com.hierynomus.gradle.license.tasks.LicenseFormat
+
+@Suppress("RemoveRedundantBackticks")
 plugins {
+    `application`
     kotlin("jvm")
-    application
+    kotlin("plugin.noarg")
+    id("com.github.hierynomus.license")
     id("com.github.johnrengelman.shadow")
-    `maven-publish`
 }
 
+group = "com.epam.drill.plugins"
+
+val ajaltCliktVersion: String by parent!!.extra
+
 repositories {
+    mavenLocal()
     mavenCentral()
+}
+
+@Suppress("HasPlatformType")
+val jarDependencies by configurations.creating {
+    attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
 }
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation(project(":admin-part"))
-    implementation(project(":api"))
-    implementation("com.github.ajalt:clikt:2.7.1")
+    implementation("com.github.ajalt:clikt:$ajaltCliktVersion")
+    implementation(project(":test2code-admin"))
+    implementation(project(":test2code-api"))
 
     testImplementation(kotlin("test"))
     testImplementation(kotlin("test-junit"))
 }
 
-val main = "com.epam.drill.plugins.test2code.cli.CliKt"
-
-application {
-    mainClassName = main
-}
-
-val jarDeps by configurations.creating {
-    attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
-}
+val jarMainClassName = "com.epam.drill.plugins.test2code.cli.CliKt"
 
 tasks {
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
+    }
     shadowJar {
-        archiveBaseName.set("parsing-cli.jar")
-        destinationDirectory.set(file("$buildDir/shadowLibs"))
         isZip64 = true
-        configurations = listOf(jarDeps)
-        manifest.attributes["Main-Class"] = main
+        manifest.attributes["Main-Class"] = jarMainClassName
+        configurations = listOf(jarDependencies)
+        archiveBaseName.set("test2code-cli.jar")
+        destinationDirectory.set(file("$buildDir/shadowLibs"))
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("test2codeZip") {
-            artifact(tasks.shadowJar.get())
+noArg {
+    annotation("kotlinx.serialization.Serializable")
+}
+
+application {
+    mainClassName = jarMainClassName
+}
+
+@Suppress("UNUSED_VARIABLE")
+license {
+    headerURI = URI("https://raw.githubusercontent.com/Drill4J/drill4j/develop/COPYRIGHT")
+    val licenseFormatSources by tasks.registering(LicenseFormat::class) {
+        source = fileTree("$projectDir/src").also {
+            include("**/*.kt", "**/*.java", "**/*.groovy")
+        }
+    }
+    val licenseCheckSources by tasks.registering(LicenseCheck::class) {
+        source = fileTree("$projectDir/src").also {
+            include("**/*.kt", "**/*.java", "**/*.groovy")
         }
     }
 }

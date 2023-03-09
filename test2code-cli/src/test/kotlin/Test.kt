@@ -22,7 +22,7 @@ class Test {
 
     @Test
     fun `specified path is jar file`() {
-        val rootDir = File("..", "admin-part")
+        val rootDir = File("..", "test2code-admin")
         val jarFile = rootDir.walkTopDown().first { it.name.endsWith(".jar") }
         val file = File.createTempFile("test2code-", "-parsed-class.txt")
         val args = listOf(

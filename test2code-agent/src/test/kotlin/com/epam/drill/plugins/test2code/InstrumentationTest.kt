@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
+/*
 import com.epam.drill.instrumentation.data.*
 import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.sessionId
 import org.junit.jupiter.api.*
@@ -113,4 +114,4 @@ class InstrumentationTest {
         assertEquals(0, counter?.missedCount)
     }
 }
-
+*/

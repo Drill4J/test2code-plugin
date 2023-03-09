@@ -28,10 +28,11 @@ repositories {
     mavenCentral()
 }
 
+@Suppress("HasPlatformType")
 val jarDependencies by configurations.creating {
     attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
 }
-configurations.implementation.extendsFrom(jarDependencies)
+configurations.implementation.get().extendsFrom(jarDependencies)
 
 kotlin.sourceSets.all {
     languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
