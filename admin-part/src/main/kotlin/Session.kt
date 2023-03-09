@@ -43,7 +43,7 @@ class ActiveSession(
     override val id: String,
     override val testType: String,
     val isGlobal: Boolean = false,
-    private val envId: String?,
+    val envId: String?,
     val isRealtime: Boolean = false,
     val testName: String? = null,
     private val labels: MutableSet<Label> = mutableSetOf<Label>(),

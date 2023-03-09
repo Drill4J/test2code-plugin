@@ -35,8 +35,8 @@ dependencies {
     testCompileOnly(project(":agent-part"))
 
     testImplementation("com.epam.drill:common")
-    testImplementation("com.epam.drill:drill-agent-part")
-    testImplementation("com.epam.drill:drill-admin-part")
+    testImplementation("com.epam.drill:plugin-api-agent")
+    testImplementation("com.epam.drill:plugin-api-admin")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 

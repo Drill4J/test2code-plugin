@@ -165,18 +165,20 @@ class ActiveScope(
         labels: MutableSet<Label> = mutableSetOf<Label>(),
     ): ActiveSession {
         val newSession = ActiveSession(sessionId, testType, isGlobal, envId, isRealtime, testName, labels)
-        val key = newSession.getKey()
-        activeSessions(key) { existing ->
-            if (existing !== null) {
-                if (existing.isGlobal) {
+        activeSessions(newSession.id) { existingSession ->
+            if (existingSession != null) {
+                throw FieldError(
+                    name = "sessionId",
+                    message = "Session with such id ${newSession.id} is already started. Please provide id unique across all envs"
+                )
+            }
+
+            if (newSession.isGlobal) {
+                val envGlobalSession = activeSessions.values.find { it.envId == newSession.envId && it.isGlobal }
+                if (envGlobalSession != null) {
                     throw FieldError(
-                        name = "envId",
-                        message = "Session for env $key is already started."
-                    )
-                } else {
-                    throw FieldError(
-                        name = "sessionId",
-                        message = "Session with such id $key is already started"
+                        name = "isGlobal",
+                        message = "Global sessions for env ${newSession.envId} is already started."
                     )
                 }
             }
@@ -186,16 +188,16 @@ class ActiveScope(
         return newSession
     }
 
-    fun activeSessionOrNull(id: String): ActiveSession? = activeSessions.run {
-        this[""]?.takeIf { it.id == id } ?: this[id]
-    }
-
-    fun hasActiveGlobalSession(): Boolean = "" in activeSessions
+    fun activeSessionOrNull(id: String): ActiveSession? = activeSessions.values.find { it.id == id }
 
     fun addProbes(
         sessionId: String,
         probeProvider: () -> Collection<ExecClassData>,
-    ): ActiveSession? = activeSessionOrNull(sessionId)?.apply { addAll(probeProvider()) }
+    ): ActiveSession? {
+        val session = activeSessions.values.find { it.id == sessionId }
+        session?.addAll(probeProvider())
+        return session
+    }
 
     fun addBundleCache(bundleByTests: Map<TestKey, BundleCounter>) {
         _bundleByTests.update {
@@ -266,9 +268,7 @@ class ActiveScope(
     private fun clearBundleCache() = _bundleByTests.update { SoftReference(persistentMapOf()) }
 
     private fun removeSession(id: String): ActiveSession? = activeSessions.run {
-        if (this[""]?.id == id) {
-            remove("")
-        } else remove(id)
+        remove(id)
     }
 }
 

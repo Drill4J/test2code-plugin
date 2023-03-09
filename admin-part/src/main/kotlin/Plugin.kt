@@ -52,11 +52,13 @@ class Plugin(
     val storeClient: StoreClient,
     agentInfo: AgentInfo,
     id: String,
+    envId: String,
 ) : AdminPluginPart<Action>(
     id = id,
     agentInfo = agentInfo,
     adminData = adminData,
-    sender = sender
+    sender = sender,
+    envId = envId,
 ), Closeable {
     companion object {
         val json = Json { encodeDefaults = true }
@@ -178,7 +180,7 @@ class Plugin(
                 newSessionId,
                 testType,
                 isGlobal,
-                envId = "",
+                envId = envId,
                 isRealtimeSession,
                 testName,
                 labels
@@ -271,6 +273,7 @@ class Plugin(
 
     override suspend fun processData(
         instanceId: String,
+        envId: String,
         content: String,
     ): Any = run {
         val message = if (content.isJson())
@@ -280,12 +283,13 @@ class Plugin(
             val decompress = Zstd.decompress(decode, Zstd.decompressedSize(decode).toInt())
             ProtoBuf.decodeFromByteArray(CoverMessage.serializer(), decompress)
         }
-        processData(instanceId, message)
+        processData(instanceId, envId, message)
             .let { "" } //TODO eliminate magic empty strings from API
     }
 
     suspend fun processData(
         instanceId: String,
+        envId: String,
         message: CoverMessage,
     ) = when (message) {
         is InitInfo -> {
@@ -332,15 +336,22 @@ class Plugin(
             message.ids.forEach { state.finishSession(it) }
         }
         //TODO EPMDJ-10398 send on agent attach
-        is SyncMessage -> message.run {
-            logger.info { "Active session ids from agent: $activeSessions" }
-            activeSessions.filter { it !in activeScope.activeSessions }.forEach {
+        is SyncMessage -> message.run { // This message is sent by agent on reconnect to sync sessions
+            val agentSessions = activeSessions; // these are sessions persisted on agent
+            logger.info { "Active session ids from agent: $agentSessions" }
+            
+            // Find sessions canceled/stopped when agent was offline
+            // and send "Cancel" message to agent for each session
+            agentSessions.filter { it !in activeScope.activeSessions }.forEach {
                 AsyncJobDispatcher.launch {
                     logger.info { "Attempting to cancel session: $it" }
                     sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
                 }
             }
-            activeScope.activeSessions.map.filter { it.key !in activeSessions }.forEach { (id, session) ->
+
+            // Find sessions started prior to agent being online
+            // and send "Start" message to agent for each session
+            activeScope.activeSessions.map.filter { it.key !in agentSessions }.forEach { (id, session) ->
                 AsyncJobDispatcher.launch {
                     val startSessionPayload = StartSessionPayload(
                         sessionId = id,
