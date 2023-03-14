@@ -25,7 +25,6 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.api.TestResult.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.global_filter.*
-import e2e.*
 import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.kotlintest.matchers.numerics.*

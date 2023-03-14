@@ -50,7 +50,7 @@ dependencies {
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
-    //testImplementation(project(":tests"))
+    testImplementation(project(":tests"))
 }
 
 @Suppress("UNUSED_VARIABLE")
@@ -73,7 +73,6 @@ tasks {
     val configureShadowJar: ShadowJar.() -> Unit = {
         isZip64 = true
         configurations = listOf(jarDependencies)
-        archiveFileName.set("test2code-agent.jar")
         destinationDirectory.set(file("$buildDir/shadowLibs"))
         dependencies {
             exclude("/META-INF/**", "/*.class", "/*.html")
@@ -84,11 +83,13 @@ tasks {
     }
     shadowJar {
         configureShadowJar()
+        archiveFileName.set("test2code-agent.jar")
         relocate("kotlin", "kruntime")
         relocate("kotlinx", "kruntimex")
     }
     val testShadowJar by registering(ShadowJar::class) {
         configureShadowJar()
+        archiveFileName.set("test2code-agent-test.jar")
         group = "shadow"
         from(jar)
     }

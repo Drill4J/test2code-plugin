@@ -21,8 +21,6 @@ import com.epam.drill.e2e.plugin.*
 import com.epam.drill.plugins.test2code.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
-import e2e.*
-import e2e.AUTO_TEST_TYPE
 import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.kotlintest.matchers.numerics.*

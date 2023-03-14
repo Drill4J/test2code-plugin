@@ -1,71 +1,82 @@
+import java.net.URI
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.hierynomus.gradle.license.tasks.LicenseCheck
+import com.hierynomus.gradle.license.tasks.LicenseFormat
+
 plugins {
     kotlin("jvm")
+    kotlin("plugin.noarg")
     kotlin("plugin.serialization")
     id("kotlinx-atomicfu")
+    id("com.github.hierynomus.license")
 }
 
-val testBuilds = listOf("build1", "build2")
+group = "com.epam.drill.plugins"
+
+val kotlinxCollectionsVersion: String by parent!!.extra
+val kotlinxSerializationVersion: String by parent!!.extra
+val ktorVersion: String by parent!!.extra
+val bcelVersion: String by parent!!.extra
+val kodeinVersion: String by parent!!.extra
+val jacocoVersion: String by parent!!.extra
+val atomicfuVersion: String by parent!!.extra
+val flywaydbVersion: String by parent!!.extra
+val drillAdminVersion: String by parent!!.extra
+val drillKtorSwaggerVersion: String by parent!!.extra
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 sourceSets {
-    testBuilds.forEach { create(it) }
+    create("build1")
+    create("build2")
 }
 
-val testData: Configuration by configurations.creating {}
+@Suppress("HasPlatformType")
+val testData by configurations.creating
 
 configurations {
     all { resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES) }
-    testImplementation {
-        extendsFrom(testData)
-    }
-    testBuilds.forEach {
-        named("${it}Implementation") {
-            extendsFrom(testData)
-        }
-    }
+    testImplementation.get().extendsFrom(testData)
+    getByName("build1Implementation").extendsFrom(testData)
+    getByName("build2Implementation").extendsFrom(testData)
 }
 
-val drillAdminVersion: String by rootProject
-val drillDsmVersion: String by rootProject
-val ktorVersion: String by rootProject
-val ktorSwaggerVersion: String by rootProject
-val kodeinVersion: String by extra
-val flywayVersion: String by extra
+@Suppress("UnusedReceiverParameter")
+fun DependencyHandler.ktor(module: String, version: String = ktorVersion): String = "io.ktor:ktor-$module:$version"
 
 dependencies {
-    implementation(project(":api"))
-    implementation(project(":agent-api"))
-    implementation(project(":admin-part"))
-    implementation(project(":agent-part"))
-    implementation(project(":jacoco"))
-
-    implementation("com.epam.drill:common")
-    implementation("com.epam.drill:drill-agent-part")
-    implementation("com.epam.drill:drill-admin-part")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
-
-    implementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
-    implementation("org.flywaydb:flyway-core:$flywayVersion")
-    implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
-    implementation("com.epam.drill.dsm:test-framework:$drillDsmVersion")
-
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:$kotlinxCollectionsVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    implementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
+    implementation("org.apache.bcel:bcel:$bcelVersion")
     implementation("org.kodein.di:kodein-di-jvm:$kodeinVersion")
-
-    implementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
-    implementation(ktor("server-test-host"))
+    implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
+    implementation("org.flywaydb:flyway-core:$flywaydbVersion")
     implementation(ktor("auth"))
     implementation(ktor("auth-jwt"))
-    implementation(ktor("server-netty"))
-    implementation(ktor("locations"))
-    implementation(ktor("server-core"))
-    implementation(ktor("websockets"))
     implementation(ktor("client-cio"))
+    implementation(ktor("locations"))
     implementation(ktor("serialization"))
+    implementation(ktor("server-core"))
+    implementation(ktor("server-netty"))
+    implementation(ktor("server-test-host"))
+    implementation(ktor("websockets"))
+    implementation(project(":common"))
+    implementation(project(":plugin-api-agent"))
+    implementation(project(":plugin-api-admin"))
+    implementation(project(":dsm-test-framework"))
+    implementation(project(":jacoco"))
+    implementation(project(":test2code-api"))
+    implementation(project(":test2code-common"))
+    implementation(project(":test2code-admin"))
+    implementation(project(":test2code-agent"))
+    implementation("com.epam.drill.ktor:ktor-swagger:$drillKtorSwaggerVersion")
+    implementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
+    implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
 
-    implementation("org.jacoco:org.jacoco.core")
-    implementation("org.apache.bcel:bcel")
-    implementation("org.jetbrains.kotlinx:atomicfu")
-
-    testImplementation(project(":tests"))
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
@@ -75,36 +86,47 @@ dependencies {
 }
 
 tasks {
-    val testBuildClassesTasks = testBuilds.map { named("${it}Classes") }
-
-    val distrDir = file("distr")
-
-    clean {
-        delete(distrDir)
+    val prepareDistr by registering(Sync::class) {
+        from(rootProject.tasks["testDistZip"])
+        into("$buildDir/distr/adminStorage")
     }
-
-    val prepareDist by registering(Sync::class) {
-        from(rootProject.tasks.named("testDistZip"))
-        into(distrDir.resolve("adminStorage"))
-    }
-
     val integrationTest by registering(Test::class) {
         description = "Runs the integration tests"
         group = "verification"
-        dependsOn(testBuildClassesTasks.toTypedArray())
-        dependsOn(prepareDist)
+        workingDir = buildDir
         useJUnitPlatform()
         systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
         systemProperty("drill.plugins.test2code.features.realtime", false)
         systemProperty("analytic.disable", true)
+        dependsOn("build1Classes")
+        dependsOn("build2Classes")
+        dependsOn(prepareDistr)
         mustRunAfter(test)
     }
-
-    check {
-        dependsOn(integrationTest)
+    check.get().dependsOn(integrationTest)
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
 }
 
-@Suppress("unused")
-fun DependencyHandler.ktor(module: String, version: String? = ktorVersion): Any =
-    "io.ktor:ktor-$module:${version ?: "+"}"
+noArg {
+    annotation("kotlinx.serialization.Serializable")
+}
+
+@Suppress("UNUSED_VARIABLE")
+license {
+    headerURI = URI("https://raw.githubusercontent.com/Drill4J/drill4j/develop/COPYRIGHT")
+    val licenseFormatSources by tasks.registering(LicenseFormat::class) {
+        source = fileTree("$projectDir/src").also {
+            include("**/*.kt", "**/*.java", "**/*.groovy")
+        }
+    }
+    val licenseCheckSources by tasks.registering(LicenseCheck::class) {
+        source = fileTree("$projectDir/src").also {
+            include("**/*.kt", "**/*.java", "**/*.groovy")
+        }
+    }
+}

@@ -24,7 +24,6 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.coverage.TestKey
 import com.epam.drill.plugins.test2code.util.*
-import e2e.*
 import io.kotlintest.*
 import io.kotlintest.matchers.doubles.*
 import io.ktor.http.*
