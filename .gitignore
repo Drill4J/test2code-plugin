@@ -3,3 +3,6 @@ build/
 .idea/
 *.iml
 /lib-jvm-shared/
+/tests/.kotlintest
+/tests/distr
+/tests/work

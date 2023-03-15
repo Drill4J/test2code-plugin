@@ -26,7 +26,7 @@ class BuildMethodsTests : E2EPluginTest() {
 
     @Test
     fun `deploy 2 builds without coverage`() {
-        createSimpleAppWithPlugin<CoverageSocketStreams> {
+        createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 30) {
             connectAgent<Build1> { plugUi, _ ->
                 plugUi.methods()!!.apply {
                     all.total shouldBe 4

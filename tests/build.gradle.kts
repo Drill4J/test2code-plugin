@@ -11,7 +11,7 @@ plugins {
     id("com.github.hierynomus.license")
 }
 
-group = "com.epam.drill.plugins"
+group = "com.epam.drill.plugins.test2code"
 
 val kotlinxCollectionsVersion: String by parent!!.extra
 val kotlinxSerializationVersion: String by parent!!.extra
@@ -78,22 +78,27 @@ dependencies {
     implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
 
     testData("com.epam.drill:test-data:$drillAdminVersion") { isChanging = true }
 }
 
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.Experimental")
+    languageSettings.optIn("kotlin.time.ExperimentalTime")
+    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
+}
+
 tasks {
     val prepareDistr by registering(Sync::class) {
         from(rootProject.tasks["testDistZip"])
-        into("$buildDir/distr/adminStorage")
+        into("distr/adminStorage")
     }
     val integrationTest by registering(Test::class) {
         description = "Runs the integration tests"
         group = "verification"
-        workingDir = buildDir
         useJUnitPlatform()
         systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
         systemProperty("drill.plugins.test2code.features.realtime", false)
@@ -104,11 +109,13 @@ tasks {
         mustRunAfter(test)
     }
     check.get().dependsOn(integrationTest)
+    clean {
+        delete(".kotlintest")
+        delete("distr")
+        delete("work")
+    }
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
 }
 

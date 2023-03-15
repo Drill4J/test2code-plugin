@@ -13,7 +13,7 @@ plugins {
     id("com.github.johnrengelman.shadow")
 }
 
-group = "com.epam.drill.plugins"
+group = "com.epam.drill.plugins.test2code"
 
 val kotlinxCollectionsVersion: String by parent!!.extra
 val kotlinxCoroutinesVersion: String by parent!!.extra
@@ -48,9 +48,20 @@ dependencies {
     implementation(project(":plugin-api-agent"))
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
     testImplementation(project(":tests"))
+}
+
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.Experimental")
+    languageSettings.optIn("kotlin.ExperimentalStdlibApi")
+    languageSettings.optIn("kotlin.time.ExperimentalTime")
+    languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
+    languageSettings.optIn("kotlinx.coroutines.FlowPreview")
+    languageSettings.optIn("kotlinx.coroutines.InternalCoroutinesApi")
+    languageSettings.optIn("kotlinx.coroutines.ObsoleteCoroutinesApi")
+    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
 }
 
 @Suppress("UNUSED_VARIABLE")
@@ -61,35 +72,26 @@ tasks {
     }
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.FlowPreview"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.InternalCoroutinesApi"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ObsoleteCoroutinesApi"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
-    val configureShadowJar: ShadowJar.() -> Unit = {
+    val configureShadowJar: ShadowJar.(String) -> Unit = {
         isZip64 = true
         configurations = listOf(jarDependencies)
-        destinationDirectory.set(file("$buildDir/shadowLibs"))
+        archiveFileName.set("agent-part.jar")
+        destinationDirectory.set(file("$buildDir/shadowLibs/$it"))
         dependencies {
             exclude("/META-INF/**", "/*.class", "/*.html")
         }
-        relocate("org.jacoco.core", "$group.test2code.shadow.org.jacoco.core")
-        relocate("org.objectweb.asm", "$group.test2code.shadow.org.objectweb.asm")
-        relocate("kotlinx.collections.immutable", "$group.test2code.shadow.kotlinx.collections.immutable")
+        relocate("org.jacoco.core", "${project.group}.shadow.org.jacoco.core")
+        relocate("org.objectweb.asm", "${project.group}.shadow.org.objectweb.asm")
+        relocate("kotlinx.collections.immutable", "${project.group}.shadow.kotlinx.collections.immutable")
     }
     shadowJar {
-        configureShadowJar()
-        archiveFileName.set("test2code-agent.jar")
+        configureShadowJar("main")
         relocate("kotlin", "kruntime")
         relocate("kotlinx", "kruntimex")
     }
     val testShadowJar by registering(ShadowJar::class) {
-        configureShadowJar()
-        archiveFileName.set("test2code-agent-test.jar")
+        configureShadowJar("test")
         group = "shadow"
         from(jar)
     }

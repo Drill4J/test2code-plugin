@@ -12,7 +12,7 @@ plugins {
     id("com.github.johnrengelman.shadow")
 }
 
-group = "com.epam.drill.plugins"
+group = "com.epam.drill.plugins.test2code"
 
 val ajaltCliktVersion: String by parent!!.extra
 
@@ -36,14 +36,17 @@ dependencies {
     testImplementation(kotlin("test-junit"))
 }
 
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.Experimental")
+    languageSettings.optIn("kotlin.time.ExperimentalTime")
+    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
+}
+
 val jarMainClassName = "com.epam.drill.plugins.test2code.cli.CliKt"
 
 tasks {
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
     shadowJar {
         isZip64 = true
@@ -58,6 +61,7 @@ noArg {
     annotation("kotlinx.serialization.Serializable")
 }
 
+@Suppress("DEPRECATION")
 application {
     mainClassName = jarMainClassName
 }

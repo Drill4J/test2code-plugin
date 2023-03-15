@@ -12,7 +12,7 @@ plugins {
     id("com.github.hierynomus.license")
 }
 
-group = "com.epam.drill.plugins"
+group = "com.epam.drill.plugins.test2code"
 
 val kotlinxCoroutinesVersion: String by parent!!.extra
 val kotlinxSerializationVersion: String by parent!!.extra
@@ -34,11 +34,6 @@ val jarDependencies by configurations.creating {
 }
 configurations.implementation.get().extendsFrom(jarDependencies)
 
-kotlin.sourceSets.all {
-    languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
-    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
-}
-
 dependencies {
     jarDependencies("org.apache.bcel:bcel:$bcelVersion")
     jarDependencies("org.jacoco:org.jacoco.core:$jacocoVersion")
@@ -58,16 +53,22 @@ dependencies {
     implementation(project(":plugin-api-admin"))
 
     api(project(":dsm"))
-    api(project(":dsm-annotations"))
+    api(project(":dsm-annotations")) { isTransitive = false }
     api(project(":admin-analytics"))
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("ch.qos.logback:logback-classic:1.2.3")
     testImplementation(project(":dsm-test-framework"))
 }
 
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.Experimental")
+    languageSettings.optIn("kotlin.time.ExperimentalTime")
+    languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
+    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
+}
 
 tasks {
     test {
@@ -75,20 +76,17 @@ tasks {
     }
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
     shadowJar {
         isZip64 = true
         configurations = listOf(jarDependencies)
-        archiveFileName.set("test2code-admin.jar")
+        archiveFileName.set("admin-part.jar")
         destinationDirectory.set(file("$buildDir/shadowLibs"))
         dependencies {
             exclude("/META-INF/**", "/*.class", "/*.html")
         }
-        relocate("org.jacoco", "$group.test2code.shadow.org.jacoco")
-        relocate("org.objectweb", "$group.test2code.shadow.org.objectweb")
+        relocate("org.jacoco", "${project.group}.shadow.org.jacoco")
+        relocate("org.objectweb", "${project.group}.shadow.org.objectweb")
     }
 }
 

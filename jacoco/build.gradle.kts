@@ -9,7 +9,7 @@ plugins {
     id("com.github.hierynomus.license")
 }
 
-group = "com.epam.drill.plugins"
+group = "com.epam.drill.plugins.test2code"
 
 val jacocoVersion: String by parent!!.extra
 
@@ -19,6 +19,7 @@ repositories {
 }
 
 java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
@@ -27,12 +28,15 @@ dependencies {
     implementation("org.jacoco:org.jacoco.core:$jacocoVersion")
 }
 
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.Experimental")
+    languageSettings.optIn("kotlin.time.ExperimentalTime")
+    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
+}
+
 tasks {
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
 }
 

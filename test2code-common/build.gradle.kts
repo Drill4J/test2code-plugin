@@ -10,7 +10,7 @@ plugins {
     id("com.github.hierynomus.license")
 }
 
-group = "com.epam.drill.plugins"
+group = "com.epam.drill.plugins.test2code"
 
 val kotlinxSerializationVersion: String by parent!!.extra
 
@@ -25,6 +25,11 @@ kotlin {
     }
     @Suppress("UNUSED_VARIABLE")
     sourceSets {
+        all {
+            languageSettings.optIn("kotlin.Experimental")
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
+            languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
+        }
         val commonMain by getting {
             dependencies {
                 compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
@@ -37,9 +42,6 @@ kotlin {
 tasks {
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
     }
 }
 
