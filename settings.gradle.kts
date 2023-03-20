@@ -2,15 +2,18 @@ rootProject.name = "test2code-plugin"
 
 pluginManagement {
     val kotlinVersion: String by extra
+    val kotlinxBenchmarkVersion: String by extra
     val licenseVersion: String by extra
     val atomicfuVersion: String by extra
     val shadowPluginVersion: String by extra
     plugins {
         kotlin("jvm") version kotlinVersion
         kotlin("multiplatform") version kotlinVersion
+        kotlin("plugin.allopen") version kotlinVersion
         kotlin("plugin.noarg") version kotlinVersion
         kotlin("plugin.serialization") version kotlinVersion
         id("kotlinx-atomicfu") version atomicfuVersion
+        id("org.jetbrains.kotlinx.benchmark") version kotlinxBenchmarkVersion
         id("com.github.hierynomus.license") version licenseVersion
         id("com.github.johnrengelman.shadow") version shadowPluginVersion
     }
@@ -50,3 +53,4 @@ include("test2code-cli")
 include("test2code-agent")
 include("tests")
 include("load-tests")
+include("benchmarks")

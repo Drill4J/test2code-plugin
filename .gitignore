@@ -9,3 +9,4 @@ build/
 /load-tests/.kotlintest
 /load-tests/distr
 /load-tests/work
+/benchmarks/.kotlintest
