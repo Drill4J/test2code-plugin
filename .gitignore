@@ -6,3 +6,6 @@ build/
 /tests/.kotlintest
 /tests/distr
 /tests/work
+/load-tests/.kotlintest
+/load-tests/distr
+/load-tests/work

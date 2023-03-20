@@ -22,7 +22,6 @@ val jacocoVersion: String by parent!!.extra
 val atomicfuVersion: String by parent!!.extra
 val flywaydbVersion: String by parent!!.extra
 val drillAdminVersion: String by parent!!.extra
-val drillKtorSwaggerVersion: String by parent!!.extra
 
 repositories {
     mavenLocal()
@@ -73,7 +72,7 @@ dependencies {
     implementation(project(":test2code-common"))
     implementation(project(":test2code-admin"))
     implementation(project(":test2code-agent"))
-    implementation("com.epam.drill.ktor:ktor-swagger:$drillKtorSwaggerVersion")
+    implementation(project(":ktor-swagger"))
     implementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
     implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
 
@@ -82,7 +81,7 @@ dependencies {
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
 
-    testData("com.epam.drill:test-data:$drillAdminVersion") { isChanging = true }
+    testData(project(":test-data"))
 }
 
 kotlin.sourceSets.all {
