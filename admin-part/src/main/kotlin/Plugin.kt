@@ -52,13 +52,11 @@ class Plugin(
     val storeClient: StoreClient,
     agentInfo: AgentInfo,
     id: String,
-    envId: String,
 ) : AdminPluginPart<Action>(
     id = id,
     agentInfo = agentInfo,
     adminData = adminData,
-    sender = sender,
-    envId = envId,
+    sender = sender
 ), Closeable {
     companion object {
         val json = Json { encodeDefaults = true }
@@ -339,7 +337,7 @@ class Plugin(
         is SyncMessage -> message.run { // This message is sent by agent on reconnect to sync sessions
             val agentSessions = activeSessions; // these are sessions persisted on agent
             logger.info { "Active session ids from agent: $agentSessions" }
-            
+
             // Find sessions canceled/stopped when agent was offline
             // and send "Cancel" message to agent for each session
             agentSessions.filter { it !in activeScope.activeSessions }.forEach {

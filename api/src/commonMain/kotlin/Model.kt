@@ -28,6 +28,7 @@ data class StartPayload(
     val isRealtime: Boolean = false,
     val isGlobal: Boolean = false,
     val labels: MutableSet<Label> = mutableSetOf<Label>(),
+    val envId: String = "",
 )
 
 @Serializable

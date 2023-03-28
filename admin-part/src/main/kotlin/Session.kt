@@ -142,12 +142,8 @@ class ActiveSession(
             testType = testType,
             tests = tests,
             probes = values.flatMap { it.values },
+            labels = labels,
         )
-    }
-
-    fun getKey(): String {
-        if (isGlobal) return envId as String
-        return id
     }
 }
 
@@ -156,6 +152,7 @@ data class FinishedSession(
     override val id: String,
     override val testType: String,
     override val tests: Set<TestOverview>,
+    val labels: Set<Label> = emptySet(),
     val probes: List<ExecClassData>,
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()
