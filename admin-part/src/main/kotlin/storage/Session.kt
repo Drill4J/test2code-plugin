@@ -79,16 +79,16 @@ internal suspend fun StoreClient.sessionIdsWithLabels(
     val allBuildSessions = findBy<StoredSession> { (StoredSession::agentKey eq agentKey) }.get()
     val labelFilters = filters.filter { it.isLabel }
     val filteredSessions = allBuildSessions.filter { session ->
-        labelFilters.fold(false) { result, filter ->
-            when (filter.valuesOp) {
-                BetweenOp.OR -> session.data.labels.any { label ->
-                    label.name == filter.fieldPath && filter.values.map { it.value }.contains(label.value)
+        labelFilters.fold(true) { result, filter ->
+            result && when (filter.valuesOp) {
+                BetweenOp.OR -> session.data.labels.any {
+                    it.name == filter.fieldPath && filter.values.map { it.value }.contains(it.value)
                 }
-                BetweenOp.AND -> session.data.labels.all { label ->
-                    label.name == filter.fieldPath && filter.values.map { it.value }.contains(label.value)
-                }
+                BetweenOp.AND -> session.data.labels
+                    .filter { it.name == filter.fieldPath }
+                    .map { it.value }
+                    .containsAll(filter.values.map { it.value })
             }
-
         }
     }
     return filteredSessions.map { session -> session.id() }
