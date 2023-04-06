@@ -50,15 +50,9 @@ class ActiveSession(
 ) : Session() {
 
     init {
-        if (isGlobal) {
-            if (envId.isNullOrEmpty()) {
-                throw IllegalArgumentException("Missing envId. To create global session you must supply envId")
-            }
+        if (!envId.isNullOrEmpty()) {
             labels.add(Label("Environment", envId))
         }
-    }
-
-    init {
         labels.add(Label("Session", id))
     }
 

@@ -159,7 +159,7 @@ class ActiveScope(
         sessionId: String,
         testType: String,
         isGlobal: Boolean = false,
-        envId: String? = "", // TODO set no default
+        envId: String = "",
         isRealtime: Boolean = false,
         testName: String? = null,
         labels: MutableSet<Label> = mutableSetOf<Label>(),
