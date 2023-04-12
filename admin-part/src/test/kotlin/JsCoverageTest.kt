@@ -15,13 +15,15 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugin.api.*
+import com.epam.drill.plugin.api.AdminData
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.plugins.test2code.common.api.toList
 import com.epam.drill.plugins.test2code.test.js.*
-import com.epam.drill.plugins.test2code.util.*
-import kotlinx.coroutines.*
-import kotlin.test.*
+import com.epam.drill.plugins.test2code.util.PostgresBased
+import com.epam.drill.plugins.test2code.util.genUuid
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class JsCoverageTest : PostgresBased("js_coverage") {
 
@@ -72,8 +74,10 @@ class JsCoverageTest : PostgresBased("js_coverage") {
                     }
                 }
                 assertEquals(
-                    setOf(TypedTest(details = TestDetails(testName = "default"), type = manualTestType),
-                        TypedTest(details = TestDetails(testName = "default"), type = autoTestType)),
+                    setOf(
+                        TypedTest(details = TestDetails(testName = "default"), type = manualTestType),
+                        TypedTest(details = TestDetails(testName = "default"), type = autoTestType)
+                    ),
                     associatedTests.getAssociatedTests().flatMap { it.tests }.toSet()
                 )
                 buildMethods.run {
@@ -104,7 +108,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
         }
     }
 
-    private suspend fun calculateCoverage(addProbes: suspend ActiveScope.() -> Unit): CoverageInfoSet {
+    private suspend fun calculateCoverage(addProbes: suspend Scope.() -> Unit): CoverageInfoSet {
         val adminData = object : AdminData {
             override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
             override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
@@ -115,7 +119,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
         state.init()
         (state.data as DataBuilder) += ast
         state.initialized()
-        val active = state.activeScope
+        val active = state.scope
         active.addProbes()
         val finished = active.finish(enabled = true)
         val context = state.coverContext()
@@ -123,7 +127,7 @@ class JsCoverageTest : PostgresBased("js_coverage") {
         return bundleCounters.calculateCoverageData(context)
     }
 
-    private suspend fun ActiveScope.execSession(testType: String, block: suspend ActiveScope.(String) -> Unit) {
+    private suspend fun Scope.execSession(testType: String, block: suspend Scope.(String) -> Unit) {
         val sessionId = genUuid()
         startSession(sessionId = sessionId, testType = testType)
         block(sessionId)

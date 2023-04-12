@@ -67,23 +67,6 @@ class FiltersTest : E2EPluginTest() {
                 }.join()
 
                 plugUi.activeSessions()!!.count shouldBe 0
-                val switchScope = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new2",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope) { status, _ ->
-                    status shouldBe HttpStatusCode.OK
-                    plugUi.buildCoverage()!!.apply {
-                        count.covered shouldBeGreaterThan 0
-                    }
-                    plugUi.coveragePackages()
-                    plugUi.coveragePackages()!!.apply {
-                        first().coverage shouldBeGreaterThan 0.0
-                    }
-                }.join()
                 println("init filters ${plugUi.filters()} ${plugUi.filters()}")
                 //create filter
                 val filterName = "new filter"

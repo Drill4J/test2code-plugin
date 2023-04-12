@@ -15,14 +15,19 @@
  */
 package com.epam.drill.plugins.test2code.perf
 
-import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.storage.*
-import kotlinx.coroutines.*
-import kotlin.random.*
-import kotlin.test.*
+import com.epam.drill.plugins.test2code.FinishedSession
+import com.epam.drill.plugins.test2code.Plugin
+import com.epam.drill.plugins.test2code.PluginTest
+import com.epam.drill.plugins.test2code.api.ActiveScopeChangePayload
+import com.epam.drill.plugins.test2code.changeActiveScope
+import com.epam.drill.plugins.test2code.common.api.ExecClassData
+import com.epam.drill.plugins.test2code.common.api.toBitSet
+import com.epam.drill.plugins.test2code.storage.AgentKey
+import kotlinx.coroutines.runBlocking
+import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class PerformanceTest : PluginTest() {
 
@@ -76,7 +81,7 @@ class PerformanceTest : PluginTest() {
         sizeExec: Int = 100,
         sizeProbes: Int = 10_000,
     ): FinishedSession? {
-        plugin.activeScope.startSession(
+        plugin.scope.startSession(
             sessionId = sessionId,
             testType = "MANUAL",
         )
@@ -109,7 +114,7 @@ class PerformanceTest : PluginTest() {
                     testName = "$index/$it"
                 )
             }
-            plugin.activeScope.addProbes(sessionId) { execClassData }
+            plugin.scope.addProbes(sessionId) { execClassData }
         }
     }
 

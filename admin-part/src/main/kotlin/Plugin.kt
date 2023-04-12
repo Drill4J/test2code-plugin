@@ -71,7 +71,7 @@ class Plugin(
 
     internal val state: AgentState get() = _state.value!!
 
-    val activeScope: ActiveScope get() = state.activeScope
+    val scope: Scope get() = state.scope
 
     val agentKey = AgentKey(agentId, buildVersion)
 
@@ -107,6 +107,7 @@ class Plugin(
         is SwitchActiveScope -> changeActiveScope(action.payload).also {
             sendLabels()
         }
+
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
         is CreateFilter -> {
@@ -119,6 +120,7 @@ class Plugin(
                 calculateFilter(newFilter.toStoredFilter(agentId))
             } else ActionResult(code = StatusCodes.CONFLICT, data = "Filter with this name already exists")
         }
+
         is DuplicateFilter -> {
             val filterId = action.payload.id
             val filter = storeClient.findById<StoredFilter>(filterId)
@@ -135,6 +137,7 @@ class Plugin(
                 ActionResult(code = StatusCodes.OK, data = duplicateName)
             } ?: ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this id is not found")
         }
+
         is UpdateFilter -> {
             val updateFilter = action.payload
             val filterId = updateFilter.id
@@ -143,6 +146,7 @@ class Plugin(
                 calculateFilter(updateFilter.toStoredFilter(agentId))
             } ?: ActionResult(StatusCodes.BAD_REQUEST, "Can not find the filter with id '$filterId'")
         }
+
         is ApplyFilter -> {
             val filterId = action.payload.id
             val filter = storeClient.findById<StoredFilter>(filterId)
@@ -151,6 +155,7 @@ class Plugin(
                 calculateFilter(it)
             } ?: ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this id is not found")
         }
+
         is DeleteFilter -> {
             val filterId = action.payload.id
             logger.debug { "deleting filter with id '$filterId'" }
@@ -158,6 +163,7 @@ class Plugin(
             sendFilterUpdates(filterId)
             okResult
         }
+
         is RemoveBuild -> {
             val version = action.payload.version
             if (version != buildVersion && version != state.coverContext().parentBuild?.agentKey?.buildVersion) {
@@ -165,17 +171,19 @@ class Plugin(
                 okResult
             } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Can not remove a current or baseline build")
         }
+
         is RemovePluginData -> {
             storeClient.removeAllPluginData(agentId)
             okResult
         }
+
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
             val labels = labels + Label("Session", newSessionId)
-            activeScope.startSession(
+            scope.startSession(
                 newSessionId,
                 testType,
                 isGlobal,
@@ -192,7 +200,7 @@ class Plugin(
                         isRealtime = isRealtime
                     )
                 ).toActionResult()
-            } ?: if (isGlobal && activeScope.hasActiveGlobalSession()) {
+            } ?: if (isGlobal && scope.hasActiveGlobalSession()) {
                 ActionResult(
                     code = StatusCodes.CONFLICT,
                     data = listOf(
@@ -205,8 +213,9 @@ class Plugin(
                 message = "Session with such ID already exists. Please choose a different ID."
             ).toActionResult(StatusCodes.CONFLICT)
         }
+
         is AddSessionData -> action.payload.run {
-            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+            scope.activeSessionOrNull(sessionId)?.let { session ->
                 ActionResult(
                     code = StatusCodes.OK,
                     data = "Successfully received session data",
@@ -218,36 +227,43 @@ class Plugin(
                 )
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is AddCoverage -> action.payload.run {
-            activeScope.addProbes(sessionId) {
+            scope.addProbes(sessionId) {
                 this.data.map { probes ->
-                    ExecClassData(className = probes.name,
+                    ExecClassData(
+                        className = probes.name,
                         testName = probes.test,
                         testId = probes.testId,
-                        probes = probes.probes.toBitSet())
+                        probes = probes.probes.toBitSet()
+                    )
                 }
             }?.run {
                 if (isRealtime) {
-                    activeScope.probesChanged()
+                    scope.probesChanged()
                 }
                 okResult
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is ExportCoverage -> exportCoverage(action.payload.version)
         is ImportCoverage -> (data as? InputStream)?.let {
             importCoverage(it)
         } ?: ActionResult(StatusCodes.BAD_REQUEST, "Error while parsing form-data parameters")
+
         is CancelSession -> action.payload.run {
-            activeScope.cancelSession(action.payload.sessionId)?.let { session ->
+            scope.cancelSession(action.payload.sessionId)?.let { session ->
                 CancelAgentSession(payload = AgentSessionPayload(session.id)).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is CancelAllSessions -> {
-            activeScope.cancelAllSessions()
+            scope.cancelAllSessions()
             CancelAllAgentSessions.toActionResult()
         }
+
         is AddTests -> action.payload.run {
-            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+            scope.activeSessionOrNull(sessionId)?.let { session ->
                 session.addTests(tests)
                 AddAgentSessionTests(
                     AgentSessionTestsPayload(
@@ -256,14 +272,16 @@ class Plugin(
                     )).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is StopSession -> action.payload.run {
-            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+            scope.activeSessionOrNull(sessionId)?.let { session ->
                 session.addTests(tests)
                 StopAgentSession(
                     payload = AgentSessionPayload(session.id)
                 ).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is StopAllSessions -> StopAllAgentSessions.toActionResult()
         else -> "Action '$action' is not supported!".let { message ->
             logger.error { message }
@@ -304,38 +322,52 @@ class Plugin(
             logger.info { "$instanceId: ${message.message}" } //log init message
             logger.info { "$instanceId: ${message.classesCount} classes to load" }
         }
+
         is InitDataPart -> {
             (state.data as? DataBuilder)?.also {
                 logger.info { "$instanceId: $message" }
                 it += message.astEntities
             }
         }
+
         is Initialized -> state.initialized {
             processInitialized()
         }
+
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
             .also { logPoolStats() }
+
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
         is SessionsCancelled -> message.run {
-            activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
+            scope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
-        is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
-            activeScope.addProbes(message.sessionId) { message.data }?.run {
+
+        is CoverDataPart -> scope.activeSessionOrNull(message.sessionId)?.let {
+            scope.addProbes(message.sessionId) { message.data }?.run {
                 if (isRealtime) {
-                    activeScope.probesChanged()
+                    scope.probesChanged()
                 }
             }
         } ?: logger.debug { "Attempting to add coverage in non-existent active session" }
-        is SessionChanged -> activeScope.takeIf { scope ->
+
+        is SessionChanged -> scope.takeIf { scope ->
             scope.activeSessions.values.any { it.isRealtime }
         }?.apply { probesChanged() }
+
         is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
-            state.finishSession(message.sessionId) ?: logger.info {
+            state.finishSession(message.sessionId)
+                .also {
+                    calculateAndSendBuildCoverage()
+                    sendActiveSessions()
+                    sendLabels()
+                } ?: logger.info {
                 "$instanceId: No active session with id ${message.sessionId}."
             }
+
         }
+
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
@@ -343,13 +375,13 @@ class Plugin(
         //TODO EPMDJ-10398 send on agent attach
         is SyncMessage -> message.run {
             logger.info { "Active session ids from agent: $activeSessions" }
-            activeSessions.filter { it !in activeScope.activeSessions }.forEach {
+            activeSessions.filter { it !in scope.activeSessions }.forEach {
                 AsyncJobDispatcher.launch {
                     logger.info { "Attempting to cancel session: $it" }
                     sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
                 }
             }
-            activeScope.activeSessions.map.filter { it.key !in activeSessions }.forEach { (id, session) ->
+            scope.activeSessions.map.filter { it.key !in activeSessions }.forEach { (id, session) ->
                 AsyncJobDispatcher.launch {
                     val startSessionPayload = StartSessionPayload(
                         sessionId = id,
@@ -363,6 +395,7 @@ class Plugin(
                 }
             }
         }
+
         else -> logger.info { "$instanceId: Message is not supported! $message" }
     }
 
@@ -410,7 +443,7 @@ class Plugin(
         val scopes = state.scopeManager.byVersion(
             agentKey, withData = true
         )
-        state.updateProbes(scopes.enabled())
+        state.updateProbes(scopes.flatten())
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
@@ -423,12 +456,12 @@ class Plugin(
     }
 
     internal suspend fun sendScopeMessages(buildVersion: String) {
-        sendActiveScope()
+        sendScope()
         sendScopes(buildVersion)
     }
 
     internal suspend fun sendActiveSessions() {
-        val sessions = activeScope.activeSessions.values.map {
+        val sessions = scope.activeSessions.values.map {
             ActiveSessionDto(
                 id = it.id,
                 agentId = agentId,
@@ -456,7 +489,13 @@ class Plugin(
     }
 
     internal suspend fun sendActiveScope() {
-        val summary = activeScope.summary
+        val summary = scope.summary
+        send(buildVersion, Routes.ActiveScope(), summary)
+        sendScopeSummary(summary)
+    }
+
+    internal suspend fun sendScope() {
+        val summary = scope.summary
         send(buildVersion, Routes.ActiveScope(), summary)
         sendScopeSummary(summary)
     }
@@ -506,7 +545,8 @@ class Plugin(
             context,
             adminData.loadClassBytes(buildVersion),
             storeClient,
-            agentKey)
+            agentKey
+        )
         context = context.updateBundleCounters(bundleCounters)
         logger.debug { "Starting to calculate coverage by filter..." }
         val filterId = filter.id
@@ -518,18 +558,16 @@ class Plugin(
         return filterId
     }
 
-
+    //TODO get the only one scope and calculate build coverage
     internal suspend fun calculateAndSendBuildCoverage() {
-        val scopes = state.scopeManager.run {
-            byVersion(agentKey, withData = true).enabled()
-        }
-        scopes.calculateAndSendBuildCoverage(state.coverContext())
+        val sessions = state.scope.sessions().asSequence()
+        sessions.calculateAndSendBuildCoverage(state.coverContext())
     }
 
-    private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
+    private suspend fun Sequence<FinishedSession>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
-        val bundleCounters = flatten().calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
+        val bundleCounters = calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         state.updateBundleCounters(bundleCounters)
         logger.debug { "Start to calculate build coverage" }
         bundleCounters.calculateAndSendBuildCoverage(context, scopeCount = count())
@@ -556,10 +594,12 @@ class Plugin(
             state.updateBuildTests(testsNew)
             state.coverContext()
         } else {
-            context.copy(build = context.build.copy(
-                stats = buildCoverage.toCachedBuildStats(context),
-                tests = context.build.tests.copy(tests = testsNew)
-            ))
+            context.copy(
+                build = context.build.copy(
+                    stats = buildCoverage.toCachedBuildStats(context),
+                    tests = context.build.tests.copy(tests = testsNew)
+                )
+            )
         }
         val summary = newContext.build.toSummary(
             agentInfo.name,
@@ -614,10 +654,12 @@ class Plugin(
             state.storeClient.store(testsToRunSummary)
         }
         Routes.Build.Summary(buildRoute).let {
-            send(buildVersion,
+            send(
+                buildVersion,
                 Routes.Build.Summary.TestsToRun(it),
                 testsToRunSummary.toTestsToRunSummaryDto(),
-                filterId)
+                filterId
+            )
         }
     }
 
@@ -689,11 +731,11 @@ class Plugin(
         }
     }
 
-    internal suspend fun calculateAndSendScopeCoverage() = activeScope.let { scope ->
+    internal suspend fun calculateAndSendScopeCoverage() = scope.let { scope ->
         val context = state.coverContext()
         val bundleCounters = scope.calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
         val coverageInfoSet = bundleCounters.calculateCoverageData(context, scope)
-        activeScope.updateSummary {
+        this.scope.updateSummary {
             it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage)
         }
         coverageInfoSet.sendScopeCoverage(buildVersion, scope.id)
@@ -723,10 +765,12 @@ class Plugin(
         send(buildVersion, pkgsRoute, packages.map { it.copy(classes = emptyList()) }, filterId)
         packages.forEach {
             AsyncJobDispatcher.launch {
-                send(buildVersion,
+                send(
+                    buildVersion,
                     Routes.Build.Scopes.Scope.Coverage.Packages.Package(it.name, pkgsRoute),
                     it,
-                    filterId)
+                    filterId
+                )
             }
         }
     }
@@ -766,7 +810,7 @@ class Plugin(
     }
 
     internal suspend fun BundleCounters.assocTestsJob(
-        scope: Scope? = null,
+        scope: IScope? = null,
         filterId: String = "",
     ) = AsyncJobDispatcher.launch {
         trackTime("assocTestsJob") {
@@ -786,10 +830,12 @@ class Plugin(
                     sendScopeTree(it.id, associatedTests, treeCoverage, filterId)
                 }
             } ?: run {
-                send(buildVersion,
+                send(
+                    buildVersion,
                     Routes.Build.Risks(Routes.Build()),
                     state.coverContext().risksDto(storeClient, assocTestsMap),
-                    filterId)
+                    filterId
+                )
                 trackTime("assocTestsJob sendBuildTree") { sendBuildTree(treeCoverage, associatedTests, filterId) }
             }
         }

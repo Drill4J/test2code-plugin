@@ -20,6 +20,7 @@ import kotlin.time.*
 
 val logger = logger {}
 
+@OptIn(ExperimentalTime::class)
 inline fun <T> trackTime(tag: String = "", debug: Boolean = true, block: () -> T) =
     measureTimedValue { block() }.apply {
         val message = "[$tag] took: $duration"

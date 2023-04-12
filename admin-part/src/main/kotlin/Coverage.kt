@@ -110,7 +110,7 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
 
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
-    scope: Scope? = null,
+    scope: IScope? = null,
 ): CoverageInfoSet {
     val bundle = all
     val bundlesByTests = byTest
@@ -148,6 +148,7 @@ internal fun BundleCounters.calculateCoverageData(
                 byTestType = coverageByTests.byType
             )
         }
+
         is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
@@ -247,6 +248,7 @@ internal fun Sequence<ExecClassData>.bundle(
         probeIds = context.probeIds,
         classBytes = classBytes
     )
+
     else -> bundle(context.packageTree)
 }
 
@@ -268,7 +270,7 @@ internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatc
             finishedScope.data.sessions.flatMap { it.probes }
         }.writeCoverage(executionDataWriter, classBytes)
         if (buildVersion == exportBuildVersion) {
-            activeScope.flatMap {
+            scope.flatMap {
                 it.probes
             }.writeCoverage(executionDataWriter, classBytes)
         }
@@ -295,7 +297,7 @@ private fun Sequence<ExecClassData>.writeCoverage(
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
     sessionId: String = genUuid(),
-) = activeScope.startSession(sessionId, "UNIT").runCatching {
+) = scope.startSession(sessionId, "UNIT").runCatching {
     val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
     val classBytes = adminData.loadClassBytes()
     val probeIds = state.coverContext().probeIds
@@ -305,11 +307,11 @@ internal suspend fun Plugin.importCoverage(
     execDatum.bundle(probeIds, classBytes) { bytes, execData ->
         analyzeClass(bytes, execData.name)
     }
-    activeScope.addProbes(sessionId) { execDatum.toList() }
+    scope.addProbes(sessionId) { execDatum.toList() }
     state.finishSession(sessionId)
     ActionResult(StatusCodes.OK, "Coverage successfully imported")
 }.getOrElse {
-    state.activeScope.cancelSession(sessionId)
+    state.scope.cancelSession(sessionId)
     logger.error { "Can't import coverage. Session was cancelled." }
     ActionResult(StatusCodes.ERROR, "Can't import coverage. An error occurred: ${it.message}")
 }

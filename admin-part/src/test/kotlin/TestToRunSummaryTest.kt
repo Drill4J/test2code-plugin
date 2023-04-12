@@ -15,9 +15,11 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.storage.*
-import kotlinx.coroutines.*
-import kotlin.test.*
+import com.epam.drill.plugins.test2code.storage.AgentKey
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class TestToRunSummaryTest : PluginTest() {
     @Test

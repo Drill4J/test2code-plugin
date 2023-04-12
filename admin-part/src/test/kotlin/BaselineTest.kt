@@ -15,8 +15,9 @@
  */
 package com.epam.drill.plugins.test2code
 
-import kotlinx.coroutines.*
-import kotlin.test.*
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class BaselineTest : PluginTest() {
 
