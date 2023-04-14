@@ -5,6 +5,7 @@ pluginManagement {
     val kotlinxBenchmarkVersion: String by extra
     val licenseVersion: String by extra
     val atomicfuVersion: String by extra
+    val grgitVersion: String by extra
     val shadowPluginVersion: String by extra
     plugins {
         kotlin("jvm") version kotlinVersion
@@ -13,6 +14,7 @@ pluginManagement {
         kotlin("plugin.noarg") version kotlinVersion
         kotlin("plugin.serialization") version kotlinVersion
         id("kotlinx-atomicfu") version atomicfuVersion
+        id("org.ajoberstar.grgit") version grgitVersion
         id("org.jetbrains.kotlinx.benchmark") version kotlinxBenchmarkVersion
         id("com.github.hierynomus.license") version licenseVersion
         id("com.github.johnrengelman.shadow") version shadowPluginVersion
