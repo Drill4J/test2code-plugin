@@ -14,6 +14,7 @@ plugins {
 }
 
 group = "com.epam.drill.plugins.test2code"
+version = rootProject.version
 
 val kotlinxCollectionsVersion: String by parent!!.extra
 val kotlinxCoroutinesVersion: String by parent!!.extra

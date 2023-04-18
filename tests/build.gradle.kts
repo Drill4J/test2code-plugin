@@ -12,6 +12,7 @@ plugins {
 }
 
 group = "com.epam.drill.plugins.test2code"
+version = rootProject.version
 
 val kotlinxCollectionsVersion: String by parent!!.extra
 val kotlinxSerializationVersion: String by parent!!.extra
@@ -22,6 +23,7 @@ val jacocoVersion: String by parent!!.extra
 val atomicfuVersion: String by parent!!.extra
 val flywaydbVersion: String by parent!!.extra
 val drillAdminVersion: String by parent!!.extra
+val testsSkipIntegrationTests: String by parent!!.extra
 
 repositories {
     mavenLocal()
@@ -98,6 +100,7 @@ tasks {
     val integrationTest by registering(Test::class) {
         description = "Runs the integration tests"
         group = "verification"
+        enabled = !testsSkipIntegrationTests.toBoolean()
         useJUnitPlatform()
         systemProperty("plugin.config.path", rootDir.resolve("plugin_config.json"))
         systemProperty("drill.plugins.test2code.features.realtime", false)

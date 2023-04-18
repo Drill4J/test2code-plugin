@@ -3,6 +3,7 @@ plugins {
 }
 
 group = "com.epam.drill.plugins.test2code"
+version = rootProject.version
 
 val drillAdminVersion: String by rootProject
 
