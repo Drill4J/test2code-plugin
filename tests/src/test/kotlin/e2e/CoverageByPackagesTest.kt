@@ -15,21 +15,27 @@
  */
 package com.epam.drill.plugins.test2code.e2e
 
-import com.epam.drill.builds.*
-import com.epam.drill.e2e.*
-import com.epam.drill.e2e.plugin.*
-import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.coverage.*
+import com.epam.drill.builds.Build1
+import com.epam.drill.e2e.E2EPluginTest
+import com.epam.drill.e2e.plugin.runWithSession
+import com.epam.drill.plugins.test2code.CoverageSocketStreams
+import com.epam.drill.plugins.test2code.api.StartNewSession
+import com.epam.drill.plugins.test2code.api.StartPayload
+import com.epam.drill.plugins.test2code.api.TestDetails
+import com.epam.drill.plugins.test2code.common.api.AgentSessionPayload
+import com.epam.drill.plugins.test2code.common.api.StartAgentSession
+import com.epam.drill.plugins.test2code.common.api.StopAgentSession
 import com.epam.drill.plugins.test2code.coverage.TestKey
-import com.epam.drill.plugins.test2code.util.*
-import e2e.*
-import io.kotlintest.*
-import io.kotlintest.matchers.doubles.*
+import com.epam.drill.plugins.test2code.coverage.id
+import com.epam.drill.plugins.test2code.parseJsonData
+import com.epam.drill.plugins.test2code.stringify
+import com.epam.drill.plugins.test2code.util.crc64
+import e2e.MANUAL_TEST_TYPE
+import io.kotlintest.matchers.doubles.shouldBeGreaterThan
+import io.kotlintest.shouldBe
 import io.ktor.http.*
-import kotlinx.coroutines.*
-import kotlin.test.*
+import kotlinx.coroutines.delay
+import kotlin.test.Test
 
 class CoverageByPackagesTest : E2EPluginTest() {
 
@@ -37,7 +43,7 @@ class CoverageByPackagesTest : E2EPluginTest() {
     private val testHash = testDetails.testName.crc64
 
     @Test
-    fun `cover one method in 2 scopes`() {
+    fun `cover one method in scope`() {
         createSimpleAppWithPlugin<CoverageSocketStreams>(timeout = 60L) {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.coveragePackages()!!.first().apply {
@@ -48,19 +54,20 @@ class CoverageByPackagesTest : E2EPluginTest() {
                     totalClassesCount shouldBe 1
                     assocTestsCount shouldBe 0
                 }
+
                 val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 lateinit var cont: String
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
                     cont = content!!
                 }.join()
+
                 val startSession = cont.parseJsonData<StartAgentSession>()
                 println(startSession)
                 runWithSession(startSession.payload.sessionId, testHash = testHash) {
                     val gt = build.entryPoint()
                     gt.test1()
                 }
-
 
                 pluginAction(StopAgentSession(AgentSessionPayload(startSession.payload.sessionId)).stringify()) { status, _ ->
                     status shouldBe HttpStatusCode.OK
@@ -78,8 +85,10 @@ class CoverageByPackagesTest : E2EPluginTest() {
                         classes shouldBe emptyList()
                         assocTestsCount shouldBe 1
                     }
-                    plugUi.subscribeOnTest(scopeId, TestKey(type = MANUAL_TEST_TYPE, id = testHash)
-                        .id()) {
+                    plugUi.subscribeOnTest(
+                        scopeId, TestKey(type = MANUAL_TEST_TYPE, id = testHash)
+                            .id()
+                    ) {
                         methodsCoveredByTest()!!.apply {
                             details.testName shouldBe testDetails.testName
                             methodCounts.apply {
@@ -90,65 +99,6 @@ class CoverageByPackagesTest : E2EPluginTest() {
                             }
                         }
                     }
-                }
-                val switchScope = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new2",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope)
-                plugUi.coveragePackages()!!
-                plugUi.coveragePackages()!!.first().apply {
-                    id shouldBe "vsu9sbxes5bl"
-                    coveredClassesCount shouldBe 1
-                    name shouldBe "com/epam/test"
-                    coverage shouldBeGreaterThan 46.6
-                    totalClassesCount shouldBe 1
-                    assocTestsCount shouldBe 1
-                }
-
-                val startNewSession2 = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
-                pluginAction(startNewSession2) { status, content ->
-                    status shouldBe HttpStatusCode.OK
-                    val startSession2 = content!!.parseJsonData<StartAgentSession>()
-                    runWithSession(startSession2.payload.sessionId) {
-                        val gt = build.entryPoint()
-                        gt.test1()
-                    }
-
-                    pluginAction(StopAgentSession(AgentSessionPayload(startSession2.payload.sessionId)).stringify()) { st, _ ->
-                        st shouldBe HttpStatusCode.OK
-                    }.join()
-                }.join()
-                delay(1100)//todo move it to core library
-
-                plugUi.subscribeOnScope(plugUi.activeScope()!!.id) {
-                    coveragePackages()!!.first().apply {
-                        id shouldBe "vsu9sbxes5bl"
-                        coveredClassesCount shouldBe 1
-                        name shouldBe "com/epam/test"
-                        coverage shouldBeGreaterThan 46.6
-                        totalClassesCount shouldBe 1
-                        assocTestsCount shouldBe 1
-                    }
-                }
-                val switchScope2 = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new3",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope2)
-                plugUi.coveragePackages()!!.first().apply {
-                    id shouldBe "vsu9sbxes5bl"
-                    coveredClassesCount shouldBe 1
-                    name shouldBe "com/epam/test"
-                    coverage shouldBeGreaterThan 46.6
-                    totalClassesCount shouldBe 1
-                    assocTestsCount shouldBe 1
                 }
             }
         }

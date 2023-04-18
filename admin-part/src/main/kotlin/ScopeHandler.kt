@@ -15,15 +15,18 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugin.api.end.*
-import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.api.routes.*
-import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.util.*
-import com.epam.dsm.util.*
+import com.epam.drill.plugin.api.end.ActionResult
+import com.epam.drill.plugins.test2code.api.ActiveScopeChangePayload
+import com.epam.drill.plugins.test2code.api.RenameScopePayload
+import com.epam.drill.plugins.test2code.api.ScopeCoverage
+import com.epam.drill.plugins.test2code.api.routes.Routes
+import com.epam.drill.plugins.test2code.common.api.ActionScopeResult
+import com.epam.drill.plugins.test2code.coverage.BundleCounter
+import com.epam.drill.plugins.test2code.util.count
+import com.epam.drill.plugins.test2code.util.trackTime
+import com.epam.dsm.util.logPoolStats
 
-internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler { sessionChanged, sessions ->
+internal fun Plugin.initActiveScope(): Boolean = scope.initRealtimeHandler { sessionChanged, sessions ->
     if (sessionChanged) {
         sendActiveSessions()
     }
@@ -36,7 +39,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler
             bundleCounters.calculateCoverageData(context, this)
         }.also { logPoolStats() }
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
-        sendActiveScope()
+        sendScope()
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
         if (sessionChanged) {
             bundleCounters.assocTestsJob(this)
@@ -45,7 +48,7 @@ internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler
     }
 }
 
-internal fun Plugin.initBundleHandler(): Boolean = activeScope.initBundleHandler { tests ->
+internal fun Plugin.initBundleHandler(): Boolean = scope.initBundleHandler { tests ->
     val context = state.coverContext()
     val preparedBundle = tests.keys.associateWithTo(mutableMapOf()) {
         BundleCounter.empty
@@ -56,20 +59,61 @@ internal fun Plugin.initBundleHandler(): Boolean = activeScope.initBundleHandler
     addBundleCache(calculated)
 }
 
+internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
+    return state.scopeManager.deleteById(scopeId)?.let { scope ->
+        cleanTopics(scope.id)
+        handleChange(scope)
+        ActionResult(
+            StatusCodes.OK,
+            "Scope with id $scopeId was removed"
+        )
+    } ?: ActionResult(
+        StatusCodes.NOT_FOUND,
+        "Failed to drop scope with id $scopeId: scope not found"
+    )
+}
+
+internal suspend fun Plugin.cleanTopics(scopeId: String) = scopeById(scopeId).let { scope ->
+    val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
+    send(buildVersion, coverageRoute, "")
+    state.classDataOrNull()?.let { classData ->
+        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
+        classData.packageTree.packages.forEach { p ->
+            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(p.name, pkgsRoute), "")
+            send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(p.id, scope), "")
+            p.classes.forEach { c ->
+                send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(c.id, scope), "")
+                c.methods.forEach { m ->
+                    send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(m.id, scope), "")
+                }
+            }
+        }
+    }
+    send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), "")
+}
+
+private suspend fun Plugin.handleChange(scopeFinish: FinishedScope) {
+    val scopeBuildVersion = scopeFinish.agentKey.buildVersion
+    if (scopeBuildVersion == buildVersion) {
+        calculateAndSendBuildCoverage()
+        scope.probesChanged()
+    }
+    sendScopes(scopeBuildVersion)
+}
 
 internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload,
 ): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
     trackTime("changeActiveScope") {
         if (scopeChange.forceFinish) {
-            val activeScope = state.activeScope
+            val activeScope = state.scope
             logger.warn { "Active sessions count ${activeScope.activeSessions.count()}. Probes may be lost." }
             val probes = activeScope.activeSessions.map.mapNotNull { (sessionId, _) ->
                 state.finishSession(sessionId)
             }.asSequence().flatten()
             if (probes.any()) calculateAndSendScopeCoverage()
         }
-        val prevScope = state.changeActiveScope(scopeChange.scopeName.trim())
+        val prevScope = state.changeActiveScope()
         state.storeActiveScopeInfo()
         sendActiveSessions()
         sendActiveScope()
@@ -86,10 +130,11 @@ internal suspend fun Plugin.changeActiveScope(
             }
         } else cleanTopics(prevScope.id)
         scopeInitialized(prevScope.id)
-        ActionResult(StatusCodes.OK,
+        ActionResult(
+            StatusCodes.OK,
             data = ActionScopeResult(
-                id = activeScope.id,
-                name = activeScope.name,
+                id = scope.id,
+                name = scope.name,
                 prevId = prevScope.id
             )
         )
@@ -107,9 +152,10 @@ internal suspend fun Plugin.scopeInitialized(prevId: String) {
             calculateAndSendBuildCoverage()
         }
         calculateAndSendScopeCoverage()
-        logger.info { "Current active scope - $activeScope" }.also { logPoolStats() }
+        logger.info { "Current active scope - $scope" }.also { logPoolStats() }
     }
 }
+
 
 internal suspend fun Plugin.renameScope(
     payload: RenameScopePayload,
@@ -144,45 +190,22 @@ internal suspend fun Plugin.toggleScope(scopeId: String): ActionResult {
     )
 }
 
-internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
-    return state.scopeManager.deleteById(scopeId)?.let { scope ->
-        cleanTopics(scope.id)
-        handleChange(scope)
-        ActionResult(
-            StatusCodes.OK,
-            "Scope with id $scopeId was removed"
-        )
-    } ?: ActionResult(
-        StatusCodes.NOT_FOUND,
-        "Failed to drop scope with id $scopeId: scope not found"
-    )
-}
-
-private suspend fun Plugin.cleanTopics(scopeId: String) = scopeById(scopeId).let { scope ->
-    val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
-    send(buildVersion, coverageRoute, "")
-    state.classDataOrNull()?.let { classData ->
-        val pkgsRoute = Routes.Build.Scopes.Scope.Coverage.Packages(coverageRoute)
-        classData.packageTree.packages.forEach { p ->
-            send(buildVersion, Routes.Build.Scopes.Scope.Coverage.Packages.Package(p.name, pkgsRoute), "")
-            send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(p.id, scope), "")
-            p.classes.forEach { c ->
-                send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(c.id, scope), "")
-                c.methods.forEach { m ->
-                    send(buildVersion, Routes.Build.Scopes.Scope.AssociatedTests(m.id, scope), "")
-                }
-            }
+internal fun Plugin.initScope(): Boolean = scope.initRealtimeHandler { sessionChanged, sessions ->
+    if (sessionChanged) {
+        sendActiveSessions()
+    }
+    sessions?.let {
+        val context = state.coverContext()
+        val bundleCounters = trackTime("bundleCounters") {
+            sessions.calcBundleCounters(context, state.classBytes(buildVersion), bundleByTests)
+        }.also { logPoolStats() }
+        val coverageInfoSet = trackTime("coverageInfoSet") {
+            bundleCounters.calculateCoverageData(context, this)
+        }.also { logPoolStats() }
+        coverageInfoSet.sendScopeCoverage(id, buildVersion)
+        if (sessionChanged) {
+            bundleCounters.assocTestsJob(this)
+            bundleCounters.coveredMethodsJob()
         }
     }
-    send(buildVersion, Routes.Build.Scopes.Scope.Tests(scope), "")
-}
-
-private suspend fun Plugin.handleChange(scope: FinishedScope) {
-    val scopeBuildVersion = scope.agentKey.buildVersion
-    if (scopeBuildVersion == buildVersion) {
-        calculateAndSendBuildCoverage()
-        activeScope.probesChanged()
-    }
-    sendScopes(scopeBuildVersion)
-    sendScopeSummary(scope.summary, scopeBuildVersion)
 }

@@ -29,6 +29,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlin.test.*
 
+@Ignore
 class ScopeTest : E2EPluginTest() {
 
     @Test

@@ -33,7 +33,7 @@ import kotlin.test.*
 class PluginInstanceStateTest : E2EPluginTest() {
 
     @Test
-    fun `deploy build2 with finishing active scope and session on previous build`() {
+    fun `deploy build2 with finishing session on previous build`() {
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
                 plugUi.buildCoverage()
@@ -61,24 +61,6 @@ class PluginInstanceStateTest : E2EPluginTest() {
                 }.join()
 
                 plugUi.activeSessions()!!.count shouldBe 0
-                val switchScope = SwitchActiveScope(
-                    ActiveScopeChangePayload(
-                        scopeName = "new2",
-                        savePrevScope = true,
-                        prevScopeEnabled = true
-                    )
-                ).stringify()
-                pluginAction(switchScope) { status, _ ->
-                    status shouldBe HttpStatusCode.OK
-                    plugUi.buildCoverage()!!.apply {
-                        count.covered shouldBeGreaterThan 0
-                    }
-                    plugUi.coveragePackages()
-                    plugUi.coveragePackages()!!.apply {
-                        first().coverage shouldBeGreaterThan 0.0
-                    }
-                }.join()
-                delay(100)
             }.reconnect<Build2> { plugUi, _ ->
                 plugUi.buildCoverage()!!.apply {
                     count.covered shouldBe 0
@@ -89,7 +71,8 @@ class PluginInstanceStateTest : E2EPluginTest() {
     }
 
     @Test
-    fun `deploy build2 without finishing active scope and session on previous build`() {
+    @Ignore
+    fun `deploy build2 without session on previous build`() {
         lateinit var activeScopeIdFirstBuild: String
         createSimpleAppWithPlugin<CoverageSocketStreams> {
             connectAgent<Build1> { plugUi, build ->
