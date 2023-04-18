@@ -88,7 +88,7 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
 internal suspend fun StoreClient.removeBuild(
     agentKey: AgentKey,
 ) = executeInAsyncTransaction {
-    deleteById<ActiveScopeInfo>(agentKey)
+    deleteById<ScopeInfo>(agentKey)
     deleteById<TestsToRunSummary>(agentKey)
 
     val agentKeyHashCode = "${agentKey.hashCode()}"
