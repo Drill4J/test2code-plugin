@@ -15,17 +15,25 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugin.api.*
+import com.epam.drill.plugin.api.AdminData
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.api.BetweenOp.*
+import com.epam.drill.plugins.test2code.api.BetweenOp.AND
 import com.epam.drill.plugins.test2code.api.TestResult.*
-import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.global_filter.*
-import com.epam.drill.plugins.test2code.storage.*
-import com.epam.drill.plugins.test2code.test.java.*
-import com.epam.drill.plugins.test2code.util.*
-import kotlinx.coroutines.*
-import kotlin.test.*
+import com.epam.drill.plugins.test2code.coverage.BundleCounters
+import com.epam.drill.plugins.test2code.coverage.CoverContext
+import com.epam.drill.plugins.test2code.global_filter.attrValues
+import com.epam.drill.plugins.test2code.storage.AgentKey
+import com.epam.drill.plugins.test2code.storage.StoredSession
+import com.epam.drill.plugins.test2code.storage.sessionIds
+import com.epam.drill.plugins.test2code.test.java.autoProbesWithFullCoverage
+import com.epam.drill.plugins.test2code.test.java.autoProbesWithPartCoverage
+import com.epam.drill.plugins.test2code.test.java.classBytesEmptyBody
+import com.epam.drill.plugins.test2code.test.java.manualFullProbes
+import com.epam.drill.plugins.test2code.util.genUuid
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 
 class JavaCoverageTest : PluginTest() {
@@ -87,9 +95,13 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filters = listOf(TestOverviewFilter(TestOverview::result.name,
-                    false,
-                    values = listOf(FilterValue(FAILED.name)))),
+                filters = listOf(
+                    TestOverviewFilter(
+                        TestOverview::result.name,
+                        false,
+                        values = listOf(FilterValue(FAILED.name))
+                    )
+                ),
                 expectedCoverage = 100.0
             )
         }
@@ -106,9 +118,13 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filters = listOf(TestOverviewFilter(TestOverview::result.name,
-                    false,
-                    values = listOf(FilterValue(PASSED.name)))),
+                filters = listOf(
+                    TestOverviewFilter(
+                        TestOverview::result.name,
+                        false,
+                        values = listOf(FilterValue(PASSED.name))
+                    )
+                ),
                 expectedCoverage = 25.0
             )
         }
@@ -125,9 +141,13 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filters = listOf(TestOverviewFilter("${TestOverview::details.name}->${TestDetails::testName.name}",
-                false,
-                values = listOf(FilterValue(failedAutoTest)))),
+            filters = listOf(
+                TestOverviewFilter(
+                    "${TestOverview::details.name}->${TestDetails::testName.name}",
+                    false,
+                    values = listOf(FilterValue(failedAutoTest))
+                )
+            ),
             expectedCoverage = 100.0
         )
     }
@@ -142,9 +162,13 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filters = listOf(TestOverviewFilter("${TestOverview::details.name}->${TestDetails::engine.name}",
-                false,
-                values = listOf(FilterValue("does not exist")))),
+            filters = listOf(
+                TestOverviewFilter(
+                    "${TestOverview::details.name}->${TestDetails::engine.name}",
+                    false,
+                    values = listOf(FilterValue("does not exist"))
+                )
+            ),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -161,12 +185,14 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filters = listOf(TestOverviewFilter(
-                TestOverview::result.name,
-                isLabel = false,
-                values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)),
-                valuesOp = AND
-            )),
+            filters = listOf(
+                TestOverviewFilter(
+                    TestOverview::result.name,
+                    isLabel = false,
+                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)),
+                    valuesOp = AND
+                )
+            ),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -183,12 +209,14 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filters = listOf(TestOverviewFilter(
-                TestOverview::result.name,
-                isLabel = false,
-                values = listOf(FilterValue(FAILED.name), FilterValue(SKIPPED.name)),
-                valuesOp = AND
-            )),
+            filters = listOf(
+                TestOverviewFilter(
+                    TestOverview::result.name,
+                    isLabel = false,
+                    values = listOf(FilterValue(FAILED.name), FilterValue(SKIPPED.name)),
+                    valuesOp = AND
+                )
+            ),
             expectedCoverage = 0.0,
             expectedTestsCount = 0,
             expectedTestTypeCount = 0
@@ -206,9 +234,13 @@ class JavaCoverageTest : PluginTest() {
 
             filterAndCalculateCoverage(
                 context,
-                filters = listOf(TestOverviewFilter(TestOverview::result.name,
-                    isLabel = false,
-                    values = listOf(FilterValue(PASSED.name), FilterValue(FAILED.name)))),
+                filters = listOf(
+                    TestOverviewFilter(
+                        TestOverview::result.name,
+                        isLabel = false,
+                        values = listOf(FilterValue(PASSED.name), FilterValue(FAILED.name))
+                    )
+                ),
                 expectedCoverage = 100.0,
                 expectedTestsCount = 2,
             )
@@ -226,12 +258,16 @@ class JavaCoverageTest : PluginTest() {
         filterAndCalculateCoverage(
             context,
             filters = listOf(
-                TestOverviewFilter("${TestOverview::details.name}->${TestDetails::testName.name}",
+                TestOverviewFilter(
+                    "${TestOverview::details.name}->${TestDetails::testName.name}",
                     false,
-                    values = listOf(FilterValue(failedAutoTest))),
-                TestOverviewFilter(TestOverview::result.name,
+                    values = listOf(FilterValue(failedAutoTest))
+                ),
+                TestOverviewFilter(
+                    TestOverview::result.name,
                     false,
-                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)))
+                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name))
+                )
             ),
             expectedCoverage = 100.0,
         )
@@ -313,12 +349,16 @@ class JavaCoverageTest : PluginTest() {
             context,
             filters = listOf(
                 TestOverviewFilter(TEAM, true, values = listOf(FilterValue(DRILL4J), FilterValue(RP)), valuesOp = AND),
-                TestOverviewFilter(TestOverview::result.name,
+                TestOverviewFilter(
+                    TestOverview::result.name,
                     false,
-                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name))),
-                TestOverviewFilter("${TestOverview::details.name}->${TestDetails::testName.name}",
+                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name))
+                ),
+                TestOverviewFilter(
+                    "${TestOverview::details.name}->${TestDetails::testName.name}",
                     false,
-                    values = listOf(FilterValue(failedAutoTest)))
+                    values = listOf(FilterValue(failedAutoTest))
+                )
             ),
             expectedCoverage = 100.0,
         )
@@ -334,9 +374,13 @@ class JavaCoverageTest : PluginTest() {
 
         filterAndCalculateCoverage(
             context,
-            filters = listOf(TestOverviewFilter("result",
-                isLabel = false,
-                values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name)))),
+            filters = listOf(
+                TestOverviewFilter(
+                    "result",
+                    isLabel = false,
+                    values = listOf(FilterValue(SKIPPED.name), FilterValue(FAILED.name))
+                )
+            ),
             expectedCoverage = 100.0,
             expectedTestsCount = 1,
         )
@@ -351,10 +395,14 @@ class JavaCoverageTest : PluginTest() {
         }
 
         val sessionIds = storeClient.sessionIds(agentKey)
-        assertEquals(listOf(FAILED.toString(), PASSED.toString()),
-            storeClient.attrValues(sessionIds, TestOverview::result.name))
-        assertEquals(listOf(passedAutoTest, failedAutoTest),
-            storeClient.attrValues(sessionIds, TestDetails::testName.name, isTestDetails = true))
+        assertEquals(
+            listOf(FAILED.toString(), PASSED.toString()),
+            storeClient.attrValues(sessionIds, TestOverview::result.name)
+        )
+        assertEquals(
+            listOf(passedAutoTest, failedAutoTest),
+            storeClient.attrValues(sessionIds, TestDetails::testName.name, isTestDetails = true)
+        )
     }
 
     private suspend fun runAutoSessionWithTwoTests(
@@ -390,13 +438,13 @@ class JavaCoverageTest : PluginTest() {
 
     private suspend fun calculateCoverage(
         sessionId: String,
-        addProbes: suspend ActiveScope.() -> Unit,
+        addProbes: suspend Scope.() -> Unit,
     ): Pair<CoverageInfoSet, CoverContext> {
         val plugin = initPlugin("0.1.0", classEmptyBody)
         plugin.initialize()
         val state = plugin.state
 
-        val activeScope = state.activeScope
+        val activeScope = state.scope
         activeScope.addProbes()
         state.finishSession(sessionId)
         val finishedScope = activeScope.finish(enabled = true)
@@ -406,14 +454,14 @@ class JavaCoverageTest : PluginTest() {
         return bundleCounters.calculateCoverageData(context) to context
     }
 
-    private suspend fun ActiveScope.execSession(
+    private suspend fun Scope.execSession(
         testName: String,
         sessionId: String,
         testType: String,
         session: ActiveSession? = null,
         result: TestResult = PASSED,
         labels: Set<Label> = emptySet(),
-        block: suspend ActiveScope.(String) -> Unit,
+        block: suspend Scope.(String) -> Unit,
     ) {
         val startSessionNew = session ?: startSession(sessionId = sessionId, testType = testType)
         block(sessionId)
@@ -452,10 +500,12 @@ class JavaCoverageTest : PluginTest() {
 
         val agentKey = AgentKey(agentId, buildVersion)
 
-        val filterBundleCounters: BundleCounters = filters.calcBundleCounters(context,
+        val filterBundleCounters: BundleCounters = filters.calcBundleCounters(
+            context,
             classBytesEmptyBody,
             storeClient,
-            agentKey)
+            agentKey
+        )
         assertEquals(expectedTestsCount, filterBundleCounters.byTest.size)
         assertEquals(expectedTestsCount, filterBundleCounters.byTestOverview.size)
         assertEquals(expectedTestTypeCount, filterBundleCounters.byTestType.size)

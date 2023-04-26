@@ -16,10 +16,13 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
+import com.epam.dsm.serializer.*
 import kotlinx.serialization.*
 
 @Serializable
@@ -85,6 +88,33 @@ internal suspend fun CachedBuild.store(storage: StoreClient) {
 internal suspend fun StoreClient.removeBuild(
     agentKey: AgentKey,
 ) = executeInAsyncTransaction {
+    deleteById<ScopeInfo>(agentKey)
+    deleteById<TestsToRunSummary>(agentKey)
+
+    val agentKeyHashCode = "${agentKey.hashCode()}"
+    deleteBy<ClassCounter> { containsParentId(listOf(agentKeyHashCode)) }
+    deleteBy<JavaClassCoverage> { containsParentId(listOf(agentKeyHashCode)) }
+    deleteBy<MethodCounter> { containsParentId(listOf(agentKeyHashCode)) }
+    deleteBy<JavaMethodCoverage> { containsParentId(listOf(agentKeyHashCode)) }
+
+    sessionIds(agentKey).forEach {
+        deleteBy<StoredSession> { FieldPath(StoredSession::agentKey, AgentKey::agentId) eq agentKey.agentId }
+        deleteBy<ExecClassData> { containsParentId(listOf(it)) }
+        deleteBy<Label> { containsParentId(listOf(it)) }
+        deleteBy<TestOverview> { containsParentId(listOf(it)) }
+    }
+
+    cleanUpBinaryTable("agent::${agentKey.agentId}:${agentKey.buildVersion}:")
+
+    //clean up string_to_bundlecounter
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(String::class, BundleCounter::class))
+    //clean up testkey_to_bundlecounter
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(TestKey::class, BundleCounter::class))
+    //clean up testkey_to_testoverview
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(TestKey::class, TestOverview::class))
+    //clean up string_to_list
+    deleteMapByParentId(parentId = agentKey, entryClass = EntryClass(String::class, List::class))
+
     deleteById<BuildStats>(agentKey)
     deleteById<StoredBundles>(agentKey)
     deleteById<StoredBuildTests>(agentKey)
@@ -114,7 +144,7 @@ internal suspend fun StoreClient.removeAllPluginData(
         deleteBy<StoredBundles> { FieldPath(StoredBundles::agentKey, AgentKey::agentId) eq agent }
         deleteBy<StoredBuildTests> { FieldPath(StoredBuildTests::agentKey, AgentKey::agentId) eq agent }
         deleteBy<BaselineRisks> { FieldPath(BaselineRisks::baseline, AgentKey::agentId) eq agent }
-        deleteBy<FinishedScope> { FieldPath(FinishedScope::agentKey, AgentKey::agentId) eq agent }
+        deleteBy<Scope> { FieldPath(Scope::agentKey, AgentKey::agentId) eq agent }
         deleteBy<ScopeDataEntity> { FieldPath(ScopeDataEntity::agentKey, AgentKey::agentId) eq agent }
         deleteBy<StoredSession> { FieldPath(StoredSession::agentKey, AgentKey::agentId) eq agent }
     }

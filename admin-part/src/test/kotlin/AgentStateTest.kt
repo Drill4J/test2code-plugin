@@ -15,12 +15,13 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
-import com.epam.drill.plugin.api.*
-import com.epam.drill.plugins.test2code.global_filter.*
-import com.epam.drill.plugins.test2code.util.*
-import kotlinx.coroutines.*
-import kotlin.test.*
+import com.epam.drill.common.AgentInfo
+import com.epam.drill.plugin.api.AdminData
+import com.epam.drill.plugins.test2code.util.PostgresBased
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class AgentStateTest : PostgresBased("agent_state") {
 

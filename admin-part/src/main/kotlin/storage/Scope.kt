@@ -15,11 +15,14 @@
  */
 package com.epam.drill.plugins.test2code.storage
 
-import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.util.*
+import com.epam.drill.plugins.test2code.ScopeInfo
+import com.epam.drill.plugins.test2code.FinishedScope
+import com.epam.drill.plugins.test2code.ScopeData
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.trackTime
 import com.epam.dsm.*
-import com.epam.dsm.find.*
-import kotlinx.serialization.*
+import com.epam.dsm.find.get
+import kotlinx.serialization.Serializable
 
 private val logger = logger {}
 fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
@@ -36,7 +39,8 @@ class ScopeManager(private val storage: StoreClient) {
         }.get().run {
             takeIf { withData }?.run {
                 trackTime("Loading scope") {
-                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.get().takeIf { it.any() }
+                    transaction.findBy<ScopeDataEntity> { ScopeDataEntity::agentKey eq agentKey }.get()
+                        .takeIf { it.any() }
                 }
             }?.associateBy { it.id }?.let { dataMap ->
                 map { it.withProbes(dataMap[it.id], storage) }
@@ -80,9 +84,9 @@ class ScopeManager(private val storage: StoreClient) {
         } ?: findById(scopeId)
     }
 
-    internal suspend fun counter(agentKey: AgentKey): ActiveScopeInfo? = storage.findById(agentKey)
+    internal suspend fun counter(agentKey: AgentKey): ScopeInfo? = storage.findById(agentKey)
 
-    internal suspend fun storeCounter(activeScopeInfo: ActiveScopeInfo) = storage.store(activeScopeInfo)
+    internal suspend fun storeCounter(scopeInfo: ScopeInfo) = storage.store(scopeInfo)
 }
 
 @Serializable
