@@ -187,10 +187,11 @@ class Plugin(
                 newSessionId,
                 testType,
                 isGlobal,
+                envId = envId,
                 isRealtimeSession,
                 testName,
                 labels
-            )?.run {
+            ).run {
                 StartAgentSession(
                     payload = StartSessionPayload(
                         sessionId = id,
@@ -208,10 +209,7 @@ class Plugin(
                         "Please finish the active one in order to start new."
                     ).joinToString(" ")
                 )
-            } else FieldErrorDto(
-                field = "sessionId",
-                message = "Session with such ID already exists. Please choose a different ID."
-            ).toActionResult(StatusCodes.CONFLICT)
+            }.toActionResult()
         }
 
         is AddSessionData -> action.payload.run {
@@ -373,14 +371,20 @@ class Plugin(
             message.ids.forEach { state.finishSession(it) }
         }
         //TODO EPMDJ-10398 send on agent attach
-        is SyncMessage -> message.run {
-            logger.info { "Active session ids from agent: $activeSessions" }
+        is SyncMessage -> message.run { // This message is sent by agent on reconnect to sync sessions
+            logger.info { "Active session ids from agent: $activeSessions" } // these are sessions persisted on agent
+            
+            // Find sessions canceled/stopped when agent was offline
+            // and send "Cancel" message to agent for each session
             activeSessions.filter { it !in scope.activeSessions }.forEach {
                 AsyncJobDispatcher.launch {
                     logger.info { "Attempting to cancel session: $it" }
                     sendAgentAction(CancelAgentSession(AgentSessionPayload(it)))
                 }
             }
+            
+            // Find sessions started prior to agent being online
+            // and send "Start" message to agent for each session
             scope.activeSessions.map.filter { it.key !in activeSessions }.forEach { (id, session) ->
                 AsyncJobDispatcher.launch {
                     val startSessionPayload = StartSessionPayload(

@@ -38,8 +38,8 @@ dependencies {
     implementation(project(":jacoco"))
 
     implementation("com.epam.drill:common")
-    implementation("com.epam.drill:drill-agent-part")
-    implementation("com.epam.drill:drill-admin-part")
+    implementation("com.epam.drill:plugin-api-agent")
+    implementation("com.epam.drill:plugin-api-admin")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
 

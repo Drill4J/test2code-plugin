@@ -47,8 +47,8 @@ subprojects {
 
     val constraints = listOf(
         "com.epam.drill:common:$drillApiVersion",
-        "com.epam.drill:drill-admin-part:$drillApiVersion",
-        "com.epam.drill:drill-agent-part:$drillApiVersion",
+        "com.epam.drill:plugin-api-admin:$drillApiVersion",
+        "com.epam.drill:plugin-api-agent:$drillApiVersion",
         "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-core:$kxSerializationVersion",
         "org.jetbrains.kotlinx:kotlinx-serialization-json:$kxSerializationVersion",

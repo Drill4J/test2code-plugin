@@ -86,7 +86,8 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
     agentKey: AgentKey,
 ) = run {
     logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
-    val sessionsIds = storeClient.sessionIds(agentKey)
+    // filter sessions right away with labels to avoid getting extra tests by testId hash of an empty test
+    val sessionsIds = storeClient.sessionIdsWithLabels(agentKey, this)
     val testIds = findTestsByFilters(storeClient, sessionsIds, this)
     val byTestOverview: Map<TestKey, TestOverview> = findByTestType(storeClient, sessionsIds, testIds)
     val byTestType: Map<String, List<TestOverview>> = byTestOverview.toList().groupBy({ it.first.type }, { it.second })
@@ -297,12 +298,16 @@ private fun Sequence<ExecClassData>.writeCoverage(
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
     sessionId: String = genUuid(),
-) = scope.startSession(sessionId, "UNIT").runCatching {
+) = scope.startSession(sessionId, "UNIT", envId = "unit").runCatching {
     val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
     val classBytes = adminData.loadClassBytes()
     val probeIds = state.coverContext().probeIds
     val execDatum = jacocoFile.executionDataStore.contents.map {
-        ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
+        ExecClassData(
+            className = it.name,
+            probes = it.probes.toBitSet(),
+            testName = "All unit tests",
+        )
     }.asSequence()
     execDatum.bundle(probeIds, classBytes) { bytes, execData ->
         analyzeClass(bytes, execData.name)

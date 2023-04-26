@@ -22,7 +22,7 @@ dependencies {
     implementation(kotlin("stdlib"))
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-agent-part")
+    implementation("com.epam.drill:plugin-api-agent")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")

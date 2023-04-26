@@ -1,4 +1,4 @@
- /**
+/**
  * Copyright 2020 - 2022 EPAM Systems
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,11 @@
 package com.epam.drill.plugins.test2code.storage
 
 import com.epam.drill.plugins.test2code.*
+import com.epam.drill.plugins.test2code.api.BetweenOp
+import com.epam.drill.plugins.test2code.api.TestOverviewFilter
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
+import com.epam.dsm.util.*
 import com.epam.dsm.find.*
 import kotlinx.serialization.*
 
@@ -68,3 +71,25 @@ internal suspend fun StoreClient.storeSession(
 internal suspend fun StoreClient.sessionIds(
     agentKey: AgentKey,
 ) = findBy<StoredSession> { StoredSession::agentKey eq agentKey }.getIds()
+
+internal suspend fun StoreClient.sessionIdsWithLabels(
+    agentKey: AgentKey,
+    filters: List<TestOverviewFilter>,
+): List<String> {
+    val allBuildSessions = findBy<StoredSession> { (StoredSession::agentKey eq agentKey) }.get()
+    val labelFilters = filters.filter { it.isLabel }
+    val filteredSessions = allBuildSessions.filter { session ->
+        labelFilters.fold(true) { result, filter ->
+            result && when (filter.valuesOp) {
+                BetweenOp.OR -> session.data.labels.any {
+                    it.name == filter.fieldPath && filter.values.map { it.value }.contains(it.value)
+                }
+                BetweenOp.AND -> session.data.labels
+                    .filter { it.name == filter.fieldPath }
+                    .map { it.value }
+                    .containsAll(filter.values.map { it.value })
+            }
+        }
+    }
+    return filteredSessions.map { session -> session.id() }
+}

@@ -37,17 +37,24 @@ sealed class Session : Sequence<ExecClassData> {
     abstract val tests: Set<TestOverview>
 }
 
-
 private typealias ProbeKey = Pair<String, String>
 
 class ActiveSession(
     override val id: String,
     override val testType: String,
     val isGlobal: Boolean = false,
+    val envId: String?,
     val isRealtime: Boolean = false,
     val testName: String? = null,
-    private val labels: Set<Label> = emptySet(),
+    private val labels: MutableSet<Label> = mutableSetOf<Label>(),
 ) : Session() {
+
+    init {
+        if (!envId.isNullOrEmpty()) {
+            labels.add(Label("Environment", envId))
+        }
+        labels.add(Label("Session", id))
+    }
 
     override val tests: Set<TestOverview>
         get() = _probes.value.run {
@@ -129,6 +136,7 @@ class ActiveSession(
             testType = testType,
             tests = tests,
             probes = values.flatMap { it.values },
+            labels = labels,
         )
     }
 }
@@ -138,6 +146,7 @@ data class FinishedSession(
     override val id: String,
     override val testType: String,
     override val tests: Set<TestOverview>,
+    val labels: Set<Label> = emptySet(),
     val probes: List<ExecClassData>,
 ) : Session() {
     override fun iterator(): Iterator<ExecClassData> = probes.iterator()

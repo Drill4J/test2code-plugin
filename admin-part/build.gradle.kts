@@ -33,7 +33,7 @@ dependencies {
     jarDeps("org.apache.bcel:bcel")
 
     //provided by drill runtime
-    implementation("com.epam.drill:drill-admin-part")
+    implementation("com.epam.drill:plugin-api-admin")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
