@@ -64,6 +64,11 @@ suspend fun Plugin.sendFilterUpdates(filterId: String, filter: StoredFilter? = n
     sendFilters(agentFilters(), filtersRoute)
 }
 
+/**
+ * Send filters to the agent part of the plugin
+ *
+ * @features Agent registration
+ */
 suspend fun Plugin.sendFilters() {
     val filtersRoute = Routes.Build().let(Routes.Build::Filters)
     val storedFilters = agentFilters()

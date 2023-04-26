@@ -70,6 +70,13 @@ internal class AgentState(
         _classBytes.update { loaded }
     }
 
+    /**
+     * Initialize the agent state and call a function if the agent class data exists in database
+     *
+     * @param block a function that will be called if the class data exists in the database
+     *
+     * @features Agent registration
+     */
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentKey)?.let { classData ->
@@ -132,6 +139,13 @@ internal class AgentState(
         }
     }
 
+    /**
+     * Initialize the state of the agent data from DB
+     *
+     * @param classData the data of agent classes
+     *
+     * @features Agent registration
+     */
     private suspend fun initialized(classData: ClassData) {
         val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
         val probes = scopeManager.byVersion(agentKey, withData = true)
@@ -218,6 +232,12 @@ internal class AgentState(
         }
     }
 
+    /**
+     * Update the state of scope probes
+     * @param buildScopes the scope data
+     *
+     * @features Agent registration
+     */
     internal fun updateProbes(
         buildScopes: Sequence<FinishedScope>,
     ) {
@@ -286,6 +306,11 @@ internal class AgentState(
 
     internal fun classDataOrNull(): ClassData? = _data.value as? ClassData
 
+    /**
+     * Update an active scope
+     *
+     * @features Agent registration
+     */
     private suspend fun initActiveScope() {
         readActiveScopeInfo()?.run {
             val sessions = storeClient.loadSessions(id)

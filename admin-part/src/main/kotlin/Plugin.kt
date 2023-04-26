@@ -45,6 +45,16 @@ internal object AsyncJobDispatcher : CoroutineScope {
         Executors.newFixedThreadPool(availableProcessors).asCoroutineDispatcher() + SupervisorJob()
 }
 
+/**
+ * The all information related to the plugin
+ *
+ * @param adminData the plugin's part of agent data
+ * @param sender the messages sender for the plugin
+ * @param storeClient the plugin's datasource client
+ * @param agentInfo the information about the agent
+ * @param id the plugin ID
+ *
+ */
 @Suppress("unused")
 class Plugin(
     adminData: AdminData,
@@ -77,6 +87,11 @@ class Plugin(
 
     private val _state = atomic<AgentState?>(null)
 
+    /**
+     * Initialize the plugin state
+     *
+     * @features Agent registration
+     */
     override suspend fun initialize() {
         logger.debug { "$agentKey initializing from admin..." }
         changeState()
@@ -366,6 +381,11 @@ class Plugin(
         else -> logger.info { "$instanceId: Message is not supported! $message" }
     }
 
+    /**
+     * todo
+     *
+     * @features Agent registration
+     */
     private suspend fun Plugin.processInitialized(): Boolean {
         initGateSettings()
         sendGateSettings()
@@ -380,18 +400,33 @@ class Plugin(
         return initActiveScope() && initBundleHandler()
     }
 
+    /**
+     * Send a parent build version to the admin UI
+     *
+     * @features Agent registration
+     */
     private suspend fun sendParentBuild() = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Parent),
         message = state.coverContext().parentBuild?.agentKey?.buildVersion?.let(::BuildVersionDto) ?: ""
     )
 
+    /**
+     * Send a baseline build version to the admin UI
+     *
+     * @features Agent registration
+     */
     internal suspend fun sendBaseline() = send(
         buildVersion,
         destination = Routes.Data().let(Routes.Data::Baseline),
         message = storeClient.findById<GlobalAgentData>(agentId)?.baseline?.version?.let(::BuildVersionDto) ?: ""
     )
 
+    /**
+     * Send a test to run summary to the admin UI
+     *
+     * @features Agent registration
+     */
     private suspend fun sendParentTestsToRunStats() = send(
         buildVersion,
         destination = Routes.Build().let(Routes.Build::TestsToRun)
@@ -402,15 +437,25 @@ class Plugin(
         ).map { it.toTestsToRunSummaryDto() }
     )
 
+    /**
+     * Send build statistics to the admin UI
+     *
+     * @features Agent registration
+     */
     private suspend fun ClassData.sendBuildStats() {
         send(buildVersion, Routes.Data().let(Routes.Data::Build), state.coverContext().toBuildStatsDto())
     }
 
+    /**
+     * Calculate coverage and send to the admin UI
+     *
+     * @features Agent registration
+     */
     private suspend fun calculateAndSendCachedCoverage() = state.coverContext().build.let { build ->
         val scopes = state.scopeManager.byVersion(
             agentKey, withData = true
-        )
-        state.updateProbes(scopes.enabled())
+        ) //todo double get from DB? (State.initialized)
+        state.updateProbes(scopes.enabled()) //todo double call updateProbes? (State.initialized)
         val coverContext = state.coverContext()
         build.bundleCounters.calculateAndSendBuildCoverage(coverContext, build.stats.scopeCount)
         scopes.forEach { scope ->
@@ -468,8 +513,14 @@ class Plugin(
         send(buildVersion, scopeById(scopeSummary.id), scopeSummary)
     }
 
+    /**
+     * Send scopes to the admin UI
+     * @param buildVersion the build version of the scope to send
+     *
+     * @features Agent registration
+     */
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
-        val scopes = state.scopeManager.byVersion(AgentKey(agentId, buildVersion))
+        val scopes = state.scopeManager.byVersion(AgentKey(agentId, buildVersion))  //todo double get from DB (State.initialized)?
         sendScopes(buildVersion, scopes)
     }
 
@@ -754,6 +805,11 @@ class Plugin(
         sender.sendAgentAction(agentId, id, message)
     }
 
+    /**
+     * Update state of the plugin from storeClient, agentInfo and adminData
+     *
+     * @features Agent registration
+     */
     private fun changeState() {
         logger.debug { "$agentKey changing state..." }
         _state.getAndUpdate {

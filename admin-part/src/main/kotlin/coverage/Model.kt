@@ -49,6 +49,9 @@ data class InitCoverContext(
     val testsToRun: GroupedTests = emptyMap(),
 )
 
+/**
+ * Context of coverage
+ */
 data class CoverContext(
     val agentType: String,
     val packageTree: PackageTree,

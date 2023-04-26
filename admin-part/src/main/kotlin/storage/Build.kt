@@ -55,6 +55,12 @@ internal suspend fun ClassData.store(storage: StoreClient) {
 
 internal suspend fun StoreClient.removeClassData(agentKey: AgentKey) = deleteById<StoredClassData>(agentKey)
 
+/**
+ * Load information about the build
+ * @param agentKey the pair of agent ID and build version
+ *
+ * @features Agent registration
+ */
 internal suspend fun StoreClient.loadBuild(
     agentKey: AgentKey,
 ): CachedBuild? = findById<BuildStats>(agentKey)?.let { stats ->
