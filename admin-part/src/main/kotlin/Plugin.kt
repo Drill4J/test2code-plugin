@@ -182,7 +182,6 @@ class Plugin(
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
-            val labels = labels + Label("Session", newSessionId)
             scope.startSession(
                 newSessionId,
                 testType,
