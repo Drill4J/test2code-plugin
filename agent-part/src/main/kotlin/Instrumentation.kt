@@ -24,24 +24,41 @@ import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
 
 /**
- * Instrumenter type
+ *  Type of the instrumenter
  */
 typealias DrillInstrumenter = (String, Long, ByteArray) -> ByteArray?
 
 /**
- * JaCoCo instrumenter
+ * Main method that covers all instrumentation process. It will be called by agent
+ *
+ * @param probeArrayProvider
+ * @param logger
+ * @return DrillInstrumenter - wrapper of ByteArray
  */
 fun instrumenter(probeArrayProvider: ProbeArrayProvider, logger: Logger): DrillInstrumenter {
     return CustomInstrumenter(probeArrayProvider, logger)
 }
 
+/**
+ *  Count number of classes
+ */
 private val classCounter = atomic(0)
+
 
 private class CustomInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider,
     private val logger: Logger
 ) : DrillInstrumenter {
 
+    /**
+     * Start to instrument class
+     *
+     * @param className name of the class
+     * @param classId Long value in CRC64 format
+     * @param classBody content of the class
+     * @return instrumented ByteArray
+     * @features Class instrumentation, Probe inserter
+     */
     override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray? = try {
         instrument(className, classId, classBody)
     } catch (e: Exception) {
@@ -92,6 +109,12 @@ private class CustomInstrumenter(
     }
 }
 
+/**
+ * Probe counter
+ *
+ * @constructor Create empty Probe counter
+ * @features Probe inserter
+ */
 private class ProbeCounter : ClassProbesVisitor() {
     var count = 0
         private set
@@ -107,6 +130,17 @@ private class ProbeCounter : ClassProbesVisitor() {
     }
 }
 
+/**
+ *  Class provides strategy for IProbeArrayStrategy interface.
+ *
+ * @property probeArrayProvider Provides boolean array for the probe.
+ * @property className Name of the class
+ * @property classId ID of the class
+ * @property number Number of class
+ * @property probeCount Number of probes
+ * @constructor Create DrillProbeStrategy
+ * @features Class Instrumentation
+ */
 private class DrillProbeStrategy(
     private val probeArrayProvider: ProbeArrayProvider,
     private val className: String,
@@ -118,6 +152,7 @@ private class DrillProbeStrategy(
         val drillClassName = probeArrayProvider.javaClass.name.replace('.', '/')
         visitFieldInsn(Opcodes.GETSTATIC, drillClassName, "INSTANCE", "L$drillClassName;")
         // Stack[0]: Lcom/epam/drill/jacoco/Stuff;
+        //TODO investigate code
 
         visitLdcInsn(classId)
         visitLdcInsn(number)
@@ -136,6 +171,7 @@ private class DrillProbeStrategy(
 //        createDataField(cv)
     }
 }
+
 
 class DrillClassInstrumenter(
     private val probeArrayStrategy: IProbeArrayStrategy,

@@ -21,6 +21,16 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
 import org.jacoco.core.internal.data.*
 
+/**
+ * That method cover next action points:
+ * - generate IDs for classBytes
+ * - get context of the class
+ * - //TODO continue
+ *
+ * @param agentKey Identifier of the agent
+ * @return ClassData object
+ * @features Retrieve context of the classes
+ */
 fun Map<String, ByteArray>.parseClassBytes(agentKey: AgentKey): ClassData = run {
     val probeIds: Map<String, Long> = mapValues { CRC64.classId(it.value) }
     val bundleCoverage = keys.bundle(this, probeIds)

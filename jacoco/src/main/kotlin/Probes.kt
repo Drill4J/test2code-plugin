@@ -15,6 +15,15 @@
  */
 package com.epam.drill.jacoco
 
+/**
+ * Agent probes
+ *
+ * @property values
+ * @constructor
+ *
+ * @param initialSize
+ * @features Probe inserter, Retrieve exec data
+ */
 open class AgentProbes(
     initialSize: Int = 0,
     val values: BooleanArray = BooleanArray(initialSize),

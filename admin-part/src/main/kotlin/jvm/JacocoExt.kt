@@ -52,6 +52,14 @@ private fun Analyzer.analyze(
     logger.error { "Error while analyzing ${execData.name}." }
 }.getOrNull()
 
+/**
+ * Convert classBytes to BundleCounter.
+ *
+ * @param probeIds checksum of the class bytes
+ * @param classBytes Bytes of the class
+ * @return BundleCounter
+ * @features  Retrieve context of the classes
+ */
 internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,
     probeIds: Map<String, Long>,
@@ -59,12 +67,22 @@ internal fun Iterable<String>.bundle(
     forEach { name -> analyzer.analyzeClass(classBytes.getValue(name), name) }
 }.toCounter(false)
 
+/**
+ * Internal function that analyze classes from dataStore by probesID and
+ * after that invoke analyze process.
+ *
+ *
+ * @param probeIds ID for probes
+ * @param analyze implementation of  ICoverageVisitor. Sample: CustomCoverageBuilder
+ * @return IBundleCoverage (interface)
+ * @features Retrieve context of the classes
+ */
 private fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     analyze: ExecutionDataStore.(Analyzer) -> Unit,
 ): IBundleCoverage = CustomCoverageBuilder().also { coverageBuilder ->
-    val dataStore = execDataStore(probeIds)
-    val analyzer = threadSafeAnalyzer(dataStore, coverageBuilder)
+    val dataStore : ExecutionDataStore = execDataStore(probeIds)
+    val analyzer : Analyzer = threadSafeAnalyzer(dataStore, coverageBuilder)
     dataStore.analyze(analyzer)
 }.getBundle("")
 
@@ -84,6 +102,12 @@ internal fun Sequence<ExecClassData>.execDataStore(
     }
 }
 
+/**
+ * Map IBundleCoverage content to BundleCounter
+ *
+ * @param filter
+ * @features Retrieve context of the classes
+ */
 internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
     name = "",
     count = instructionCounter.toCount(),
@@ -185,6 +209,7 @@ fun parseDescType(char: Char, charIterator: CharIterator): String = when (char) 
         val objectDesc = objectDescSeq.fold(StringBuilder()) { sBuilder, c -> sBuilder.append(c) }.toString()
         objectDesc.substringAfterLast("/")
     }
+
     else -> "!Error"
 }
 

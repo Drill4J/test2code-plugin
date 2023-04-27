@@ -29,10 +29,11 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
     private final BooleanArrayProbeInserter probeInserter;
 
     /**
-     * Create a new instrumenter instance for the given method.
+     * Create a new instrumenter instance for the given MethodVisitor.
      *
      * @param mv            next method visitor in the chain
      * @param probeInserter call-back to insert probes where required
+     * @features Class Instrumentation, Probe inserter
      */
     public DrillMethodInstrumenter(final MethodVisitor mv,
                                    final BooleanArrayProbeInserter probeInserter) {
@@ -42,17 +43,50 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
 
     // === IMethodProbesVisitor ===
 
+    /**
+     * @param probeId id of the probe to insert
+     * @features Class Instrumentation, Probe inserter
+     */
     @Override
     public void visitProbe(final int probeId) {
         probeInserter.insertProbe(probeId);
     }
 
+    /**
+     *
+     * @param opcode
+     *            the opcode of the instruction to be visited. This opcode is
+     *            either IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN or
+     *            ATHROW.
+     * @param probeId
+     *            id of the probe
+     * @features Class Instrumentation, Probe inserter
+     */
     @Override
     public void visitInsnWithProbe(final int opcode, final int probeId) {
         probeInserter.insertProbe(probeId);
         mv.visitInsn(opcode);
     }
 
+    /**
+     *
+     * @param opcode
+     *            the opcode of the type instruction to be visited. This opcode
+     *            is either IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ,
+     *            IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE,
+     *            IF_ACMPEQ, IF_ACMPNE, GOTO, IFNULL or IFNONNULL.
+     * @param label
+     *            the operand of the instruction to be visited. This operand is
+     *            a label that designates the instruction to which the jump
+     *            instruction may jump.
+     * @param probeId
+     *            id of the probe
+     * @param frame
+     *            stackmap frame status after the execution of the jump
+     *            instruction. The instance is only valid with the call of this
+     *            method.
+     * @features Class Instrumentation, Probe inserter
+     */
     @Override
     public void visitJumpInsnWithProbe(final int opcode, final Label label,
                                        final int probeId, final IFrame frame) {
@@ -107,6 +141,25 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
         throw new IllegalArgumentException();
     }
 
+    /**
+     *
+     *
+     * @param min
+     *            the minimum key value.
+     * @param max
+     *            the maximum key value.
+     * @param dflt
+     *            beginning of the default handler block.
+     * @param labels
+     *            beginnings of the handler blocks. <code>labels[i]</code> is
+     *            the beginning of the handler block for the
+     *            <code>min + i</code> key.
+     * @param frame
+     *            stackmap frame status after the execution of the switch
+     *            instruction. The instance is only valid with the call of this
+     *            method.
+     * @features Class Instrumentation, Probe inserter
+     */
     @Override
     public void visitTableSwitchInsnWithProbes(final int min, final int max,
                                                final Label dflt, final Label[] labels, final IFrame frame) {
@@ -121,6 +174,22 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
         insertIntermediateProbes(dflt, labels, frame);
     }
 
+    /**
+     *
+     * @param dflt
+     *            beginning of the default handler block.
+     * @param keys
+     *            the values of the keys.
+     * @param labels
+     *            beginnings of the handler blocks. <code>labels[i]</code> is
+     *            the beginning of the handler block for the
+     *            <code>keys[i]</code> key.
+     * @param frame
+     *            stackmap frame status after the execution of the switch
+     *            instruction. The instance is only valid with the call of this
+     *            method.
+     * @features Class Instrumentation, Probe inserter
+     */
     @Override
     public void visitLookupSwitchInsnWithProbes(final Label dflt,
                                                 final int[] keys, final Label[] labels, final IFrame frame) {
@@ -159,6 +228,12 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
         return intermediate;
     }
 
+    /**
+     *
+     * @param label
+     * @param frame
+     * @features Class Instrumentation, Probe inserter
+     */
     private void insertIntermediateProbe(final Label label,
                                          final IFrame frame) {
         final int probeId = LabelInfo.getProbeId(label);

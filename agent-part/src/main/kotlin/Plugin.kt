@@ -97,6 +97,14 @@ class Plugin(
         }
     }
 
+    /**
+     * Instrument given class
+     *
+     * @param className name of the class that need to be instrumented
+     * @param initialBytes bytes of the class that need to be instrumented
+     * @return instrumented class in byte-array view
+     * @features Probe inserter
+     */
     override fun instrument(
         className: String,
         initialBytes: ByteArray,
@@ -164,6 +172,7 @@ class Plugin(
 
     /**
      * For each request we fill the thread local variable with an array of [ExecDatum]
+     * @features Retrieve exec data
      */
     fun processServerRequest() {
         (instrContext as DrillProbeArrayProvider).run {

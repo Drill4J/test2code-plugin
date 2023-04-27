@@ -62,6 +62,16 @@ public class DrillClassProbesAdapter extends ClassVisitor
 		super.visit(version, access, name, signature, superName, interfaces);
 	}
 
+	/**
+	 *  Calls after DrillMethodInstrumenter - visitMethod
+	 *
+	 * @param access
+	 * @param name
+	 * @param desc
+	 * @param signature
+	 * @param exceptions
+	 * @return
+	 */
 	@Override
 	public final MethodVisitor visitMethod(final int access, final String name,
 			final String desc, final String signature,

@@ -1,12 +1,12 @@
 /**
  * Copyright 2020 - 2022 EPAM Systems
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,6 +72,12 @@ public class BooleanArrayProbeInserter extends MethodVisitor {
         variable = pos;
     }
 
+    /**
+     * Insert probe process
+     *
+     * @param id probe id
+     * @features Probe inserter, Class Instrumentation
+     */
     public void insertProbe(final int id) {
         // For a probe we set the corresponding position in the boolean[] array
         // to true.
@@ -155,6 +161,16 @@ public class BooleanArrayProbeInserter extends MethodVisitor {
         }
     }
 
+    /**
+     * Insert probe on frame level.
+     *
+     * @param type
+     * @param nLocal
+     * @param local
+     * @param nStack
+     * @param stack
+     * @features Probe inserter
+     */
     @Override
     public final void visitFrame(final int type, final int nLocal,
                                  final Object[] local, final int nStack, final Object[] stack) {
