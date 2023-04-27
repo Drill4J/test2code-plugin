@@ -201,15 +201,7 @@ class Plugin(
                         isRealtime = isRealtime
                     )
                 ).toActionResult()
-            } ?: if (isGlobal && scope.hasActiveGlobalSession()) {
-                ActionResult(
-                    code = StatusCodes.CONFLICT,
-                    data = listOf(
-                        "Error! Only one active global session is allowed.",
-                        "Please finish the active one in order to start new."
-                    ).joinToString(" ")
-                )
-            }.toActionResult()
+            }
         }
 
         is AddSessionData -> action.payload.run {
