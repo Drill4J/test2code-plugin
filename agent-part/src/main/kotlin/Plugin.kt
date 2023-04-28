@@ -26,6 +26,9 @@ import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
 import java.util.*
 
+/**
+ * Service for managing the plugin on the agent side
+ */
 @Suppress("unused")
 class Plugin(
     id: String,

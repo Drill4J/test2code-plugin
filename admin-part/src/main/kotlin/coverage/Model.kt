@@ -80,6 +80,9 @@ data class CoverageKey(
     override fun hashCode() = id.hashCode()
 }
 
+/**
+ * Various sets of bundle counters
+ */
 @Serializable
 class BundleCounters(
     val all: BundleCounter,
@@ -104,6 +107,9 @@ sealed class NamedCounter {
     abstract val count: Count
 }
 
+/**
+ * Counter of bundles
+ */
 @Serializable
 data class BundleCounter(
     override val name: String,

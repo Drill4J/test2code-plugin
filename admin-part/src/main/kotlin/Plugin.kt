@@ -382,7 +382,8 @@ class Plugin(
     }
 
     /**
-     * todo
+     * Initialize the plugin.
+     * Send information to the admin UI
      *
      * @features Agent registration
      */
@@ -472,6 +473,9 @@ class Plugin(
         sendScopes(buildVersion)
     }
 
+    /**
+     * Send all active sessions to the admin UI
+     */
     internal suspend fun sendActiveSessions() {
         val sessions = activeScope.activeSessions.values.map {
             ActiveSessionDto(
