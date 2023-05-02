@@ -70,7 +70,8 @@ public class DrillClassProbesAdapter extends ClassVisitor
 	 * @param desc
 	 * @param signature
 	 * @param exceptions
-	 * @return
+	 * @return MethodVisitor
+	 * @features Probe inserter, Class Instrumentation
 	 */
 	@Override
 	public final MethodVisitor visitMethod(final int access, final String name,

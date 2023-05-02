@@ -142,6 +142,7 @@ public final class MethodProbesAdapter extends MethodVisitor {
      *
      * @param opcode type of instruction
      * @param label  This operand is a label that designates the instruction to which the jump instruction may jump.
+     * @features Class Instrumentation, Probe inserter
      */
     @Override
     public void visitJumpInsn(final int opcode, final Label label) {
@@ -158,6 +159,7 @@ public final class MethodProbesAdapter extends MethodVisitor {
      *
      * @param opcode value of OpCode
      * @return pop count
+     * @features Class Instrumentation, Probe inserter
      */
     private int jumpPopCount(final int opcode) {
         switch (opcode) {
@@ -222,6 +224,7 @@ public final class MethodProbesAdapter extends MethodVisitor {
      * @param dflt   label of default value
      * @param labels beginnings of the handler blocks
      * @return probe set up result
+     * @features Class Instrumentation, Probe inserter
      */
     private boolean markLabels(final Label dflt, final Label[] labels) {
         boolean probe = false;
@@ -244,6 +247,7 @@ public final class MethodProbesAdapter extends MethodVisitor {
     /**
      * @param popCount
      * @return Frame of the given popCount
+     * @features Class Instrumentation, Probe inserter
      */
     private IFrame frame(final int popCount) {
         return DrillFrameSnapshot.create(analyzer, popCount);

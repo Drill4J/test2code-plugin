@@ -152,7 +152,7 @@ class ExecRuntime(
     ): Array<ExecDatum?> = _execData.getOrPut(testKey) { updater() }
 
     /**
-     * Put
+     * Put execdata to runtime
      *
      * @param index
      * @param updater
@@ -179,9 +179,10 @@ class GlobalExecRuntime(
     internal val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
 
     /**
-     * Collect all probes in runtime
+     * Collect all probes at runtime
      *
      * @return
+     * @features Retrieve exec data
      */
     override fun collect(): Sequence<ExecDatum> = execDatum.asSequence().filterNotNull().filter { datum ->
         datum.probes.values.any { it }
@@ -208,7 +209,7 @@ class GlobalExecRuntime(
 }
 
 /**
- * Probe meta container is holding on all collected probes
+ * Probe meta container is describing probes at runtime
  *
  * @constructor Create empty Probe meta container
  * @features Probe inserter

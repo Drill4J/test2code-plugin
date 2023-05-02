@@ -15,13 +15,23 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.jacoco.*
-import com.epam.drill.jacoco.BooleanArrayProbeInserter.*
-import com.epam.drill.logger.api.*
-import kotlinx.atomicfu.*
-import org.jacoco.core.internal.flow.*
-import org.jacoco.core.internal.instr.*
-import org.objectweb.asm.*
+import com.epam.drill.jacoco.BooleanArrayProbeInserter
+import com.epam.drill.jacoco.BooleanArrayProbeInserter.PROBE_IMPL
+import com.epam.drill.jacoco.DrillClassProbesAdapter
+import com.epam.drill.jacoco.DrillDuplicateFrameEliminator
+import com.epam.drill.jacoco.DrillMethodInstrumenter
+import com.epam.drill.logger.api.Logger
+import kotlinx.atomicfu.atomic
+import org.jacoco.core.internal.flow.ClassProbesVisitor
+import org.jacoco.core.internal.flow.MethodProbesVisitor
+import org.jacoco.core.internal.instr.ClassInstrumenter
+import org.jacoco.core.internal.instr.IProbeArrayStrategy
+import org.jacoco.core.internal.instr.InstrSupport
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
 
 /**
  *  Type of the instrumenter
@@ -139,7 +149,7 @@ private class ProbeCounter : ClassProbesVisitor() {
  * @property number Number of class
  * @property probeCount Number of probes
  * @constructor Create DrillProbeStrategy
- * @features Class Instrumentation
+ * @features Probe inserter, Class Instrumentation
  */
 private class DrillProbeStrategy(
     private val probeArrayProvider: ProbeArrayProvider,
@@ -148,25 +158,45 @@ private class DrillProbeStrategy(
     private val number: Int,
     private val probeCount: Int
 ) : IProbeArrayStrategy {
+
+    /**
+     * Provide AgentProbe field
+     *
+     * @param mv instance of MethodVisitor
+     * @param clinit flag of static initializer block
+     * @param variable variable index to store probe array to
+     * @return Maximum stack size required by the generated code
+     * @features Probe inserter, Class Instrumentation
+     */
     override fun storeInstance(mv: MethodVisitor?, clinit: Boolean, variable: Int): Int = mv!!.run {
         val drillClassName = probeArrayProvider.javaClass.name.replace('.', '/')
         visitFieldInsn(Opcodes.GETSTATIC, drillClassName, "INSTANCE", "L$drillClassName;")
         // Stack[0]: Lcom/epam/drill/jacoco/Stuff;
-        //TODO investigate code
 
+        //Insert Ldc instructions
         visitLdcInsn(classId)
         visitLdcInsn(number)
         visitLdcInsn(className)
         visitLdcInsn(probeCount)
+
+        //Call invoke method
         visitMethodInsn(
             Opcodes.INVOKEVIRTUAL, drillClassName, "invoke", "(JILjava/lang/String;I)L$PROBE_IMPL;",
             false
         )
+        // Store reference into local variable
         visitVarInsn(Opcodes.ASTORE, variable)
 
         6 //stack size
     }
 
+    /**
+     * Adds additional class members required by this strategy.
+     * This method is called after all original members of the class has been processed.
+     *
+     * @param cv ClassVisitor instance
+     * @param probeCount Total number of probes required for this class
+     */
     override fun addMembers(cv: ClassVisitor?, probeCount: Int) {
 //        createDataField(cv)
     }

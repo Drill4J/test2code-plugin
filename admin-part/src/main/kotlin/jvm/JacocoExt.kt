@@ -15,17 +15,30 @@
  */
 package com.epam.drill.plugins.test2code.jvm
 
-import com.epam.drill.jacoco.*
-import com.epam.drill.plugins.test2code.*
-import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.util.*
-import com.epam.dsm.util.*
-import org.jacoco.core.analysis.*
-import org.jacoco.core.data.*
-import org.jacoco.core.internal.analysis.*
-import java.util.concurrent.*
+import com.epam.drill.jacoco.CustomCoverageBuilder
+import com.epam.drill.plugins.test2code.api.Count
+import com.epam.drill.plugins.test2code.api.covered
+import com.epam.drill.plugins.test2code.common.api.ExecClassData
+import com.epam.drill.plugins.test2code.common.api.toBooleanArray
+import com.epam.drill.plugins.test2code.coverage.BundleCounter
+import com.epam.drill.plugins.test2code.coverage.ClassCounter
+import com.epam.drill.plugins.test2code.coverage.MethodCounter
+import com.epam.drill.plugins.test2code.coverage.PackageCounter
+import com.epam.drill.plugins.test2code.logger
+import com.epam.drill.plugins.test2code.util.classname
+import com.epam.drill.plugins.test2code.util.fullMethodName
+import com.epam.drill.plugins.test2code.util.methodName
+import com.epam.drill.plugins.test2code.util.percentOf
+import com.epam.drill.plugins.test2code.util.signature
+import com.epam.dsm.util.weakIntern
+import org.jacoco.core.analysis.Analyzer
+import org.jacoco.core.analysis.IBundleCoverage
+import org.jacoco.core.analysis.ICounter
+import org.jacoco.core.analysis.ICoverageNode
+import org.jacoco.core.data.ExecutionData
+import org.jacoco.core.data.ExecutionDataStore
+import org.jacoco.core.internal.analysis.StringPool
+import java.util.concurrent.ConcurrentHashMap
 
 private val logger = logger {}
 
@@ -57,7 +70,7 @@ private fun Analyzer.analyze(
  *
  * @param probeIds checksum of the class bytes
  * @param classBytes Bytes of the class
- * @return BundleCounter
+ * @return instance of BundleCounter
  * @features  Retrieve context of the classes
  */
 internal fun Iterable<String>.bundle(
@@ -81,8 +94,8 @@ private fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     analyze: ExecutionDataStore.(Analyzer) -> Unit,
 ): IBundleCoverage = CustomCoverageBuilder().also { coverageBuilder ->
-    val dataStore : ExecutionDataStore = execDataStore(probeIds)
-    val analyzer : Analyzer = threadSafeAnalyzer(dataStore, coverageBuilder)
+    val dataStore: ExecutionDataStore = execDataStore(probeIds)
+    val analyzer: Analyzer = threadSafeAnalyzer(dataStore, coverageBuilder)
     dataStore.analyze(analyzer)
 }.getBundle("")
 
@@ -105,7 +118,7 @@ internal fun Sequence<ExecClassData>.execDataStore(
 /**
  * Map IBundleCoverage content to BundleCounter
  *
- * @param filter
+ * @param filter Flag of getting count of covered instructions in method
  * @features Retrieve context of the classes
  */
 internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(

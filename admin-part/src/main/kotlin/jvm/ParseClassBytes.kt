@@ -23,12 +23,11 @@ import org.jacoco.core.internal.data.*
 
 /**
  * That method cover next action points:
- * - generate IDs for classBytes
  * - get context of the class
- * - //TODO continue
+ * - from received class context retrieve count of methods, packages
  *
  * @param agentKey Identifier of the agent
- * @return ClassData object
+ * @return instance of ClassData
  * @features Retrieve context of the classes
  */
 fun Map<String, ByteArray>.parseClassBytes(agentKey: AgentKey): ClassData = run {

@@ -229,7 +229,7 @@ public class DrillMethodInstrumenter extends MethodProbesVisitor {
     }
 
     /**
-     *
+     * Insert probe without waiting
      * @param label
      * @param frame
      * @features Class Instrumentation, Probe inserter

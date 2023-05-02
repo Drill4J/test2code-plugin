@@ -103,7 +103,7 @@ class Plugin(
      * @param className name of the class that need to be instrumented
      * @param initialBytes bytes of the class that need to be instrumented
      * @return instrumented class in byte-array view
-     * @features Probe inserter
+     * @features Probe inserter, Class Instrumentation
      */
     override fun instrument(
         className: String,
