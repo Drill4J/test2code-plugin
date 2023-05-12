@@ -93,8 +93,7 @@ internal suspend fun Plugin.updateGateConditions(
 }
 
 /**
- * Send quality gate settings to the admin UI
- *
+ * Send quality gate settings to the Admin UI
  * @features Agent registration
  */
 internal suspend fun Plugin.sendGateSettings() {

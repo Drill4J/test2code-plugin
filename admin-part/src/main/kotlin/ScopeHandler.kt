@@ -23,6 +23,10 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 
+/**
+ * Initialize periodic job to recalculate coverage data
+ * @feature Agent registration
+ */
 internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler { sessionChanged, sessions ->
     if (sessionChanged) {
         sendActiveSessions()

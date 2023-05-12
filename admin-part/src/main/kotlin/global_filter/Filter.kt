@@ -65,8 +65,7 @@ suspend fun Plugin.sendFilterUpdates(filterId: String, filter: StoredFilter? = n
 }
 
 /**
- * Send filters to the agent part of the plugin
- *
+ * Collect and send filters to the Admin UI
  * @features Agent registration
  */
 suspend fun Plugin.sendFilters() {

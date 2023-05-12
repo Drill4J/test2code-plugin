@@ -67,6 +67,10 @@ class Plugin(
     //TODO remove
     override fun isEnabled(): Boolean = _enabled.value
 
+    /**
+     * Launch the plugin
+     * @feature Agent registration
+     */
     override fun on() {
         val initInfo = InitInfo(message = "Initializing plugin $id...")
         sendMessage(initInfo)

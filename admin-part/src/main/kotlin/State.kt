@@ -99,6 +99,17 @@ internal class AgentState(
 
     private val mutex = Mutex()
 
+    /**
+     * Initialize state of the plugin
+     * - Converts DataBuilder to ClassData if the data state is DataBuilder class
+     * - Load class bytes from the database if the data state is NoData class
+     * - Updates class data state
+     * - Stores class data to the database
+     * - Initializes class data
+     * - Call the block
+     * @param block the function which will be called in the end
+     * @feature Agent registration
+     */
     suspend fun initialized(block: suspend () -> Unit = {}): Unit = mutex.withLock {
         logger.debug { "initialized by event from agent..." }.also { logPoolStats() }
         _data.getAndUpdate {
@@ -141,9 +152,7 @@ internal class AgentState(
 
     /**
      * Initialize the state of the agent data from DB
-     *
      * @param classData the data of agent classes
-     *
      * @features Agent registration
      */
     private suspend fun initialized(classData: ClassData) {
@@ -308,7 +317,6 @@ internal class AgentState(
 
     /**
      * Update an active scope
-     *
      * @features Agent registration
      */
     private suspend fun initActiveScope() {

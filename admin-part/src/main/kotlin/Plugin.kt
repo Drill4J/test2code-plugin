@@ -89,7 +89,6 @@ class Plugin(
 
     /**
      * Initialize the plugin state
-     *
      * @features Agent registration
      */
     override suspend fun initialize() {
@@ -356,6 +355,10 @@ class Plugin(
             message.ids.forEach { state.finishSession(it) }
         }
         //TODO EPMDJ-10398 send on agent attach
+        /**
+         * Find inactive sessions and send them for cancellation on the agent side
+         * @feature Agent attaching
+         */
         is SyncMessage -> message.run {
             logger.info { "Active session ids from agent: $activeSessions" }
             activeSessions.filter { it !in activeScope.activeSessions }.forEach {
@@ -384,7 +387,6 @@ class Plugin(
     /**
      * Initialize the plugin.
      * Send information to the admin UI
-     *
      * @features Agent registration
      */
     private suspend fun Plugin.processInitialized(): Boolean {
@@ -402,8 +404,7 @@ class Plugin(
     }
 
     /**
-     * Send a parent build version to the admin UI
-     *
+     * Send a parent build version to the Admin UI
      * @features Agent registration
      */
     private suspend fun sendParentBuild() = send(
@@ -413,8 +414,7 @@ class Plugin(
     )
 
     /**
-     * Send a baseline build version to the admin UI
-     *
+     * Send a baseline build version to the Admin UI
      * @features Agent registration
      */
     internal suspend fun sendBaseline() = send(
@@ -424,8 +424,7 @@ class Plugin(
     )
 
     /**
-     * Send a test to run summary to the admin UI
-     *
+     * Send a test to run summary to the Admin UI
      * @features Agent registration
      */
     private suspend fun sendParentTestsToRunStats() = send(
@@ -439,8 +438,7 @@ class Plugin(
     )
 
     /**
-     * Send build statistics to the admin UI
-     *
+     * Send build statistics to the Admin UI
      * @features Agent registration
      */
     private suspend fun ClassData.sendBuildStats() {
@@ -448,8 +446,7 @@ class Plugin(
     }
 
     /**
-     * Calculate coverage and send to the admin UI
-     *
+     * Calculate coverage and send to the Admin UI
      * @features Agent registration
      */
     private suspend fun calculateAndSendCachedCoverage() = state.coverContext().build.let { build ->
@@ -474,7 +471,7 @@ class Plugin(
     }
 
     /**
-     * Send all active sessions to the admin UI
+     * Send all active sessions to the Admin UI
      */
     internal suspend fun sendActiveSessions() {
         val sessions = activeScope.activeSessions.values.map {
@@ -518,9 +515,8 @@ class Plugin(
     }
 
     /**
-     * Send scopes to the admin UI
+     * Send scopes to the Admin UI
      * @param buildVersion the build version of the scope to send
-     *
      * @features Agent registration
      */
     internal suspend fun sendScopes(buildVersion: String = this.buildVersion) {
@@ -810,8 +806,7 @@ class Plugin(
     }
 
     /**
-     * Update state of the plugin from storeClient, agentInfo and adminData
-     *
+     * Update agent state of the plugin and close an active scope
      * @features Agent registration
      */
     private fun changeState() {
@@ -825,6 +820,12 @@ class Plugin(
         }?.close()
     }
 
+    /**
+     * Calculate all associated tests
+     * @param scope the current scope
+     * @param filterId the filter
+     * @features Agent registration
+     */
     internal suspend fun BundleCounters.assocTestsJob(
         scope: Scope? = null,
         filterId: String = "",
