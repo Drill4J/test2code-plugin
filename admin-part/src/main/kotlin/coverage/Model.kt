@@ -51,6 +51,15 @@ data class InitCoverContext(
 
 /**
  * Context of coverage
+ * @param agentType the agent type
+ * @param packageTree summary of packages, classes and methods
+ * @param methods the list of all methods
+ * @param methodChanges summary of added, changed, removed methods
+ * @param probeIds the map where key is class name and value is a csr value of the class name
+ * @param build information about the current build
+ * @param parentBuild information about the previous build
+ * @param testsToRun the map of testing data
+ * @param testsToRunParentDurations duration of tests performed
  */
 data class CoverContext(
     val agentType: String,

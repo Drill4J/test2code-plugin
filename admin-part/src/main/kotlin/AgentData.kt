@@ -53,6 +53,10 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 
 /**
  * Data for java-agent
+ * @param agentKey the pair of the agent ID and the build version
+ * @param packageTree summary of packages, classes and methods
+ * @param methods the list of all methods
+ * @param probeIds the map where key is class name and value is a csr value of the class name
  */
 @Serializable
 data class ClassData(

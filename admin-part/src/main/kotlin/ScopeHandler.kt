@@ -24,8 +24,8 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 
 /**
- * Initialize periodic job to recalculate coverage data
- * @feature Agent registration
+ * Initialize periodic job to recalculate coverage data and send it to the UI
+ * @features Session starting, Session finishing, Sending coverage data, Scope finishing
  */
 internal fun Plugin.initActiveScope(): Boolean = activeScope.initRealtimeHandler { sessionChanged, sessions ->
     if (sessionChanged) {
@@ -61,6 +61,11 @@ internal fun Plugin.initBundleHandler(): Boolean = activeScope.initBundleHandler
 }
 
 
+/**
+ * Finish the current active scope and start a new one
+ * @param scopeChange the action payload to finish the scope
+ * @features Scope finishing
+ */
 internal suspend fun Plugin.changeActiveScope(
     scopeChange: ActiveScopeChangePayload,
 ): ActionResult = if (state.scopeByName(scopeChange.scopeName) == null) {
@@ -103,6 +108,14 @@ internal suspend fun Plugin.changeActiveScope(
     data = "Failed to switch to a new scope: name ${scopeChange.scopeName} is already in use"
 )
 
+/**
+ * Initialize the active scope:
+ * - resume the jobs for a new active scope
+ * - recalculate coverage data by the enabled finished scopes
+ * - calculate coverage data for the active scope
+ * @param prevId the previous scope ID
+ * @features Scope finishing
+ */
 internal suspend fun Plugin.scopeInitialized(prevId: String) {
     if (initActiveScope() && initBundleHandler()) {
         sendScopes()
@@ -162,6 +175,11 @@ internal suspend fun Plugin.dropScope(scopeId: String): ActionResult {
     )
 }
 
+/**
+ * Clean the scope data which was sent to the UI
+ * @param scopeId the scope ID which data need to clean
+ * @features Scope finishing
+ */
 private suspend fun Plugin.cleanTopics(scopeId: String) = scopeById(scopeId).let { scope ->
     val coverageRoute = Routes.Build.Scopes.Scope.Coverage(scope)
     send(buildVersion, coverageRoute, "")

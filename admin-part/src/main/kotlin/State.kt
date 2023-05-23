@@ -108,7 +108,7 @@ internal class AgentState(
      * - Initializes class data
      * - Call the block
      * @param block the function which will be called in the end
-     * @feature Agent registration
+     * @features Agent registration
      */
     suspend fun initialized(block: suspend () -> Unit = {}): Unit = mutex.withLock {
         logger.debug { "initialized by event from agent..." }.also { logPoolStats() }
@@ -221,6 +221,11 @@ internal class AgentState(
         initActiveScope()
     }
 
+    /**
+     * Finish the test session
+     * @param sessionId the session ID which need to finish
+     * @features Session finishing, Scope finishing
+     */
     internal suspend fun finishSession(
         sessionId: String,
     ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
@@ -339,6 +344,12 @@ internal class AgentState(
         } ?: storeActiveScopeInfo()
     }
 
+    /**
+     * Change the active scope state to a new one and close the previous scope
+     * @param name the name of a new scope
+     * @return the previous instance of the active scope state
+     * @features Scope finishing
+     */
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
         ActiveScope(
             nth = it.nth.inc(),
@@ -349,6 +360,10 @@ internal class AgentState(
 
     private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentKey)
 
+    /**
+     * Store the active scope to the database
+     * @features Scope finishing
+     */
     suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
         scopeManager.storeCounter(
             activeScope.run {

@@ -108,6 +108,13 @@ enum class TestResult {
     UNKNOWN
 }
 
+/**
+ * The action payload to finish the scope
+ * @param scopeName the next scope name
+ * @param savePrevScope a sign of the need to save the previous state
+ * @param prevScopeEnabled todo
+ * @param forceFinish todo
+ */
 @Serializable
 data class ActiveScopeChangePayload(
     val scopeName: String,

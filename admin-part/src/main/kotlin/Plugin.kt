@@ -118,6 +118,9 @@ class Plugin(
         data: Any?,
     ): ActionResult = when (action) {
         is ToggleBaseline -> toggleBaseline()
+        /**
+         * @features Scope finishing
+         */
         is SwitchActiveScope -> changeActiveScope(action.payload).also {
             sendLabels()
         }
@@ -185,6 +188,9 @@ class Plugin(
         }
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
+        /**
+         * @features Session starting
+         */
         is StartNewSession -> action.payload.run {
             val newSessionId = sessionId.ifEmpty(::genUuid)
             val isRealtimeSession = runtimeConfig.realtime && isRealtime
@@ -219,6 +225,9 @@ class Plugin(
                 message = "Session with such ID already exists. Please choose a different ID."
             ).toActionResult(StatusCodes.CONFLICT)
         }
+        /**
+         * @features Running tests
+         */
         is AddSessionData -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 ActionResult(
@@ -260,6 +269,9 @@ class Plugin(
             activeScope.cancelAllSessions()
             CancelAllAgentSessions.toActionResult()
         }
+        /**
+         * @features Running tests
+         */
         is AddTests -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 session.addTests(tests)
@@ -270,6 +282,9 @@ class Plugin(
                     )).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+        /**
+         * @features Session finishing
+         */
         is StopSession -> action.payload.run {
             activeScope.activeSessionOrNull(sessionId)?.let { session ->
                 session.addTests(tests)
@@ -292,6 +307,11 @@ class Plugin(
         return ActionResult(code = StatusCodes.OK, data = filterId)
     }
 
+    /**
+     * Process data from agents
+     * @param instanceId the agent instance ID
+     * @param content data to be processed
+     */
     override suspend fun processData(
         instanceId: String,
         content: String,
@@ -327,6 +347,9 @@ class Plugin(
         is Initialized -> state.initialized {
             processInitialized()
         }
+        /**
+         * @features Session starting
+         */
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
             .also { logPoolStats() }
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
@@ -344,6 +367,9 @@ class Plugin(
         is SessionChanged -> activeScope.takeIf { scope ->
             scope.activeSessions.values.any { it.isRealtime }
         }?.apply { probesChanged() }
+        /**
+         * @features Session finishing
+         */
         is SessionFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             state.finishSession(message.sessionId) ?: logger.info {
@@ -357,7 +383,7 @@ class Plugin(
         //TODO EPMDJ-10398 send on agent attach
         /**
          * Find inactive sessions and send them for cancellation on the agent side
-         * @feature Agent attaching
+         * @features Agent attaching
          */
         is SyncMessage -> message.run {
             logger.info { "Active session ids from agent: $activeSessions" }
@@ -404,7 +430,7 @@ class Plugin(
     }
 
     /**
-     * Send a parent build version to the Admin UI
+     * Send a parent build version to the UI
      * @features Agent registration
      */
     private suspend fun sendParentBuild() = send(
@@ -414,7 +440,7 @@ class Plugin(
     )
 
     /**
-     * Send a baseline build version to the Admin UI
+     * Send a baseline build version to the UI
      * @features Agent registration
      */
     internal suspend fun sendBaseline() = send(
@@ -424,7 +450,7 @@ class Plugin(
     )
 
     /**
-     * Send a test to run summary to the Admin UI
+     * Send a test to run summary to the UI
      * @features Agent registration
      */
     private suspend fun sendParentTestsToRunStats() = send(
@@ -438,7 +464,7 @@ class Plugin(
     )
 
     /**
-     * Send build statistics to the Admin UI
+     * Send build statistics to the UI
      * @features Agent registration
      */
     private suspend fun ClassData.sendBuildStats() {
@@ -446,7 +472,7 @@ class Plugin(
     }
 
     /**
-     * Calculate coverage and send to the Admin UI
+     * Calculate coverage and send to the UI
      * @features Agent registration
      */
     private suspend fun calculateAndSendCachedCoverage() = state.coverContext().build.let { build ->
@@ -471,7 +497,8 @@ class Plugin(
     }
 
     /**
-     * Send all active sessions to the Admin UI
+     * Send all active sessions to the UI
+     * @features Scope finishing, Session starting
      */
     internal suspend fun sendActiveSessions() {
         val sessions = activeScope.activeSessions.values.map {
@@ -501,12 +528,22 @@ class Plugin(
         }
     }
 
+    /**
+     * Send information about the active scope and the scope summary to the UI
+     * @features Sending coverage data, Scope finishing
+     */
     internal suspend fun sendActiveScope() {
         val summary = activeScope.summary
         send(buildVersion, Routes.ActiveScope(), summary)
         sendScopeSummary(summary)
     }
 
+    /**
+     * Send information about the scope summary to the UI
+     * @param scopeSummary the scope summary
+     * @param buildVersion the version of the build which need to summarize information
+     * @features Sending coverage data, Scope finishing
+     */
     internal suspend fun sendScopeSummary(
         scopeSummary: ScopeSummary,
         buildVersion: String = this.buildVersion,
@@ -515,7 +552,7 @@ class Plugin(
     }
 
     /**
-     * Send scopes to the Admin UI
+     * Send scopes to the UI
      * @param buildVersion the build version of the scope to send
      * @features Agent registration
      */
@@ -570,6 +607,10 @@ class Plugin(
     }
 
 
+    /**
+     * Recalculate test coverage data by enabled finished scopes and send it to the UI
+     * @features Scope finishing
+     */
     internal suspend fun calculateAndSendBuildCoverage() {
         val scopes = state.scopeManager.run {
             byVersion(agentKey, withData = true).enabled()
@@ -577,6 +618,10 @@ class Plugin(
         scopes.calculateAndSendBuildCoverage(state.coverContext())
     }
 
+    /**
+     * Calculate coverage data by the sequence of the finished scopes
+     * @features Scope finishing
+     */
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {
         state.updateProbes(this)
         logger.debug { "Start to calculate BundleCounters of build" }
@@ -740,6 +785,10 @@ class Plugin(
         }
     }
 
+    /**
+     * Calculate test coverage data for the active scope
+     * @features Scope finishing
+     */
     internal suspend fun calculateAndSendScopeCoverage() = activeScope.let { scope ->
         val context = state.coverContext()
         val bundleCounters = scope.calcBundleCounters(context, adminData.loadClassBytes(buildVersion))
@@ -821,10 +870,10 @@ class Plugin(
     }
 
     /**
-     * Calculate all associated tests
+     * Calculate all associated tests and send to the UI
      * @param scope the current scope
      * @param filterId the filter
-     * @features Agent registration
+     * @features Agent registration, Test running
      */
     internal suspend fun BundleCounters.assocTestsJob(
         scope: Scope? = null,
@@ -856,6 +905,10 @@ class Plugin(
         }
     }
 
+    /**
+     * Calculate created, modified and deleted methods
+     * @features Agent registration, Scope finished, Test running
+     */
     internal suspend fun BundleCounters.coveredMethodsJob(
         scopeId: String? = null,
         context: CoverContext = state.coverContext(),

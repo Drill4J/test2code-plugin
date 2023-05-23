@@ -33,8 +33,8 @@ data class LabelMarker(val name: String, val isLabel: Boolean = true)
 private val propertyNames = staticPropertyNames()
 
 /**
- * Collect and send labels to the Admin UI
- * @features Agent registration
+ * Collect and send labels to the UI
+ * @features Agent registration, Scope finishing
  */
 suspend fun Plugin.sendLabels() {
     val attributesRoute = Routes.Build().let(Routes.Build::Attributes)

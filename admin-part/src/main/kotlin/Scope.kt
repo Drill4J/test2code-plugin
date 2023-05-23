@@ -46,6 +46,14 @@ typealias BundleCacheHandler = suspend ActiveScope.(Map<TestKey, Sequence<ExecCl
 
 private val logger = logger {}
 
+/**
+ * State of an active scope
+ * @param id the scope ID
+ * @param agentKey todo
+ * @param nth todo
+ * @param name the scope name
+ * @param sessions all finished sessions in the scope
+ */
 class ActiveScope(
     override val id: String = genUuid(),
     override val agentKey: AgentKey,
@@ -138,6 +146,11 @@ class ActiveScope(
 
     fun rename(name: String): ScopeSummary = _summary.updateAndGet { it.copy(name = name) }
 
+    /**
+     * Create a FinishScope instance from the active scope state
+     * @param enabled todo
+     * @features Scope finishing
+     */
     fun finish(enabled: Boolean) = FinishedScope(
         id = id,
         agentKey = agentKey,
@@ -155,6 +168,10 @@ class ActiveScope(
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
+    /**
+     * todo
+     * @features Test running
+     */
     fun startSession(
         sessionId: String,
         testType: String,
@@ -212,6 +229,10 @@ class ActiveScope(
         } else sessionsChanged()
     }
 
+    /**
+     * todo
+     * @features Finishing a test session
+     */
     fun finishSession(
         sessionId: String,
     ): FinishedSession? = removeSession(sessionId)?.run {
@@ -229,6 +250,12 @@ class ActiveScope(
     }
 
 
+    /**
+     * Close the active scope:
+     * - clear the active sessions
+     * - suspend all the scope jobs
+     * @features Scope finishing
+     */
     fun close() {
         logger.debug { "closing active scope $id..." }
         _change.value = null
@@ -239,6 +266,10 @@ class ActiveScope(
 
     override fun toString() = "act-scope($id, $name)"
 
+    /**
+     * todo
+     * @features Test running
+     */
     private fun sessionsChanged() {
         _change.update {
             when (it) {

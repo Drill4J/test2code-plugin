@@ -44,6 +44,15 @@ data class ActionScopeResult(
     val prevId: String,
 )
 
+/**
+ * Information about a started test session
+ * @param sessionId the started session ID
+ * @param testType the type of the test (AUTO, MANUAL)
+ * @param testName the name of first running test
+ * @param isRealtime a sign that it is necessary to collect test coverage in real time
+ * @param isGlobal a sign that the session is global
+ * @features Test running
+ */
 @Serializable
 data class StartSessionPayload(
     val sessionId: String,

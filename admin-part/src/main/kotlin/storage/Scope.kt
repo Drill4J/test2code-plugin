@@ -36,8 +36,7 @@ class ScopeManager(private val storage: StoreClient) {
      * @param agentKey the pair of agent ID and the build version
      * @param withData the sign of the need to load scope data
      * @return a sequences of finished scopes
-     *
-     * @features Agent registration
+     * @features Agent registration, Scope finishing
      */
     suspend fun byVersion(
         agentKey: AgentKey,
@@ -57,6 +56,11 @@ class ScopeManager(private val storage: StoreClient) {
         }
     }.asSequence()
 
+    /**
+     * Store the finished scope to the database
+     * @param scope the finished scope
+     * @features Scope finishing
+     */
     suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
             trackTime("Store FinishedScope") {
