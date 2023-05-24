@@ -172,7 +172,7 @@ class GlobalExecRuntime(
 
     /**
      * Get probes from the completed tests
-     * @feature Coverage data sending
+     * @features Coverage data sending
      */
     override fun collect(): Sequence<ExecDatum> = execDatum.asSequence().filterNotNull().filter { datum ->
         datum.probes.values.any { it }

@@ -123,7 +123,7 @@ class Plugin(
     override suspend fun doAction(action: AgentAction) {
         when (action) {
             /**
-             * @feature Session starting
+             * @features Session starting
              */
             is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }

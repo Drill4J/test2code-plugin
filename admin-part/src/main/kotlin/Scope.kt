@@ -169,8 +169,8 @@ class ActiveScope(
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
     /**
-     * todo
-     * @features Test running
+     * Start the test session
+     * @features Session starting
      */
     fun startSession(
         sessionId: String,
@@ -230,8 +230,10 @@ class ActiveScope(
     }
 
     /**
-     * todo
-     * @features Finishing a test session
+     * Finish the test session
+     * @param sessionId the test session ID
+     * @return the finished session
+     * @features Session finishing
      */
     fun finishSession(
         sessionId: String,
@@ -267,8 +269,8 @@ class ActiveScope(
     override fun toString() = "act-scope($id, $name)"
 
     /**
-     * todo
-     * @features Test running
+     * Set a sign that the session has been changed
+     * @features Session starting
      */
     private fun sessionsChanged() {
         _change.update {
