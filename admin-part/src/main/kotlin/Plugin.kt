@@ -483,12 +483,6 @@ class Plugin(
         }
     }
 
-    internal suspend fun sendActiveScope() {
-        val summary = scope.summary
-        send(buildVersion, Routes.ActiveScope(), summary)
-        sendScopeSummary(summary)
-    }
-
     internal suspend fun sendScope() {
         val summary = scope.summary
         send(buildVersion, Routes.ActiveScope(), summary)
@@ -553,7 +547,6 @@ class Plugin(
         return filterId
     }
 
-    //TODO get the only one scope and calculate build coverage
     internal suspend fun calculateAndSendBuildCoverage() {
         val sessions = state.scope.sessions().asSequence()
         sessions.calculateAndSendBuildCoverage(state.coverContext())

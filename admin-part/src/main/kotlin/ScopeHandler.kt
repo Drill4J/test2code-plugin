@@ -32,13 +32,17 @@ internal fun Plugin.initActiveScope(): Boolean = scope.initRealtimeHandler { ses
     }
     sessions?.let {
         val context = state.coverContext()
-        val bundleCounters = trackTime("bundleCounters") {
-            sessions.calcBundleCounters(context, state.classBytes(buildVersion), bundleByTests)
+        // calculate bundle counters model
+        val bundleCounters = trackTime("bundleCounters-init-active-scope") {
+            sessions.calcBundleCounters(context, state.classBytes(buildVersion), bundleByTests) // what the session we use here?
         }.also { logPoolStats() }
+        // ScopeCoverage
         val coverageInfoSet = trackTime("coverageInfoSet") {
             bundleCounters.calculateCoverageData(context, this)
         }.also { logPoolStats() }
+        // update summary field at scope
         updateSummary { it.copy(coverage = coverageInfoSet.coverage as ScopeCoverage) }
+        // /active-scope
         sendScope()
         coverageInfoSet.sendScopeCoverage(buildVersion, id)
         if (sessionChanged) {
@@ -116,7 +120,7 @@ internal suspend fun Plugin.changeActiveScope(
         val prevScope = state.changeActiveScope()
         state.storeActiveScopeInfo()
         sendActiveSessions()
-        sendActiveScope()
+        sendScope()
         if (scopeChange.savePrevScope) {
             if (prevScope.any()) {
                 logger.debug { "finish scope with id=${prevScope.id}" }.also { logPoolStats() }
@@ -188,24 +192,4 @@ internal suspend fun Plugin.toggleScope(scopeId: String): ActionResult {
         StatusCodes.NOT_FOUND,
         "Failed to toggle scope with id $scopeId: scope not found"
     )
-}
-
-internal fun Plugin.initScope(): Boolean = scope.initRealtimeHandler { sessionChanged, sessions ->
-    if (sessionChanged) {
-        sendActiveSessions()
-    }
-    sessions?.let {
-        val context = state.coverContext()
-        val bundleCounters = trackTime("bundleCounters") {
-            sessions.calcBundleCounters(context, state.classBytes(buildVersion), bundleByTests)
-        }.also { logPoolStats() }
-        val coverageInfoSet = trackTime("coverageInfoSet") {
-            bundleCounters.calculateCoverageData(context, this)
-        }.also { logPoolStats() }
-        coverageInfoSet.sendScopeCoverage(id, buildVersion)
-        if (sessionChanged) {
-            bundleCounters.assocTestsJob(this)
-            bundleCounters.coveredMethodsJob()
-        }
-    }
 }

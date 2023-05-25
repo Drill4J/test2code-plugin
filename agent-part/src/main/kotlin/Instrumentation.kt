@@ -156,6 +156,7 @@ class DrillClassInstrumenter(
             exceptions
         )
         val frameEliminator: MethodVisitor = DrillDuplicateFrameEliminator(mv)
+        // provide AgentProbe at the beginning og the method
         val probeVariableInserter = BooleanArrayProbeInserter(
             access,
             name,

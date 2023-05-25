@@ -185,6 +185,7 @@ class GlobalExecRuntime(
         )
     }
 
+    // create new global runtime
     override fun put(index: Int, updater: (TestKey) -> ExecDatum) {
         runCatching { execDatum[index] = updater(TestKey(testName, testName.id())) }.onFailure {
             logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
@@ -269,6 +270,7 @@ open class SimpleSessionProbeArrayProvider(
 
     private val stubProbes = StubAgentProbes()
 
+    // Instance will invoke that method at the instrumented method
     override fun invoke(
         id: Long,
         num: Int,
@@ -370,6 +372,7 @@ open class SimpleSessionProbeArrayProvider(
     }?.also(ExecRuntime::close)
 
     fun ExecData.fillFromMeta(testKey: TestKey) {
+        // initial fill probes from meta container
         val (testName, testId) = testKey
         probeMetaContainer.forEachIndexed { inx, probeDescriptor ->
             if (probeDescriptor != null)
