@@ -34,6 +34,11 @@ private val ldcInstructions = listOf(
     Const.LDC2_W_QUICK
 )
 
+/**
+ *  That class has patched method codeToString.
+ *  Patched part you can find by 'patch'
+ *  Link to documentation: TODO add link
+ */
 class LambdaParser(
     private val bootstrapMethods: Array<BootstrapMethod>,
     private val lambdaMethods: Map<String, Method>
@@ -68,6 +73,9 @@ class LambdaParser(
         return buf.toString()
     }
 
+    /**
+     * Patched method from Bcel Utility class.
+     */
     @Throws(IOException::class)
     fun codeToString(
         bytes: ByteSequence,
@@ -217,6 +225,7 @@ class LambdaParser(
                     .append(if (verbose) " ($index)\t" else "").append(nargs).append("\t")
                     .append(bytes.readUnsignedByte()) // Last byte is a reserved space
             }
+            // *patch* start
             Const.INVOKEDYNAMIC -> {
                 index = bytes.readUnsignedShort()
                 val const = constant_pool.getConstant(index, Const.CONSTANT_InvokeDynamic)
@@ -237,6 +246,7 @@ class LambdaParser(
                         }
                 }
             }
+            // *patch* end
             Const.LDC_W, Const.LDC2_W -> {
                 index = bytes.readUnsignedShort()
                 buf.append("\t\t").append(
