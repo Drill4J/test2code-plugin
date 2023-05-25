@@ -21,6 +21,11 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 
+/**
+ * Build collection of java packages from ast collection
+ * @return list of java packages
+ * @features Agent registration
+ */
 internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
     groupBy(AstEntity::path).entries.map { (path, astEntities) ->
         JavaPackageCoverage(

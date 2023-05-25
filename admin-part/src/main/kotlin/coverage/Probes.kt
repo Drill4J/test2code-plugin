@@ -19,10 +19,16 @@ import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.collections.immutable.*
 
+/**
+ * Merge probes in same classes
+ */
 internal fun Sequence<ExecClassData>.merge(): PersistentMap<Long, ExecClassData> = run {
     persistentMapOf<Long, ExecClassData>().merge(this)
 }
 
+/**
+ * Merge probes in same classes
+ */
 internal fun PersistentMap<Long, ExecClassData>.merge(
     probes: Sequence<ExecClassData>,
 ): PersistentMap<Long, ExecClassData> = if (probes.any()) {
@@ -33,6 +39,11 @@ internal fun PersistentMap<Long, ExecClassData>.merge(
     }
 } else this
 
+/**
+ * Calculate the intersection of probes by class
+ * @param other probes of the class with which the intersection is calculated
+ * @return a map of only intersecting probes
+ */
 internal fun PersistentMap<Long, ExecClassData>.intersect(
     other: Sequence<ExecClassData>,
 ): PersistentMap<Long, ExecClassData> = if (any() && other.any()) {
@@ -47,6 +58,9 @@ internal fun PersistentMap<Long, ExecClassData>.intersect(
     }
 } else persistentMapOf()
 
+/**
+ * Merge probes of two classes
+ */
 internal fun ExecClassData.merge(other: ExecClassData): ExecClassData = copy(
     probes = probes.merge(other.probes)
 )

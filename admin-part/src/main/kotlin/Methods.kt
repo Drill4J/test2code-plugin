@@ -23,6 +23,14 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
 
+/**
+ * Method model
+ * @param ownerClass the method's class name
+ * @param name the method's name
+ * @param desc the description
+ * @param hash the hash of the method body
+ * @param lambdasHash the hash of the lambda
+ */
 @Serializable
 data class Method(
     val ownerClass: String,

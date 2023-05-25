@@ -619,7 +619,7 @@ class Plugin(
     }
 
     /**
-     * Calculate coverage data by the sequence of the finished scopes
+     * Calculate coverage data by finished scopes
      * @features Scope finishing
      */
     private suspend fun Sequence<FinishedScope>.calculateAndSendBuildCoverage(context: CoverContext) {

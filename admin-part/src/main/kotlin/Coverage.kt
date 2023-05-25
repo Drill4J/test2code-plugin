@@ -34,6 +34,14 @@ import java.util.stream.*
 
 private val logger = logger {}
 
+/**
+ * Calculate build coverage counters by test sessions
+ * @param context the build context
+ * @param classBytes java class bytes of the build
+ * @param cache the current cache of build coverage
+ * @return various sets of build coverages
+ * @features Scope finishing
+ */
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
@@ -79,6 +87,14 @@ internal fun Sequence<Session>.calcBundleCounters(
     )
 }
 
+/**
+ * Calculate build coverage counters by filtered tests
+ * @param context the build context
+ * @param classBytes java class bytes of the build
+ * @param storeClient the store client
+ * @param agentKey the pair of agent ID and build version
+ * @return various sets of build coverages
+ */
 suspend fun List<TestOverviewFilter>.calcBundleCounters(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
@@ -108,6 +124,12 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
     )
 }
 
+/**
+ * Calculate coverage data by scope
+ * @param context the build context
+ * @param scope the scope
+ * @return various sets of coverage information
+ */
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null,
@@ -187,6 +209,12 @@ internal fun BundleCounters.calculateCoverageData(
     )
 }
 
+/**
+ * Calculate coverage data by test types
+ * @param bundleMap the map of build coverage counters
+ * @param context the build context
+ * @param byOverview results of the completed tests
+ */
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TestKey, BundleCounter>,
     context: CoverContext,
@@ -231,7 +259,13 @@ private fun Sequence<Session>.testsWithBundle(
     BundleCounter.empty
 }
 
-
+/**
+ * Calculate an overlapping build coverage counters between current and previous build coverage
+ * @param context the context of the coverage
+ * @param classBytes the map when keys are class names and values are class bytes
+ * @return a calculated build coverage
+ * @features Scope finishing
+ */
 internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
@@ -239,6 +273,13 @@ internal fun Sequence<ExecClassData>.overlappingBundle(
     values.asSequence()
 }.bundle(context, classBytes)
 
+/**
+ * Calculate a total build coverage counters
+ * @param context the context of the coverage
+ * @param classBytes the map when keys are class names and values are class bytes
+ * @return a calculated build coverage
+ * @features Scope finishing
+ */
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,

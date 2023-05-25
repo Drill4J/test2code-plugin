@@ -26,9 +26,19 @@ import kotlinx.serialization.*
 
 private val logger = logger {}
 
+/**
+ * Test session
+ */
 @Serializable
 sealed class Session : Sequence<ExecClassData> {
+    /**
+     * The session ID
+     */
     abstract val id: String
+
+    /**
+     * The type of tests (for example: AUTO, MANUAL)
+     */
     abstract val testType: String
 
     /**

@@ -20,6 +20,12 @@ import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 
+/**
+ * Calculate a build coverage for non java agents
+ * @param tree the tree of application packages
+ * @return a calculated build coverage
+ * @features Scope finishing
+ */
 internal fun Sequence<ExecClassData>.bundle(
     tree: PackageTree
 ): BundleCounter = run {

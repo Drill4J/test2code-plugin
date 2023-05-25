@@ -31,6 +31,13 @@ private val logger = logger {}
 
 internal typealias ClassBytes = Map<String, ByteArray>
 
+/**
+ * Calculate a build coverage counters for java agent
+ * @param probeIds the map where keys are class names and values are csr values of the class names
+ * @param classBytes class bytes of java classes
+ * @return a calculated build coverage
+ * @features Scope finishing
+ */
 internal inline fun Sequence<ExecClassData>.bundle(
     probeIds: Map<String, Long>,
     classBytes: ClassBytes,
