@@ -1,16 +1,15 @@
-# CLI
+# Drill test2code-plugin CLI
 
 Command line interface for testing class parsing: classes count and method count.
 In the future - difference between builds.
 
-## Usage example:
+## Usage example
 
 ```
 ./runCli cli --help
 ```
 
 And here's what run looks like:
-
 ```
 Usage: class-parse [OPTIONS]
 
@@ -22,7 +21,7 @@ Options:
 -h, --help            Show this message and exit
 ```
 
-### Example of output with specified parameters:
+## Example of output with specified parameters:
 
 ```
 ./runCli cli --classpath c:\path\to\classes\folder\or\jar --packages com/epam
