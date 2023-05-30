@@ -26,7 +26,6 @@ For more information see in [documentation](https://drill4j.github.io/) or [core
 - **plugin-runner**: Module with scripts for local run by task ':plugin-runner:run'
 - **test2code-admin**: Classes for working with [admin](https://github.com/Drill4J/admin). It analyzes probes and send metrics & statistics.
 - **test2code-agent**: Classes for working with [java-agent](https://github.com/Drill4J/java-agent). Probes are put down with the help of instrumentation in the source code and sends to **test2code-admin**
-- **test2code-api**: Classes for working with [admin](https://github.com/Drill4J/admin). It analyzes probes and send metrics & statistics.
 - **test2code-cli**: Module with runnable jar with command line interface for testing class parsing, see more in [here](test2code-cli/README.md)
 - **test2code-common**: Classes for working with [java-agent](https://github.com/Drill4J/java-agent). Probes are put down with the help of instrumentation in the source code and sends to **test2code-admin**
 - **tests**: Module with tests
