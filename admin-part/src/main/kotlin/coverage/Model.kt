@@ -53,7 +53,7 @@ data class TestDurations(
 )
 
 /**
- * Model for calculating filtered risks & tests2run
+ * Model for storing filtered risks, methods differences and tests to run
  * @param agentKey the pair of the agent ID and build version
  * @param methodChanges difference in methods between builds
  * @param testsToRun test results grouped by type

@@ -64,6 +64,9 @@ internal class AgentState(
 
     private val _classBytes = atomic<Map<String, ByteArray>>(emptyMap())
 
+    /**
+     * Load Java class bytes from database if not cached
+     */
     suspend fun classBytes(buildVersion: String) = _classBytes.value.takeIf {
         it.isNotEmpty()
     } ?: adminData.loadClassBytes(buildVersion).also { loaded ->
@@ -100,7 +103,7 @@ internal class AgentState(
     private val mutex = Mutex()
 
     /**
-     * Initialize state of the plugin
+     * Initialize agent data state of the plugin
      * - Converts DataBuilder to ClassData if the data state is DataBuilder class
      * - Load class bytes from the database if the data state is NoData class
      * - Updates class data state
@@ -152,6 +155,7 @@ internal class AgentState(
 
     /**
      * Initialize the state of the agent data from DB
+     * Also calc difference between methods in current and parent build versions
      * @param classData the data of agent classes
      * @features Agent registration
      */

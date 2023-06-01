@@ -21,6 +21,11 @@ import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
 import org.jacoco.core.internal.data.*
 
+/**
+ * Convert Java class bytes of the agent to transformed data of packages, classes and methods
+ * @param agentKey the pair of the agent ID and the build version
+ * @features Agent registration
+ */
 fun Map<String, ByteArray>.parseClassBytes(agentKey: AgentKey): ClassData = run {
     val probeIds: Map<String, Long> = mapValues { CRC64.classId(it.value) }
     val bundleCoverage = keys.bundle(this, probeIds)

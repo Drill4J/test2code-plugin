@@ -22,6 +22,9 @@ import com.epam.dsm.util.*
 import org.apache.bcel.classfile.*
 import java.io.*
 
+/**
+ * Parse a list of methods by java class bytes
+ */
 internal fun ClassCounter.parseMethods(classBytes: ByteArray): List<Method> = run {
     val classParser = ClassParser(ByteArrayInputStream(classBytes), fullName)
     val parsedClass = classParser.parse()

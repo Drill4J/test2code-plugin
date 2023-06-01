@@ -52,7 +52,7 @@ internal class DataBuilder : AgentData(), Iterable<AstEntity> {
 }
 
 /**
- * Data for java-agent
+ * Transformed data about packages, classes and methods of the agent
  * @param agentKey the pair of the agent ID and the build version
  * @param packageTree summary of packages, classes and methods
  * @param methods the list of all methods
@@ -74,6 +74,9 @@ data class ClassData(
     override fun hashCode() = agentKey.hashCode()
 }
 
+/**
+ * Convert the tree of application packages to a class data instance
+ */
 fun PackageTree.toClassData(
     agentKey: AgentKey,
     methods: List<Method>,

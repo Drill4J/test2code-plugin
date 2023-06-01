@@ -59,6 +59,12 @@ private fun Analyzer.analyze(
     logger.error { "Error while analyzing ${execData.name}." }
 }.getOrNull()
 
+/**
+ * Convert Java class bytes of the agent to the build coverage counters using JaCoCo bundle
+ * @param classBytes Java class bytes of the agent
+ * @param probeIds the map where keys are class names and values are csr values of the class names
+ * @features Agent registration
+ */
 internal fun Iterable<String>.bundle(
     classBytes: Map<String, ByteArray>,
     probeIds: Map<String, Long>,
@@ -91,6 +97,10 @@ internal fun Sequence<ExecClassData>.execDataStore(
     }
 }
 
+/**
+ * Convert JaCoCo bundle to the build coverage counters
+ * @features Agent registration
+ */
 internal fun IBundleCoverage.toCounter(filter: Boolean = true) = BundleCounter(
     name = "",
     count = instructionCounter.toCount(),

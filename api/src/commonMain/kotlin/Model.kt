@@ -329,6 +329,19 @@ data class PackageTree(
     val packages: List<JavaPackageCoverage> = emptyList(),
 )
 
+/**
+ * Information about the package of the agent
+ * @param id the package ID
+ * @param name the package name
+ * @param totalClassesCount the number of classes in the package
+ * @param totalMethodsCount the number of methods in all classes in the package
+ * @param totalCount the number of probes in all classes in the package
+ * @param coverage the percent of coverage of the package
+ * @param coveredClassesCount the number of covered classes in the package
+ * @param coveredMethodsCount the number of covered methods in all classes in the package
+ * @param assocTestsCount the number of tests associated with coverage of the package
+ * @param classes the list of classes
+ */
 @Serializable
 data class JavaPackageCoverage(
     val id: String,
@@ -343,6 +356,19 @@ data class JavaPackageCoverage(
     val classes: List<JavaClassCoverage> = emptyList(),
 )
 
+/**
+ * Information about the class of the agent
+ * @param id the class ID
+ * @param name the class name
+ * @param path the full name of the class
+ * @param totalMethodsCount the number of methods in the class
+ * @param totalCount the number of probes in the class
+ * @param coverage the percent of coverage of the class
+ * @param coveredMethodsCount the number of covered methods in the class
+ * @param assocTestsCount the number of tests associated with coverage of the class
+ * @param methods the list of methods
+ * @param probes the list of class probes
+ */
 @Serializable
 data class JavaClassCoverage(
     val id: String,
@@ -357,6 +383,17 @@ data class JavaClassCoverage(
     val probes: List<Boolean> = emptyList(),
 )
 
+/**
+ * Information about the method of the class in the agent
+ * @param id the method ID
+ * @param name the method name
+ * @param desc the descriptor of the method
+ * @param decl also the descriptor of the method
+ * @param probesCount the number of probes in the method
+ * @param coverage the percent of coverage of the method
+ * @param assocTestsCount the number of tests associated with coverage of the method
+ * @param probeRange the class probe index range, with which probe the method begins and with which it ends
+ */
 @Serializable
 data class JavaMethodCoverage(
     val id: String,

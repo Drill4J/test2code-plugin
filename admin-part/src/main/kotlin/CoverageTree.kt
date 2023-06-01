@@ -22,7 +22,7 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.util.*
 
 /**
- * Build collection of java packages from ast collection
+ * Build collection of packages from ast collection
  * @return list of java packages
  * @features Agent registration
  */
