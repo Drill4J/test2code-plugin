@@ -76,7 +76,7 @@ public class CustomCoverageBuilder implements ICoverageVisitor {
      * @return bundle containing all classes and source files
      */
     public IBundleCoverage getBundle(final String name) {
-        return new BundleCoverageImpl(name, classes.values(),
+        return new ThreadSafeBundleCoverageImpl(name, classes.values(),
                 sourcefiles.values());
     }
 

@@ -73,7 +73,7 @@ internal fun Sequence<ExecClassData>.execDataStore(
     probeIds: Map<String, Long>,
 ): ExecutionDataStore = mapNotNull {
     it.toExecutionData(probeIds)
-}.fold(ExecutionDataStore()) { store, execData ->
+}.fold(threadSafeDataStore()) { store, execData ->
     store.apply {
         runCatching { put(execData) }.onFailure {
             val expected = store[execData.id]?.probes?.size
@@ -205,6 +205,19 @@ private fun threadSafeAnalyzer(
     Analyzer::class.java.getDeclaredField("stringPool").apply {
         isAccessible = true
         set(analyzer, newPool)
+        isAccessible = false
+    }
+}
+
+private fun threadSafeDataStore(): ExecutionDataStore = ExecutionDataStore().also { dataStore ->
+    ExecutionDataStore::class.java.getDeclaredField("entries").apply {
+        isAccessible = true
+        set(dataStore, ConcurrentHashMap<Long, ExecutionData>())
+        isAccessible = false
+    }
+    ExecutionDataStore::class.java.getDeclaredField("names").apply {
+        isAccessible = true
+        set(dataStore, ConcurrentSkipListSet<String>())
         isAccessible = false
     }
 }
