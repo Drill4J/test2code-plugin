@@ -26,6 +26,7 @@ import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.analysis.*
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicReference
 
 private val logger = logger {}
 
@@ -36,12 +37,15 @@ internal inline fun Sequence<ExecClassData>.bundle(
     classBytes: ClassBytes,
     crossinline analyze: Analyzer.(ByteArray, ExecutionData) -> Unit? = Analyzer::analyze
 ): BundleCounter = bundle(probeIds) { analyzer ->
-    contents.parallelStream().forEach { execData ->
+    contents.toList().parallelStream().forEach { execData ->
         classBytes[execData.name]?.let { classesBytes ->
-            analyzer.analyze(classesBytes, execData)
+            synchronized(analyzer) {
+                analyzer.analyze(classesBytes, execData)
+            }
         } ?: println("WARN No class data for ${execData.name}, id=${execData.id}")
     }
 }.toCounter()
+
 
 private fun Analyzer.analyze(
     classesBytes: ByteArray,
@@ -185,6 +189,7 @@ fun parseDescType(char: Char, charIterator: CharIterator): String = when (char) 
         val objectDesc = objectDescSeq.fold(StringBuilder()) { sBuilder, c -> sBuilder.append(c) }.toString()
         objectDesc.substringAfterLast("/")
     }
+
     else -> "!Error"
 }
 

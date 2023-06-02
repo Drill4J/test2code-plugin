@@ -10,6 +10,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 import java.io.*
+import kotlin.test.assertEquals
 
 class FlakyCoverage {
 
@@ -49,6 +50,8 @@ class FlakyCoverage {
         result.forEach {
             println(it)
         }
+
+        assertEquals(1, result.size)
     }
 
 }
