@@ -30,7 +30,7 @@ import com.epam.drill.plugins.test2code.coverage.id
 import com.epam.drill.plugins.test2code.parseJsonData
 import com.epam.drill.plugins.test2code.stringify
 import com.epam.drill.plugins.test2code.util.crc64
-import e2e.MANUAL_TEST_TYPE
+import com.epam.drill.plugins.test2code.e2e.MANUAL_TEST_TYPE
 import io.kotlintest.matchers.doubles.shouldBeGreaterThan
 import io.kotlintest.shouldBe
 import io.ktor.http.*
