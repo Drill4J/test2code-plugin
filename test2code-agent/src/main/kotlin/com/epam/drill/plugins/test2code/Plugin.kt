@@ -21,6 +21,8 @@ import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
 import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
 import org.jacoco.core.internal.data.*
@@ -50,6 +52,8 @@ class Plugin(
 
     private val _retransformed = atomic(false)
 
+    private val _astClasses = atomic(persistentListOf<AstEntity>())
+
     override fun onConnect() {
         val ids = instrContext.getActiveSessions()
         logger.info { "Send active sessions after reconnect: ${ids.count()}" }
@@ -65,11 +69,12 @@ class Plugin(
     override fun isEnabled(): Boolean = _enabled.value
 
     override fun on() {
-        val initInfo = InitInfo(message = "Initializing plugin $id...")
+        val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
         sendMessage(initInfo)
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
         }
+        sendMessage(InitDataPart(_astClasses.value))
         sendMessage(Initialized(msg = "Initialized"))
         logger.info { "Plugin $id initialized!" }
     }
@@ -102,6 +107,7 @@ class Plugin(
         initialBytes: ByteArray,
     ): ByteArray? = takeIf { enabled }?.run {
         val idFromClassName = CRC64.classId(className.encodeToByteArray())
+        _astClasses.update { it + parseAstClass(className, initialBytes) }
         instrumenter(className, idFromClassName, initialBytes)
     }
 
