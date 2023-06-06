@@ -8,6 +8,7 @@ import org.ajoberstar.grgit.operation.BranchListOp
 @Suppress("RemoveRedundantBackticks")
 plugins {
     `distribution`
+    `maven-publish`
     kotlin("jvm").apply(false)
     kotlin("multiplatform").apply(false)
     kotlin("plugin.allopen").apply(false)
@@ -106,6 +107,12 @@ distributions {
             pluginConfigJson
         )
         into("/")
+    }
+}
+
+publishing {
+    publications.create<MavenPublication>("test2codeZip") {
+        artifact(tasks.distZip.get())
     }
 }
 
