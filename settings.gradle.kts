@@ -1,15 +1,59 @@
-val drillPluginId: String by settings
-rootProject.name = "$drillPluginId-plugin"
+rootProject.name = "test2code-plugin"
 
-apply(from = "plugins.settings.gradle.kts")
+pluginManagement {
+    val kotlinVersion: String by extra
+    val kotlinxBenchmarkVersion: String by extra
+    val licenseVersion: String by extra
+    val atomicfuVersion: String by extra
+    val grgitVersion: String by extra
+    val shadowPluginVersion: String by extra
+    plugins {
+        kotlin("jvm") version kotlinVersion
+        kotlin("multiplatform") version kotlinVersion
+        kotlin("plugin.allopen") version kotlinVersion
+        kotlin("plugin.noarg") version kotlinVersion
+        kotlin("plugin.serialization") version kotlinVersion
+        id("kotlinx-atomicfu") version atomicfuVersion
+        id("org.ajoberstar.grgit") version grgitVersion
+        id("org.jetbrains.kotlinx.benchmark") version kotlinxBenchmarkVersion
+        id("com.github.hierynomus.license") version licenseVersion
+        id("com.github.johnrengelman.shadow") version shadowPluginVersion
+    }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    resolutionStrategy.eachPlugin {
+        if(requested.id.id == "kotlinx-atomicfu") useModule("org.jetbrains.kotlinx:atomicfu-gradle-plugin:${target.version}")
+    }
+}
 
-include(":api")
-include(":agent-api")
-include(":admin-part")
-include(":agent-part")
-include(":tests")
-include(":load-tests")
-include(":benchmarks")
-include(":plugin-runner")
-include(":jacoco")
-include(":cli")
+val includeSharedLib: Settings.(String) -> Unit = {
+    include(it)
+    project(":$it").projectDir = file("lib-jvm-shared/$it")
+}
+
+includeSharedLib("dsm")
+includeSharedLib("dsm-annotations")
+includeSharedLib("dsm-test-framework")
+includeSharedLib("kt2dts")
+includeSharedLib("kt2dts-cli")
+includeSharedLib("kt2dts-api-sample")
+includeSharedLib("admin-analytics")
+includeSharedLib("common")
+includeSharedLib("logger-api")
+includeSharedLib("ktor-swagger")
+includeSharedLib("plugin-api-admin")
+includeSharedLib("plugin-api-agent")
+includeSharedLib("test-data")
+includeSharedLib("test2code-api")
+include("jacoco")
+include("test2code-common")
+include("test2code-admin")
+include("test2code-cli")
+include("test2code-agent")
+include("tests")
+include("load-tests")
+include("benchmarks")
+include("plugin-runner")

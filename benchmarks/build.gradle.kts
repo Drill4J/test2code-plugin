@@ -1,85 +1,119 @@
-import kotlinx.benchmark.gradle.*
-import org.jetbrains.kotlin.allopen.gradle.*
+import java.net.URI
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.hierynomus.gradle.license.tasks.LicenseCheck
+import com.hierynomus.gradle.license.tasks.LicenseFormat
+import kotlinx.benchmark.gradle.JvmBenchmarkTarget
 
 plugins {
     kotlin("jvm")
+    kotlin("plugin.allopen")
+    kotlin("plugin.noarg")
     kotlin("plugin.serialization")
-    kotlin("plugin.allopen") version "1.4.21"
-    id("org.jetbrains.kotlinx.benchmark") version "0.3.0"
     id("kotlinx-atomicfu")
+    id("org.jetbrains.kotlinx.benchmark")
+    id("com.github.hierynomus.license")
 }
 
-configure<AllOpenExtension> {
-    annotation("org.openjdk.jmh.annotations.State")
+group = "com.epam.drill.plugins.test2code"
+version = rootProject.version
+
+val kotlinxCollectionsVersion: String by parent!!.extra
+val kotlinxSerializationVersion: String by parent!!.extra
+val kotlinxBenchmarkVersion: String by parent!!.extra
+val ktorVersion: String by parent!!.extra
+val kodeinVersion: String by parent!!.extra
+val bcelVersion: String by parent!!.extra
+val javassistVersion: String by parent!!.extra
+val jacocoVersion: String by parent!!.extra
+val atomicfuVersion: String by parent!!.extra
+val drillAdminVersion: String by parent!!.extra
+
+repositories {
+    mavenLocal()
+    mavenCentral()
 }
 
-configurations {
-    all { resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES) }
+configurations.all {
+    resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES)
 }
-
-val drillAdminVersion: String by rootProject
-val ktorVersion: String by rootProject
-val ktorSwaggerVersion: String by rootProject
-val benchmarkVersion: String by rootProject
-val kodeinVersion: String by extra
-val bcelVersion: String by extra
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    testCompileOnly(project(":api"))
-    testCompileOnly(project(":agent-api"))
-    testImplementation(project(":admin-part"))
-    testImplementation(project(":tests"))
-    testImplementation(project(":agent-part"))
+    implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:$kotlinxBenchmarkVersion")
 
-    testImplementation("com.epam.drill:common")
-    testImplementation("com.epam.drill:plugin-api-agent")
-    testImplementation("com.epam.drill:plugin-api-admin")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable")
-
-    testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
-    testImplementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
-
-    testImplementation("org.kodein.di:kodein-di-jvm:$kodeinVersion")
-
-    testImplementation("com.epam.drill.ktor:ktor-swagger:$ktorSwaggerVersion")
-    testImplementation("org.javassist:javassist:+")
-
-    testImplementation("org.jacoco:org.jacoco.core")
-    testImplementation("org.apache.bcel:bcel")
-    testImplementation("org.jetbrains.kotlinx:atomicfu")
+    testCompileOnly(project(":test2code-api"))
+    testCompileOnly(project(":test2code-common"))
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:$kotlinxCollectionsVersion")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    testImplementation("org.kodein.di:kodein-di-jvm:$kodeinVersion")
+    testImplementation("org.apache.bcel:bcel:$bcelVersion")
+    testImplementation("org.javassist:javassist:$javassistVersion")
+    testImplementation("org.jacoco:org.jacoco.core:$jacocoVersion")
+    testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
+    testImplementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
+    testImplementation(project(":common"))
+    testImplementation(project(":ktor-swagger"))
+    testImplementation(project(":plugin-api-admin"))
+    testImplementation(project(":plugin-api-agent"))
+    testImplementation(project(":test2code-admin"))
+    testImplementation(project(":test2code-agent"))
+    testImplementation(project(":tests"))
 }
-kotlin {
-    sourceSets.main {
-        dependencies {
-            implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:$benchmarkVersion")
-        }
-    }
+
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.Experimental")
+    languageSettings.optIn("kotlin.time.ExperimentalTime")
+    languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
 }
+
 tasks {
     test {
         useJUnitPlatform()
         systemProperty("plugin.feature.drealtime", false)
     }
-}
-benchmark {
-    configurations {
-        named("main") {
-            iterationTime = 5
-            iterationTimeUnit = "ms"
-        }
+    clean {
+        delete(".kotlintest")
     }
-    targets {
-        register("test") {
-            this as JvmBenchmarkTarget
-            jmhVersion = "1.21"
-        }
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
     }
 }
 
+benchmark {
+    configurations.getByName("main") {
+        iterationTime = 5
+        iterationTimeUnit = "ms"
+    }
+    targets.register("test") {
+        (this as JvmBenchmarkTarget).jmhVersion = "1.21"
+    }
+}
+
+allOpen {
+    annotation("org.openjdk.jmh.annotations.State")
+}
+
+noArg {
+    annotation("kotlinx.serialization.Serializable")
+}
+
+@Suppress("UNUSED_VARIABLE")
+license {
+    headerURI = URI("https://raw.githubusercontent.com/Drill4J/drill4j/develop/COPYRIGHT")
+    val licenseFormatSources by tasks.registering(LicenseFormat::class) {
+        source = fileTree("$projectDir/src").also {
+            include("**/*.kt", "**/*.java", "**/*.groovy")
+        }
+    }
+    val licenseCheckSources by tasks.registering(LicenseCheck::class) {
+        source = fileTree("$projectDir/src").also {
+            include("**/*.kt", "**/*.java", "**/*.groovy")
+        }
+    }
+}
