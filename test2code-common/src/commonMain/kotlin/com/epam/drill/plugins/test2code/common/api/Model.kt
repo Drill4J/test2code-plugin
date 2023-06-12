@@ -20,6 +20,12 @@ import kotlinx.serialization.*
 
 const val DEFAULT_TEST_NAME = "unspecified"
 
+/**
+ * Ast metadata about the file or the class containing methods
+ * @param path the path to class or file
+ * @param name the name of class or file
+ * @param methods the list of methods
+ */
 @Serializable
 data class AstEntity(
     val path: String,
@@ -27,15 +33,25 @@ data class AstEntity(
     val methods: List<AstMethod>,
 )
 
+/**
+ * Ast metadata about the method of class or file
+ * @param name the name of the method
+ * @param params the list of parameters of the method
+ * @param returnType the method return type
+ * @param count todo
+ * @param probes the probe indices of the method
+ * @param checksum the checksum of the method body
+ */
 @Serializable
 data class AstMethod(
     val name: String,
     val params: List<String>,
     val returnType: String,
-    val count: Int = 0,
     val probes: List<Int> = emptyList(),
     val checksum: String = "",
-)
+) {
+    val count: Int = probes.size
+}
 
 @Serializable
 data class ActionScopeResult(
@@ -64,6 +80,9 @@ data class AgentSessionDataPayload(val sessionId: String, val data: String)
 @Serializable
 data class AgentSessionTestsPayload(val sessionId: String, val tests: List<String>)
 
+/**
+ * Class probes received by a specific test
+ */
 @Serializable
 data class ExecClassData(
     val id: Long? = null,

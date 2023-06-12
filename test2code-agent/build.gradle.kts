@@ -52,6 +52,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
     testImplementation(project(":tests"))
+    testImplementation("joda-time:joda-time:2.10.6")
+    testImplementation("org.mybatis:mybatis:3.0.6")
 }
 
 kotlin.sourceSets.all {

@@ -25,7 +25,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
-import org.jacoco.core.internal.data.*
 import java.util.*
 
 @Suppress("unused")
@@ -48,11 +47,13 @@ class Plugin(
         logger = this@Plugin.logger
     }
 
-    private val instrumenter: DrillInstrumenter = instrumenter(instrContext, logger)
+    private val _astClasses = atomic(persistentListOf<AstEntity>())
+
+    private val instrumenter = DrillInstrumenter(instrContext, logger) { entity ->
+        _astClasses.update { it + entity }
+    }
 
     private val _retransformed = atomic(false)
-
-    private val _astClasses = atomic(persistentListOf<AstEntity>())
 
     override fun onConnect() {
         val ids = instrContext.getActiveSessions()
@@ -106,9 +107,7 @@ class Plugin(
         className: String,
         initialBytes: ByteArray,
     ): ByteArray? = takeIf { enabled }?.run {
-        val idFromClassName = CRC64.classId(className.encodeToByteArray())
-        _astClasses.update { it + parseAstClass(className, initialBytes) }
-        instrumenter(className, idFromClassName, initialBytes)
+        instrumenter.instrument(className, initialBytes)
     }
 
     override fun destroyPlugin(unloadReason: UnloadReason) {}

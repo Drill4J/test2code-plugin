@@ -15,9 +15,14 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.jacoco.DrillClassProbesAdapter
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.jacoco.core.internal.data.CRC64
+import org.jacoco.core.internal.flow.ClassProbesVisitor
+import org.jacoco.core.internal.flow.IFrame
+import org.jacoco.core.internal.flow.MethodProbesVisitor
+import org.jacoco.core.internal.instr.InstrSupport
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.FieldInsnNode
@@ -27,39 +32,77 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import java.nio.ByteBuffer
 
-fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
-    val methods: MutableList<AstMethod> = ArrayList()
-    val astClass = AstEntity(path = getPackageName(className), name = getShortClassName(className), methods)
-    val classReader = ClassReader(classBytes)
 
-    val classVisitor: ClassVisitor = object : ClassVisitor(Opcodes.ASM9) {
-        override fun visitMethod(
-            access: Int,
-            name: String,
-            desc: String,
-            signature: String?,
-            exceptions: Array<String>?
-        ): MethodVisitor {
-            super.visitMethod(access, name, desc, signature, exceptions)
-            val methodNode = MethodNode(Opcodes.ASM9, access, name, desc, signature, exceptions)
-            return object : MethodVisitor(Opcodes.ASM9, methodNode) {
-                override fun visitEnd() {
-                    super.visitEnd()
-                    val method = AstMethod(
-                        name = methodNode.name,
-                        params = getParams(methodNode),
-                        returnType = getReturnType(methodNode),
-                        checksum = calculateMethodHash(methodNode),
-                        probes = listOf(0,1,2)//TODO change the stub
-                    )
-                    methods.add(method)
-                }
-            }
-        }
+class ClassProbeCounter(val name: String) : ClassProbesVisitor() {
+    var count = 0
+        private set
+    val astClass = newAstClass(name, ArrayList())
+
+    override fun visitMethod(
+        access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?
+    ): MethodProbesVisitor {
+        return MethodProbeCounter(astClass.methods as MutableList)
     }
-    classReader.accept(classVisitor, ClassReader.SKIP_DEBUG or ClassReader.EXPAND_FRAMES)
-    return astClass
+
+    override fun visitTotalProbeCount(count: Int) {
+        this.count = count
+    }
 }
+
+
+class MethodProbeCounter(
+    private val methods: MutableList<AstMethod>
+) : MethodProbesVisitor() {
+
+    private val probes = ArrayList<Int>()
+    private lateinit var methodNode: MethodNode
+
+
+    override fun visitEnd() {
+        super.visitEnd()
+        val method = AstMethod(
+            name = methodNode.name,
+            params = getParams(methodNode),
+            returnType = getReturnType(methodNode),
+            checksum = calculateMethodHash(methodNode),
+            probes = probes
+        )
+        methods.add(method)
+    }
+
+    override fun accept(methodNode: MethodNode?, methodVisitor: MethodVisitor?) {
+        this.methodNode = methodNode!!
+        super.accept(methodNode, methodVisitor)
+    }
+
+    override fun visitProbe(probeId: Int) {
+        super.visitProbe(probeId)
+        probes += probeId
+    }
+
+    override fun visitInsnWithProbe(opcode: Int, probeId: Int) {
+        super.visitInsnWithProbe(opcode, probeId)
+        probes += probeId
+    }
+
+    override fun visitJumpInsnWithProbe(opcode: Int, label: Label?, probeId: Int, frame: IFrame?) {
+        super.visitJumpInsnWithProbe(opcode, label, probeId, frame)
+        probes += probeId
+    }
+}
+
+fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
+    val classReader = InstrSupport.classReaderFor(classBytes)
+    val counter = ClassProbeCounter(className)
+    classReader.accept(DrillClassProbesAdapter(counter, false), 0)
+    return counter.astClass
+}
+
+fun newAstClass(className: String,
+                methods: MutableList<AstMethod> = ArrayList()) = AstEntity(
+    path = getPackageName(className),
+    name = getShortClassName(className),
+    methods)
 
 private fun getShortClassName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')
