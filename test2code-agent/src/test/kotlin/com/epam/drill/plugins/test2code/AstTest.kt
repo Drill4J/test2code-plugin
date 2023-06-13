@@ -247,8 +247,6 @@ class AstTest {
 
 }
 
-}
-
 internal fun KClass<*>.readBytes(): ByteArray = java.getResourceAsStream(
     "/${getFullName()}.class"
 )!!.readBytes()
