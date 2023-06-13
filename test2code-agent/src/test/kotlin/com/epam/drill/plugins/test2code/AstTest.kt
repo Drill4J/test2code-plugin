@@ -16,10 +16,13 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.ast.SimpleClass
+import com.epam.drill.plugins.test2code.lambda.*
 import org.junit.jupiter.api.Test
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class AstTest {
 
@@ -49,8 +52,93 @@ class AstTest {
         }
     }
 
-}
+    @Test
+    fun `lambda with different context should have other checksum`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithDifferentReferences::class.getFullName(),
+                ClassWithDifferentReferences::class.readBytes()
+            )
 
+        val methods = astEntity.methods
+        //Methods, which contain only lambda, should be equal
+        assertEquals(methods[1].checksum, methods[3].checksum)
+        assertEquals(methods[2].checksum, methods[4].checksum)
+
+        // Lambdas should have different value, because they contain different context
+        assertNotEquals(methods[5].checksum, methods[6].checksum)
+    }
+
+    @Test
+    fun `test on existing inner lambda`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithInnerLambda::class.getFullName(),
+                ClassWithInnerLambda::class.readBytes()
+            )
+
+        assertTrue(astEntity.methods[3].name.contains("lambda\$null"))
+    }
+
+    @Test
+    fun `test on existing inner lambdas`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithInnerLambdas::class.getFullName(),
+                ClassWithInnerLambdas::class.readBytes()
+            )
+
+        assertTrue(astEntity.methods[4].name.contains("lambda\$null"))
+        assertTrue(astEntity.methods[6].name.contains("lambda\$null"))
+    }
+
+    @Test
+    fun `test class with lambda`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithLambda::class.getFullName(),
+                ClassWithLambda::class.readBytes()
+            )
+
+        assertTrue(astEntity.methods[3].name.contains("lambda\$secondMethod\$1"))
+        assertTrue(astEntity.methods[4].name.contains("lambda\$firstMethod\$0"))
+    }
+
+    @Test
+    fun `test class with lambda return`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithLambdaReturning::class.getFullName(),
+                ClassWithLambdaReturning::class.readBytes()
+            )
+
+        assertEquals(astEntity.methods[1].returnType, "java.util.function.Function")
+    }
+
+    @Test
+    fun `test class with reference call`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithReferences::class.getFullName(),
+                ClassWithReferences::class.readBytes()
+            )
+        //Reference call has the same view as lambda
+        assertNotNull(astEntity.methods[2])
+        assertEquals(astEntity.methods[2].checksum, "-n27yc05empbd")
+    }
+
+    @Test
+    fun `test method with different instance type`() {
+        val astEntity =
+            parseAstClass(
+                ClassWithInstanceType::class.getFullName(),
+                ClassWithInstanceType::class.readBytes()
+            )
+        //Should be different checksum of method
+        assertNotEquals(astEntity.methods[1].checksum,astEntity.methods[2].checksum)
+    }
+
+}
 
 internal fun KClass<*>.readBytes(): ByteArray = java.getResourceAsStream(
     "/${getFullName()}.class"
