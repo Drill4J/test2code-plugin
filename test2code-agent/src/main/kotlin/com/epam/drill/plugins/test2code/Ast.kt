@@ -27,7 +27,9 @@ import org.objectweb.asm.*
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.IntInsnNode
+import org.objectweb.asm.tree.LabelNode
 import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.LineNumberNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import java.nio.ByteBuffer
@@ -98,11 +100,14 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
     return counter.astClass
 }
 
-fun newAstClass(className: String,
-                methods: MutableList<AstMethod> = ArrayList()) = AstEntity(
+fun newAstClass(
+    className: String,
+    methods: MutableList<AstMethod> = ArrayList()
+) = AstEntity(
     path = getPackageName(className),
     name = getShortClassName(className),
-    methods)
+    methods
+)
 
 private fun getShortClassName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')

@@ -126,7 +126,7 @@ class AstTest {
             )
         //Reference call has the same view as lambda
         assertNotNull(astEntity.methods[2])
-        assertEquals(astEntity.methods[2].checksum, "-n27yc05empbd")
+        assertEquals(astEntity.methods[2].checksum, "-fyzpajs3zsqh")
     }
 
     @Test

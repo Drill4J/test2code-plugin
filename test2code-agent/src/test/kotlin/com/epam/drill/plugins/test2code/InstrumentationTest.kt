@@ -17,10 +17,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.instrumentation.data.*
 import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.sessionId
-import com.epam.drill.plugins.test2code.ast.CheckProbeRanges
-import com.epam.drill.plugins.test2code.ast.CheckTemp
-import com.epam.drill.plugins.test2code.ast.DateTimeHandler
-import com.epam.drill.plugins.test2code.ast.SimpleClass
 import org.junit.jupiter.api.*
 import kotlin.test.*
 import kotlin.test.Test
