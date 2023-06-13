@@ -24,7 +24,6 @@ import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class AstTest {
 
@@ -54,91 +53,102 @@ class AstTest {
         }
     }
 
+    private val methodsBuild1 =
+        parseAstClass(
+            Build1::class.getFullName(),
+            Build1::class.readBytes()
+        ).methods
+    private val methodsBuild2 =
+        parseAstClass(
+            Build2::class.getFullName(),
+            Build2::class.readBytes()
+        ).methods
+
     @Test
     fun `lambda with different context should have other checksum`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithDifferentReferences::class.getFullName(),
-                ClassWithDifferentReferences::class.readBytes()
-            )
-
-        val methods = astEntity.methods
-        //Methods, which contain only lambda, should be equal
-        assertEquals(methods[1].checksum, methods[3].checksum)
-        assertEquals(methods[2].checksum, methods[4].checksum)
+        val methodName = "lambda\$differentContextChangeAtLambda\$1"
 
         // Lambdas should have different value, because they contain different context
-        assertNotEquals(methods[5].checksum, methods[6].checksum)
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
 
     @Test
-    fun `test on existing inner lambda`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithInnerLambda::class.getFullName(),
-                ClassWithInnerLambda::class.readBytes()
-            )
-
-        assertTrue(astEntity.methods[3].name.contains("lambda\$null"))
+    fun `method with lambda should have the same checksum`() {
+        val methodName = "theSameContextChangeAtLambda"
+        //Methods, which contain lambda with different context, should not have difference in checksum
+        assertEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
 
     @Test
-    fun `test on existing inner lambdas`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithInnerLambdas::class.getFullName(),
-                ClassWithInnerLambdas::class.readBytes()
-            )
-
-        assertTrue(astEntity.methods[4].name.contains("lambda\$null"))
-        assertTrue(astEntity.methods[6].name.contains("lambda\$null"))
+    fun `test on different context at inner lambda`() {
+        val methodName = "lambda\$null\$2"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
 
     @Test
-    fun `test class with lambda`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithLambda::class.getFullName(),
-                ClassWithLambda::class.readBytes()
-            )
-
-        assertTrue(astEntity.methods[3].name.contains("lambda\$secondMethod\$1"))
-        assertTrue(astEntity.methods[4].name.contains("lambda\$firstMethod\$0"))
+    fun `should have different checksum for reference call`() {
+        val methodName = "referenceMethodCall"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
 
     @Test
-    fun `test class with lambda return`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithLambdaReturning::class.getFullName(),
-                ClassWithLambdaReturning::class.readBytes()
-            )
-
-        assertEquals(astEntity.methods[1].returnType, "java.util.function.Function")
+    fun `should have different checksum for array`() {
+        val methodName = "multiANewArrayInsnNode"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
 
     @Test
-    fun `test class with reference call`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithReferences::class.getFullName(),
-                ClassWithReferences::class.readBytes()
-            )
-        //Reference call has the same view as lambda
-        assertNotNull(astEntity.methods[2])
-        assertEquals(astEntity.methods[2].checksum, "-fyzpajs3zsqh")
+    fun `should have different checksum for switch table`() {
+        val methodName = "tableSwitchMethodTest"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
 
     @Test
-    fun `test method with different instance type`() {
-        val astEntity =
-            parseAstClass(
-                ClassWithInstanceType::class.getFullName(),
-                ClassWithInstanceType::class.readBytes()
-            )
-        //Should be different checksum of method
-        assertNotEquals(astEntity.methods[1].checksum,astEntity.methods[2].checksum)
+    fun `should have different checksum for look up switch`() {
+        val methodName = "lookupSwitchMethodTest"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
     }
+
+    @Test
+    fun `method with different instance type`() {
+        val methodName = "differentInstanceType"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
+    }
+
+
+    @Test
+    fun `method call other method`() {
+        val methodName = "callOtherMethod"
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
+    }
+
 
     @Test
     fun `check probe ranges`() {
