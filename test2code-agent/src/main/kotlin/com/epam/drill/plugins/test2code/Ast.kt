@@ -20,6 +20,10 @@ import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.jacoco.core.internal.data.CRC64
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.IntInsnNode
+import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import java.nio.ByteBuffer
 
@@ -53,7 +57,7 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
             }
         }
     }
-    classReader.accept(classVisitor, ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+    classReader.accept(classVisitor, ClassReader.SKIP_DEBUG or ClassReader.EXPAND_FRAMES)
     return astClass
 }
 
@@ -94,10 +98,29 @@ private fun calculateMethodHash(methodNode: MethodNode): String {
     for (insnNode in methodNode.instructions.toArray()) {
         instructions.add(insnNode)
     }
-
-    val buffer = ByteBuffer.allocate(instructions.size * 4)
+    // 8 is needed to increase buffer capacity
+    val buffer = ByteBuffer.allocate((instructions.size * 8))
     for (insnNode in instructions) {
         buffer.putInt(insnNode!!.opcode)
+        when (insnNode) {
+            //To cover the context of lambda
+            is LdcInsnNode -> {
+                buffer.putInt(insnNode.cst.hashCode())
+            }
+            //To cover the context of int var
+            is IntInsnNode -> {
+                buffer.putInt(insnNode.operand.hashCode())
+            }
+            //To cover the context of instance method
+            is MethodInsnNode -> {
+                buffer.putInt(insnNode.name.hashCode())
+            }
+            //To cover the context of reference call prep.
+            is FieldInsnNode -> {
+                buffer.putInt(insnNode.name.hashCode())
+            }
+        }
+
     }
     val bytecode = buffer.array()
     return CRC64.classId(bytecode).toString(Character.MAX_RADIX)
