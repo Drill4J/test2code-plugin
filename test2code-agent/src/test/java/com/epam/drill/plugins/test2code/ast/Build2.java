@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.test2code.lambda;
+package com.epam.drill.plugins.test2code.ast;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 public class Build2 {
 
-    void theSameContextChangeAtLambda(List<String> strings) {
+    void theSameMethodBody(List<String> strings) {
         BigDecimal i = BigDecimal.valueOf(10);
         int result = 0;
         for (int y = 0; y < 100; y++) {
@@ -53,15 +53,15 @@ public class Build2 {
 
     void tableSwitchMethodTest(String value) {
         switch (value) {
-            case "11": {
+            case "1": {
                 System.out.println(1);
                 break;
             }
-            case "22": {
+            case "2": {
                 System.out.println(2);
                 break;
             }
-            case "33": {
+            case "3": {
                 System.out.println(3);
                 break;
             }
@@ -100,5 +100,26 @@ public class Build2 {
         for (int j = 0; j < i; j++) {
             System.out.println("Print");
         }
+    }
+
+    void methodWithDifferentParams(Integer test, Integer test2) {
+        System.out.println(test);
+    }
+
+    void methodWithIteratedValue(Integer test) {
+        for (int i = 0; i < test; i += 2) {
+            System.out.println(test);
+        }
+    }
+
+    void changeLocalVarName(Integer test) {
+        String changedName = String.valueOf(test);
+        for (int i = 0; i < test; i++) {
+            System.out.println(changedName);
+        }
+    }
+
+    void constantLambdaHashCalculation(List<String> strings) {
+        strings.stream().map(str -> str + "12").collect(Collectors.joining());
     }
 }

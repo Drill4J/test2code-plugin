@@ -1,4 +1,4 @@
-package com.epam.drill.plugins.test2code.lambda;
+package com.epam.drill.plugins.test2code.ast;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 public class Build1 {
 
-    void theSameContextChangeAtLambda(List<String> strings) {
+    void theSameMethodBody(List<String> strings) {
         BigDecimal i = BigDecimal.valueOf(10);
         int result = 0;
         for (int y = 0; y < 100; y++) {
@@ -20,7 +20,6 @@ public class Build1 {
     }
 
     void differentContextChangeAtLambda(List<String> strings) {
-
         strings.stream().map(str -> str + "2").collect(Collectors.joining());
     }
 
@@ -50,25 +49,25 @@ public class Build1 {
         }
     }
 
-    void tableSwitchMethodTest(String value) {
+    void tableSwitchMethodTest(int value) {
         switch (value) {
-            case "1": {
+            case 1: {
                 System.out.println(1);
                 break;
             }
-            case "2": {
+            case 2: {
                 System.out.println(2);
                 break;
             }
-            case "3": {
+            case 3: {
                 System.out.println(3);
                 break;
             }
-            case "4": {
+            case 4: {
                 System.out.println(4);
                 break;
             }
-            case "5": {
+            case 5: {
                 System.out.println(5);
                 break;
             }
@@ -111,5 +110,26 @@ public class Build1 {
         for (int j = 0; j < i; j++) {
             System.out.println("Test");
         }
+    }
+
+    void methodWithDifferentParams(Integer test) {
+        System.out.println(test);
+    }
+
+    void methodWithIteratedValue(Integer test) {
+        for (int i = 0; i < test; i++) {
+            System.out.println(test);
+        }
+    }
+
+    void changeLocalVarName(Integer test) {
+        String strValue = String.valueOf(test);
+        for (int i = 0; i < test; i++) {
+            System.out.println(strValue);
+        }
+    }
+
+    void constantLambdaHashCalculation(List<String> strings) {
+        strings.stream().map(str -> str + "12").collect(Collectors.joining());
     }
 }

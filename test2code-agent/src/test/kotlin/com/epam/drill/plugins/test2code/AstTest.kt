@@ -15,10 +15,11 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.plugins.test2code.ast.Build1
+import com.epam.drill.plugins.test2code.ast.Build2
 import com.epam.drill.plugins.test2code.ast.CheckProbeRanges
 import com.epam.drill.plugins.test2code.common.api.AstMethod
 import com.epam.drill.plugins.test2code.ast.SimpleClass
-import com.epam.drill.plugins.test2code.lambda.*
 import org.junit.jupiter.api.Test
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
@@ -67,9 +68,14 @@ class AstTest {
     @Test
     fun `lambda with different context should have other checksum`() {
         val methodName = "lambda\$differentContextChangeAtLambda\$1"
-
         // Lambdas should have different value, because they contain different context
-        assertNotEquals(
+        assertChecksum(methodName)
+    }
+
+    @Test
+    fun `constant lambda hash calculation`() {
+        val methodName = "lambda\$constantLambdaHashCalculation\$6"
+        assertEquals(
             methodsBuild1.filter { it.name == methodName }[0].checksum,
             methodsBuild2.filter { it.name == methodName }[0].checksum
         )
@@ -77,7 +83,7 @@ class AstTest {
 
     @Test
     fun `method with lambda should have the same checksum`() {
-        val methodName = "theSameContextChangeAtLambda"
+        val methodName = "theSameMethodBody"
         //Methods, which contain lambda with different context, should not have difference in checksum
         assertEquals(
             methodsBuild1.filter { it.name == methodName }[0].checksum,
@@ -88,65 +94,61 @@ class AstTest {
     @Test
     fun `test on different context at inner lambda`() {
         val methodName = "lambda\$null\$2"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
     }
 
     @Test
     fun `should have different checksum for reference call`() {
         val methodName = "referenceMethodCall"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
     }
 
     @Test
     fun `should have different checksum for array`() {
         val methodName = "multiANewArrayInsnNode"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
     }
 
     @Test
     fun `should have different checksum for switch table`() {
         val methodName = "tableSwitchMethodTest"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
     }
 
     @Test
     fun `should have different checksum for look up switch`() {
         val methodName = "lookupSwitchMethodTest"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
     }
 
     @Test
     fun `method with different instance type`() {
         val methodName = "differentInstanceType"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
     }
-
 
     @Test
     fun `method call other method`() {
         val methodName = "callOtherMethod"
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
-        )
+        assertChecksum(methodName)
+    }
+
+    @Test
+    fun `method with different params`() {
+        val methodName = "methodWithDifferentParams"
+        assertChecksum(methodName)
+    }
+
+    @Test
+    fun `method with incremented value`() {
+        val methodName = "methodWithIteratedValue"
+        assertChecksum(methodName)
+    }
+
+    @Test
+    fun `change name of local var`() {
+        val methodName = "changeLocalVarName"
+        assertChecksum(methodName)
     }
 
 
@@ -255,6 +257,13 @@ class AstTest {
         methods["methodRef"].assertProbesCount(1)
     }
 
+    private fun assertChecksum(methodName: String) {
+        assertNotEquals(
+            methodsBuild1.filter { it.name == methodName }[0].checksum,
+            methodsBuild2.filter { it.name == methodName }[0].checksum
+        )
+    }
+
 }
 
 internal fun KClass<*>.readBytes(): ByteArray = java.getResourceAsStream(
@@ -267,3 +276,4 @@ internal fun AstMethod?.assertProbesCount(count: Int) {
     assertNotNull(this)
     assertEquals(count, this.probes.size)
 }
+
