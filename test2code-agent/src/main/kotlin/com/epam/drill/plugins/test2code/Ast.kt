@@ -139,6 +139,11 @@ private fun calculateMethodHash(methodNode: MethodNode): String {
     val instructions = methodNode.instructions.filter { (it?.opcode != -1) }
 
     val builder: StringBuilder = StringBuilder()
+    // Skip "this" object
+    methodNode.localVariables.filter { it.name != "this" }.forEach {
+        builder.append("${it.desc}/")
+        builder.append("${it.index} = ${it.name}/")
+    }
     for (insnNode in instructions) {
         builder.append("${insnNode.opcode}$")
         when (insnNode) {
@@ -181,6 +186,13 @@ private fun calculateMethodHash(methodNode: MethodNode): String {
             is MultiANewArrayInsnNode -> {
                 builder.append("${insnNode.desc}/")
                 builder.append("${insnNode.dims}/")
+            }
+            // context of incremented value
+            is IincInsnNode -> {
+                builder.append("${insnNode.incr}/")
+                val localVariable = methodNode.localVariables[insnNode.`var`]
+                builder.append("${localVariable.desc}/")
+                builder.append("${localVariable.index} =${localVariable.name}/")
             }
         }
     }
