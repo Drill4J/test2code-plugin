@@ -24,12 +24,7 @@ import org.jacoco.core.internal.flow.IFrame
 import org.jacoco.core.internal.flow.MethodProbesVisitor
 import org.jacoco.core.internal.instr.InstrSupport
 import org.objectweb.asm.*
-import org.objectweb.asm.tree.AbstractInsnNode
-import org.objectweb.asm.tree.FieldInsnNode
-import org.objectweb.asm.tree.IntInsnNode
-import org.objectweb.asm.tree.LdcInsnNode
-import org.objectweb.asm.tree.MethodInsnNode
-import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.*
 import java.nio.ByteBuffer
 
 
@@ -98,11 +93,14 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
     return counter.astClass
 }
 
-fun newAstClass(className: String,
-                methods: MutableList<AstMethod> = ArrayList()) = AstEntity(
+fun newAstClass(
+    className: String,
+    methods: MutableList<AstMethod> = ArrayList()
+) = AstEntity(
     path = getPackageName(className),
     name = getShortClassName(className),
-    methods)
+    methods
+)
 
 private fun getShortClassName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')
@@ -137,34 +135,72 @@ private fun getParams(methodNode: MethodNode): List<String> {
 }
 
 private fun calculateMethodHash(methodNode: MethodNode): String {
-    val instructions: MutableList<AbstractInsnNode?> = ArrayList(methodNode.instructions.size())
-    for (insnNode in methodNode.instructions.toArray()) {
-        instructions.add(insnNode)
+    // filter "-1" virtual opcodes: LabelNode, LineNumberNode.
+    val instructions = methodNode.instructions.filter { (it?.opcode != -1) }
+
+    val builder: StringBuilder = StringBuilder()
+    // Skip "this" object
+    methodNode.localVariables.filter { it.name != "this" }.forEach {
+        builder.append("${it.desc}/")
+        builder.append("${it.index} = ${it.name}/")
     }
-    // 8 is needed to increase buffer capacity
-    val buffer = ByteBuffer.allocate((instructions.size * 8))
     for (insnNode in instructions) {
-        buffer.putInt(insnNode!!.opcode)
+        builder.append("${insnNode.opcode}$")
         when (insnNode) {
-            //To cover the context of lambda
-            is LdcInsnNode -> {
-                buffer.putInt(insnNode.cst.hashCode())
-            }
-            //To cover the context of int var
+            //context of int var
             is IntInsnNode -> {
-                buffer.putInt(insnNode.operand.hashCode())
+                builder.append("${insnNode.operand}/")
             }
-            //To cover the context of instance method
-            is MethodInsnNode -> {
-                buffer.putInt(insnNode.name.hashCode())
+            //context of type instruction
+            is TypeInsnNode -> {
+                builder.append("${insnNode.desc}/")
             }
-            //To cover the context of reference call prep.
+            //context of reference call prep.
             is FieldInsnNode -> {
-                buffer.putInt(insnNode.name.hashCode())
+                builder.append("${insnNode.owner}/")
+                builder.append("${insnNode.desc}/")
+                builder.append("${insnNode.name}/")
+            }
+            //context of instance method
+            is MethodInsnNode -> {
+                builder.append("${insnNode.owner}/")
+                builder.append("${insnNode.desc}/")
+                builder.append("${insnNode.name}/")
+            }
+            //context of primitive var
+            is LdcInsnNode -> {
+                builder.append("${insnNode.cst}/")
+            }
+            //context of a sequence switch case
+            is TableSwitchInsnNode -> {
+                builder.append("${insnNode.min}/")
+                builder.append("${insnNode.max}/")
+                builder.append("${insnNode.labels.size}/")
+            }
+            //context of a distributed value of cases
+            is LookupSwitchInsnNode -> {
+                builder.append("${insnNode.labels.size}/")
+                insnNode.keys.forEach { builder.append("${it}/") }
+            }
+            // context of matrix view [][]...n[]
+            is MultiANewArrayInsnNode -> {
+                builder.append("${insnNode.desc}/")
+                builder.append("${insnNode.dims}/")
+            }
+            // context of incremented value
+            is IincInsnNode -> {
+                builder.append("${insnNode.incr}/")
+                val localVariable = methodNode.localVariables[insnNode.`var`]
+                builder.append("${localVariable.desc}/")
+                builder.append("${localVariable.index} =${localVariable.name}/")
             }
         }
-
     }
+    val builderString = builder.toString()
+    // multiply on 4 is necessary, cause position increments by four
+    val buffer = ByteBuffer.allocate(builderString.length * 4)
+    builderString.toCharArray().map { it.code }.toIntArray().forEach { buffer.putInt(it) }
+
     val bytecode = buffer.array()
     return CRC64.classId(bytecode).toString(Character.MAX_RADIX)
 }
