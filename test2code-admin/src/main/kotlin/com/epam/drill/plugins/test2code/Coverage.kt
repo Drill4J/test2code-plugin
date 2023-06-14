@@ -243,10 +243,10 @@ internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext,
     classBytes: Map<String, ByteArray>,
 ): BundleCounter = when (context.agentType) {
-    "JAVA" -> bundle(
-        probeIds = context.probeIds,
-        classBytes = classBytes
-    )
+//    "JAVA" -> bundle(
+//        probeIds = context.probeIds,
+//        classBytes = classBytes
+//    )
     else -> bundle(context.packageTree)
 }
 
