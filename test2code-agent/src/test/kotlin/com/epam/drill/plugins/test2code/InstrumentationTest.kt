@@ -27,11 +27,6 @@ import kotlin.test.Test
 
 class InstrumentationTest {
 
-//    @Test
-//    fun name() {
-//        val instrumentation = InstrumentationForTest(DateTimeHandler::class)
-//        instrumentation.saveToDisk()
-//    }
     @Test
     fun `instrumented class should be larger the the original`() {
         val instrumentation = InstrumentationForTest(TestTarget::class)
