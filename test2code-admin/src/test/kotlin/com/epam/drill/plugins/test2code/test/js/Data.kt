@@ -36,21 +36,18 @@ val ast = listOf(
                 name = "foo",
                 params = listOf("one", "two"),
                 returnType = "number",
-                count = 2,
                 probes = listOf(1, 2)
             ),
             AstMethod(
                 name = "bar",
                 params = listOf(),
                 returnType = "void",
-                count = 1,
                 probes = listOf(3)
             ),
             AstMethod(
                 name = "baz",
                 params = listOf(),
                 returnType = "void",
-                count = 2,
                 probes = listOf(4, 5)
             )
 
