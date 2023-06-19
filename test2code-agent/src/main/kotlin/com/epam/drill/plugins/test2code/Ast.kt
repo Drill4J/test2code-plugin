@@ -16,17 +16,15 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.DrillClassProbesAdapter
+import com.epam.drill.plugins.test2code.checsum.checksumCalculation
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
-import org.jacoco.core.internal.data.CRC64
 import org.jacoco.core.internal.flow.ClassProbesVisitor
 import org.jacoco.core.internal.flow.IFrame
 import org.jacoco.core.internal.flow.MethodProbesVisitor
 import org.jacoco.core.internal.instr.InstrSupport
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.*
-import java.nio.ByteBuffer
-
 
 class ClassProbeCounter(val name: String) : ClassProbesVisitor() {
     var count = 0
@@ -59,8 +57,9 @@ class MethodProbeCounter(
             name = methodNode.name,
             params = getParams(methodNode),
             returnType = getReturnType(methodNode),
-            checksum = calculateMethodHash(methodNode),
-            probes = probes
+            checksum = "",
+            probes = probes,
+            desc = methodNode.desc
         )
         methods.add(method)
     }
@@ -90,7 +89,11 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
     val classReader = InstrSupport.classReaderFor(classBytes)
     val counter = ClassProbeCounter(className)
     classReader.accept(DrillClassProbesAdapter(counter, false), 0)
-    return counter.astClass
+
+    val astClass = counter.astClass
+    val astMethodsWithChecksum = checksumCalculation(classBytes, className, astClass)
+    astClass.methods = astMethodsWithChecksum
+    return astClass
 }
 
 fun newAstClass(
@@ -132,75 +135,4 @@ private fun getParams(methodNode: MethodNode): List<String> {
         params.add(parameterType.className)
     }
     return params
-}
-
-private fun calculateMethodHash(methodNode: MethodNode): String {
-    // filter "-1" virtual opcodes: LabelNode, LineNumberNode.
-    val instructions = methodNode.instructions.filter { (it?.opcode != -1) }
-
-    val builder: StringBuilder = StringBuilder()
-    // Skip "this" object
-    methodNode.localVariables.filter { it.name != "this" }.forEach {
-        builder.append("${it.desc}/")
-        builder.append("${it.index} = ${it.name}/")
-    }
-    for (insnNode in instructions) {
-        builder.append("${insnNode.opcode}$")
-        when (insnNode) {
-            //context of int var
-            is IntInsnNode -> {
-                builder.append("${insnNode.operand}/")
-            }
-            //context of type instruction
-            is TypeInsnNode -> {
-                builder.append("${insnNode.desc}/")
-            }
-            //context of reference call prep.
-            is FieldInsnNode -> {
-                builder.append("${insnNode.owner}/")
-                builder.append("${insnNode.desc}/")
-                builder.append("${insnNode.name}/")
-            }
-            //context of instance method
-            is MethodInsnNode -> {
-                builder.append("${insnNode.owner}/")
-                builder.append("${insnNode.desc}/")
-                builder.append("${insnNode.name}/")
-            }
-            //context of primitive var
-            is LdcInsnNode -> {
-                builder.append("${insnNode.cst}/")
-            }
-            //context of a sequence switch case
-            is TableSwitchInsnNode -> {
-                builder.append("${insnNode.min}/")
-                builder.append("${insnNode.max}/")
-                builder.append("${insnNode.labels.size}/")
-            }
-            //context of a distributed value of cases
-            is LookupSwitchInsnNode -> {
-                builder.append("${insnNode.labels.size}/")
-                insnNode.keys.forEach { builder.append("${it}/") }
-            }
-            // context of matrix view [][]...n[]
-            is MultiANewArrayInsnNode -> {
-                builder.append("${insnNode.desc}/")
-                builder.append("${insnNode.dims}/")
-            }
-            // context of incremented value
-            is IincInsnNode -> {
-                builder.append("${insnNode.incr}/")
-                val localVariable = methodNode.localVariables[insnNode.`var`]
-                builder.append("${localVariable.desc}/")
-                builder.append("${localVariable.index} =${localVariable.name}/")
-            }
-        }
-    }
-    val builderString = builder.toString()
-    // multiply on 4 is necessary, cause position increments by four
-    val buffer = ByteBuffer.allocate(builderString.length * 4)
-    builderString.toCharArray().map { it.code }.toIntArray().forEach { buffer.putInt(it) }
-
-    val bytecode = buffer.array()
-    return CRC64.classId(bytecode).toString(Character.MAX_RADIX)
 }

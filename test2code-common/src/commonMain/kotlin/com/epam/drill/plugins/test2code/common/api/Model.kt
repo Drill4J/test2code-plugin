@@ -30,7 +30,7 @@ const val DEFAULT_TEST_NAME = "unspecified"
 data class AstEntity(
     val path: String,
     val name: String,
-    val methods: List<AstMethod>,
+    var methods: List<AstMethod>,
 )
 
 /**
@@ -45,6 +45,7 @@ data class AstEntity(
 @Serializable
 data class AstMethod(
     val name: String,
+    val desc: String,
     val params: List<String>,
     val returnType: String,
     val probes: List<Int> = emptyList(),
