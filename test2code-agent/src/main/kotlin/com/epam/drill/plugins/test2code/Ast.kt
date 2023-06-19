@@ -58,8 +58,7 @@ class MethodProbeCounter(
             params = getParams(methodNode),
             returnType = getReturnType(methodNode),
             checksum = "",
-            probes = probes,
-            desc = methodNode.desc
+            probes = probes
         )
         methods.add(method)
     }

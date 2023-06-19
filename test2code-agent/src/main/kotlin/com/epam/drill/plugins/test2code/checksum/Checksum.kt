@@ -7,7 +7,6 @@ import org.apache.bcel.classfile.Method
 import org.jacoco.core.internal.data.CRC64
 import java.io.ByteArrayInputStream
 
-
 internal fun checksumCalculation(
     classBytes: ByteArray,
     className: String,
@@ -20,10 +19,10 @@ internal fun checksumCalculation(
     val bcelClass = classParser.parse()
     val bcelMethods = bcelClass.methods
     //Map of ClassName to Bcel method instance
-    val bcelMethodsMap = bcelMethods.associateBy { signature(className, it.name, it.signature) }
+    val bcelMethodsMap = bcelMethods.associateBy { it.name }
 
     return astMethods.map { astMethod ->
-        val astSignature = signature(className, astMethod.name, astMethod.desc)
+        val astSignature = astMethod.name
         val bcelMethod = bcelMethodsMap[astSignature]
 
         val codeToStringService = CodeToStringService()

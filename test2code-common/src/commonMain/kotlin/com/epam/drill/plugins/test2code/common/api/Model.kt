@@ -45,7 +45,6 @@ data class AstEntity(
 @Serializable
 data class AstMethod(
     val name: String,
-    val desc: String,
     val params: List<String>,
     val returnType: String,
     val probes: List<Int> = emptyList(),
