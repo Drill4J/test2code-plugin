@@ -18,6 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
+import com.epam.drill.plugins.test2code.classloading.scanResourceMap
 import com.epam.drill.plugins.test2code.common.api.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
@@ -72,10 +73,15 @@ class Plugin(
     override fun on() {
         val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
         sendMessage(initInfo)
+
+        val classes = scanResourceMap(listOf("io/spring"))//todo change "io.spring" to packagePrefixes
+        sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
+        _astClasses.update { persistentListOf() }
+
+
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
         }
-        sendMessage(InitDataPart(_astClasses.value))
         sendMessage(Initialized(msg = "Initialized"))
         logger.info { "Plugin $id initialized!" }
     }
