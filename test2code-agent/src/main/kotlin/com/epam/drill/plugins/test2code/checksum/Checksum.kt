@@ -1,10 +1,9 @@
-package com.epam.drill.plugins.test2code.checsum
+package com.epam.drill.plugins.test2code.checksum
 
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.apache.bcel.classfile.ClassParser
 import org.apache.bcel.classfile.Method
-import org.apache.bcel.classfile.Utility
 import org.jacoco.core.internal.data.CRC64
 import java.io.ByteArrayInputStream
 
@@ -26,12 +25,18 @@ internal fun checksumCalculation(
     return astMethods.map { astMethod ->
         val astSignature = signature(className, astMethod.name, astMethod.desc)
         val bcelMethod = bcelMethodsMap[astSignature]
-        astMethod.copy(checksum = bcelMethod.checksum())
+
+        val codeToStringService = CodeToStringService()
+        val methodHash = bcelMethod.let { codeToStringService.checksum(it) }
+
+        astMethod.copy(checksum = methodHash)
     }
 }
 
-private fun Method?.checksum(): String = (this?.code?.run {
-    Utility.codeToString(code, constantPool, 0, length, false)
+private fun CodeToStringService.checksum(
+    method: Method?,
+): String = (method?.code?.run {
+    codeToString(code, constantPool, 0, length, false)
 } ?: "").crc64
 
 val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.plugins.test2code.checsum
+package com.epam.drill.plugins.test2code.checksum
 
 // That file was taken from test2code-admin
 fun signature(

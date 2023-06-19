@@ -16,7 +16,7 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.DrillClassProbesAdapter
-import com.epam.drill.plugins.test2code.checsum.checksumCalculation
+import com.epam.drill.plugins.test2code.checksum.checksumCalculation
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.jacoco.core.internal.flow.ClassProbesVisitor
