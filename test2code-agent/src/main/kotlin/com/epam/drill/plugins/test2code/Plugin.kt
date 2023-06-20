@@ -64,13 +64,15 @@ class Plugin(
     //TODO remove
     override fun isEnabled(): Boolean = _enabled.value
 
+    /**
+     * Switch on the plugin
+     */
     override fun on() {
         val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
         sendMessage(initInfo)
+        logger.info { "Initializing plugin $id..." }
 
-        scanClasses(getPackagePrefixes()) { classes ->
-            sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
-        }
+        scanAndSendMetadataClasses()
 
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
@@ -79,6 +81,9 @@ class Plugin(
         logger.info { "Plugin $id initialized!" }
     }
 
+    /**
+     * Switch off the plugin
+     */
     override fun off() {
         logger.info { "Enabled $enabled" }
         val cancelledCount = instrContext.cancelAll()
@@ -195,7 +200,17 @@ class Plugin(
         rawAction: String,
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 
-    private fun getPackagePrefixes() = Native.GetPackagePrefixes().split(", ")
+    /**
+     * Scan and send to the admin side classes metadata
+     */
+    private fun scanAndSendMetadataClasses() {
+        val packagePrefixes = Native.GetPackagePrefixes().split(", ")
+        logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
+        val count = scanClasses(packagePrefixes) { classes ->
+            sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
+        }
+        logger.info { "Scanned $count classes" }
+    }
 }
 
 fun Plugin.probeSender(
@@ -218,6 +233,7 @@ fun Plugin.probeSender(
 }
 
 fun Plugin.sendMessage(message: CoverMessage) {
+    logger.debug { "Send message $message" }
     val messageStr = json.encodeToString(CoverMessage.serializer(), message)
     send(messageStr)
 }

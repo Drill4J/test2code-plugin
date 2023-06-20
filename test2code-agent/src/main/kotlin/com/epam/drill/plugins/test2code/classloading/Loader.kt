@@ -15,28 +15,14 @@
  */
 package com.epam.drill.plugins.test2code.classloading
 
-fun scanResourceMap(packagePrefixes: Iterable<String>): Set<ClassSource> = packagePrefixes.run {
-    scanAvailableClassLoaders().apply { addAll(scanExternalSources()) }
-}
-
-fun Iterable<String>.scanExternalSources(): List<ClassSource> = emptyList()
-
-fun Iterable<String>.scanAvailableClassLoaders(): MutableSet<ClassSource> {
-    val threadClassLoaders = Thread.getAllStackTraces().keys.mapNotNull(Thread::getContextClassLoader)
-    val leafClassLoaders = threadClassLoaders
-        .leaves(ClassLoader::getParent)
-        .toListWith(ClassLoader.getSystemClassLoader())
-    return ClassPath(this).scan(leafClassLoaders)
-}
-
 fun scanClasses(
     scanPackages: Iterable<String>,
     classesBufferSize: Int = 50,
     transfer: (Set<ClassSource>) -> Unit
-) {
+): Int {
     val threadClassLoaders = Thread.getAllStackTraces().keys.mapNotNull(Thread::getContextClassLoader)
     val leafClassLoaders = threadClassLoaders
         .leaves(ClassLoader::getParent)
         .toListWith(ClassLoader.getSystemClassLoader())
-    ClassPath(scanPackages, classesBufferSize, transfer).scan(leafClassLoaders)
+    return ClassHandler(scanPackages, classesBufferSize, transfer).scan(leafClassLoaders)
 }

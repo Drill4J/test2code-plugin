@@ -19,10 +19,16 @@ import java.io.*
 import java.net.*
 import java.util.jar.*
 
-class ClassPath(
+/**
+ * Buffering and handling scanned classes
+ * @param includedPaths package prefixes for scanning
+ * @param bufferSize the size of classes buffer before handling
+ * @param transfer handler of scanned classes
+ */
+class ClassHandler(
     private val includedPaths: Iterable<String>,
-    private val classesBufferSize: Int = 50,
-    private val transfer: (Set<ClassSource>) -> Unit = {}
+    private val bufferSize: Int = 50,
+    private val transfer: (Set<ClassSource>) -> Unit
 ) {
     private val scannedUrls = mutableSetOf<URL>()
 
@@ -30,7 +36,14 @@ class ClassPath(
 
     private val scannedClasses = mutableSetOf<ClassSource>()
 
-    fun scan(classLoaders: Iterable<ClassLoader>): MutableSet<ClassSource> {
+    private var scannedClassesCount = 0
+
+    /**
+     * Scan classes using class loaders
+     * @param classLoaders the list of class loaders
+     * @return the total number of scanned classes
+     */
+    fun scan(classLoaders: Iterable<ClassLoader>): Int {
         val allClassLoaders = classLoaders.flatMapTo(mutRefSet()) {
             it.parents(ClassLoader::getParent) + it
         }
@@ -41,7 +54,7 @@ class ClassPath(
         }
         if (scannedClasses.isNotEmpty())
             transfer(scannedClasses)
-        return scannedClasses
+        return scannedClassesCount
     }
 
     private fun URL.scan(classloader: ClassLoader): Unit = takeIf { scannedUrls.add(it) }?.toFile()?.let { file ->
@@ -68,7 +81,8 @@ class ClassPath(
     private fun handler(source: ClassSource) {
         scannedNames.add(source.className)
         scannedClasses.add(source)
-        if (scannedClasses.size >= classesBufferSize) {
+        scannedClassesCount++
+        if (scannedClasses.size >= bufferSize) {
             transfer(scannedClasses)
             scannedClasses.clear()
         }
