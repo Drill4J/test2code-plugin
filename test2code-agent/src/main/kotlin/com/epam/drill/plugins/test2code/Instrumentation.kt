@@ -19,7 +19,6 @@ import com.epam.drill.jacoco.*
 import com.epam.drill.jacoco.BooleanArrayProbeInserter.*
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.processing.Instrumenter
-import com.epam.drill.plugins.test2code.common.api.AstEntity
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.CRC64
 import org.jacoco.core.internal.flow.*
@@ -30,8 +29,7 @@ private val classCounter = atomic(0)
 
 class DrillInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider,
-    private val logger: Logger,
-    private val classUpdater: (AstEntity) -> Unit = {}
+    private val logger: Logger
 ): Instrumenter {
 
     override fun instrument(className: String, initialBytes: ByteArray): ByteArray? = try {
@@ -42,7 +40,6 @@ class DrillInstrumenter(
         val counter = ClassProbeCounter(className)
         val reader = InstrSupport.classReaderFor(initialBytes)
         reader.accept(DrillClassProbesAdapter(counter, false), 0)
-        classUpdater(counter.astClass)
 
         val genId = classCounter.incrementAndGet()
         val probeCount = counter.count

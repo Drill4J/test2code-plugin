@@ -22,8 +22,6 @@ import com.epam.drill.plugins.test2code.classloading.scanClasses
 import com.epam.drill.plugins.test2code.common.api.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.plus
 import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
 import java.util.*
@@ -48,11 +46,7 @@ class Plugin(
         logger = this@Plugin.logger
     }
 
-    private val _astClasses = atomic(persistentListOf<AstEntity>())
-
-    private val instrumenter = DrillInstrumenter(instrContext, logger) { entity ->
-        _astClasses.update { it + entity }
-    }
+    private val instrumenter = DrillInstrumenter(instrContext, logger)
 
     private val _retransformed = atomic(false)
 
