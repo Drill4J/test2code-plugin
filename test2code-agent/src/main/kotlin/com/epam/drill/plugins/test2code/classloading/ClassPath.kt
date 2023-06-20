@@ -20,7 +20,9 @@ import java.net.*
 import java.util.jar.*
 
 class ClassPath(
-    private val includedPaths: Iterable<String>
+    private val includedPaths: Iterable<String>,
+    private val classesBufferSize: Int = 50,
+    private val transfer: (Set<ClassSource>) -> Unit = {}
 ) {
     private val scannedUrls = mutableSetOf<URL>()
 
@@ -37,6 +39,8 @@ class ClassPath(
                 url.scan(classLoader)
             }
         }
+        if (scannedClasses.isNotEmpty())
+            transfer(scannedClasses)
         return scannedClasses
     }
 
@@ -64,6 +68,10 @@ class ClassPath(
     private fun handler(source: ClassSource) {
         scannedNames.add(source.className)
         scannedClasses.add(source)
+        if (scannedClasses.size >= classesBufferSize) {
+            transfer(scannedClasses)
+            scannedClasses.clear()
+        }
     }
 }
 

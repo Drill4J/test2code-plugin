@@ -18,7 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.classloading.scanResourceMap
+import com.epam.drill.plugins.test2code.classloading.scanClasses
 import com.epam.drill.plugins.test2code.common.api.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
@@ -74,10 +74,9 @@ class Plugin(
         val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
         sendMessage(initInfo)
 
-        val classes = scanResourceMap(listOf("io/spring"))//todo change "io.spring" to packagePrefixes
-        sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
-        _astClasses.update { persistentListOf() }
-
+        scanClasses(getPackagePrefixes()) { classes ->
+            sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
+        }
 
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
@@ -201,6 +200,8 @@ class Plugin(
     override fun parseAction(
         rawAction: String,
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
+
+    private fun getPackagePrefixes() = Native.GetPackagePrefixes().split(", ")
 }
 
 fun Plugin.probeSender(

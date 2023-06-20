@@ -28,3 +28,15 @@ fun Iterable<String>.scanAvailableClassLoaders(): MutableSet<ClassSource> {
         .toListWith(ClassLoader.getSystemClassLoader())
     return ClassPath(this).scan(leafClassLoaders)
 }
+
+fun scanClasses(
+    scanPackages: Iterable<String>,
+    classesBufferSize: Int = 50,
+    transfer: (Set<ClassSource>) -> Unit
+) {
+    val threadClassLoaders = Thread.getAllStackTraces().keys.mapNotNull(Thread::getContextClassLoader)
+    val leafClassLoaders = threadClassLoaders
+        .leaves(ClassLoader::getParent)
+        .toListWith(ClassLoader.getSystemClassLoader())
+    ClassPath(scanPackages, classesBufferSize, transfer).scan(leafClassLoaders)
+}
