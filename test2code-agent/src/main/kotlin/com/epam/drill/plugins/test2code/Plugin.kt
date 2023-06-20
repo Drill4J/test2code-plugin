@@ -201,9 +201,10 @@ class Plugin(
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 
     /**
-     * Scan and send to the admin side classes metadata
+     * Scan, parse and send metadata classes them to the admin side
      */
     private fun scanAndSendMetadataClasses() {
+        Native.WaitClassScanning()
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
         val count = scanClasses(packagePrefixes) { classes ->
