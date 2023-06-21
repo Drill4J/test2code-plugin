@@ -35,6 +35,7 @@ val jarDependencies by configurations.creating {
 configurations.implementation.get().extendsFrom(jarDependencies)
 
 dependencies {
+    testImplementation("org.projectlombok:lombok:1.18.26")
     jarDependencies("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kotlinxCollectionsVersion") { isTransitive = false }
     jarDependencies("org.jacoco:org.jacoco.core:$jacocoVersion")
     jarDependencies("com.github.luben:zstd-jni:$lubenZstdVersion")
