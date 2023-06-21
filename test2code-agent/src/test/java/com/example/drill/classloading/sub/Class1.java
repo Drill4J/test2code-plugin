@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.plugins.test2code.classloading
+package com.example.drill.classloading.sub;
 
-fun scanClasses(
-    scanPackages: Iterable<String>,
-    classesBufferSize: Int = 50,
-    transfer: (Set<ClassSource>) -> Unit
-): Int {
-    val threadClassLoaders = Thread.getAllStackTraces().keys.mapNotNull(Thread::getContextClassLoader)
-    val leafClassLoaders = threadClassLoaders
-        .leaves(ClassLoader::getParent)
-        .toListWith(ClassLoader.getSystemClassLoader())
-    return ClassHandler(scanPackages, classesBufferSize, transfer).scan(leafClassLoaders)
+public class Class1 implements Interface1 {
+    @Override
+    public void method1() {
+
+    }
 }

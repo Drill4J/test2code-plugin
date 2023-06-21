@@ -154,4 +154,4 @@ internal fun AstMethod.toDesc(): String = params.joinToString(
     prefix = "(", postfix = "):$returnType"
 ).weakIntern()
 
-private fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }
+fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }

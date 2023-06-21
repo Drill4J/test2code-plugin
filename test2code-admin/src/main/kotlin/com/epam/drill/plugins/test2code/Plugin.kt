@@ -304,6 +304,9 @@ class Plugin(
             logger.info { "$instanceId: ${message.message}" } //log init message
             logger.info { "$instanceId: ${message.classesCount} classes to load" }
         }
+        /**
+         * @features Class data sending
+         */
         is InitDataPart -> {
             (state.data as? DataBuilder)?.also {
                 logger.info { "$instanceId: $message" }

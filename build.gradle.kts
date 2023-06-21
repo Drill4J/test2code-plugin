@@ -8,6 +8,7 @@ import org.ajoberstar.grgit.operation.BranchListOp
 @Suppress("RemoveRedundantBackticks")
 plugins {
     `distribution`
+    `maven-publish`
     kotlin("jvm").apply(false)
     kotlin("multiplatform").apply(false)
     kotlin("plugin.allopen").apply(false)
@@ -26,6 +27,7 @@ val kotlinVersion: String by extra
 val kotlinxCollectionsVersion: String by extra
 val kotlinxCoroutinesVersion: String by extra
 val kotlinxSerializationVersion: String by extra
+val sharedLibsLocalPath: String by extra
 
 repositories {
     mavenLocal()
@@ -109,9 +111,15 @@ distributions {
     }
 }
 
+publishing {
+    publications.create<MavenPublication>("test2codeZip") {
+        artifact(tasks.distZip.get())
+    }
+}
+
 @Suppress("UNUSED_VARIABLE")
 tasks {
-    val sharedLibsDir = file("$projectDir/lib-jvm-shared")
+    val sharedLibsDir = projectDir.resolve(sharedLibsLocalPath)
     val sharedLibsRef: String by extra
     val updateSharedLibs by registering {
         group = "other"

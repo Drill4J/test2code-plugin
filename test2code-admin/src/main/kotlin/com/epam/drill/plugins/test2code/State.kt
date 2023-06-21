@@ -101,7 +101,7 @@ internal class AgentState(
             }
         }.takeIf { it !is ClassData }?.also { data ->
             val classData = when (data) {
-                is DataBuilder -> data.flatMap { e -> e.methods.map { e to it } }.run {
+                is DataBuilder -> data.flatMap { e -> e.methodsWithProbes().map { e to it } }.run {
                     logger.debug { "initializing DataBuilder..." }
                     val methods = map { (e, m) ->
                         Method(

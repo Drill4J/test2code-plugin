@@ -18,12 +18,10 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.classloading.scanResourceMap
+import com.epam.drill.plugins.test2code.classloading.scanClasses
 import com.epam.drill.plugins.test2code.common.api.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.plus
 import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
 import java.util.*
@@ -48,11 +46,7 @@ class Plugin(
         logger = this@Plugin.logger
     }
 
-    private val _astClasses = atomic(persistentListOf<AstEntity>())
-
-    private val instrumenter = DrillInstrumenter(instrContext, logger) { entity ->
-        _astClasses.update { it + entity }
-    }
+    private val instrumenter = DrillInstrumenter(instrContext, logger)
 
     private val _retransformed = atomic(false)
 
@@ -70,14 +64,15 @@ class Plugin(
     //TODO remove
     override fun isEnabled(): Boolean = _enabled.value
 
+    /**
+     * Switch on the plugin
+     */
     override fun on() {
         val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
         sendMessage(initInfo)
+        logger.info { "Initializing plugin $id..." }
 
-        val classes = scanResourceMap(listOf("io/spring"))//todo change "io.spring" to packagePrefixes
-        sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
-        _astClasses.update { persistentListOf() }
-
+        scanAndSendMetadataClasses()
 
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
@@ -86,6 +81,9 @@ class Plugin(
         logger.info { "Plugin $id initialized!" }
     }
 
+    /**
+     * Switch off the plugin
+     */
     override fun off() {
         logger.info { "Enabled $enabled" }
         val cancelledCount = instrContext.cancelAll()
@@ -201,6 +199,19 @@ class Plugin(
     override fun parseAction(
         rawAction: String,
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
+
+    /**
+     * Scan, parse and send metadata classes them to the admin side
+     */
+    private fun scanAndSendMetadataClasses() {
+        Native.WaitClassScanning()
+        val packagePrefixes = Native.GetPackagePrefixes().split(", ")
+        logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
+        val count = scanClasses(packagePrefixes) { classes ->
+            sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
+        }
+        logger.info { "Scanned $count classes" }
+    }
 }
 
 fun Plugin.probeSender(
@@ -223,6 +234,7 @@ fun Plugin.probeSender(
 }
 
 fun Plugin.sendMessage(message: CoverMessage) {
+    logger.debug { "Send message $message" }
     val messageStr = json.encodeToString(CoverMessage.serializer(), message)
     send(messageStr)
 }
