@@ -1,14 +1,8 @@
 package com.epam.drill.plugins.test2code.ast;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-@Getter
-@NoArgsConstructor
-@EqualsAndHashCode(of = {"id"})
 public class ConstructorTestBuild2 {
     private String id;
     private String email;
@@ -28,4 +22,7 @@ public class ConstructorTestBuild2 {
         this.phone = "";
     }
 
+    public ConstructorTestBuild2() {
+
+    }
 }

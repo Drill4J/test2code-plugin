@@ -34,10 +34,12 @@ internal fun checksumCalculation(
     val bcelClass = classParser.parse()
     val bcelMethods = bcelClass.methods
     //Map of ClassName to Bcel method instance
-    val bcelMethodsMap = bcelMethods.associateBy { it.name }
+    val bcelMethodsMap = bcelMethods.associateBy {
+        it.classSignature()
+    }
 
     return astMethods.map { astMethod ->
-        val astSignature = astMethod.name
+        val astSignature = astMethod.classSignature()
         val bcelMethod = bcelMethodsMap[astSignature]
 
         val codeToStringService = CodeToStringService()
@@ -46,6 +48,12 @@ internal fun checksumCalculation(
         astMethod.copy(checksum = methodHash)
     }
 }
+
+private fun AstMethod.classSignature() =
+    "${name}/${params.joinToString()}/${returnType}"
+
+private fun Method.classSignature() =
+    "${name}/${argumentTypes.asSequence().map { type -> type.toString() }.joinToString()}/${returnType}"
 
 private fun CodeToStringService.checksum(
     method: Method?,

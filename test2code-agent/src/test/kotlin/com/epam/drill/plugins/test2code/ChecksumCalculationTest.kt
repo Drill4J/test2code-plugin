@@ -15,8 +15,9 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.ast.Build1
-import com.epam.drill.plugins.test2code.ast.Build2
+import com.epam.drill.plugins.test2code.ast.*
+import com.epam.drill.plugins.test2code.ast.OverrideTest
+import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -38,7 +39,7 @@ class ChecksumCalculationTest {
     fun `lambda with different context should have other checksum`() {
         val methodName = "lambda\$differentContextChangeAtLambda\$1"
         // Lambdas should have different value, because they contain different context
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
@@ -63,43 +64,43 @@ class ChecksumCalculationTest {
     @Test
     fun `test on different context at inner lambda`() {
         val methodName = "lambda\$null\$2"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
     fun `should have different checksum for reference call`() {
         val methodName = "referenceMethodCall"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
     fun `should have different checksum for array`() {
         val methodName = "multiANewArrayInsnNode"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
     fun `should have different checksum for switch table`() {
         val methodName = "tableSwitchMethodTest"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
     fun `should have different checksum for look up switch`() {
         val methodName = "lookupSwitchMethodTest"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
     fun `method with different instance type`() {
         val methodName = "differentInstanceType"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
     @Test
     fun `method call other method`() {
         val methodName = "callOtherMethod"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 //    Do we need to cover that case?
 //    @Test
@@ -111,7 +112,7 @@ class ChecksumCalculationTest {
     @Test
     fun `method with incremented value`() {
         val methodName = "methodWithIteratedValue"
-        assertChecksum(methodName)
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
     }
 
 //   Do we need to cover that case?
@@ -121,10 +122,61 @@ class ChecksumCalculationTest {
 //        assertChecksum(methodName)
 //    }
 
-    private fun assertChecksum(methodName: String) {
-        assertNotEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
+}
+
+class ConstructorTest {
+    private val methodsBuild1 =
+        parseAstClass(
+            ConstructorTestBuild1::class.getFullName(),
+            ConstructorTestBuild1::class.readBytes()
+        ).methods
+    private val methodsBuild2 =
+        parseAstClass(
+            ConstructorTestBuild2::class.getFullName(),
+            ConstructorTestBuild2::class.readBytes()
+        ).methods
+
+    @Test
+    fun `class with more that one constructor should have two different checksum`() {
+        val methodName = "<init>"
+        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        assertEquals(
+            methodsBuild1.filter { it.name == methodName }[1].checksum,
+            methodsBuild2.filter { it.name == methodName }[1].checksum
         )
     }
+}
+
+class OverrideTest {
+    private val methodsBuild =
+        parseAstClass(
+            OverrideTest::class.getFullName(),
+            OverrideTest::class.readBytes()
+        ).methods
+
+    @Test
+    fun `class with override methods should have different checksum`() {
+        val methodName = "getResult"
+        assertEquals(methodsBuild.size, 8)
+        //Compare checksum of virtual method and method with override annotation
+        assertNotEquals(
+            methodsBuild.filter { it.name == methodName }[1].checksum,
+            methodsBuild.filter { it.name == methodName }[2].checksum
+        )
+        assertNotEquals(
+            methodsBuild.filter { it.name == methodName }[0].checksum,
+            methodsBuild.filter { it.name == methodName }[3].checksum
+        )
+    }
+}
+
+private fun assertChecksum(
+    methodName: String,
+    build1: List<AstMethod>,
+    build2: List<AstMethod>
+) {
+    assertNotEquals(
+        build1.filter { it.name == methodName }[0].checksum,
+        build2.filter { it.name == methodName }[0].checksum
+    )
 }
