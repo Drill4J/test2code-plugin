@@ -98,7 +98,7 @@ class SessionTest : E2EPluginTest() {
                     val stopSession = StopSession(StopSessionPayload(sessionId)).stringify()
                     pluginAction(stopSession).join()
                     plugUi.activeSessions()!!.count shouldBe 0
-                    plugUi.activeScope()!!.coverage.count shouldBe Count(11, 15)
+                    plugUi.activeScope()!!.coverage.count shouldBe Count(3, 4)
                 }
 
                 "${UUID.randomUUID()}".let { sessionId ->
@@ -125,7 +125,7 @@ class SessionTest : E2EPluginTest() {
 
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!.coverage.count.covered shouldBe 0
-                plugUi.buildCoverage()!!.count shouldBe Count(11, 15)
+                plugUi.buildCoverage()!!.count shouldBe Count(3, 4)
             }
         }
     }
@@ -139,8 +139,8 @@ class SessionTest : E2EPluginTest() {
                     testTypes shouldBe emptySet()
                 }
 
-                plugUi.activeScope()!!.coverage.count shouldBe Count(0, 15)
-                plugUi.buildCoverage()!!.count shouldBe Count(0, 15)
+                plugUi.activeScope()!!.coverage.count shouldBe Count(0, 4)
+                plugUi.buildCoverage()!!.count shouldBe Count(0, 4)
                 val startNewSession = StartNewSession(StartPayload(MANUAL_TEST_TYPE)).stringify()
                 pluginAction(startNewSession) { status, content ->
                     status shouldBe HttpStatusCode.OK
@@ -178,7 +178,7 @@ class SessionTest : E2EPluginTest() {
                 plugUi.activeSessions()!!.count shouldBe 0
                 plugUi.activeScope()!!
                 plugUi.activeScope()!!.coverage.run {
-                    testTypeOverlap.count shouldBe Count(7, 15).toDto()
+                    testTypeOverlap.count shouldBe Count(2, 4).toDto()
                     byTestType.size shouldBe 2
                 }
             }
