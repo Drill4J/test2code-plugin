@@ -32,7 +32,7 @@ class Plugin(
     agentContext: AgentContext,
     sender: Sender,
     logging: LoggerFactory,
-) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter {
+) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter, ClassScanner {
     internal val logger = logging.logger("Plugin $id")
 
     internal val json = Json { encodeDefaults = true }
@@ -200,15 +200,21 @@ class Plugin(
         rawAction: String,
     ): AgentAction = json.decodeFromString(AgentAction.serializer(), rawAction)
 
-    /**
-     * Scan, parse and send metadata classes them to the admin side
-     */
-    private fun scanAndSendMetadataClasses() {
+    override fun scanClasses(consumer: (Set<EntitySource>) -> Unit) {
         Native.WaitClassScanning()
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
-        val count = scanClasses(packagePrefixes) { classes ->
-            sendMessage(InitDataPart(classes.map { parseAstClass(it.className, it.bytes()) }))
+        scanClasses(packagePrefixes, 50, consumer)
+    }
+
+    /**
+     * Scan, parse and send metadata classes to the admin side
+     */
+    private fun scanAndSendMetadataClasses() {
+        var count = 0
+        scanClasses { classes ->
+            sendMessage(InitDataPart(classes.map { parseAstClass(it.entityName(), it.bytes()) }))
+            count =+ classes.size
         }
         logger.info { "Scanned $count classes" }
     }

@@ -15,18 +15,19 @@
  */
 package com.epam.drill.plugins.test2code.classloading
 
+import com.epam.drill.plugin.api.processing.EntitySource
+
 const val SUBCLASS = "!subclassOf:"
 
-interface ByteSource {
-    fun bytes(): ByteArray
-}
 
 data class ClassSource(
     val className: String,
     val superName: String = "",
     private val bytes: ByteArray = byteArrayOf(),
-) : ByteSource {
+) : EntitySource {
     override fun bytes() = bytes
+
+    override fun entityName() = className
 
     override fun toString() = "$className: ${this::class.simpleName}"
 

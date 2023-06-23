@@ -15,6 +15,7 @@
  */
 package com.epam.drill.plugins.test2code.classloading
 
+import com.epam.drill.plugin.api.processing.EntitySource
 import java.io.*
 import java.net.*
 import java.util.jar.*
@@ -28,13 +29,13 @@ import java.util.jar.*
 class ClassHandler(
     private val includedPaths: Iterable<String>,
     private val bufferSize: Int = 50,
-    private val transfer: (Set<ClassSource>) -> Unit
+    private val transfer: (Set<EntitySource>) -> Unit
 ) {
     private val scannedUrls = mutableSetOf<URL>()
 
     private val scannedNames = mutableSetOf<String>()
 
-    private val scannedClasses = mutableSetOf<ClassSource>()
+    private val scannedClasses: MutableSet<EntitySource> = mutableSetOf()
 
     private var scannedClassesCount = 0
 

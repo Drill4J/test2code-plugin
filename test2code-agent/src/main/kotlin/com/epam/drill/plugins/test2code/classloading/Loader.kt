@@ -15,10 +15,12 @@
  */
 package com.epam.drill.plugins.test2code.classloading
 
+import com.epam.drill.plugin.api.processing.EntitySource
+
 fun scanClasses(
     scanPackages: Iterable<String>,
     classesBufferSize: Int = 50,
-    transfer: (Set<ClassSource>) -> Unit
+    transfer: (Set<EntitySource>) -> Unit
 ): Int {
     val threadClassLoaders = Thread.getAllStackTraces().keys.mapNotNull(Thread::getContextClassLoader)
     val leafClassLoaders = threadClassLoaders
