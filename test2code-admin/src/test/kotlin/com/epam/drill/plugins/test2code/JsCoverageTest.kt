@@ -106,8 +106,6 @@ class JsCoverageTest : PostgresBased("js_coverage") {
 
     private suspend fun calculateCoverage(addProbes: suspend ActiveScope.() -> Unit): CoverageInfoSet {
         val adminData = object : AdminData {
-            override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
-            override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
         }
         val state = AgentState(
             storeClient, jsAgentInfo, adminData

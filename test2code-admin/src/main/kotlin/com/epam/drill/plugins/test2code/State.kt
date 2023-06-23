@@ -19,7 +19,6 @@ import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
@@ -51,7 +50,7 @@ internal class AgentState(
 
     val qualityGateSettings = AtomicCache<String, ConditionSetting>()
 
-    private val _data = atomic<AgentData>(NoData)
+    private val _data = atomic<AgentData>(DataBuilder())
 
     private val _coverContext = atomic<CoverContext?>(null)
 
@@ -62,13 +61,7 @@ internal class AgentState(
         )
     )
 
-    private val _classBytes = atomic<Map<String, ByteArray>>(emptyMap())
 
-    suspend fun classBytes(buildVersion: String) = _classBytes.value.takeIf {
-        it.isNotEmpty()
-    } ?: adminData.loadClassBytes(buildVersion).also { loaded ->
-        _classBytes.update { loaded }
-    }
 
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
@@ -120,9 +113,7 @@ internal class AgentState(
                     ).toClassData(agentKey, methods = methods)
                 }
                 is NoData -> {
-                    val classBytes = adminData.loadClassBytes(agentInfo.buildVersion)
-                    logger.info { "initializing noData with classBytes size ${classBytes.size}..." }
-                    classBytes.parseClassBytes(agentKey)
+                    throw UnsupportedOperationException("Java class bytes are not supported")
                 }
                 else -> data
             } as ClassData
@@ -212,10 +203,6 @@ internal class AgentState(
             }
             logger.debug { "Session $sessionId finished." }.also { logPoolStats() }
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
-        if (activeScope.activeSessions.isEmpty()) {
-            _classBytes.update { emptyMap() }
-            logger.trace { "Class bytes have been cleared" }
-        }
     }
 
     internal fun updateProbes(

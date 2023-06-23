@@ -17,7 +17,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
@@ -101,7 +100,7 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
 } else DiffMethods(deleted = otherMethods)
 
 private fun MutableList<Method>.addMethod(value: Method) {
-    if (LAMBDA !in value.name) add(value)
+    add(value)
 }
 
 internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(

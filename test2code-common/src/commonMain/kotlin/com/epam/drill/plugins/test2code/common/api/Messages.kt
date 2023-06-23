@@ -25,7 +25,8 @@ sealed class CoverMessage
 data class InitInfo(
     val classesCount: Int = 0,
     val message: String = "",
-    val init: Boolean = false,
+    @Deprecated(message = "the parameter is unused")
+    val init: Boolean = true,
 ) : CoverMessage()
 
 @SerialName("INIT_DATA_PART")
