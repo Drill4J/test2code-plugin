@@ -15,7 +15,6 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.jacoco.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
@@ -26,8 +25,6 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
 import kotlinx.collections.immutable.*
-import org.jacoco.core.data.*
-import org.jacoco.core.tools.*
 import java.io.*
 import java.util.stream.*
 
