@@ -170,6 +170,10 @@ class GlobalExecRuntime(
 ) : Runtime(realtimeHandler) {
     internal val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
 
+    /**
+     * Get probes from the completed tests
+     * @features Coverage data sending
+     */
     override fun collect(): Sequence<ExecDatum> = execDatum.asSequence().filterNotNull().filter { datum ->
         datum.probes.values.any { it }
     }.map { datum ->
@@ -295,6 +299,10 @@ open class SimpleSessionProbeArrayProvider(
         }
     }
 
+    /**
+     * Remove the test session from the active session list and return probes
+     * @features Session finishing
+     */
     override fun stop(sessionId: String): Sequence<ExecDatum>? {
         return if (sessionId !in runtimes) {
             removeGlobal()?.collect()

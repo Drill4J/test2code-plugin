@@ -63,6 +63,11 @@ internal class AgentState(
 
 
 
+    /**
+     * Initialize the agent state and call a function if the agent class data exists in database
+     * @param block a function that will be called if the class data exists in the database
+     * @features Agent registration
+     */
     suspend fun loadFromDb(block: suspend () -> Unit = {}) {
         logger.debug { "starting load ClassData from DB..." }
         storeClient.loadClassData(agentKey)?.let { classData ->
@@ -85,6 +90,17 @@ internal class AgentState(
 
     private val mutex = Mutex()
 
+    /**
+     * Initialize agent data state of the plugin
+     * - Converts DataBuilder to ClassData if the data state is DataBuilder class
+     * - Load class bytes from the database if the data state is NoData class
+     * - Updates class data state
+     * - Stores class data to the database
+     * - Initializes class data
+     * - Call the block
+     * @param block the function which will be called in the end
+     * @features Agent registration
+     */
     suspend fun initialized(block: suspend () -> Unit = {}): Unit = mutex.withLock {
         logger.debug { "initialized by event from agent..." }.also { logPoolStats() }
         _data.getAndUpdate {
@@ -123,6 +139,12 @@ internal class AgentState(
         }
     }
 
+    /**
+     * Initialize the state of the agent data from DB
+     * Also calc difference between methods in current and parent build versions
+     * @param classData the data of agent classes
+     * @features Agent registration
+     */
     private suspend fun initialized(classData: ClassData) {
         val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
         val probes = scopeManager.byVersion(agentKey, withData = true)
@@ -189,6 +211,11 @@ internal class AgentState(
         initActiveScope()
     }
 
+    /**
+     * Finish the test session
+     * @param sessionId the session ID which need to finish
+     * @features Session finishing, Scope finishing
+     */
     internal suspend fun finishSession(
         sessionId: String,
     ): FinishedSession? = activeScope.finishSession(sessionId)?.also {
@@ -205,6 +232,11 @@ internal class AgentState(
         } else logger.debug { "Session with id $sessionId is empty, it won't be added to the active scope." }
     }
 
+    /**
+     * Update the state of scope probes
+     * @param buildScopes the scope data
+     * @features Agent registration
+     */
     internal fun updateProbes(
         buildScopes: Sequence<FinishedScope>,
     ) {
@@ -273,6 +305,10 @@ internal class AgentState(
 
     internal fun classDataOrNull(): ClassData? = _data.value as? ClassData
 
+    /**
+     * Update an active scope
+     * @features Agent registration
+     */
     private suspend fun initActiveScope() {
         readActiveScopeInfo()?.run {
             val sessions = storeClient.loadSessions(id)
@@ -293,6 +329,12 @@ internal class AgentState(
         } ?: storeActiveScopeInfo()
     }
 
+    /**
+     * Change the active scope state to a new one and close the previous scope
+     * @param name the name of a new scope
+     * @return the previous instance of the active scope state
+     * @features Scope finishing
+     */
     fun changeActiveScope(name: String): ActiveScope = _activeScope.getAndUpdate {
         ActiveScope(
             nth = it.nth.inc(),
@@ -303,6 +345,10 @@ internal class AgentState(
 
     private suspend fun readActiveScopeInfo(): ActiveScopeInfo? = scopeManager.counter(agentKey)
 
+    /**
+     * Store the active scope to the database
+     * @features Scope finishing
+     */
     suspend fun storeActiveScopeInfo() = trackTime("storeActiveScopeInfo") {
         scopeManager.storeCounter(
             activeScope.run {

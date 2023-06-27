@@ -26,9 +26,19 @@ import kotlinx.serialization.*
 
 private val logger = logger {}
 
+/**
+ * Test session
+ */
 @Serializable
 sealed class Session : Sequence<ExecClassData> {
+    /**
+     * The session ID
+     */
     abstract val id: String
+
+    /**
+     * The type of tests (for example: AUTO, MANUAL)
+     */
     abstract val testType: String
 
     /**
@@ -86,6 +96,11 @@ class ActiveSession(
     val updatedTests: Set<TestKey>
         get() = _updatedTests.getAndUpdate { setOf() }.mapTo(mutableSetOf()) { it.testKey(testType) }
 
+    /**
+     * Add and merge new probes with current
+     * @param dataPart a collection of new probes
+     * @features Sending coverage data
+     */
     fun addAll(dataPart: Collection<ExecClassData>) = dataPart.map { probe ->
         probe.id?.let { probe } ?: probe.copy(id = probe.id())
     }.forEach { probe ->
@@ -112,6 +127,11 @@ class ActiveSession(
         if (testId in _testTestInfo.value) _updatedTests.update { it + testId }
     }
 
+    /**
+     * Add new completed tests to the test session
+     * @param testRun the list of new completed tests
+     * @features Running tests
+     */
     fun addTests(testRun: List<TestInfo>) {
         val testMap = testRun.associateBy { it.id }
         _testTestInfo.update { current -> current.putAll(testMap) }

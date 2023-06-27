@@ -26,6 +26,9 @@ import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
 import java.util.*
 
+/**
+ * Service for managing the plugin on the agent side
+ */
 @Suppress("unused")
 class Plugin(
     id: String,
@@ -66,6 +69,7 @@ class Plugin(
 
     /**
      * Switch on the plugin
+     * @features Agent registration
      */
     override fun on() {
         val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
@@ -124,6 +128,9 @@ class Plugin(
 
     override suspend fun doAction(action: AgentAction) {
         when (action) {
+            /**
+             * @features Session starting
+             */
             is StartAgentSession -> action.payload.run {
                 logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
                 val handler = probeSender(sessionId, isRealtime)
@@ -136,6 +143,9 @@ class Plugin(
             is AddAgentSessionTests -> action.payload.run {
                 instrContext.addCompletedTests(sessionId, tests)
             }
+            /**
+             * @features Session stopping
+             */
             is StopAgentSession -> {
                 val sessionId = action.payload.sessionId
                 logger.info { "End of recording for session $sessionId" }
@@ -172,7 +182,9 @@ class Plugin(
     }
 
     /**
+     * When the application under test receive a request from the caller
      * For each request we fill the thread local variable with an array of [ExecDatum]
+     * @features Running tests
      */
     fun processServerRequest() {
         (instrContext as DrillProbeArrayProvider).run {
@@ -190,6 +202,10 @@ class Plugin(
         }
     }
 
+    /**
+     * When the application under test returns a response to the caller
+     * @features Running tests
+     */
     fun processServerResponse() {
         (instrContext as DrillProbeArrayProvider).run {
             requestThreadLocal.remove()
@@ -220,6 +236,13 @@ class Plugin(
     }
 }
 
+/**
+ * Create a function which sends chunks of test coverage to the admin part of the plugin
+ * @param sessionId the test session ID
+ * @param sendChanged the sign of the need to send the number of data
+ * @return the function of sending test coverage
+ * @features Coverage data sending
+ */
 fun Plugin.probeSender(
     sessionId: String,
     sendChanged: Boolean = false,

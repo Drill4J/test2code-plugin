@@ -46,6 +46,14 @@ typealias BundleCacheHandler = suspend ActiveScope.(Map<TestKey, Sequence<ExecCl
 
 private val logger = logger {}
 
+/**
+ * State of an active scope
+ * @param id the scope ID
+ * @param agentKey todo
+ * @param nth todo
+ * @param name the scope name
+ * @param sessions all finished sessions in the scope
+ */
 class ActiveScope(
     override val id: String = genUuid(),
     override val agentKey: AgentKey,
@@ -138,6 +146,11 @@ class ActiveScope(
 
     fun rename(name: String): ScopeSummary = _summary.updateAndGet { it.copy(name = name) }
 
+    /**
+     * Create a FinishScope instance from the active scope state
+     * @param enabled todo
+     * @features Scope finishing
+     */
     fun finish(enabled: Boolean) = FinishedScope(
         id = id,
         agentKey = agentKey,
@@ -155,6 +168,10 @@ class ActiveScope(
 
     override fun iterator(): Iterator<FinishedSession> = _sessions.value.iterator()
 
+    /**
+     * Start the test session
+     * @features Session starting
+     */
     fun startSession(
         sessionId: String,
         testType: String,
@@ -212,6 +229,12 @@ class ActiveScope(
         } else sessionsChanged()
     }
 
+    /**
+     * Finish the test session
+     * @param sessionId the test session ID
+     * @return the finished session
+     * @features Session finishing
+     */
     fun finishSession(
         sessionId: String,
     ): FinishedSession? = removeSession(sessionId)?.run {
@@ -229,6 +252,12 @@ class ActiveScope(
     }
 
 
+    /**
+     * Close the active scope:
+     * - clear the active sessions
+     * - suspend all the scope jobs
+     * @features Scope finishing
+     */
     fun close() {
         logger.debug { "closing active scope $id..." }
         _change.value = null
@@ -239,6 +268,10 @@ class ActiveScope(
 
     override fun toString() = "act-scope($id, $name)"
 
+    /**
+     * Set a sign that the session has been changed
+     * @features Session starting
+     */
     private fun sessionsChanged() {
         _change.update {
             when (it) {

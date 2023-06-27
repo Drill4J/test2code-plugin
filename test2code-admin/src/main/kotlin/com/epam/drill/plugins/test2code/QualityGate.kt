@@ -54,6 +54,11 @@ private object QualityGateData {
     }
 }
 
+/**
+ * Initialize state of quality gate settings from DB
+ *
+ * @features Agent registration
+ */
 internal suspend fun Plugin.initGateSettings() {
     val settings = state.qualityGateSettings
     QualityGateData.defaults.forEach { (key, value) ->
@@ -87,6 +92,10 @@ internal suspend fun Plugin.updateGateConditions(
     } else ActionResult(StatusCodes.BAD_REQUEST, "Unknown quality gate measures: '$unknownMeasures'")
 }
 
+/**
+ * Send quality gate settings to the UI
+ * @features Agent registration
+ */
 internal suspend fun Plugin.sendGateSettings() {
     val dataRoute = Routes.Data()
     val settings = state.qualityGateSettings.values.toList()
