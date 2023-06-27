@@ -263,7 +263,7 @@ fun Plugin.probeSender(
 }
 
 fun Plugin.sendMessage(message: CoverMessage) {
-    logger.debug { "Send message $message" }
     val messageStr = json.encodeToString(CoverMessage.serializer(), message)
+    logger.debug { "Send message ${if (messageStr.length > 1000) messageStr.substring(0, 1000) else messageStr}" }
     send(messageStr)
 }
