@@ -37,7 +37,7 @@ class DrillInstrumenter(
         val classId = CRC64.classId(initialBytes)
 
         //count probes before transformation
-        val counter = ClassProbeCounter(className)
+        val counter = ProbeCounter()
         val reader = InstrSupport.classReaderFor(initialBytes)
         reader.accept(DrillClassProbesAdapter(counter, false), 0)
 

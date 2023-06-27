@@ -26,19 +26,28 @@ import org.jacoco.core.internal.instr.InstrSupport
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.*
 
-class ClassProbeCounter(val name: String) : ClassProbesVisitor() {
+
+open class ProbeCounter : ClassProbesVisitor() {
     var count = 0
         private set
+
+    override fun visitMethod(
+        access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?
+    ): MethodProbesVisitor? {
+        return null
+    }
+
+    override fun visitTotalProbeCount(count: Int) {
+        this.count = count
+    }
+}
+class ClassProbeCounter(val name: String) : ProbeCounter() {
     val astClass = newAstClass(name, ArrayList())
 
     override fun visitMethod(
         access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?
     ): MethodProbesVisitor {
         return MethodProbeCounter(astClass.methods as MutableList)
-    }
-
-    override fun visitTotalProbeCount(count: Int) {
-        this.count = count
     }
 }
 
