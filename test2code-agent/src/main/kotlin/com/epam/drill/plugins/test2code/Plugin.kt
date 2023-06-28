@@ -18,7 +18,7 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.classloading.scanClasses
+import com.epam.drill.plugins.test2code.classloading.ClassLoadersScanner
 import com.epam.drill.plugins.test2code.common.api.*
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
@@ -220,7 +220,7 @@ class Plugin(
         Native.WaitClassScanning()
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
-        scanClasses(packagePrefixes, 50, consumer)
+        ClassLoadersScanner(packagePrefixes, 50, consumer).scanClasses()
     }
 
     /**
