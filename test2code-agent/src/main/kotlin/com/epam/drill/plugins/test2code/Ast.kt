@@ -16,15 +16,17 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.DrillClassProbesAdapter
-import com.epam.drill.plugins.test2code.checksum.checksumCalculation
+import com.epam.drill.plugins.test2code.checksum.calculateMethodsChecksums
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.jacoco.core.internal.flow.ClassProbesVisitor
 import org.jacoco.core.internal.flow.IFrame
 import org.jacoco.core.internal.flow.MethodProbesVisitor
 import org.jacoco.core.internal.instr.InstrSupport
-import org.objectweb.asm.*
-import org.objectweb.asm.tree.*
+import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Type
+import org.objectweb.asm.tree.MethodNode
 
 
 open class ProbeCounter : ClassProbesVisitor() {
@@ -99,8 +101,13 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
     classReader.accept(DrillClassProbesAdapter(counter, false), 0)
 
     val astClass = counter.astClass
-    val astMethodsWithChecksum = checksumCalculation(classBytes, className, astClass)
-    astClass.methods = astMethodsWithChecksum
+    val astMethodsWithChecksum = calculateMethodsChecksums(classBytes, className)
+
+    astClass.methods = astClass.methods.map {
+        it.copy(
+            checksum = astMethodsWithChecksum[it.classSignature()] ?: ""
+        )
+    }
     return astClass
 }
 
@@ -112,6 +119,9 @@ fun newAstClass(
     name = getShortClassName(className),
     methods
 )
+
+private fun AstMethod.classSignature() =
+    "${name}/${params.joinToString()}/${returnType}"
 
 private fun getShortClassName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')

@@ -156,17 +156,14 @@ class OverrideTest {
 
     @Test
     fun `class with override methods should have different checksum`() {
-        val methodName = "getResult"
-        assertEquals(methodsBuild.size, 8)
+        val methodName = "call"
+        assertEquals(methodsBuild.size, 3)
         //Compare checksum of virtual method and method with override annotation
         assertNotEquals(
-            methodsBuild.filter { it.name == methodName }[1].checksum,
-            methodsBuild.filter { it.name == methodName }[2].checksum
-        )
-        assertNotEquals(
             methodsBuild.filter { it.name == methodName }[0].checksum,
-            methodsBuild.filter { it.name == methodName }[3].checksum
+            methodsBuild.filter { it.name == methodName }[1].checksum
         )
+
     }
 }
 

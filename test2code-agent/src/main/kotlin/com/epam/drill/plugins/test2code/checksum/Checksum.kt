@@ -15,50 +15,27 @@
  */
 package com.epam.drill.plugins.test2code.checksum
 
-import com.epam.drill.plugins.test2code.common.api.AstEntity
-import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.apache.bcel.classfile.ClassParser
 import org.apache.bcel.classfile.Method
 import org.jacoco.core.internal.data.CRC64
 import java.io.ByteArrayInputStream
 
-internal fun checksumCalculation(
+internal fun calculateMethodsChecksums(
     classBytes: ByteArray,
-    className: String,
-    astClass: AstEntity
-): List<AstMethod> {
-    val astMethods = astClass.methods
-
-    //Bcel parses process
-    val classParser = ClassParser(ByteArrayInputStream(classBytes), className)
-    val bcelClass = classParser.parse()
-    val bcelMethods = bcelClass.methods
-    //Map of ClassName to Bcel method instance
-    val bcelMethodsMap = bcelMethods.associateBy {
-        it.classSignature()
-    }
-
-    return astMethods.map { astMethod ->
-        val astSignature = astMethod.classSignature()
-        val bcelMethod = bcelMethodsMap[astSignature]
-
-        val codeToStringService = CodeToStringService()
-        val methodHash = bcelMethod.let { codeToStringService.checksum(it) }
-
-        astMethod.copy(checksum = methodHash)
-    }
-}
-
-private fun AstMethod.classSignature() =
-    "${name}/${params.joinToString()}/${returnType}"
+    className: String
+): Map<String, String> = ClassParser(ByteArrayInputStream(classBytes), className)
+    .parse()
+    .methods
+    .associate { method -> method.classSignature() to checksum(method) }
 
 private fun Method.classSignature() =
     "${name}/${argumentTypes.asSequence().map { type -> type.toString() }.joinToString()}/${returnType}"
 
-private fun CodeToStringService.checksum(
-    method: Method?,
-): String = (method?.code?.run {
-    codeToString(code, constantPool, 0, length, false)
-} ?: "").crc64
-
-val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX)
+private fun checksum(
+    method: Method,
+): String {
+    val codeText = method.code.run {
+        codeToString(code, constantPool, 0, length, false)
+    }
+    return CRC64.classId(codeText.toByteArray()).toString(Character.MAX_RADIX)
+}
