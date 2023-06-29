@@ -36,20 +36,20 @@ data class ClassSource(
     override fun hashCode() = entityName.hashCode()
 
     fun prefixMatches(prefixes: Iterable<String>): Boolean {
-        val matchPrefix: () -> Boolean = {
+        val isMatchPrefix: () -> Boolean = {
             prefixes.any { entityName.regionMatches(0, it, 0, it.length) }
         }
-        val notExcluded: () -> Boolean = {
+        val isNotExcluded: () -> Boolean = {
             prefixes.none { it.startsWith('!') && entityName.regionMatches(0, it, 1, it.length - 1) }
         }
-        val notSubclass: () -> Boolean = {
+        val isNotSubclass: () -> Boolean = {
             prefixes.none {
                 it.startsWith(SUBCLASS_OF) &&
                         superName.isNotBlank() &&
                         superName.regionMatches(0, it, SUBCLASS_OF.length, it.length - SUBCLASS_OF.length)
             }
         }
-        return matchPrefix() && notExcluded() && notSubclass()
+        return isMatchPrefix() && isNotExcluded() && isNotSubclass()
     }
 
 }

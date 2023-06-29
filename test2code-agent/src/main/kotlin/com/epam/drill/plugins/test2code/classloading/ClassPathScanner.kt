@@ -17,7 +17,6 @@ package com.epam.drill.plugins.test2code.classloading
 
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.io.InputStream
 import java.net.URI
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
@@ -32,7 +31,7 @@ private const val JAR_BUFFER_SIZE = 256 * 1024
 
 class ClassPathScanner(
     private val packagePrefixes: List<String>,
-    private val classesBufferSize: Int = 50,
+    private val classesBufferSize: Int,
     private val transfer: (Set<ClassSource>) -> Unit
 ) {
 
@@ -42,36 +41,41 @@ class ClassPathScanner(
 
     fun transferBuffer() = scannedBuffer.takeIf(Collection<ClassSource>::isNotEmpty)?.let(transfer)
 
-    fun scanURI(uri: URI) = uri.let(::File).takeIf(File::exists)?.let(::scanFile) ?: 0
+    fun scanURI(uri: URI) = File(uri).takeIf(File::exists)?.let(::scanFile) ?: 0
 
-    fun scanFile(file: File) = file.takeIf(File::isDirectory)?.let(::scanDirectory) ?: scanJarFile(file)
+    fun scanFile(file: File) = file.takeIf(File::isDirectory)?.let(::scanDirectory) ?: scanJarFile(file).getOrDefault(0)
 
     private fun scanDirectory(file: File) = file.run {
         val isClassFile: (File) -> Boolean = { it.isFile && it.extension == "class" }
-        this.walkTopDown().filter(isClassFile).sumOf { scanClassFile(it, this) }
+        this.walkTopDown().filter(isClassFile).sumOf { scanClassFile(it, this).getOrDefault(0) }
     }
 
-    private fun scanJarFile(file: File) = file.run {
+    private fun scanJarFile(file: File): Result<Int> = file.runCatching {
         val isNotScanned: (File) -> Boolean = { !scannedJarFiles.contains(it.absolutePath) }
-        val toStream: (File) -> InputStream = { it.inputStream().buffered(JAR_BUFFER_SIZE) }
-        this.takeIf(isNotScanned)?.let(toStream)?.let { scanJarInputStream(it, this) } ?: 0
+        val fileToStream: (File) -> JarInputStream = { JarInputStream(it.inputStream().buffered(JAR_BUFFER_SIZE)) }
+        val pathToFile: (String) -> File? = { File(this.parent, it).takeIf(File::exists) }
+        var scanned = 0
+        this.takeIf(isNotScanned)?.let(fileToStream)?.use {
+            scanned += scanJarInputStream(it).also { scannedJarFiles.add(this.absolutePath) }
+            scanned += it.manifest?.mainAttributes?.getValue(Attributes.Name.CLASS_PATH)?.split(" ")
+                ?.mapNotNull(pathToFile)?.map(::scanJarFile)?.mapNotNull(Result<Int>::getOrNull)?.sum() ?: 0
+        }
+        scanned
     }
 
-    private fun scanJarInputStream(stream: InputStream, file: File?): Int = JarInputStream(stream).use {
+    private fun scanJarEntry(bytes: ByteArray): Result<Int> = bytes.runCatching {
+        JarInputStream(ByteArrayInputStream(this)).use(::scanJarInputStream)
+    }
+
+    private fun scanJarInputStream(stream: JarInputStream) = stream.run {
         var scanned = 0
-        var jarEntry = it.nextJarEntry
+        var jarEntry = this.nextJarEntry
         while (jarEntry != null) {
             when (jarEntry.takeUnless(JarEntry::isDirectory)?.name?.substringAfterLast('.')) {
-                "jar", "war", "rar" -> scanned += scanJarInputStream(ByteArrayInputStream(it.readBytes()), null)
-                "class" -> scanned += scanClassEntry(jarEntry, it)
+                "jar", "war", "rar" -> scanned += scanJarEntry(this.readBytes()).getOrDefault(0)
+                "class" -> scanned += scanClassEntry(jarEntry, this.readBytes()).getOrDefault(0)
             }
-            jarEntry = it.nextJarEntry
-        }
-        file?.run {
-            val classpathToFile: (String) -> File? = { cp -> File(this.parent, cp).takeIf(File::exists) }
-            val classpath = it.manifest?.mainAttributes?.getValue(Attributes.Name.CLASS_PATH)?.split(" ") ?: emptyList()
-            scannedJarFiles.add(this.absolutePath)
-            scanned += classpath.mapNotNull(classpathToFile).sumOf(::scanJarFile)
+            jarEntry = this.nextJarEntry
         }
         scanned
     }
@@ -85,8 +89,8 @@ class ClassPathScanner(
                 !scannedClasses.contains(it.entityName())
     }
 
-    private fun scanClassFile(file: File, directory: File) = file.run {
-        val readClassSource: (ClassSource) -> ClassSource = {
+    private fun scanClassFile(file: File, directory: File) = file.runCatching {
+        val readClassSource: (ClassSource) -> ClassSource? = {
             val bytes = this.readBytes()
             val superName = ClassReader(bytes).superName ?: ""
             it.copy(superName = superName, bytes = bytes)
@@ -96,9 +100,8 @@ class ClassPathScanner(
             .takeIf(isClassAccepted)?.let(readClassSource)?.takeIf(isPrefixMatches)?.let(::addClassToScanned) ?: 0
     }
 
-    private fun scanClassEntry(entry: JarEntry, stream: JarInputStream) = entry.name.run {
-        val readClassSource: (ClassSource) -> ClassSource = {
-            val bytes = stream.readBytes()
+    private fun scanClassEntry(entry: JarEntry, bytes: ByteArray) = entry.name.runCatching {
+        val readClassSource: (ClassSource) -> ClassSource? = {
             val superName = ClassReader(bytes).superName ?: ""
             it.copy(superName = superName, bytes = bytes)
         }
@@ -107,12 +110,10 @@ class ClassPathScanner(
     }
 
     private fun addClassToScanned(classSource: ClassSource): Int {
+        val isBufferFilled: (Set<ClassSource>) -> Boolean = { it.size >= classesBufferSize }
         scannedClasses.add(classSource.entityName())
         scannedBuffer.add(classSource)
-        if (scannedBuffer.size >= classesBufferSize) {
-            transfer(scannedBuffer)
-            scannedBuffer.clear()
-        }
+        scannedBuffer.takeIf(isBufferFilled)?.also(transfer)?.clear()
         return 1
     }
 

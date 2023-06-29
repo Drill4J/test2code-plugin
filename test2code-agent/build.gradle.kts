@@ -29,6 +29,7 @@ repositories {
     mavenCentral()
 }
 
+@Suppress("HasPlatformType")
 val jarDependencies by configurations.creating {
     attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
 }
@@ -37,10 +38,10 @@ configurations.implementation.get().extendsFrom(jarDependencies)
 dependencies {
     jarDependencies("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kotlinxCollectionsVersion") { isTransitive = false }
     jarDependencies("org.jacoco:org.jacoco.core:$jacocoVersion")
+    jarDependencies("org.apache.bcel:bcel:$bcelVersion")
     jarDependencies("com.github.luben:zstd-jni:$lubenZstdVersion")
     jarDependencies(project(":jacoco")) { isTransitive = false }
     jarDependencies(project(":test2code-common"))
-    jarDependencies("org.apache.bcel:bcel:$bcelVersion")
 
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
 
@@ -53,9 +54,9 @@ dependencies {
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
-    testImplementation(project(":tests"))
-    testImplementation("joda-time:joda-time:2.10.6")
     testImplementation("org.mybatis:mybatis:3.0.6")
+    testImplementation("joda-time:joda-time:2.10.6")
+    testImplementation(project(":tests"))
 }
 
 kotlin.sourceSets.all {

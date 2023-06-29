@@ -16,10 +16,11 @@
 package com.epam.drill.plugins.test2code.classloading
 
 import java.io.File
+import java.io.IOException
 import java.net.URI
+import java.net.URISyntaxException
 import java.net.URL
 import java.net.URLClassLoader
-import java.net.MalformedURLException
 
 class ClassLoadersScanner(
     packagePrefixes: List<String>,
@@ -37,7 +38,7 @@ class ClassLoadersScanner(
 
     fun scanClassLoadersURIs() = scanClassLoadersURIs(scanClassLoaders())
 
-    fun scanClasses(uris: Set<URI>) = uris.fold(0, ::scanClassLoaderURI).also { classPathScanner.transferBuffer() }
+    fun scanClasses(uris: Set<URI>) = uris.fold(0, ::addClasses).also { classPathScanner.transferBuffer() }
 
     fun scanClasses() = scanClasses(scanClassLoadersURIs())
 
@@ -49,35 +50,32 @@ class ClassLoadersScanner(
         }
     }
 
-    private fun addClassLoaderURIs(uris: MutableSet<URI>, classloader: ClassLoader) = uris.apply {
-        if (classloader is URLClassLoader) this.addAll(classloader.urLs.map(URL::toURI))
-        this.addAll(classloader.getResources("/").asSequence().map(URL::toURI))
-    }
-
-    private fun scanClassLoaderURI(count: Int, uri: URI) = count + classPathScanner.scanURI(uri)
-
-    private fun getSystemClassPath() = System.getProperty("java.class.path").split(File.pathSeparator).mapNotNull {
-        try {
-            File(it).takeIf(File::exists)?.toURI()
-        } catch (e: SecurityException) {
-            null
-        } catch (e: MalformedURLException) {
-            null
+    private fun addClassLoaderURIs(uris: MutableSet<URI>, cl: ClassLoader) = uris.apply {
+        val urlToUri: (URL) -> Result<URI> = { it.runCatching { this.toURI() } }
+        this.runCatching {
+            if (cl is URLClassLoader) this.addAll(cl.urLs.map(urlToUri).mapNotNull(Result<URI>::getOrNull))
+            this.addAll(cl.getResources("/").asSequence().map(urlToUri).mapNotNull(Result<URI>::getOrNull))
         }
     }
+
+    private fun addClasses(count: Int, uri: URI) = count + classPathScanner.scanURI(uri)
+
+    private fun getSystemClassPath() = System.getProperty("java.class.path").split(File.pathSeparator).map(::File)
+        .filter(File::exists).map(File::toURI)
 
     private fun normalizeURIs(uris: Set<URI>) = mutableSetOf<URI>().apply {
-        val isFileExists: (URI) -> Boolean = {  File(it).exists() }
+        val isFileExists: (URI) -> Boolean = { File(it).exists() }
         val isNormalized: (URI) -> Boolean = { uri -> this.any { uri.path.startsWith(it.path) } }
-        val normalizePath: (URI) -> URI = {
-            val path = it.takeUnless(URI::isOpaque)?.let(URI::getPath) ?: it.schemeSpecificPart.removePrefix("file:")
-            URI("file", null, path.removeSuffix("!/"), null)
-        }
-        uris.map(normalizePath).forEach {
+        uris.map(::normalizeURIPath).mapNotNull(Result<URI>::getOrNull).forEach {
             it.takeUnless(isNormalized)?.let { uri ->
                 uri.takeIf(isFileExists)?.let(this::add) ?: retrieveFileURI(uri)?.let(this::add)
             }
         }
+    }
+
+    private fun normalizeURIPath(uri: URI) = uri.runCatching {
+        val path = this.takeUnless(URI::isOpaque)?.path ?: this.schemeSpecificPart.removePrefix("file:")
+        URI("file", null, path.removeSuffix("!/"), null)
     }
 
     private fun retrieveFileURI(uri: URI) = uri.run {
