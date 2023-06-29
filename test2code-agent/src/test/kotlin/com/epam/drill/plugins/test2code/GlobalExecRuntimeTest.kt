@@ -15,10 +15,9 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.jacoco.*
-import org.junit.jupiter.api.*
+import com.epam.drill.jacoco.AgentProbes
+import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.test.*
-import kotlin.test.Test
 
 class GlobalExecRuntimeTest {
     private val className = "foo/bar/Foo"

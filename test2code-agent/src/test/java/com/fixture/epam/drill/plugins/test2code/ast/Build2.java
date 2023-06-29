@@ -1,19 +1,19 @@
 /**
  * Copyright 2020 - 2022 EPAM Systems
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.plugins.test2code.ast;
+package com.fixture.epam.drill.plugins.test2code.ast;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-public class Build1 {
+public class Build2 {
 
     void theSameMethodBody(List<String> strings) {
         BigDecimal i = BigDecimal.valueOf(10);
@@ -31,11 +31,13 @@ public class Build1 {
             result++;
         }
         System.out.println(result);
-        strings.stream().map(str -> str + "12").collect(Collectors.joining());
+        strings.stream().map(str -> str + "10").collect(Collectors.joining());
     }
 
     void differentContextChangeAtLambda(List<String> strings) {
-        strings.stream().map(str -> str + "2").collect(Collectors.joining());
+        strings.stream().map(str ->
+                str + "5"
+        ).collect(Collectors.joining());
     }
 
     void differentContextInnerLambda(List<String> strings) {
@@ -44,74 +46,62 @@ public class Build1 {
             System.out.println(i.add(BigDecimal.ONE));
         }
         strings.stream().map(str ->
-                Arrays.stream(str.split(".")).map(it -> it + "2").collect(Collectors.toList())
+                Arrays.stream(str.split(",")).map(it -> it + "100").collect(Collectors.toList())
         ).collect(Collectors.toList());
     }
 
     void referenceMethodCall(List<String> strings) {
-        strings.stream().filter(el -> el.contains("qwe")).skip(1).forEach(System.out::printf);
+        strings.stream().filter(el -> el.contains("qwe")).skip(1).forEach(System.err::printf);
     }
 
     void differentInstanceType() {
-        Integer valuer = new Random().nextInt();
+        Double valuer = new Random().nextDouble();
     }
 
     void multiANewArrayInsnNode() {
-        int arraySize = 13;
-        Integer[][] array = new Integer[arraySize][arraySize];
+        int arraySize = 15;
+        int[][][] array = new int[arraySize][][];
         for (int i = 0; i < arraySize; i++) {
-            array[i][i] = new Random().nextInt();
+            array[i][i][i] = new Random().nextInt();
         }
     }
 
-    void tableSwitchMethodTest(int value) {
+    void tableSwitchMethodTest(String value) {
         switch (value) {
-            case 1: {
+            case "1": {
                 System.out.println(1);
                 break;
             }
-            case 2: {
+            case "2": {
                 System.out.println(2);
                 break;
             }
-            case 3: {
+            case "3": {
                 System.out.println(3);
                 break;
             }
-            case 4: {
-                System.out.println(4);
-                break;
-            }
-            case 5: {
-                System.out.println(5);
-                break;
-            }
             default: {
-                System.out.println("Default");
+                System.out.println("Default-123");
             }
         }
     }
 
     void lookupSwitchMethodTest(Integer value) {
         switch (value) {
-            case 1: {
-                System.out.println(1);
+            case 2: {
+                System.out.println(2);
                 break;
             }
-            case 100: {
-                System.out.println(100);
+            case 102: {
+                System.out.println(102);
                 break;
             }
-            case 200: {
-                System.out.println(200);
-                break;
-            }
-            case 300: {
-                System.out.println(300);
+            case 202: {
+                System.out.println(202);
                 break;
             }
             default: {
-                System.out.println("Default");
+                System.out.println("Default-2");
             }
         }
     }
@@ -123,24 +113,24 @@ public class Build1 {
 
     private void callMe(Integer i) {
         for (int j = 0; j < i; j++) {
-            System.out.println("Test");
+            System.out.println("Print");
         }
     }
 
-    void methodWithDifferentParams(Integer test) {
+    void methodWithDifferentParams(Integer test, Integer test2) {
         System.out.println(test);
     }
 
     void methodWithIteratedValue(Integer test) {
-        for (int i = 0; i < test; i++) {
+        for (int i = 0; i < test; i += 2) {
             System.out.println(test);
         }
     }
 
     void changeLocalVarName(Integer test) {
-        String strValue = String.valueOf(test);
+        String changedName = String.valueOf(test);
         for (int i = 0; i < test; i++) {
-            System.out.println(strValue);
+            System.out.println(changedName);
         }
     }
 

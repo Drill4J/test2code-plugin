@@ -13,16 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.plugins.test2code.ast;
+package com.fixture.epam.drill.plugins.test2code;
 
-import java.util.concurrent.Callable;
-
-public class OverrideTest implements Callable<String> {
-
+public class ClassWithLoop implements Runnable {
     @Override
-    public String call() throws Exception {
-        throw new UnsupportedOperationException();
+    public void run() {
+        printAnotherPlace(1);
+        printAnotherPlace(2);
     }
 
+    private void printAnotherPlace(int count) {
+        int i = 0;
+        while (i < count) {
+            System.out.println("printAnotherPlace");
+            i++;
+        }
+        int[] marks = new int[]{80, 85};
+        for (int item : marks) {
+            System.out.println(item);
+        }
+    }
 }
-
