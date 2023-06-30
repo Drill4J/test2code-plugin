@@ -164,6 +164,7 @@ internal fun BundleCounters.calculateCoverageData(
                 byTestType = coverageByTests.byType
             )
         }
+
         is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
@@ -283,49 +284,11 @@ internal fun BundleCounters.associatedTests(
     bundle.coverageKeys(onlyPackages).map { it to typedTest }.distinct()
 }.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
-internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatching {
-//todo temporarily unsupported
-
-    val coverage = File(System.getProperty("java.io.tmpdir"))
-        .resolve("jacoco.exec")
-//    coverage.outputStream().use { outputStream ->
-//        val executionDataWriter = ExecutionDataWriter(outputStream)
-//        val allFinishedScopes = state.scopeManager.byVersion(AgentKey(agentId, exportBuildVersion), true)
-//        allFinishedScopes.filter { it.enabled }.flatMap { finishedScope ->
-//            finishedScope.data.sessions.flatMap { it.probes }
-//        }.writeCoverage(executionDataWriter)
-//        if (buildVersion == exportBuildVersion) {
-//            activeScope.flatMap {
-//                it.probes
-//            }.writeCoverage(executionDataWriter)
-//        }
-//    }
-    ActionResult(StatusCodes.OK, coverage)
-}.getOrElse {
-    logger.error(it) { "Can't get coverage. Reason:" }
-    ActionResult(StatusCodes.BAD_REQUEST, "Can't get coverage.")
-}
+internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) =
+    ActionResult(StatusCodes.ERROR, "Coverage export for class bytes is deprecated")
 
 
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
     sessionId: String = genUuid(),
-) = activeScope.startSession(sessionId, "UNIT").runCatching {
-//    todo temporarily unsupported
-
-//    val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
-//    val probeIds = state.coverContext().probeIds
-//    val execDatum = jacocoFile.executionDataStore.contents.map {
-//        ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
-//    }.asSequence()
-//    execDatum.bundle(probeIds) { bytes, execData ->
-//        analyzeClass(bytes, execData.name)
-//    }
-//    activeScope.addProbes(sessionId) { execDatum.toList() }
-//    state.finishSession(sessionId)
-    ActionResult(StatusCodes.OK, "Coverage successfully imported")
-}.getOrElse {
-    state.activeScope.cancelSession(sessionId)
-    logger.error { "Can't import coverage. Session was cancelled." }
-    ActionResult(StatusCodes.ERROR, "Can't import coverage. An error occurred: ${it.message}")
-}
+) = ActionResult(StatusCodes.ERROR, "Coverage import for class bytes is deprecated")
