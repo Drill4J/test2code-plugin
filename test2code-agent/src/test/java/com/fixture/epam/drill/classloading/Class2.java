@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.example.drill.classloading.sub;
+package com.fixture.epam.drill.classloading;
 
-public interface Interface1 {
-    void method1();
+public class Class2 {
+    public void method2() {
+
+    }
 }

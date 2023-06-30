@@ -19,21 +19,21 @@ import com.epam.drill.plugins.test2code.classloading.scanClasses
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class LoaderTest {
+class ClassScannerTest {
     @Test
-    fun `check scan classes for one transfer`() {
+    fun `check class scan in one consumer call`() {
         var classCount = 0
-        scanClasses(listOf("com/example/drill/classloading/sub")) { classes ->
+        scanClasses(listOf("com/fixture/epam/drill/classloading/sub")) { classes ->
             classCount += classes.size
         }
         assertEquals(2, classCount)
     }
 
     @Test
-    fun `check scan classes for several transfers`() {
+    fun `check class scan in several consumer call`() {
         var classCount = 0
         var transferCount = 0
-        scanClasses(listOf("com/example/drill/classloading"), 5) { classes ->
+        scanClasses(listOf("com/fixture/epam/drill/classloading"), 5) { classes ->
             classCount += classes.size
             transferCount++
         }

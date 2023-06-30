@@ -20,11 +20,11 @@ import com.epam.drill.plugin.api.processing.EntitySource
 fun scanClasses(
     scanPackages: Iterable<String>,
     classesBufferSize: Int = 50,
-    transfer: (Set<EntitySource>) -> Unit
+    consumer: (Set<EntitySource>) -> Unit
 ): Int {
     val threadClassLoaders = Thread.getAllStackTraces().keys.mapNotNull(Thread::getContextClassLoader)
     val leafClassLoaders = threadClassLoaders
         .leaves(ClassLoader::getParent)
         .toListWith(ClassLoader.getSystemClassLoader())
-    return ClassHandler(scanPackages, classesBufferSize, transfer).scan(leafClassLoaders)
+    return ClassHandler(scanPackages, classesBufferSize, consumer).scan(leafClassLoaders)
 }

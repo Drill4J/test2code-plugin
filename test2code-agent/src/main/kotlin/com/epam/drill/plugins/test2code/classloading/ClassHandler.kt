@@ -24,12 +24,12 @@ import java.util.jar.*
  * Buffering and handling scanned classes
  * @param includedPaths package prefixes for scanning
  * @param bufferSize the size of classes buffer before handling
- * @param transfer handler of scanned classes
+ * @param consumer handler of scanned classes
  */
 class ClassHandler(
     private val includedPaths: Iterable<String>,
     private val bufferSize: Int = 50,
-    private val transfer: (Set<EntitySource>) -> Unit
+    private val consumer: (Set<EntitySource>) -> Unit
 ) {
     private val scannedUrls = mutableSetOf<URL>()
 
@@ -54,7 +54,7 @@ class ClassHandler(
             }
         }
         if (scannedClasses.isNotEmpty())
-            transfer(scannedClasses)
+            consumer(scannedClasses)
         return scannedClassesCount
     }
 
@@ -84,7 +84,7 @@ class ClassHandler(
         scannedClasses.add(source)
         scannedClassesCount++
         if (scannedClasses.size >= bufferSize) {
-            transfer(scannedClasses)
+            consumer(scannedClasses)
             scannedClasses.clear()
         }
     }
