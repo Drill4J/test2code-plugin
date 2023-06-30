@@ -72,7 +72,7 @@ class Plugin(
      * @features Agent registration
      */
     override fun on() {
-        val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
+        val initInfo = InitInfo(message = "Initializing plugin $id...")
         sendMessage(initInfo)
         logger.info { "Initializing plugin $id..." }
 
