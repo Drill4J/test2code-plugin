@@ -230,7 +230,7 @@ class Plugin(
         var count = 0
         scanClasses { classes ->
             sendMessage(InitDataPart(classes.map { parseAstClass(it.entityName(), it.bytes()) }))
-            count =+ classes.size
+            count += classes.size
         }
         logger.info { "Scanned $count classes" }
     }
