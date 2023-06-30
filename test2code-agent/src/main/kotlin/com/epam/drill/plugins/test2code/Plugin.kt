@@ -220,7 +220,7 @@ class Plugin(
         Native.WaitClassScanning()
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
-        ClassLoadersScanner(packagePrefixes, 50, consumer).scanClasses()
+        ClassLoadersScanner(packagePrefixes, 50, logger, consumer).scanClasses()
     }
 
     /**

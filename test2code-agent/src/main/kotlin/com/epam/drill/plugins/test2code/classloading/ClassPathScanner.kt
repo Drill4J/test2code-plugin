@@ -22,6 +22,7 @@ import java.util.jar.Attributes
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import org.objectweb.asm.ClassReader
+import com.epam.drill.logger.api.Logger
 
 private const val PREFIX_SPRING_BOOT = "BOOT-INF/classes/"
 private const val PREFIX_WEB_APP = "WEB-INF/classes/"
@@ -32,6 +33,7 @@ private const val JAR_BUFFER_SIZE = 256 * 1024
 class ClassPathScanner(
     private val packagePrefixes: List<String>,
     private val classesBufferSize: Int,
+    private val logger: Logger?,
     private val transfer: (Set<ClassSource>) -> Unit
 ) {
 
@@ -39,15 +41,21 @@ class ClassPathScanner(
     private val scannedClasses = mutableSetOf<String>()
     private val scannedBuffer = mutableSetOf<ClassSource>()
 
+    private val getOrLogFail: Result<Int>.() -> Int = {
+        this.onFailure { logger?.error(it) { "ClassPathScanner: error handling class file" } }
+        this.getOrDefault(0)
+    }
+
     fun transferBuffer() = scannedBuffer.takeIf(Collection<ClassSource>::isNotEmpty)?.let(transfer)
 
     fun scanURI(uri: URI) = File(uri).takeIf(File::exists)?.let(::scanFile) ?: 0
 
-    fun scanFile(file: File) = file.takeIf(File::isDirectory)?.let(::scanDirectory) ?: scanJarFile(file).getOrDefault(0)
+    fun scanFile(file: File) = file.takeIf(File::isDirectory)?.let(::scanDirectory) ?: scanJarFile(file).getOrLogFail()
 
     private fun scanDirectory(file: File) = file.run {
         val isClassFile: (File) -> Boolean = { it.isFile && it.extension == "class" }
-        this.walkTopDown().filter(isClassFile).sumOf { scanClassFile(it, this).getOrDefault(0) }
+        logger?.debug { "ClassPathScanner: scanning directory: ${this.absolutePath}" }
+        this.walkTopDown().filter(isClassFile).sumOf { scanClassFile(it, this).getOrLogFail() }
     }
 
     private fun scanJarFile(file: File): Result<Int> = file.runCatching {
@@ -55,10 +63,11 @@ class ClassPathScanner(
         val fileToStream: (File) -> JarInputStream = { JarInputStream(it.inputStream().buffered(JAR_BUFFER_SIZE)) }
         val pathToFile: (String) -> File? = { File(this.parent, it).takeIf(File::exists) }
         var scanned = 0
+        logger?.debug { "ClassPathScanner: scanning file: ${this.absolutePath}" }
         this.takeIf(isNotScanned)?.let(fileToStream)?.use {
             scanned += scanJarInputStream(it).also { scannedJarFiles.add(this.absolutePath) }
             scanned += it.manifest?.mainAttributes?.getValue(Attributes.Name.CLASS_PATH)?.split(" ")
-                ?.mapNotNull(pathToFile)?.map(::scanJarFile)?.mapNotNull(Result<Int>::getOrNull)?.sum() ?: 0
+                ?.mapNotNull(pathToFile)?.map(::scanJarFile)?.sumOf(getOrLogFail) ?: 0
         }
         scanned
     }
@@ -72,8 +81,8 @@ class ClassPathScanner(
         var jarEntry = this.nextJarEntry
         while (jarEntry != null) {
             when (jarEntry.takeUnless(JarEntry::isDirectory)?.name?.substringAfterLast('.')) {
-                "jar", "war", "rar" -> scanned += scanJarEntry(this.readBytes()).getOrDefault(0)
-                "class" -> scanned += scanClassEntry(jarEntry, this.readBytes()).getOrDefault(0)
+                "jar", "war", "rar" -> scanned += scanJarEntry(this.readBytes()).getOrLogFail()
+                "class" -> scanned += scanClassEntry(jarEntry, this.readBytes()).getOrLogFail()
             }
             jarEntry = this.nextJarEntry
         }
@@ -95,6 +104,7 @@ class ClassPathScanner(
             val superName = ClassReader(bytes).superName ?: ""
             it.copy(superName = superName, bytes = bytes)
         }
+        logger?.trace { "ClassPathScanner: scanning class file: ${this.toRelativeString(directory)}" }
         this.toRelativeString(directory).replace(File.separatorChar, '/')
             .removePrefix(PREFIX_WEB_APP).removePrefix(PREFIX_SPRING_BOOT).removeSuffix(".class").let(::ClassSource)
             .takeIf(isClassAccepted)?.let(readClassSource)?.takeIf(isPrefixMatches)?.let(::addClassToScanned) ?: 0
@@ -105,12 +115,14 @@ class ClassPathScanner(
             val superName = ClassReader(bytes).superName ?: ""
             it.copy(superName = superName, bytes = bytes)
         }
+        logger?.trace { "ClassPathScanner: scanning class entry: $this" }
         this.removePrefix(PREFIX_WEB_APP).removePrefix(PREFIX_SPRING_BOOT).removeSuffix(".class").let(::ClassSource)
             .takeIf(isClassAccepted)?.let(readClassSource)?.takeIf(isPrefixMatches)?.let(::addClassToScanned) ?: 0
     }
 
     private fun addClassToScanned(classSource: ClassSource): Int {
         val isBufferFilled: (Set<ClassSource>) -> Boolean = { it.size >= classesBufferSize }
+        logger?.trace { "ClassPathScanner: found class: ${classSource.entityName()}" }
         scannedClasses.add(classSource.entityName())
         scannedBuffer.add(classSource)
         scannedBuffer.takeIf(isBufferFilled)?.also(transfer)?.clear()
