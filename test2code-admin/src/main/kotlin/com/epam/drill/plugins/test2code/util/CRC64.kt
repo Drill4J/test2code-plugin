@@ -16,7 +16,13 @@
 package com.epam.drill.plugins.test2code.util
 
 /**
- * CRC64 checksum calculator based on the polynom specified in ISO 3309. T
+ * CRC64 checksum calculator based on the polynom specified in ISO 3309. The
+ * implementation is based on the following publications:
+ *
+ * <ul>
+ * <li>http://en.wikipedia.org/wiki/Cyclic_redundancy_check</li>
+ * <li>http://www.geocities.com/SiliconValley/Pines/8659/crc.htm</li>
+ * </ul>
  */
 object CRC64 {
     private const val POLY64REV = -0x2800000000000000L
@@ -43,7 +49,7 @@ object CRC64 {
      * @param data data to calculate checksum for
      * @return checksum value
      */
-    fun classId(data: ByteArray): Long {
+    fun calculateHash(data: ByteArray): Long {
         var sum: Long = 0
         for (b in data) {
             val lookupidx = sum.toInt() xor b.toInt() and 0xff

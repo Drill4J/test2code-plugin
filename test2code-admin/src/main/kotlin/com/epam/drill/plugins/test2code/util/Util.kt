@@ -33,11 +33,11 @@ internal fun String.urlDecode(): String = takeIf { '%' in it }?.run {
 
 internal fun String.urlEncode(): String = runCatching { URLEncoder.encode(this, "UTF-8") }.getOrNull() ?: this
 
-val String.crc64: String get() = CRC64.classId(toByteArray()).toString(Character.MAX_RADIX).weakIntern()
+val String.crc64: String get() = CRC64.calculateHash(toByteArray()).toString(Character.MAX_RADIX).weakIntern()
 
-internal fun String.crc64(): Long = CRC64.classId(toByteArray())
+internal fun String.crc64(): Long = CRC64.calculateHash(toByteArray())
 
-internal fun ByteArray.crc64(): Long = CRC64.classId(this)
+internal fun ByteArray.crc64(): Long = CRC64.calculateHash(this)
 
 infix fun Number.percentOf(other: Number): Double = when (val dOther = other.toDouble()) {
     0.0 -> 0.0
