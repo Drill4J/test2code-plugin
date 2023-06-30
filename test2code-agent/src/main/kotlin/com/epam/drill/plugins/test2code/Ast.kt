@@ -125,7 +125,8 @@ private fun AstMethod.classSignature() =
 
 private fun getShortClassName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')
-    return if (lastSlashIndex != -1) {
+    val hasPackage = lastSlashIndex != -1
+    return if (hasPackage) {
         className.substring(lastSlashIndex + 1)
     } else {
         className
@@ -134,7 +135,8 @@ private fun getShortClassName(className: String): String {
 
 private fun getPackageName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')
-    return if (lastSlashIndex != -1) {
+    val hasPackage = lastSlashIndex != -1
+    return if (hasPackage) {
         className.substring(0, lastSlashIndex)
     } else {
         ""
