@@ -23,6 +23,7 @@ import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import org.objectweb.asm.ClassReader
 import com.epam.drill.logger.api.Logger
+import com.epam.drill.common.classloading.ClassSource
 
 private const val PREFIX_SPRING_BOOT = "BOOT-INF/classes/"
 private const val PREFIX_WEB_APP = "WEB-INF/classes/"

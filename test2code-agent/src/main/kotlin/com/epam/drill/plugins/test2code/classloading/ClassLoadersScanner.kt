@@ -20,6 +20,7 @@ import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
 import com.epam.drill.logger.api.Logger
+import com.epam.drill.common.classloading.ClassSource
 
 class ClassLoadersScanner(
     packagePrefixes: List<String>,
