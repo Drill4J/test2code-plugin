@@ -13,18 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.plugins.test2code.ast;
+package com.example.fixture.classloading.sub;
 
-public class SimpleClass {
-    public void simpleMethod() {
-        System.out.println("someMethod");
-    }
+public class Class1 implements Interface1 {
+    @Override
+    public void method1() {
 
-    public String methodWithReturn() {
-        return "methodWithReturn";
-    }
-
-    public void methodWithParams(String param1, int param2) {
-        System.out.println("methodWithParams");
     }
 }

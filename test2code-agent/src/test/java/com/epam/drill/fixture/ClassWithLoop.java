@@ -13,11 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.classloading;
+package com.epam.drill.fixture;
 
-public class Class5 {
+public class ClassWithLoop implements Runnable {
+    @Override
+    public void run() {
+        printAnotherPlace(1);
+        printAnotherPlace(2);
+    }
 
-    public void method5() {
-
+    private void printAnotherPlace(int count) {
+        int i = 0;
+        while (i < count) {
+            System.out.println("printAnotherPlace");
+            i++;
+        }
+        int[] marks = new int[]{80, 85};
+        for (int item : marks) {
+            System.out.println(item);
+        }
     }
 }

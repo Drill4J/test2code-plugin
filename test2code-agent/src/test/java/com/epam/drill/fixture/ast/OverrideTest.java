@@ -13,8 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.classloading.sub;
+package com.epam.drill.fixture.ast;
 
-public interface Interface1 {
-    void method1();
+import java.util.concurrent.Callable;
+
+public class OverrideTest implements Callable<String> {
+
+    @Override
+    public String call() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
 }
+

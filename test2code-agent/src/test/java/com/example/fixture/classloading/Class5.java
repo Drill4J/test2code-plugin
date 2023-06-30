@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.classloading.sub;
+package com.example.fixture.classloading;
 
-public class Class1 implements Interface1 {
-    @Override
-    public void method1() {
+public class Class5 {
+
+    public void method5() {
 
     }
 }

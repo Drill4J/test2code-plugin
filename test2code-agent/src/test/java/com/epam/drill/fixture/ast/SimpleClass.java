@@ -13,10 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.plugins.test2code;
+package com.epam.drill.fixture.ast;
 
-public class EmptyBody implements Runnable {
-    @Override
-    public void run() {
+public class SimpleClass {
+    public void simpleMethod() {
+        System.out.println("someMethod");
+    }
+
+    public String methodWithReturn() {
+        return "methodWithReturn";
+    }
+
+    public void methodWithParams(String param1, int param2) {
+        System.out.println("methodWithParams");
     }
 }

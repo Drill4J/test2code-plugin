@@ -13,26 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.plugins.test2code;
+package com.example.fixture.classloading;
 
-public class TestTarget implements Runnable {
-    @Override
-    public void run() {
-        isPrime(7);
-        isPrime(7);
-        isPrime(7);
-        isPrime(7);
-        isPrime(12);
-    }
+public class Class3 {
+    public void method3() {
 
-    private boolean isPrime(int n) {
-        int i = 2;
-        while (i * i <= n) {
-            if ((n ^ i) == 0) {
-                return false;
-            }
-            i++;
-        }
-        return true;
     }
 }

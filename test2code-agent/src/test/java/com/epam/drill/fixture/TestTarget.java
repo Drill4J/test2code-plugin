@@ -13,16 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.plugins.test2code.ast;
+package com.epam.drill.fixture;
 
-import java.util.concurrent.Callable;
-
-public class OverrideTest implements Callable<String> {
-
+public class TestTarget implements Runnable {
     @Override
-    public String call() throws Exception {
-        throw new UnsupportedOperationException();
+    public void run() {
+        isPrime(7);
+        isPrime(7);
+        isPrime(7);
+        isPrime(7);
+        isPrime(12);
     }
 
+    private boolean isPrime(int n) {
+        int i = 2;
+        while (i * i <= n) {
+            if ((n ^ i) == 0) {
+                return false;
+            }
+            i++;
+        }
+        return true;
+    }
 }
-

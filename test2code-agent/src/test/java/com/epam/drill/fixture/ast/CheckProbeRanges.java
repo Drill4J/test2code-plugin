@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fixture.epam.drill.plugins.test2code.ast;
+package com.epam.drill.fixture.ast;
 
 import java.util.List;
 

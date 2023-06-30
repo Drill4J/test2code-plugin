@@ -15,7 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.fixture.epam.drill.plugins.test2code.ast.SimpleClass
+import com.epam.drill.fixture.ast.SimpleClass
 import org.junit.jupiter.api.Test
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
@@ -27,7 +27,7 @@ class AstTest {
     fun `check parsing method signature`() {
         val astEntity = parseAstClass(SimpleClass::class.getFullName(), SimpleClass::class.readBytes())
         assertEquals(SimpleClass::class.simpleName, astEntity.name)
-        assertEquals("com/fixture/epam/drill/plugins/test2code/ast", astEntity.path)
+        assertEquals("com/epam/drill/fixture/ast", astEntity.path)
         assertEquals(4, astEntity.methods.size)
         astEntity.methods[0].run {
             assertEquals("<init>", name)
