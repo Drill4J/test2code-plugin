@@ -43,6 +43,7 @@ open class ProbeCounter : ClassProbesVisitor() {
         this.count = count
     }
 }
+
 class ClassProbeCounter(val name: String) : ProbeCounter() {
     val astClass = newAstClass(name, ArrayList())
 
@@ -148,11 +149,6 @@ private fun getReturnType(methodNode: MethodNode): String {
     return Type.getType(returnTypeDesc).className
 }
 
-private fun getParams(methodNode: MethodNode): List<String> {
-    val params = ArrayList<String>()
-    val parameterTypes: Array<Type> = Type.getArgumentTypes(methodNode.desc)
-    for (parameterType in parameterTypes) {
-        params.add(parameterType.className)
-    }
-    return params
-}
+private fun getParams(methodNode: MethodNode): List<String> = Type
+    .getArgumentTypes(methodNode.desc)
+    .map { it.className }
