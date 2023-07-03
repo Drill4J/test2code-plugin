@@ -23,7 +23,7 @@ class ClassScannerTest {
     @Test
     fun `check class scan in one consumer call`() {
         var classCount = 0
-        scanClasses(listOf("com/fixture/epam/drill/classloading/sub")) { classes ->
+        scanClasses(listOf("com/example/fixture/classloading/sub")) { classes ->
             classCount += classes.size
         }
         assertEquals(2, classCount)
@@ -33,7 +33,7 @@ class ClassScannerTest {
     fun `check class scan in several consumer call`() {
         var classCount = 0
         var transferCount = 0
-        scanClasses(listOf("com/fixture/epam/drill/classloading"), 5) { classes ->
+        scanClasses(listOf("com/example/fixture/classloading"), 5) { classes ->
             classCount += classes.size
             transferCount++
         }

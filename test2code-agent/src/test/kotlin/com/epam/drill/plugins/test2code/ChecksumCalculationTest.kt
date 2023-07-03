@@ -16,10 +16,11 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.common.api.AstMethod
-import com.fixture.epam.drill.plugins.test2code.ast.Build1
-import com.fixture.epam.drill.plugins.test2code.ast.Build2
-import com.fixture.epam.drill.plugins.test2code.ast.ConstructorTestBuild1
-import com.fixture.epam.drill.plugins.test2code.ast.ConstructorTestBuild2
+import com.epam.drill.fixture.ast.Build1
+import com.epam.drill.fixture.ast.Build2
+import com.epam.drill.fixture.ast.ConstructorTestBuild1
+import com.epam.drill.fixture.ast.ConstructorTestBuild2
+import com.epam.drill.fixture.ast.OverrideTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -152,8 +153,8 @@ class ConstructorTest {
 class OverrideTest {
     private val methodsBuild =
         parseAstClass(
-            com.fixture.epam.drill.plugins.test2code.ast.OverrideTest::class.getFullName(),
-            com.fixture.epam.drill.plugins.test2code.ast.OverrideTest::class.readBytes()
+            OverrideTest::class.getFullName(),
+            OverrideTest::class.readBytes()
         ).methods
 
     @Test

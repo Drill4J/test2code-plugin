@@ -20,9 +20,9 @@ import com.epam.drill.instrumentation.data.ClassWithVoid
 import com.epam.drill.instrumentation.data.InvokeBigConditions
 import com.epam.drill.instrumentation.data.InvokeCycles
 import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.sessionId
-import com.fixture.epam.drill.plugins.test2code.ClassWithLoop
-import com.fixture.epam.drill.plugins.test2code.EmptyBody
-import com.fixture.epam.drill.plugins.test2code.TestTarget
+import com.epam.drill.fixture.ClassWithLoop
+import com.epam.drill.fixture.EmptyBody
+import com.epam.drill.fixture.TestTarget
 import org.junit.jupiter.api.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
