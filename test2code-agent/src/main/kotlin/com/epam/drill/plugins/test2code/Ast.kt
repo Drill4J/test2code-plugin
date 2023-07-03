@@ -23,6 +23,7 @@ import org.jacoco.core.internal.flow.ClassProbesVisitor
 import org.jacoco.core.internal.flow.IFrame
 import org.jacoco.core.internal.flow.MethodProbesVisitor
 import org.jacoco.core.internal.instr.InstrSupport
+import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
@@ -45,12 +46,18 @@ open class ProbeCounter : ClassProbesVisitor() {
 }
 
 class ClassProbeCounter(val name: String) : ProbeCounter() {
-    val astClass = newAstClass(name, ArrayList())
+    val astClass = newAstClass(name, ArrayList(), ArrayList())
 
     override fun visitMethod(
         access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?
     ): MethodProbesVisitor {
         return MethodProbeCounter(astClass.methods as MutableList)
+    }
+
+    override fun visitAnnotation(desc: String?, visible: Boolean): AnnotationVisitor? {
+        val annotationName = Type.getType(desc).className
+        (astClass.annotations as MutableList).add(annotationName)
+        return super.visitAnnotation(desc, visible)
     }
 }
 
@@ -70,7 +77,8 @@ class MethodProbeCounter(
             params = getParams(methodNode),
             returnType = getReturnType(methodNode),
             checksum = "",
-            probes = probes
+            probes = probes,
+            annotations = getAnnotations(methodNode)
         )
         methods.add(method)
     }
@@ -114,11 +122,13 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
 
 fun newAstClass(
     className: String,
-    methods: MutableList<AstMethod> = ArrayList()
+    methods: MutableList<AstMethod> = ArrayList(),
+    annotations: MutableList<String> = ArrayList()
 ) = AstEntity(
     path = getPackageName(className),
     name = getShortClassName(className),
-    methods
+    methods = methods,
+    annotations = annotations
 )
 
 private fun AstMethod.classSignature() =
@@ -152,3 +162,11 @@ private fun getReturnType(methodNode: MethodNode): String {
 private fun getParams(methodNode: MethodNode): List<String> = Type
     .getArgumentTypes(methodNode.desc)
     .map { it.className }
+
+private fun getAnnotations(methodNode: MethodNode): List<String> {
+    val list = ArrayList<String>()
+    list.addAll(methodNode.invisibleAnnotations?.map { it.desc } ?: emptyList())
+//    For visible annotations, discuss
+//    list.addAll(methodNode.visibleAnnotations?.map { it.desc } ?: emptyList())
+    return list
+}
