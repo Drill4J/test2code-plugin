@@ -26,12 +26,12 @@ internal fun calculateMethodsChecksums(
 ): Map<String, String> = ClassParser(ByteArrayInputStream(classBytes), className)
     .parse()
     .methods
-    .associate { method -> method.classSignature() to checksum(method) }
+    .associate { method -> method.classSignature() to calculateChecksum(method) }
 
 private fun Method.classSignature() =
     "${name}/${argumentTypes.asSequence().map { type -> type.toString() }.joinToString()}/${returnType}"
 
-private fun checksum(
+private fun calculateChecksum(
     method: Method,
 ): String {
     val codeText = method.code.run {
