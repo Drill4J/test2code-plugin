@@ -48,6 +48,10 @@ class ClassLoadersScanner(
 
     fun scanClasses() = scanClasses(scanClassLoadersURIs())
 
+    fun scanClasses(additionalPaths: List<String>) = additionalPaths.run {
+        scanClasses(scanClassLoadersURIs() + this.map(::File).filter(File::exists).map(File::toURI))
+    }
+
     private fun addClassLoaderWithParents(loaders: MutableSet<ClassLoader>, classloader: ClassLoader) = loaders.apply {
         var current: ClassLoader? = classloader
         while (current != null) {
