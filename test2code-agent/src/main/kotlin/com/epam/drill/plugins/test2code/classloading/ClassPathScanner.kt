@@ -73,16 +73,12 @@ class ClassPathScanner(
         scanned
     }
 
-    private fun scanJarEntry(bytes: ByteArray): Result<Int> = bytes.runCatching {
-        JarInputStream(ByteArrayInputStream(this)).use(::scanJarInputStream)
-    }
-
     private fun scanJarInputStream(stream: JarInputStream) = stream.run {
         var scanned = 0
         var jarEntry = this.nextJarEntry
         while (jarEntry != null) {
             when (jarEntry.takeUnless(JarEntry::isDirectory)?.name?.substringAfterLast('.')) {
-                "jar", "war", "rar" -> scanned += scanJarEntry(this.readBytes()).getOrLogFail()
+                "jar", "war", "rar" -> scanned += scanJarEntry(jarEntry, this.readBytes()).getOrLogFail()
                 "class" -> scanned += scanClassEntry(jarEntry, this.readBytes()).getOrLogFail()
             }
             jarEntry = this.nextJarEntry
@@ -119,6 +115,11 @@ class ClassPathScanner(
         logger?.trace { "ClassPathScanner: scanning class entry: $this" }
         this.removePrefix(PREFIX_WEB_APP).removePrefix(PREFIX_SPRING_BOOT).removeSuffix(".class").let(::ClassSource)
             .takeIf(isClassAccepted)?.let(readClassSource)?.takeIf(isPrefixMatches)?.let(::addClassToScanned) ?: 0
+    }
+
+    private fun scanJarEntry(entry: JarEntry, bytes: ByteArray): Result<Int> = entry.name.runCatching {
+        logger?.debug { "ClassPathScanner: scanning jar entry: $this" }
+        JarInputStream(ByteArrayInputStream(bytes)).use(::scanJarInputStream)
     }
 
     private fun addClassToScanned(classSource: ClassSource): Int {
