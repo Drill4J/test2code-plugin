@@ -15,16 +15,23 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.common.*
-import com.epam.drill.plugin.api.*
+import com.epam.drill.common.AgentInfo
+import com.epam.drill.plugin.api.AdminData
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
-import com.epam.drill.plugins.test2code.util.*
-import com.epam.dsm.*
-import com.epam.dsm.util.*
-import kotlinx.atomicfu.*
-import kotlinx.coroutines.sync.*
+import com.epam.drill.plugins.test2code.util.AtomicCache
+import com.epam.drill.plugins.test2code.util.fullClassname
+import com.epam.drill.plugins.test2code.util.trackTime
+import com.epam.dsm.StoreClient
+import com.epam.dsm.util.logPoolStats
+import com.epam.dsm.util.weakIntern
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.getAndUpdate
+import kotlinx.atomicfu.update
+import kotlinx.atomicfu.updateAndGet
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Agent state.
@@ -60,7 +67,6 @@ internal class AgentState(
             agentKey = agentKey,
         )
     )
-
 
 
     /**
@@ -117,7 +123,8 @@ internal class AgentState(
                             ownerClass = fullClassname(e.path, e.name),
                             name = m.name.weakIntern(),
                             desc = m.toDesc(),
-                            hash = m.checksum.weakIntern()
+                            hash = m.checksum.weakIntern(),
+                            annotations = m.annotations
                         )
                     }.sorted()
                     val packages = data.toPackages()
@@ -128,9 +135,11 @@ internal class AgentState(
                         packages = packages
                     ).toClassData(agentKey, methods = methods)
                 }
+
                 is NoData -> {
                     throw UnsupportedOperationException("Java class bytes are not supported")
                 }
+
                 else -> data
             } as ClassData
             classData.store(storeClient)
@@ -148,10 +157,12 @@ internal class AgentState(
     private suspend fun initialized(classData: ClassData) {
         val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
         val probes = scopeManager.byVersion(agentKey, withData = true)
+
+        val methods = classData.methods.filter { !it.annotations.contains("Llombok/Generated;") }
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
             packageTree = classData.packageTree,
-            methods = classData.methods,
+            methods = methods,
             probeIds = classData.probeIds,
             build = build
         )
@@ -382,10 +393,12 @@ internal class AgentState(
                     parentVersion = it.parentVersion
                 )
             }
+
             parentVersion -> Baseline(
                 version = buildVersion,
                 parentVersion = parentVersion
             )
+
             else -> null
         }?.also { newBaseline ->
             storeClient.store(data.copy(baseline = newBaseline))

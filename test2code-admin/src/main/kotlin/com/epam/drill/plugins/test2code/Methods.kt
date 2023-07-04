@@ -36,7 +36,7 @@ data class Method(
     val name: String,
     val desc: String,
     val hash: String,
-    val lambdasHash: Map<String, String> = emptyMap(),
+    val annotations: List<String>
 ) : Comparable<Method> {
     val signature = signature(ownerClass, name, desc).intern()
     val key = fullMethodName(ownerClass, name, desc).intern()
@@ -74,12 +74,10 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
                     if (cmp <= 0) {
                         when {
                             cmp == 0 -> {
-                                (unaffected.takeIf {
-                                    left.hash == right.hash
-                                            && left.lambdasHash.all { right.lambdasHash.containsValue(it.value) }
-                                } ?: modified).add(left)
+                                (unaffected.takeIf { left.hash == right.hash } ?: modified).add(left)
                                 lastRight = otherItr.nextOrNull()
                             }
+
                             cmp < 0 -> {
                                 new.addMethod(left)
                             }
