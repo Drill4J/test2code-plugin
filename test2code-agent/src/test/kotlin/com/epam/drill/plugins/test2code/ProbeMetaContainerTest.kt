@@ -15,9 +15,10 @@
  */
 package com.epam.drill.plugins.test2code
 
-import org.junit.jupiter.api.*
-import kotlin.test.*
+import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class ProbeMetaContainerTest {
     private val probeDescriptor = ProbeDescriptor(1L, "foo/bar/Foo", 4)

@@ -113,13 +113,6 @@ class InstrumentationForTest(kClass: KClass<*>) {
         val coverage = coverageBuilder.getBundle("all")
         return coverage.instructionCounter
     }
-
-    fun saveToDisk() {
-        val fileName = "instr/${targetClass.simpleName}.class"
-        FileOutputStream(fileName).use { fos ->
-            fos.write(instrumentClass())
-        }
-    }
 }
 
 class MemoryClassLoader : ClassLoader() {

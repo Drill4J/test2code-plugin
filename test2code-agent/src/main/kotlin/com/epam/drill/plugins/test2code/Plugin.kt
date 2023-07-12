@@ -72,7 +72,7 @@ class Plugin(
      * @features Agent registration
      */
     override fun on() {
-        val initInfo = InitInfo(message = "Initializing plugin $id...", init = true)
+        val initInfo = InitInfo(message = "Initializing plugin $id...")
         sendMessage(initInfo)
         logger.info { "Initializing plugin $id..." }
 
@@ -228,12 +228,15 @@ class Plugin(
      * Scan, parse and send metadata classes to the admin side
      */
     private fun scanAndSendMetadataClasses() {
-        var count = 0
+        var classCount = 0;
         scanClasses { classes ->
-            sendMessage(InitDataPart(classes.map { parseAstClass(it.entityName(), it.bytes()) }))
-            count =+ classes.size
+            classes
+                .map { parseAstClass(it.entityName(), it.bytes()) }
+                .let(::InitDataPart)
+                .also(::sendMessage)
+                .also { classCount += it.astEntities.size }
         }
-        logger.info { "Scanned $count classes" }
+        logger.info { "Scanned $classCount classes" }
     }
 }
 
