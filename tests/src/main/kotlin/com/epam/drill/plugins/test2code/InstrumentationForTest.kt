@@ -46,7 +46,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
 
     object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub)
 
-    val instrumenter = DrillInstrumenter(TestProbeArrayProvider, "".namedLogger(appender = NopLogAppender))
+    val instrumenter = DrillInstrumenter(TestProbeArrayProvider)
 
     val memoryClassLoader = MemoryClassLoader()
 

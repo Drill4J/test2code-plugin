@@ -15,7 +15,6 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.classloading.ClassLoadersScanner
@@ -26,6 +25,7 @@ import kotlinx.atomicfu.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.protobuf.*
 import java.util.*
+import mu.KotlinLogging
 
 /**
  * Service for managing the plugin on the agent side
@@ -34,10 +34,10 @@ import java.util.*
 class Plugin(
     id: String,
     agentContext: AgentContext,
-    sender: Sender,
-    logging: LoggerFactory,
-) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter, ClassScanner {
-    internal val logger = logging.logger("Plugin $id")
+    sender: Sender
+) : AgentPart<AgentAction>(id, agentContext, sender), Instrumenter, ClassScanner {
+
+    internal val logger = KotlinLogging.logger {}
 
     internal val json = Json { encodeDefaults = true }
 
@@ -47,10 +47,9 @@ class Plugin(
 
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider.apply {
         defaultContext = agentContext
-        logger = this@Plugin.logger
     }
 
-    private val instrumenter = DrillInstrumenter(instrContext, logger)
+    private val instrumenter = DrillInstrumenter(instrContext)
 
     private val _retransformed = atomic(false)
 
@@ -197,7 +196,7 @@ class Plugin(
                 val execDatum = getOrPut(testKey) {
                     arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) }
                 }
-                logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
+                logger.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
                 requestThreadLocal.set(execDatum)
             }
         }
@@ -222,7 +221,7 @@ class Plugin(
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
         val additionalPaths = Native.GetScanClassPath().split(";")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
-        ClassLoadersScanner(packagePrefixes, 50, logger, consumer).scanClasses(additionalPaths)
+        ClassLoadersScanner(packagePrefixes, 50, consumer).scanClasses(additionalPaths)
     }
 
     /**
