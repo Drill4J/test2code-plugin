@@ -15,9 +15,12 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.ast.*
-import com.epam.drill.plugins.test2code.ast.OverrideTest
 import com.epam.drill.plugins.test2code.common.api.AstMethod
+import com.epam.drill.fixture.ast.Build1
+import com.epam.drill.fixture.ast.Build2
+import com.epam.drill.fixture.ast.ConstructorTestBuild1
+import com.epam.drill.fixture.ast.ConstructorTestBuild2
+import com.epam.drill.fixture.ast.OverrideTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -156,17 +159,14 @@ class OverrideTest {
 
     @Test
     fun `class with override methods should have different checksum`() {
-        val methodName = "getResult"
-        assertEquals(methodsBuild.size, 8)
+        val methodName = "call"
+        assertEquals(3, methodsBuild.size)
         //Compare checksum of virtual method and method with override annotation
         assertNotEquals(
-            methodsBuild.filter { it.name == methodName }[1].checksum,
-            methodsBuild.filter { it.name == methodName }[2].checksum
-        )
-        assertNotEquals(
             methodsBuild.filter { it.name == methodName }[0].checksum,
-            methodsBuild.filter { it.name == methodName }[3].checksum
+            methodsBuild.filter { it.name == methodName }[1].checksum
         )
+
     }
 }
 

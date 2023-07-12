@@ -16,15 +16,17 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.DrillClassProbesAdapter
-import com.epam.drill.plugins.test2code.checksum.checksumCalculation
+import com.epam.drill.plugins.test2code.checksum.calculateMethodsChecksums
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
 import org.jacoco.core.internal.flow.ClassProbesVisitor
 import org.jacoco.core.internal.flow.IFrame
 import org.jacoco.core.internal.flow.MethodProbesVisitor
 import org.jacoco.core.internal.instr.InstrSupport
-import org.objectweb.asm.*
-import org.objectweb.asm.tree.*
+import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Type
+import org.objectweb.asm.tree.MethodNode
 
 
 open class ProbeCounter : ClassProbesVisitor() {
@@ -41,6 +43,7 @@ open class ProbeCounter : ClassProbesVisitor() {
         this.count = count
     }
 }
+
 class ClassProbeCounter(val name: String) : ProbeCounter() {
     val astClass = newAstClass(name, ArrayList())
 
@@ -99,8 +102,13 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
     classReader.accept(DrillClassProbesAdapter(counter, false), 0)
 
     val astClass = counter.astClass
-    val astMethodsWithChecksum = checksumCalculation(classBytes, className, astClass)
-    astClass.methods = astMethodsWithChecksum
+    val astMethodsWithChecksum = calculateMethodsChecksums(classBytes, className)
+
+    astClass.methods = astClass.methods.map {
+        it.copy(
+            checksum = astMethodsWithChecksum[it.classSignature()] ?: ""
+        )
+    }
     return astClass
 }
 
@@ -113,9 +121,13 @@ fun newAstClass(
     methods
 )
 
+private fun AstMethod.classSignature() =
+    "${name}/${params.joinToString()}/${returnType}"
+
 private fun getShortClassName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')
-    return if (lastSlashIndex != -1) {
+    val hasPackage = lastSlashIndex != -1
+    return if (hasPackage) {
         className.substring(lastSlashIndex + 1)
     } else {
         className
@@ -124,7 +136,8 @@ private fun getShortClassName(className: String): String {
 
 private fun getPackageName(className: String): String {
     val lastSlashIndex: Int = className.lastIndexOf('/')
-    return if (lastSlashIndex != -1) {
+    val hasPackage = lastSlashIndex != -1
+    return if (hasPackage) {
         className.substring(0, lastSlashIndex)
     } else {
         ""
@@ -136,11 +149,6 @@ private fun getReturnType(methodNode: MethodNode): String {
     return Type.getType(returnTypeDesc).className
 }
 
-private fun getParams(methodNode: MethodNode): List<String> {
-    val params = ArrayList<String>()
-    val parameterTypes: Array<Type> = Type.getArgumentTypes(methodNode.desc)
-    for (parameterType in parameterTypes) {
-        params.add(parameterType.className)
-    }
-    return params
-}
+private fun getParams(methodNode: MethodNode): List<String> = Type
+    .getArgumentTypes(methodNode.desc)
+    .map { it.className }

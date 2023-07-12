@@ -15,11 +15,18 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.instrumentation.data.*
+import com.epam.drill.instrumentation.data.ClassWithTimeout
+import com.epam.drill.instrumentation.data.ClassWithVoid
+import com.epam.drill.instrumentation.data.InvokeBigConditions
+import com.epam.drill.instrumentation.data.InvokeCycles
 import com.epam.drill.plugins.test2code.InstrumentationForTest.Companion.sessionId
-import org.junit.jupiter.api.*
-import kotlin.test.*
+import com.epam.drill.fixture.ClassWithLoop
+import com.epam.drill.fixture.EmptyBody
+import com.epam.drill.fixture.TestTarget
+import org.junit.jupiter.api.assertAll
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class InstrumentationTest {
 
