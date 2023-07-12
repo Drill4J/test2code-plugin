@@ -15,7 +15,6 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.processing.*
 import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
@@ -23,7 +22,6 @@ import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
 import java.io.FileOutputStream
-import java.io.IOException
 import kotlin.reflect.*
 
 
