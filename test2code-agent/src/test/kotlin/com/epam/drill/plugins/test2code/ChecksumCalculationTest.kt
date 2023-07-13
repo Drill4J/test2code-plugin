@@ -15,28 +15,21 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.common.api.AstMethod
-import com.epam.drill.fixture.ast.Build1
-import com.epam.drill.fixture.ast.Build2
 import com.epam.drill.fixture.ast.ConstructorTestBuild1
 import com.epam.drill.fixture.ast.ConstructorTestBuild2
 import com.epam.drill.fixture.ast.OverrideTest
+import com.epam.drill.plugins.test2code.common.api.AstMethod
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class ChecksumCalculationTest {
 
-    private val methodsBuild1 =
-        parseAstClass(
-            Build1::class.getFullName(),
-            Build1::class.readBytes()
-        ).methods
-    private val methodsBuild2 =
-        parseAstClass(
-            Build2::class.getFullName(),
-            Build2::class.readBytes()
-        ).methods
+    private val methodsBuild1 = deserializeAstMethods("methods-build-1.ser")
+    private val methodsBuild2 = deserializeAstMethods("methods-build-2.ser")
 
     @Test
     fun `lambda with different context should have other checksum`() {
@@ -180,3 +173,28 @@ private fun assertChecksum(
         build2.filter { it.name == methodName }[0].checksum
     )
 }
+
+private fun deserializeAstMethods(fileName: String) = Json.decodeFromString<List<AstMethod>>(
+    File(Thread.currentThread().contextClassLoader.getResource(fileName)!!.path.toString()).readText()
+)
+
+//  Use it only when you make some changes at Build1 or Build2 fixture files.
+//  After serializing, put created files to resources folder.
+//class SerializeBuilds {
+//    @Test
+//    fun `serialize builds`() {
+//        serializeAstMethods<Build1>("methods-build-1.ser")
+//        serializeAstMethods<Build2>("methods-build-2.ser")
+//    }
+//
+//    private inline fun <reified T> serializeAstMethods(fileName: String) {
+//        val methodsBuild = parseAstClass(
+//            T::class.getFullName(),
+//            T::class.readBytes()
+//        ).methods
+//        File(fileName).writeText(
+//            Json.encodeToString(methodsBuild)
+//        )
+//    }
+//}
+//
