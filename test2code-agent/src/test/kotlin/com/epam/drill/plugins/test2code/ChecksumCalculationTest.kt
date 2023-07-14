@@ -15,35 +15,31 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.fixture.ast.ConstructorTestBuild1
-import com.epam.drill.fixture.ast.ConstructorTestBuild2
+import com.epam.drill.fixture.ast.*
 import com.epam.drill.fixture.ast.OverrideTest
-import com.epam.drill.plugins.test2code.common.api.AstMethod
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
+import com.epam.drill.plugins.test2code.checksum.calculateMethodsChecksums
 import org.junit.jupiter.api.Test
-import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class ChecksumCalculationTest {
 
-    private val methodsBuild1 = deserializeAstMethods("methods-build-1.ser")
-    private val methodsBuild2 = deserializeAstMethods("methods-build-2.ser")
+    private val checksumsBuild1 = calculateMethodsChecksums(Build1::class.readBytes(), Build1::class.getFullName())
+    private val checksumsBuild2 = calculateMethodsChecksums(Build2::class.readBytes(), Build2::class.getFullName())
 
     @Test
     fun `lambda with different context should have other checksum`() {
-        val methodName = "lambda\$differentContextChangeAtLambda\$1"
+        val methodName = "lambda\$differentContextChangeAtLambda\$1/java.lang.String/java.lang.String"
         // Lambdas should have different value, because they contain different context
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `constant lambda hash calculation`() {
-        val methodName = "lambda\$constantLambdaHashCalculation\$6"
+        val methodName = "lambda\$constantLambdaHashCalculation\$6/java.lang.String/java.lang.String"
         assertEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
+            checksumsBuild1[methodName],
+            checksumsBuild2[methodName]
         )
     }
 
@@ -52,51 +48,51 @@ class ChecksumCalculationTest {
         val methodName = "theSameMethodBody"
         //Methods, which contain lambda with different context, should not have difference in checksum
         assertEquals(
-            methodsBuild1.filter { it.name == methodName }[0].checksum,
-            methodsBuild2.filter { it.name == methodName }[0].checksum
+            checksumsBuild1[methodName],
+            checksumsBuild2[methodName]
         )
     }
 
     @Test
     fun `test on different context at inner lambda`() {
-        val methodName = "lambda\$null\$2"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "lambda\$null\$2/java.lang.String/java.lang.String"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `should have different checksum for reference call`() {
-        val methodName = "referenceMethodCall"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "referenceMethodCall/java.util.List/void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `should have different checksum for array`() {
-        val methodName = "multiANewArrayInsnNode"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "multiANewArrayInsnNode//void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `should have different checksum for switch table`() {
-        val methodName = "tableSwitchMethodTest"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "tableSwitchMethodTest/int/void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `should have different checksum for look up switch`() {
-        val methodName = "lookupSwitchMethodTest"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "lookupSwitchMethodTest/java.lang.Integer/void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `method with different instance type`() {
-        val methodName = "differentInstanceType"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "differentInstanceType//void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
     @Test
     fun `method call other method`() {
-        val methodName = "callOtherMethod"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "callOtherMethod//void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 //    Do we need to cover that case?
 //    @Test
@@ -107,8 +103,8 @@ class ChecksumCalculationTest {
 
     @Test
     fun `method with incremented value`() {
-        val methodName = "methodWithIteratedValue"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val methodName = "methodWithIteratedValue/java.lang.Integer/void"
+        assertChecksum(methodName, checksumsBuild1, checksumsBuild2)
     }
 
 //   Do we need to cover that case?
@@ -121,80 +117,50 @@ class ChecksumCalculationTest {
 }
 
 class ConstructorTest {
-    private val methodsBuild1 =
-        parseAstClass(
-            ConstructorTestBuild1::class.getFullName(),
-            ConstructorTestBuild1::class.readBytes()
-        ).methods
-    private val methodsBuild2 =
-        parseAstClass(
-            ConstructorTestBuild2::class.getFullName(),
-            ConstructorTestBuild2::class.readBytes()
-        ).methods
+
+    private val checksumsBuild1 =
+        calculateMethodsChecksums(ConstructorTestBuild1::class.readBytes(), ConstructorTestBuild1::class.getFullName())
+    private val checksumsBuild2 =
+        calculateMethodsChecksums(ConstructorTestBuild2::class.readBytes(), ConstructorTestBuild2::class.getFullName())
 
     @Test
     fun `class with more that one constructor should have two different checksum`() {
-        val methodName = "<init>"
-        assertChecksum(methodName, methodsBuild1, methodsBuild2)
+        val constructorName =
+            "<init>/java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String/void"
+        val defaultConstructorName = "<init>//void"
+        assertChecksum(constructorName, checksumsBuild1, checksumsBuild2)
         assertEquals(
-            methodsBuild1.filter { it.name == methodName }[1].checksum,
-            methodsBuild2.filter { it.name == methodName }[1].checksum
+            checksumsBuild1[defaultConstructorName],
+            checksumsBuild2[defaultConstructorName]
         )
     }
 }
 
 class OverrideTest {
+
     private val methodsBuild =
-        parseAstClass(
-            OverrideTest::class.getFullName(),
-            OverrideTest::class.readBytes()
-        ).methods
+        calculateMethodsChecksums(OverrideTest::class.readBytes(), OverrideTest::class.getFullName())
 
     @Test
     fun `class with override methods should have different checksum`() {
-        val methodName = "call"
+        val methodNameReal = "call//java.lang.String"
+        val methodNameVirtual = "call//java.lang.Object"
         assertEquals(3, methodsBuild.size)
         //Compare checksum of virtual method and method with override annotation
         assertNotEquals(
-            methodsBuild.filter { it.name == methodName }[0].checksum,
-            methodsBuild.filter { it.name == methodName }[1].checksum
+            methodsBuild[methodNameReal],
+            methodsBuild[methodNameVirtual]
         )
-
     }
 }
 
 private fun assertChecksum(
     methodName: String,
-    build1: List<AstMethod>,
-    build2: List<AstMethod>
+    build1: Map<String, String>,
+    build2: Map<String, String>
 ) {
     assertNotEquals(
-        build1.filter { it.name == methodName }[0].checksum,
-        build2.filter { it.name == methodName }[0].checksum
+        build1[methodName],
+        build2[methodName]
     )
 }
-
-private fun deserializeAstMethods(fileName: String) = Json.decodeFromString<List<AstMethod>>(
-    File(Thread.currentThread().contextClassLoader.getResource(fileName)!!.path.toString()).readText()
-)
-
-//  Use it only when you make some changes at Build1 or Build2 fixture files.
-//  After serializing, put created files to resources folder.
-//class SerializeBuilds {
-//    @Test
-//    fun `serialize builds`() {
-//        serializeAstMethods<Build1>("methods-build-1.ser")
-//        serializeAstMethods<Build2>("methods-build-2.ser")
-//    }
-//
-//    private inline fun <reified T> serializeAstMethods(fileName: String) {
-//        val methodsBuild = parseAstClass(
-//            T::class.getFullName(),
-//            T::class.readBytes()
-//        ).methods
-//        File(fileName).writeText(
-//            Json.encodeToString(methodsBuild)
-//        )
-//    }
-//}
-//
