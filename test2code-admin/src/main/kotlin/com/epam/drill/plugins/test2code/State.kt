@@ -158,7 +158,18 @@ internal class AgentState(
         val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
         val probes = scopeManager.byVersion(agentKey, withData = true)
 
-        val methods = classData.methods.filter { !it.annotations.contains("Llombok/Generated;") }
+        //TODO move list of annotations to env variable
+        val annotationsToSkip = listOf("Generated")
+//        val annotationsToSkip = System.getenv("DRILL_SKIP_BY_ANNOTATIONS").split(",")
+
+        val methods = classData.methods.filter { method ->
+            method.annotations.none { annotation ->
+                annotationsToSkip.any { skipAnnotation ->
+                    annotation.contains(skipAnnotation, ignoreCase = true)
+                }
+            }
+        }
+
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
             packageTree = classData.packageTree,
