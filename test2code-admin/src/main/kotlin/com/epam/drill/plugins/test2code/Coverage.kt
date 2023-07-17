@@ -25,6 +25,8 @@ import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
 import kotlinx.collections.immutable.*
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
 import java.io.*
 import java.util.stream.*
 
@@ -291,4 +293,18 @@ internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) =
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
     sessionId: String = genUuid(),
-) = ActionResult(StatusCodes.ERROR, "Coverage import for class bytes is deprecated")
+) = activeScope.startSession(sessionId, "UNIT").runCatching {
+    val data = inputStream.use {
+        ProtoBuf.decodeFromByteArray<List<ExecClassData>>(it.readBytes())
+    }
+    val execDatum = data.map {
+        it.copy(testName = "All unit tests")
+    }.asSequence()
+    activeScope.addProbes(sessionId) { execDatum.toList() }
+    state.finishSession(sessionId)
+    ActionResult(StatusCodes.OK, "Coverage successfully imported")
+}.getOrElse {
+    state.activeScope.cancelSession(sessionId)
+    logger.error { "Can't import coverage. Session was cancelled." }
+    ActionResult(StatusCodes.ERROR, "Can't import coverage. An error occurred: ${it.message}")
+}
