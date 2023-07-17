@@ -116,7 +116,11 @@ internal class AgentState(
             }
         }.takeIf { it !is ClassData }?.also { data ->
             val classData = when (data) {
-                is DataBuilder -> data.flatMap { e -> e.methodsWithProbes().map { e to it } }.run {
+                is DataBuilder -> data.flatMap { astEntity ->
+                    astEntity.methodsWithProbes()
+                        .filterByAnnotations{it.annotations}
+                        .map { astEntity to it }
+                }.run {
                     logger.debug { "initializing DataBuilder..." }
                     val methods = map { (e, m) ->
                         Method(
@@ -157,23 +161,10 @@ internal class AgentState(
     private suspend fun initialized(classData: ClassData) {
         val build: CachedBuild = storeClient.loadBuild(agentKey) ?: CachedBuild(agentKey)
         val probes = scopeManager.byVersion(agentKey, withData = true)
-
-        //TODO move list of annotations to env variable
-        val annotationsToSkip = listOf("Generated")
-//        val annotationsToSkip = System.getenv("DRILL_SKIP_BY_ANNOTATIONS").split(",")
-
-        val methods = classData.methods.filter { method ->
-            method.annotations.none { annotation ->
-                annotationsToSkip.any { skipAnnotation ->
-                    annotation.contains(skipAnnotation, ignoreCase = true)
-                }
-            }
-        }
-
         val coverContext = CoverContext(
             agentType = agentInfo.agentType,
             packageTree = classData.packageTree,
-            methods = methods,
+            methods = classData.methods,
             probeIds = classData.probeIds,
             build = build
         )
