@@ -15,11 +15,10 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.jacoco.*
-import org.junit.jupiter.api.*
-import kotlin.random.*
+import com.epam.drill.jacoco.AgentProbes
+import org.junit.jupiter.api.assertDoesNotThrow
+import kotlin.random.Random
 import kotlin.test.*
-import kotlin.test.Test
 
 
 class ExecRuntimeTest {

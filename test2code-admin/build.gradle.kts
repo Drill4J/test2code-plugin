@@ -36,11 +36,8 @@ val jarDependencies by configurations.creating {
 configurations.implementation.get().extendsFrom(jarDependencies)
 
 dependencies {
-    jarDependencies("org.apache.bcel:bcel:$bcelVersion")
-    jarDependencies("org.jacoco:org.jacoco.core:$jacocoVersion")
     jarDependencies(project(":test2code-api"))
     jarDependencies(project(":test2code-common"))
-    jarDependencies(project(":jacoco"))
 
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
     compileOnly("com.github.luben:zstd-jni:$lubenZstdVersion")

@@ -17,7 +17,6 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.common.*
 import com.epam.drill.plugin.api.*
-import com.epam.drill.plugins.test2code.global_filter.*
 import com.epam.drill.plugins.test2code.util.*
 import kotlinx.coroutines.*
 import kotlin.test.*
@@ -34,8 +33,6 @@ class AgentStateTest : PostgresBased("agent_state") {
     )
 
     private val adminData = object : AdminData {
-        override suspend fun loadClassBytes(): Map<String, ByteArray> = emptyMap()
-        override suspend fun loadClassBytes(buildVersion: String): Map<String, ByteArray> = emptyMap()
     }
 
     @Test

@@ -22,6 +22,7 @@ val kotlinxSerializationVersion: String by parent!!.extra
 val jacocoVersion: String by parent!!.extra
 val atomicfuVersion: String by parent!!.extra
 val lubenZstdVersion: String by parent!!.extra
+val bcelVersion: String by parent!!.extra
 
 repositories {
     mavenLocal()
@@ -39,6 +40,7 @@ dependencies {
     jarDependencies("com.github.luben:zstd-jni:$lubenZstdVersion")
     jarDependencies(project(":jacoco")) { isTransitive = false }
     jarDependencies(project(":test2code-common"))
+    jarDependencies("org.apache.bcel:bcel:$bcelVersion")
 
     compileOnly("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
 

@@ -80,7 +80,7 @@ class CoverageTest : E2EPluginTest() {
                     val stopSession = StopSession(StopSessionPayload(sessionId)).stringify()
                     pluginAction(stopSession).join()
                     plugUi.activeSessions()!!.count shouldBe 0
-                    plugUi.activeScope()!!.coverage.count shouldBe Count(11, 15)
+                    plugUi.activeScope()!!.coverage.count shouldBe Count(3, 4)
                 }
             }
         }

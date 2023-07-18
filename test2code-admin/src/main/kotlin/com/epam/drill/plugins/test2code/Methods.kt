@@ -17,12 +17,19 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.coverage.*
-import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import kotlinx.serialization.*
 
+/**
+ * Method model
+ * @param ownerClass the method's class name
+ * @param name the method's name
+ * @param desc the description
+ * @param hash the hash of the method body
+ * @param lambdasHash the hash of the lambda
+ */
 @Serializable
 data class Method(
     val ownerClass: String,
@@ -59,7 +66,7 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
             while (hasNext()) {
                 val left = next()
                 if (lastRight == null) {
-                    new.addMethod(left)
+                    new.add(left)
                 }
                 while (lastRight != null) {
                     val right = lastRight
@@ -74,21 +81,21 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
                                 lastRight = otherItr.nextOrNull()
                             }
                             cmp < 0 -> {
-                                new.addMethod(left)
+                                new.add(left)
                             }
                         }
                         break
                     }
-                    deleted.addMethod(right)
+                    deleted.add(right)
                     lastRight = otherItr.nextOrNull()
                     if (lastRight == null) {
-                        new.addMethod(left)
+                        new.add(left)
                     }
                 }
             }
-            lastRight?.let { deleted.addMethod(it) }
+            lastRight?.let { deleted.add(it) }
             while (otherItr.hasNext()) {
-                deleted.addMethod(otherItr.next())
+                deleted.add(otherItr.next())
             }
         }
         DiffMethods(
@@ -100,9 +107,6 @@ internal fun List<Method>.diff(otherMethods: List<Method>): DiffMethods = if (an
     } else DiffMethods(new = this)
 } else DiffMethods(deleted = otherMethods)
 
-private fun MutableList<Method>.addMethod(value: Method) {
-    if (LAMBDA !in value.name) add(value)
-}
 
 internal fun BuildMethods.toSummaryDto() = MethodsSummaryDto(
     all = totalMethods.run { Count(coveredCount, totalCount).toDto() },

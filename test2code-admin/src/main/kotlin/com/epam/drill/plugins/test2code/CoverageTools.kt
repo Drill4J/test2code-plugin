@@ -22,6 +22,16 @@ import java.util.stream.*
 
 //TODO Rewrite all of this, remove the file
 
+/**
+ * Information about method covering of the build version
+ * @param totalMethods overall information
+ * @param newMethods information only by new methods
+ * @param modifiedNameMethods information only by modified method names
+ * @param modifiedDescMethods information only by modified method descriptors
+ * @param allModifiedMethods information by all modified methods
+ * @param unaffectedMethods information by unaffected methods
+ * @param deletedMethods information by deleted methods
+ */
 internal data class BuildMethods(
     val totalMethods: MethodsInfo = MethodsInfo(),
     val newMethods: MethodsInfo = MethodsInfo(),
@@ -33,6 +43,9 @@ internal data class BuildMethods(
     val deletedMethods: MethodsInfo = MethodsInfo(),
 )
 
+/**
+ * Various sets of coverage information
+ */
 internal data class CoverageInfoSet(
     val associatedTests: Map<CoverageKey, List<TypedTest>>,
     val coverage: Coverage,

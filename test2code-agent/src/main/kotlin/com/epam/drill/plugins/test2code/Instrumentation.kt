@@ -18,43 +18,27 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.jacoco.*
 import com.epam.drill.jacoco.BooleanArrayProbeInserter.*
 import com.epam.drill.logger.api.*
+import com.epam.drill.plugin.api.processing.Instrumenter
 import kotlinx.atomicfu.*
+import org.jacoco.core.internal.data.CRC64
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
 
-/**
- * Instrumenter type
- */
-typealias DrillInstrumenter = (String, Long, ByteArray) -> ByteArray?
-
-/**
- * JaCoCo instrumenter
- */
-fun instrumenter(probeArrayProvider: ProbeArrayProvider, logger: Logger): DrillInstrumenter {
-    return CustomInstrumenter(probeArrayProvider, logger)
-}
-
 private val classCounter = atomic(0)
 
-private class CustomInstrumenter(
+class DrillInstrumenter(
     private val probeArrayProvider: ProbeArrayProvider,
     private val logger: Logger
-) : DrillInstrumenter {
+): Instrumenter {
 
-    override fun invoke(className: String, classId: Long, classBody: ByteArray): ByteArray? = try {
-        instrument(className, classId, classBody)
-    } catch (e: Exception) {
-        logger.error { "Error while instrumenting $className classId=$classId: ${e.message}" }
-        null
-    }
-
-    fun instrument(className: String, classId: Long, classBody: ByteArray): ByteArray? {
-        val version = InstrSupport.getMajorVersion(classBody)
+    override fun instrument(className: String, initialBytes: ByteArray): ByteArray? = try {
+        val version = InstrSupport.getMajorVersion(initialBytes)
+        val classId = CRC64.classId(initialBytes)
 
         //count probes before transformation
         val counter = ProbeCounter()
-        val reader = InstrSupport.classReaderFor(classBody)
+        val reader = InstrSupport.classReaderFor(initialBytes)
         reader.accept(DrillClassProbesAdapter(counter, false), 0)
 
         val genId = classCounter.incrementAndGet()
@@ -88,24 +72,14 @@ private class CustomInstrumenter(
             )
         }
 
-        return writer.toByteArray()
+        writer.toByteArray()
+    } catch (e: Exception) {
+        logger.error { "Error while instrumenting $className: ${e.message}" }
+        null
     }
 }
 
-private class ProbeCounter : ClassProbesVisitor() {
-    var count = 0
-        private set
 
-    override fun visitMethod(
-        access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?
-    ): MethodProbesVisitor? {
-        return null
-    }
-
-    override fun visitTotalProbeCount(count: Int) {
-        this.count = count
-    }
-}
 
 private class DrillProbeStrategy(
     private val probeArrayProvider: ProbeArrayProvider,

@@ -162,6 +162,11 @@ internal fun Method.toCovered(
     counter: MethodCounter? = null,
 ): CoverMethod = toCovered(methodType, counter?.count)
 
+/**
+ * A pair of test ID and test type
+ * @param id the test ID
+ * @param type the test type
+ */
 @Serializable
 data class TestKey(
     val id: String,

@@ -75,8 +75,8 @@ dependencies {
     implementation(project(":test2code-admin"))
     implementation(project(":test2code-agent"))
     implementation(project(":ktor-swagger"))
-    implementation("com.epam.drill:test-framework:$drillAdminVersion") { isChanging = true }
-    implementation("com.epam.drill:admin-core:$drillAdminVersion") { isChanging = true }
+    implementation("com.epam.drill:test-framework:$drillAdminVersion@jar") { isChanging = true }
+    implementation("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")

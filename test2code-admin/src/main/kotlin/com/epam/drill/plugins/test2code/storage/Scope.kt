@@ -24,8 +24,20 @@ import kotlinx.serialization.*
 private val logger = logger {}
 fun Sequence<FinishedScope>.enabled() = filter { it.enabled }
 
+/**
+ * The service for managing scopes
+ *
+ * @param storage the plugin's datasource client
+ */
 class ScopeManager(private val storage: StoreClient) {
 
+    /**
+     * Load finished scopes by the build version
+     * @param agentKey the pair of agent ID and the build version
+     * @param withData the sign of the need to load scope data
+     * @return a sequences of finished scopes
+     * @features Agent registration, Scope finishing
+     */
     suspend fun byVersion(
         agentKey: AgentKey,
         withData: Boolean = false,
@@ -44,6 +56,11 @@ class ScopeManager(private val storage: StoreClient) {
         }
     }.asSequence()
 
+    /**
+     * Store the finished scope to the database
+     * @param scope the finished scope
+     * @features Scope finishing
+     */
     suspend fun store(scope: FinishedScope) {
         storage.executeInAsyncTransaction {
             trackTime("Store FinishedScope") {

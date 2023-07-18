@@ -22,7 +22,10 @@ import kotlinx.collections.immutable.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
 import org.jacoco.core.internal.data.*
+import java.io.FileOutputStream
+import java.io.IOException
 import kotlin.reflect.*
+
 
 class InstrumentationForTest(kClass: KClass<*>) {
 
@@ -43,15 +46,13 @@ class InstrumentationForTest(kClass: KClass<*>) {
 
     object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub)
 
-    val instrument = instrumenter(TestProbeArrayProvider, "".namedLogger(appender = NopLogAppender))
+    val instrumenter = DrillInstrumenter(TestProbeArrayProvider, "".namedLogger(appender = NopLogAppender))
 
     val memoryClassLoader = MemoryClassLoader()
 
     val targetClass = kClass.java
 
     val originalBytes = targetClass.readBytes()
-
-    val originalClassId = CRC64.classId(originalBytes)
 
     val instrumentedClass: Class<*> = loadClass()
 
@@ -68,7 +69,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
         memoryClassLoader.addDefinition(targetClass.name, instrumentClass())
     }
 
-    fun instrumentClass(name: String = targetClass.name) = instrument(name, originalClassId, originalBytes)!!
+    fun instrumentClass(name: String = targetClass.name) = instrumenter.instrument(name, originalBytes)!!
 
     fun runClass(clazz: Class<*> = instrumentedClass) {
         @Suppress("DEPRECATION")

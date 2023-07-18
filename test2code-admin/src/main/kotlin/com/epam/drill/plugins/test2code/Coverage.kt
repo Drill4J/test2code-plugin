@@ -15,28 +15,31 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.jacoco.*
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.global_filter.*
-import com.epam.drill.plugins.test2code.jvm.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
 import com.epam.dsm.*
 import com.epam.dsm.find.*
 import kotlinx.collections.immutable.*
-import org.jacoco.core.data.*
-import org.jacoco.core.tools.*
 import java.io.*
 import java.util.stream.*
 
 private val logger = logger {}
 
+/**
+ * Calculate build coverage counters by test sessions
+ * @param context the build context
+ * @param classBytes java class bytes of the build
+ * @param cache the current cache of build coverage
+ * @return various sets of build coverages
+ * @features Scope finishing
+ */
 internal fun Sequence<Session>.calcBundleCounters(
     context: CoverContext,
-    classBytes: Map<String, ByteArray>,
     cache: Map<TestKey, BundleCounter> = emptyMap(),
 ) = run {
     logger.trace {
@@ -53,16 +56,16 @@ internal fun Sequence<Session>.calcBundleCounters(
             }
         }.values.asSequence()
     } else emptySequence()
-    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size}..." }
     val execClassData = flatten()
     BundleCounters(
-        all = execClassData.bundle(context, classBytes),
-        testTypeOverlap = testTypeOverlap.bundle(context, classBytes),
-        overlap = execClassData.overlappingBundle(context, classBytes),
+        all = execClassData.bundle(context),
+        testTypeOverlap = testTypeOverlap.bundle(context),
+        overlap = execClassData.overlappingBundle(context),
         byTestType = probesByTestType.mapValues {
-            it.value.asSequence().flatten().bundle(context, classBytes)
+            it.value.asSequence().flatten().bundle(context)
         },
-        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, classBytes, cache) },
+        byTest = trackTime("bundlesByTests") { probesByTestType.bundlesByTests(context, cache) },
         byTestOverview = fold(mutableMapOf()) { map, session ->
             session.tests.forEach { overview ->
                 val testKey = TestKey(id = overview.testId, type = session.testType)
@@ -79,13 +82,20 @@ internal fun Sequence<Session>.calcBundleCounters(
     )
 }
 
+/**
+ * Calculate build coverage counters by filtered tests
+ * @param context the build context
+ * @param classBytes java class bytes of the build
+ * @param storeClient the store client
+ * @param agentKey the pair of agent ID and build version
+ * @return various sets of build coverages
+ */
 suspend fun List<TestOverviewFilter>.calcBundleCounters(
     context: CoverContext,
-    classBytes: Map<String, ByteArray>,
     storeClient: StoreClient,
     agentKey: AgentKey,
 ) = run {
-    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size} and classes ${classBytes.size}..." }
+    logger.trace { "Starting to create the bundle with probesId count ${context.probeIds.size}..." }
     val sessionsIds = storeClient.sessionIds(agentKey)
     val testIds = findTestsByFilters(storeClient, sessionsIds, this)
     val byTestOverview: Map<TestKey, TestOverview> = findByTestType(storeClient, sessionsIds, testIds)
@@ -93,21 +103,27 @@ suspend fun List<TestOverviewFilter>.calcBundleCounters(
     val allProbes: Sequence<ExecClassData> = findProbes(storeClient, sessionsIds, testIds).asSequence()
     val probesByTestId = groupProbes(storeClient, sessionsIds, testIds)
     BundleCounters(
-        all = allProbes.bundle(context, classBytes),
+        all = allProbes.bundle(context),
         testTypeOverlap = BundleCounter.empty,
         overlap = BundleCounter.empty,
         byTestType = byTestType.map {
             val tests: List<String> = it.value.map { overview -> overview.testId }
             val probes = findProbes(storeClient, sessionsIds, tests).asSequence()
-            it.key to probes.bundle(context, classBytes)
+            it.key to probes.bundle(context)
         }.toMap(),
         byTest = byTestOverview.map {
-            it.key to (probesByTestId[it.key.id]?.bundle(context, classBytes) ?: BundleCounter.empty)
+            it.key to (probesByTestId[it.key.id]?.bundle(context) ?: BundleCounter.empty)
         }.toMap(),
         byTestOverview = byTestOverview,
     )
 }
 
+/**
+ * Calculate coverage data by scope
+ * @param context the build context
+ * @param scope the scope
+ * @return various sets of coverage information
+ */
 internal fun BundleCounters.calculateCoverageData(
     context: CoverContext,
     scope: Scope? = null,
@@ -148,6 +164,7 @@ internal fun BundleCounters.calculateCoverageData(
                 byTestType = coverageByTests.byType
             )
         }
+
         is FinishedScope -> scope.summary.coverage
         else -> ScopeCoverage(
             percentage = totalCoveragePercent,
@@ -187,6 +204,12 @@ internal fun BundleCounters.calculateCoverageData(
     )
 }
 
+/**
+ * Calculate coverage data by test types
+ * @param bundleMap the map of build coverage counters
+ * @param context the build context
+ * @param byOverview results of the completed tests
+ */
 internal fun Map<String, BundleCounter>.coveragesByTestType(
     bundleMap: Map<TestKey, BundleCounter>,
     context: CoverContext,
@@ -204,7 +227,6 @@ internal fun Map<String, BundleCounter>.coveragesByTestType(
 
 private fun Map<String, List<Session>>.bundlesByTests(
     context: CoverContext,
-    classBytes: Map<String, ByteArray>,
     cache: Map<TestKey, BundleCounter>,
 ): Map<TestKey, BundleCounter> = run {
     val bundleByTests = values.asSequence().flatten().testsWithBundle()
@@ -216,7 +238,7 @@ private fun Map<String, List<Session>>.bundlesByTests(
             }
             .groupBy(Pair<TestKey, ExecClassData>::first) { it.second }
             .mapValuesTo(bundleByTests) {
-                it.value.asSequence().bundle(context, classBytes)
+                it.value.asSequence().bundle(context)
             }
     }.takeIf { it.isNotEmpty() }?.reduce { m1, m2 ->
         m1.apply { putAll(m2) }
@@ -231,24 +253,29 @@ private fun Sequence<Session>.testsWithBundle(
     BundleCounter.empty
 }
 
-
+/**
+ * Calculate an overlapping build coverage counters between current and previous build coverage
+ * @param context the context of the coverage
+ * @param classBytes the map when keys are class names and values are class bytes
+ * @return a calculated build coverage
+ * @features Scope finishing
+ */
 internal fun Sequence<ExecClassData>.overlappingBundle(
     context: CoverContext,
-    classBytes: Map<String, ByteArray>,
 ): BundleCounter = context.build.probes.intersect(this).run {
     values.asSequence()
-}.bundle(context, classBytes)
+}.bundle(context)
 
+/**
+ * Calculate a total build coverage counters
+ * @param context the context of the coverage
+ * @param classBytes the map when keys are class names and values are class bytes
+ * @return a calculated build coverage
+ * @features Scope finishing
+ */
 internal fun Sequence<ExecClassData>.bundle(
     context: CoverContext,
-    classBytes: Map<String, ByteArray>,
-): BundleCounter = when (context.agentType) {
-    "JAVA" -> bundle(
-        probeIds = context.probeIds,
-        classBytes = classBytes
-    )
-    else -> bundle(context.packageTree)
-}
+): BundleCounter = bundle(context.packageTree)
 
 internal fun BundleCounters.associatedTests(
     onlyPackages: Boolean = true,
@@ -257,59 +284,11 @@ internal fun BundleCounters.associatedTests(
     bundle.coverageKeys(onlyPackages).map { it to typedTest }.distinct()
 }.collect(Collectors.groupingBy({ it.first }, Collectors.mapping({ it.second }, Collectors.toList())))
 
-internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) = runCatching {
-    val coverage = File(System.getProperty("java.io.tmpdir"))
-        .resolve("jacoco.exec")
-    coverage.outputStream().use { outputStream ->
-        val executionDataWriter = ExecutionDataWriter(outputStream)
-        val classBytes = adminData.loadClassBytes(exportBuildVersion)
-        val allFinishedScopes = state.scopeManager.byVersion(AgentKey(agentId, exportBuildVersion), true)
-        allFinishedScopes.filter { it.enabled }.flatMap { finishedScope ->
-            finishedScope.data.sessions.flatMap { it.probes }
-        }.writeCoverage(executionDataWriter, classBytes)
-        if (buildVersion == exportBuildVersion) {
-            activeScope.flatMap {
-                it.probes
-            }.writeCoverage(executionDataWriter, classBytes)
-        }
-    }
-    ActionResult(StatusCodes.OK, coverage)
-}.getOrElse {
-    logger.error(it) { "Can't get coverage. Reason:" }
-    ActionResult(StatusCodes.BAD_REQUEST, "Can't get coverage.")
-}
+internal suspend fun Plugin.exportCoverage(exportBuildVersion: String) =
+    ActionResult(StatusCodes.ERROR, "Coverage export for class bytes is deprecated")
 
-private fun Sequence<ExecClassData>.writeCoverage(
-    executionDataWriter: ExecutionDataWriter,
-    classBytes: Map<String, ByteArray>,
-) = forEach { execClassData ->
-    executionDataWriter.visitClassExecution(
-        ExecutionData(
-            classBytes[execClassData.className]?.crc64() ?: execClassData.id(),
-            execClassData.className,
-            execClassData.probes.toBooleanArray()
-        )
-    )
-}
 
 internal suspend fun Plugin.importCoverage(
     inputStream: InputStream,
     sessionId: String = genUuid(),
-) = activeScope.startSession(sessionId, "UNIT").runCatching {
-    val jacocoFile = inputStream.use { ExecFileLoader().apply { load(it) } }
-    val classBytes = adminData.loadClassBytes()
-    val probeIds = state.coverContext().probeIds
-    val execDatum = jacocoFile.executionDataStore.contents.map {
-        ExecClassData(className = it.name, probes = it.probes.toBitSet(), testName = "All unit tests")
-    }.asSequence()
-    execDatum.bundle(probeIds, classBytes) { bytes, execData ->
-        analyzeClass(bytes, execData.name)
-    }
-    activeScope.addProbes(sessionId) { execDatum.toList() }
-    state.finishSession(sessionId)
-    ActionResult(StatusCodes.OK, "Coverage successfully imported")
-}.getOrElse {
-    state.activeScope.cancelSession(sessionId)
-    logger.error { "Can't import coverage. Session was cancelled." }
-    ActionResult(StatusCodes.ERROR, "Can't import coverage. An error occurred: ${it.message}")
-}
+) = ActionResult(StatusCodes.ERROR, "Coverage import for class bytes is deprecated")
