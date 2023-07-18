@@ -21,7 +21,9 @@ import com.epam.drill.plugins.test2code.checksum.calculateMethodsChecksums
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-
+// TODO
+//  -make test cases independent (split fixture class into multiple classes)
+//  -rewrite tests cases testing change ("Build1" and "Build2")
 class ChecksumCalculationTest {
 
     private val checksumsBuild1 = calculateMethodsChecksums(Build1::class.readBytes(), Build1::class.getFullName())
