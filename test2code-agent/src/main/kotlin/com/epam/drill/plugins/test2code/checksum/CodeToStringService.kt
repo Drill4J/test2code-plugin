@@ -60,7 +60,7 @@ internal fun codeToString(
 }
 
 @Throws(IOException::class)
-fun codeToString(
+private fun codeToString(
     bytes: ByteSequence,
     constant_pool: ConstantPool,
     verbose: Boolean
