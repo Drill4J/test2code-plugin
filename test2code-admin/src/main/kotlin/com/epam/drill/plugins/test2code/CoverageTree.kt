@@ -25,10 +25,6 @@ import com.epam.drill.plugins.test2code.util.fullClassname
 import com.epam.drill.plugins.test2code.util.fullMethodName
 import com.epam.dsm.util.weakIntern
 
-// TODO move to Config.kt
-private val DRILL_SKIP_ANNOTATIONS = runCatching {
-    System.getenv("DRILL_SKIP_ANNOTATIONS").split(",").filter { it.isNotBlank() }.toList()
-}.getOrElse { emptyList() }
 
 /**
  * Build collection of packages from ast collection
@@ -37,43 +33,36 @@ private val DRILL_SKIP_ANNOTATIONS = runCatching {
  */
 internal fun Iterable<AstEntity>.toPackages(): List<JavaPackageCoverage> = run {
     groupBy(AstEntity::path).entries.map { (path, astEntities) ->
-        val classes = astEntities.filterByAnnotations { it.annotations }
         JavaPackageCoverage(
             id = path.crc64,
             name = path.weakIntern(),
-            totalClassesCount = classes.count(),
-            totalMethodsCount = classes.flatMap(AstEntity::methodsWithProbes)
-                .filterByAnnotations { it.annotations }
-                .count(),
-            totalCount = classes.flatMap(AstEntity::methodsWithProbes)
-                .filterByAnnotations { it.annotations }
-                .sumOf(AstMethod::count),
-            classes = classes.mapNotNull { ast ->
-                ast.methodsWithProbes()
-                    .filterByAnnotations { it.annotations }
-                    .takeIf { it.any() }?.let { methods ->
-                        val className = fullClassname(path, ast.name)
-                        JavaClassCoverage(
-                            id = className.crc64,
-                            name = ast.name.weakIntern(),
-                            path = path.weakIntern(),
-                            totalMethodsCount = methods.count(),
-                            totalCount = methods.sumOf { it.count },
-                            methods = methods.fold(listOf()) { acc, astMethod ->
-                                val desc = astMethod.toDesc()
-                                acc + JavaMethodCoverage(
-                                    id = fullMethodName(className, astMethod.name, desc).crc64,
-                                    name = astMethod.name.weakIntern(),
-                                    desc = desc,
-                                    probesCount = astMethod.probes.size,
-                                    decl = desc,
-                                    probeRange = (acc.lastOrNull()?.probeRange?.last?.inc() ?: 0).let {
-                                        ProbeRange(it, it + astMethod.probes.lastIndex)
-                                    }
-                                )
-                            },
-                        )
-                    }
+            totalClassesCount = astEntities.count(),
+            totalMethodsCount = astEntities.flatMap { it.methods }.count(),
+            totalCount = astEntities.flatMap { it.methods }.sumOf(AstMethod::count),
+            classes = astEntities.mapNotNull { ast ->
+                ast.methods.takeIf { it.any() }?.let { methods ->
+                    val className = fullClassname(path, ast.name)
+                    JavaClassCoverage(
+                        id = className.crc64,
+                        name = ast.name.weakIntern(),
+                        path = path.weakIntern(),
+                        totalMethodsCount = methods.count(),
+                        totalCount = methods.sumOf { it.count },
+                        methods = methods.fold(listOf()) { acc, astMethod ->
+                            val desc = astMethod.toDesc()
+                            acc + JavaMethodCoverage(
+                                id = fullMethodName(className, astMethod.name, desc).crc64,
+                                name = astMethod.name.weakIntern(),
+                                desc = desc,
+                                probesCount = astMethod.probes.size,
+                                decl = desc,
+                                probeRange = (acc.lastOrNull()?.probeRange?.last?.inc() ?: 0).let {
+                                    ProbeRange(it, it + astMethod.probes.lastIndex)
+                                }
+                            )
+                        },
+                    )
+                }
             }
         )
     }
@@ -175,15 +164,3 @@ internal fun ClassCounter.toMethodCoverage(
 internal fun AstMethod.toDesc(): String = params.joinToString(
     prefix = "(", postfix = "):$returnType"
 ).weakIntern()
-
-fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }
-
-internal fun <T> List<T>.filterByAnnotations(processor: (T) -> List<String>): List<T> {
-    return filter { entity ->
-        processor(entity).none { annotation ->
-            DRILL_SKIP_ANNOTATIONS.any { skipAnnotation ->
-                annotation.contains(skipAnnotation)
-            }
-        }
-    }
-}

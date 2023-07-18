@@ -18,6 +18,8 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.common.AgentInfo
 import com.epam.drill.plugin.api.AdminData
 import com.epam.drill.plugins.test2code.api.*
+import com.epam.drill.plugins.test2code.common.api.AstEntity
+import com.epam.drill.plugins.test2code.common.api.AstMethod
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.AtomicCache
@@ -116,29 +118,37 @@ internal class AgentState(
             }
         }.takeIf { it !is ClassData }?.also { data ->
             val classData = when (data) {
-                is DataBuilder -> data.flatMap { astEntity ->
-                    astEntity.methodsWithProbes()
-                        .filterByAnnotations{it.annotations}
-                        .map { astEntity to it }
-                }.run {
-                    logger.debug { "initializing DataBuilder..." }
-                    val methods = map { (e, m) ->
-                        Method(
-                            ownerClass = fullClassname(e.path, e.name),
-                            name = m.name.weakIntern(),
-                            desc = m.toDesc(),
-                            hash = m.checksum.weakIntern(),
-                            annotations = m.annotations
-                        )
-                    }.sorted()
-                    val packages = data.toPackages()
-                    PackageTree(
-                        totalCount = sumOf { it.second.count },
-                        totalMethodCount = count(),
-                        totalClassCount = packages.sumOf { it.totalClassesCount },
-                        packages = packages
-                    ).toClassData(agentKey, methods = methods)
-                }
+                is DataBuilder -> data.asIterable()
+                    //filter for classes
+                    .filterByAnnotations { it.annotations }
+                    .map { astEntity ->
+                        //filter for methods in class
+                        astEntity.methods = astEntity.methodsWithProbes().filterByAnnotations { it.annotations }
+                        astEntity
+                    }.let { astEntities ->
+                        astEntities.flatMap { astEntity ->
+                            astEntity.methods.map { method -> astEntity to method }
+                        }.run {
+                            logger.debug { "initializing DataBuilder..." }
+                            val methods = map { (e, m) ->
+                                Method(
+                                    ownerClass = fullClassname(e.path, e.name),
+                                    name = m.name.weakIntern(),
+                                    desc = m.toDesc(),
+                                    hash = m.checksum.weakIntern(),
+                                    annotations = m.annotations
+                                )
+                            }.sorted()
+                            val packages = astEntities.toPackages()
+                            PackageTree(
+                                totalCount = sumOf { it.second.count },
+                                totalMethodCount = count(),
+                                totalClassCount = packages.sumOf { it.totalClassesCount },
+                                packages = packages
+                            ).toClassData(agentKey, methods = methods)
+                        }
+                    }
+
 
                 is NoData -> {
                     throw UnsupportedOperationException("Java class bytes are not supported")
@@ -420,4 +430,16 @@ private fun CoverContext.updateBuild(
     updater: CachedBuild.() -> CachedBuild,
 ): CoverContext {
     return copy(build = build.updater())
+}
+
+private fun AstEntity.methodsWithProbes(): List<AstMethod> = methods.filter { it.probes.any() }
+
+private fun <T> Iterable<T>.filterByAnnotations(processor: (T) -> List<String>): List<T> {
+    return filter { entity ->
+        processor(entity).none { annotation ->
+            DRILL_SKIP_ANNOTATIONS.any { skipAnnotation ->
+                annotation.contains(skipAnnotation)
+            }
+        }
+    }
 }
