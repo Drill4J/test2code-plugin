@@ -25,6 +25,7 @@ import com.epam.drill.plugins.test2code.util.fullClassname
 import com.epam.drill.plugins.test2code.util.fullMethodName
 import com.epam.dsm.util.weakIntern
 
+// TODO move to Config.kt
 private val DRILL_SKIP_ANNOTATIONS = runCatching {
     System.getenv("DRILL_SKIP_ANNOTATIONS").split(",").filter { it.isNotBlank() }.toList()
 }.getOrElse { emptyList() }
@@ -181,7 +182,7 @@ internal fun <T> List<T>.filterByAnnotations(processor: (T) -> List<String>): Li
     return filter { entity ->
         processor(entity).none { annotation ->
             DRILL_SKIP_ANNOTATIONS.any { skipAnnotation ->
-                annotation.contains(skipAnnotation, ignoreCase = true)
+                annotation.contains(skipAnnotation)
             }
         }
     }

@@ -164,9 +164,7 @@ private fun getParams(methodNode: MethodNode): List<String> = Type
     .map { it.className }
 
 private fun getAnnotations(methodNode: MethodNode): List<String> {
-    val list = ArrayList<String>()
-    list.addAll(methodNode.invisibleAnnotations?.map { it.desc } ?: emptyList())
 //    For visible annotations, discuss
-//    list.addAll(methodNode.visibleAnnotations?.map { it.desc } ?: emptyList())
-    return list
+//    methodNode.visibleAnnotations?.map { it.desc } ?: emptyList()
+    return methodNode.invisibleAnnotations?.map { it.desc } ?: emptyList()
 }
