@@ -120,35 +120,33 @@ internal class AgentState(
             val classData = when (data) {
                 is DataBuilder -> data.asIterable()
                     //filter for classes
-                    .filterByAnnotations { it.annotations }
+                    .filterByAnnotations { it.annotations.keys.toMutableList() }
                     .map { astEntity ->
-                        //filter for methods in class
-                        astEntity.methods = astEntity.methodsWithProbes().filterByAnnotations { it.annotations }
+                        astEntity.methods =
+                                //filter for methods in class
+                            astEntity.methodsWithProbes().filterByAnnotations { it.annotations.keys.toMutableList() }
                         astEntity
-                    }.let { astEntities ->
-                        astEntities.flatMap { astEntity ->
-                            astEntity.methods.map { method -> astEntity to method }
-                        }.run {
-                            logger.debug { "initializing DataBuilder..." }
-                            val methods = map { (e, m) ->
-                                Method(
-                                    ownerClass = fullClassname(e.path, e.name),
-                                    name = m.name.weakIntern(),
-                                    desc = m.toDesc(),
-                                    hash = m.checksum.weakIntern(),
-                                    annotations = m.annotations
-                                )
-                            }.sorted()
-                            val packages = astEntities.toPackages()
-                            PackageTree(
-                                totalCount = sumOf { it.second.count },
-                                totalMethodCount = count(),
-                                totalClassCount = packages.sumOf { it.totalClassesCount },
-                                packages = packages
-                            ).toClassData(agentKey, methods = methods)
-                        }
+                    }.run {
+                        logger.debug { "initializing DataBuilder..." }
+                        val methods = this.flatMap {
+                            it.methods.map { method -> it to method }
+                        }.map { (e, m) ->
+                            Method(
+                                ownerClass = fullClassname(e.path, e.name),
+                                name = m.name.weakIntern(),
+                                desc = m.toDesc(),
+                                hash = m.checksum.weakIntern(),
+                                annotations = m.annotations
+                            )
+                        }.sorted()
+                        val packages = this.toPackages()
+                        PackageTree(
+                            totalCount = this.flatMap(AstEntity::methods).sumOf { it.count },
+                            totalMethodCount = methods.count(),
+                            totalClassCount = packages.sumOf { it.totalClassesCount },
+                            packages = packages
+                        ).toClassData(agentKey, methods = methods)
                     }
-
 
                 is NoData -> {
                     throw UnsupportedOperationException("Java class bytes are not supported")

@@ -19,6 +19,7 @@ import com.epam.drill.jacoco.DrillClassProbesAdapter
 import com.epam.drill.plugins.test2code.checksum.calculateMethodsChecksums
 import com.epam.drill.plugins.test2code.common.api.AstEntity
 import com.epam.drill.plugins.test2code.common.api.AstMethod
+import com.sun.xml.internal.fastinfoset.util.StringArray
 import org.jacoco.core.internal.flow.ClassProbesVisitor
 import org.jacoco.core.internal.flow.IFrame
 import org.jacoco.core.internal.flow.MethodProbesVisitor
@@ -27,6 +28,7 @@ import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
+import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.MethodNode
 
 
@@ -46,7 +48,12 @@ open class ProbeCounter : ClassProbesVisitor() {
 }
 
 class ClassProbeCounter(val name: String) : ProbeCounter() {
-    val astClass = newAstClass(name, ArrayList(), ArrayList())
+    val astClass = AstEntity(
+        path = getPackageName(name),
+        name = getShortClassName(name),
+        methods = ArrayList(),
+        annotations = mutableMapOf()
+    )
 
     override fun visitMethod(
         access: Int, name: String?, desc: String?, signature: String?, exceptions: Array<out String>?
@@ -56,8 +63,16 @@ class ClassProbeCounter(val name: String) : ProbeCounter() {
 
     override fun visitAnnotation(desc: String?, visible: Boolean): AnnotationVisitor? {
         val annotationName = Type.getType(desc).className
-        (astClass.annotations as MutableList).add(annotationName)
-        return super.visitAnnotation(desc, visible)
+        val annotationValues = mutableListOf<String>()
+
+        val annotationVisitor = object : AnnotationVisitor(api) {
+            override fun visit(name: String?, value: Any?) {
+                annotationValues.add(value.toString())
+            }
+        }
+        (astClass.annotations)[annotationName] = annotationValues
+
+        return annotationVisitor
     }
 }
 
@@ -120,16 +135,6 @@ fun parseAstClass(className: String, classBytes: ByteArray): AstEntity {
     return astClass
 }
 
-fun newAstClass(
-    className: String,
-    methods: MutableList<AstMethod> = ArrayList(),
-    annotations: MutableList<String> = ArrayList()
-) = AstEntity(
-    path = getPackageName(className),
-    name = getShortClassName(className),
-    methods = methods,
-    annotations = annotations
-)
 
 private fun AstMethod.classSignature() =
     "${name}/${params.joinToString()}/${returnType}"
@@ -163,8 +168,31 @@ private fun getParams(methodNode: MethodNode): List<String> = Type
     .getArgumentTypes(methodNode.desc)
     .map { it.className }
 
-private fun getAnnotations(methodNode: MethodNode): List<String> {
-//    For visible annotations, discuss
-//    methodNode.visibleAnnotations?.map { it.desc } ?: emptyList()
-    return methodNode.invisibleAnnotations?.map { it.desc } ?: emptyList()
+private fun getAnnotations(methodNode: MethodNode): MutableMap<String, MutableList<String>> {
+    val annotationToValue = mutableMapOf<String, MutableList<String>>()
+    mutableListOf<AnnotationNode>().also {
+        it.addAll(methodNode.visibleAnnotations ?: mutableListOf())
+        it.addAll(methodNode.invisibleAnnotations ?: mutableListOf())
+    }.forEach {
+        val valuesOfAnnotation = mutableListOf<String>()
+        parseAnnotationValuesToString(it, valuesOfAnnotation)
+        annotationToValue[it.desc] = valuesOfAnnotation
+    }
+    return annotationToValue
+}
+
+private fun parseAnnotationValuesToString(
+    annotationNode: AnnotationNode,
+    valuesOfAnnotation: MutableList<String>
+) {
+    annotationNode.values?.forEach { el ->
+        run {
+            when (el) {
+                is StringArray -> el._array.forEach { x -> valuesOfAnnotation.add(x.toString()) }
+                is List<*> -> el.map { x -> valuesOfAnnotation.add(x.toString()) }
+                is AnnotationNode -> parseAnnotationValuesToString(el, valuesOfAnnotation)
+                else -> valuesOfAnnotation.add(el.toString())
+            }
+        }
+    }
 }

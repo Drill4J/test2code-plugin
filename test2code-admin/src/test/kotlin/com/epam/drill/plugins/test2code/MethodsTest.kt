@@ -24,29 +24,25 @@ class MethodsTest {
             ownerClass = "foo/bar/Baz",
             name = "new",
             desc = "(Z)Z",
-            hash = "0",
-            annotations = emptyList()
+            hash = "0"
         )
         val modified = Method(
             ownerClass = "foo/bar/Baz",
             name = "modified",
             desc = "(I)V",
-            hash = "11",
-            annotations = emptyList()
+            hash = "11"
         )
         val unaffected = Method(
             ownerClass = "foo/bar/Baz",
             name = "unaffected",
             desc = "(Z)Z",
-            hash = "0",
-            annotations = emptyList()
+            hash = "0"
         )
         val deleted = Method(
             ownerClass = "foo/bar/Baz",
             name = "deleted",
             desc = "(I)V",
-            hash = "2",
-            annotations = emptyList()
+            hash = "2"
         )
         val old = listOf(
             unaffected,
@@ -55,7 +51,6 @@ class MethodsTest {
                 name = "modified",
                 desc = "(I)V",
                 hash = "1",
-                annotations = emptyList()
             ),
             deleted
         ).sorted()

@@ -24,8 +24,7 @@ class LambdaDiffTest {
         "foo/bar/Bar",
         "method",
         "()V",
-        hash = "123",
-        annotations = emptyList()
+        hash = "123"
     )
 
     @Test

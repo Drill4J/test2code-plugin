@@ -31,7 +31,7 @@ data class AstEntity(
     val path: String,
     val name: String,
     var methods: List<AstMethod>,
-    var annotations: List<String>
+    var annotations: MutableMap<String, List<String>> = mutableMapOf()
 )
 
 /**
@@ -50,7 +50,7 @@ data class AstMethod(
     val returnType: String,
     val probes: List<Int> = emptyList(),
     val checksum: String = "",
-    val annotations: List<String>
+    val annotations: MutableMap<String, MutableList<String>> = mutableMapOf()
 ) {
     val count: Int = probes.size
 }
