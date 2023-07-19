@@ -168,31 +168,28 @@ private fun getParams(methodNode: MethodNode): List<String> = Type
     .getArgumentTypes(methodNode.desc)
     .map { it.className }
 
-private fun getAnnotations(methodNode: MethodNode): MutableMap<String, MutableList<String>> {
-    val annotationToValue = mutableMapOf<String, MutableList<String>>()
-    mutableListOf<AnnotationNode>().also {
-        it.addAll(methodNode.visibleAnnotations ?: mutableListOf())
-        it.addAll(methodNode.invisibleAnnotations ?: mutableListOf())
-    }.forEach {
-        val valuesOfAnnotation = mutableListOf<String>()
-        parseAnnotationValuesToString(it, valuesOfAnnotation)
-        annotationToValue[it.desc] = valuesOfAnnotation
-    }
-    return annotationToValue
+private fun getAnnotations(methodNode: MethodNode): Map<String, MutableList<String>> {
+    val visibleAnnotations = methodNode.visibleAnnotations.orEmpty()
+    val invisibleAnnotations = methodNode.invisibleAnnotations.orEmpty()
+
+    return (visibleAnnotations + invisibleAnnotations).groupBy(
+        { it.desc!! },
+        { getValuesOfAnnotation(it) }
+    ).mapValues { (_, v) -> v.flatten().toMutableList() }
 }
 
-private fun parseAnnotationValuesToString(
-    annotationNode: AnnotationNode,
-    valuesOfAnnotation: MutableList<String>
-) {
-    annotationNode.values?.forEach { el ->
-        run {
-            when (el) {
-                is StringArray -> el._array.forEach { x -> valuesOfAnnotation.add(x.toString()) }
-                is List<*> -> el.map { x -> valuesOfAnnotation.add(x.toString()) }
-                is AnnotationNode -> parseAnnotationValuesToString(el, valuesOfAnnotation)
-                else -> valuesOfAnnotation.add(el.toString())
-            }
-        }
+private fun getValuesOfAnnotation(annotationNode: AnnotationNode): MutableList<String> {
+    return annotationNode.values
+        .orEmpty()
+        .flatMap { annotationValue -> parseAnnotationValueToString(annotationValue) }
+        .toMutableList()
+}
+
+private fun parseAnnotationValueToString(annotationValue: Any?): List<String> {
+    return when (annotationValue) {
+        is StringArray -> annotationValue._array.map { it.toString() }
+        is List<*> -> annotationValue.flatMap { parseAnnotationValueToString(it) }
+        is AnnotationNode -> getValuesOfAnnotation(annotationValue)
+        else -> listOf(annotationValue.toString())
     }
 }
