@@ -13,21 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.epam.drill.bcel.test;
+package com.epam.drill.plugins.test2code
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import com.epam.drill.plugins.test2code.util.crc64
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
-public class ClassWithReferences {
+class JacocoExtTest {
 
-    public static Map<String, String> methodsMap = new HashMap<String, String>() {{
-        put("method", "lambda$method$0");
-    }};
-
-    void method(List<String> strings) {
-        Integer valuer = new Random().nextInt();
-        strings.stream().forEach(System.out::printf);
+    @Test
+    fun `crcr64 should return same values for equal strings`() {
+        val str1 = javaClass.name.substringAfterLast(".")
+        val str2 = javaClass.simpleName
+        assertNotSame(str1, str2) //the strings should not be identical
+        assertEquals(str1, str2)
+        assertEquals(str1.crc64, str2.crc64)
     }
+
 }

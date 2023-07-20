@@ -26,6 +26,8 @@ internal fun calculateMethodsChecksums(
 ): Map<String, String> = ClassParser(ByteArrayInputStream(classBytes), className)
     .parse()
     .methods
+//    Filter needed for skipping interfaces, which have no opcodes for calculating checksum
+    .filter { it.code != null }
     .associate { method -> method.classSignature() to calculateChecksum(method) }
 
 private fun Method.classSignature() =
