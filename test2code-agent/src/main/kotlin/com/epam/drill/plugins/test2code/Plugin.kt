@@ -15,15 +15,15 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.logger.api.*
-import com.epam.drill.plugin.api.*
+import com.epam.drill.logger.api.LoggerFactory
+import com.epam.drill.plugin.api.Native
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.classloading.scanClasses
 import com.epam.drill.plugins.test2code.common.api.*
-import com.github.luben.zstd.*
-import kotlinx.atomicfu.*
-import kotlinx.serialization.json.*
-import kotlinx.serialization.protobuf.*
+import com.github.luben.zstd.Zstd
+import kotlinx.atomicfu.atomic
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
 import java.util.*
 
 /**
@@ -77,11 +77,14 @@ class Plugin(
         logger.info { "Initializing plugin $id..." }
 
         scanAndSendMetadataClasses()
-
         if (_retransformed.compareAndSet(expect = false, update = true)) {
             retransform()
         }
         sendMessage(Initialized(msg = "Initialized"))
+        //The First version will call admin part to create session
+        //TODO add creation agent-session here and remove checking on active-session on admin part
+        sendMessage(SessionStarted("1", "AUTO", true, currentTimeMillis()))
+
         logger.info { "Plugin $id initialized!" }
     }
 
@@ -137,9 +140,11 @@ class Plugin(
                 instrContext.start(sessionId, isGlobal, testName, handler)
                 sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
+
             is AddAgentSessionData -> {
                 //ignored
             }
+
             is AddAgentSessionTests -> action.payload.run {
                 instrContext.addCompletedTests(sessionId, tests)
             }
@@ -155,6 +160,7 @@ class Plugin(
                 } else logger.info { "No data for session $sessionId" }
                 sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
+
             is StopAllAgentSessions -> {
                 val stopped = instrContext.stopAll()
                 logger.info { "End of recording for sessions $stopped" }
@@ -166,17 +172,20 @@ class Plugin(
                 val ids = stopped.map { it.first }
                 sendMessage(SessionsFinished(ids, currentTimeMillis()))
             }
+
             is CancelAgentSession -> {
                 val sessionId = action.payload.sessionId
                 logger.info { "Cancellation of recording for session $sessionId" }
                 instrContext.cancel(sessionId)
                 sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
+
             is CancelAllAgentSessions -> {
                 val cancelled = instrContext.cancelAll()
                 logger.info { "Cancellation of recording for sessions $cancelled" }
                 sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
             }
+
             else -> Unit
         }
     }

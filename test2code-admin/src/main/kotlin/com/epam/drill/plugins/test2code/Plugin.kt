@@ -16,29 +16,33 @@
 package com.epam.drill.plugins.test2code
 
 
-import com.epam.drill.common.*
-import com.epam.drill.plugin.api.*
+import com.epam.drill.common.AgentInfo
+import com.epam.drill.plugin.api.AdminData
 import com.epam.drill.plugin.api.end.*
 import com.epam.drill.plugins.test2code.api.*
-import com.epam.drill.plugins.test2code.api.routes.*
+import com.epam.drill.plugins.test2code.api.routes.Routes
 import com.epam.drill.plugins.test2code.common.api.*
 import com.epam.drill.plugins.test2code.coverage.*
 import com.epam.drill.plugins.test2code.global_filter.*
 import com.epam.drill.plugins.test2code.group.*
 import com.epam.drill.plugins.test2code.storage.*
 import com.epam.drill.plugins.test2code.util.*
-import com.epam.dsm.*
-import com.epam.dsm.find.*
+import com.epam.dsm.StoreClient
 import com.epam.dsm.find.Expr.Companion.ANY
-import com.epam.dsm.util.*
-import com.github.luben.zstd.*
-import kotlinx.atomicfu.*
+import com.epam.dsm.find.get
+import com.epam.dsm.find.getAndMap
+import com.epam.dsm.util.id
+import com.epam.dsm.util.logPoolStats
+import com.github.luben.zstd.Zstd
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.getAndUpdate
 import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
-import kotlinx.serialization.protobuf.*
-import java.io.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
+import java.io.Closeable
+import java.io.InputStream
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.Executors
 
 internal object AsyncJobDispatcher : CoroutineScope {
     override val coroutineContext =
@@ -124,6 +128,7 @@ class Plugin(
         is SwitchActiveScope -> changeActiveScope(action.payload).also {
             sendLabels()
         }
+
         is RenameScope -> renameScope(action.payload)
         is ToggleScope -> toggleScope(action.payload.scopeId)
         is CreateFilter -> {
@@ -136,6 +141,7 @@ class Plugin(
                 calculateFilter(newFilter.toStoredFilter(agentId))
             } else ActionResult(code = StatusCodes.CONFLICT, data = "Filter with this name already exists")
         }
+
         is DuplicateFilter -> {
             val filterId = action.payload.id
             val filter = storeClient.findById<StoredFilter>(filterId)
@@ -152,6 +158,7 @@ class Plugin(
                 ActionResult(code = StatusCodes.OK, data = duplicateName)
             } ?: ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this id is not found")
         }
+
         is UpdateFilter -> {
             val updateFilter = action.payload
             val filterId = updateFilter.id
@@ -160,6 +167,7 @@ class Plugin(
                 calculateFilter(updateFilter.toStoredFilter(agentId))
             } ?: ActionResult(StatusCodes.BAD_REQUEST, "Can not find the filter with id '$filterId'")
         }
+
         is ApplyFilter -> {
             val filterId = action.payload.id
             val filter = storeClient.findById<StoredFilter>(filterId)
@@ -168,6 +176,7 @@ class Plugin(
                 calculateFilter(it)
             } ?: ActionResult(code = StatusCodes.BAD_REQUEST, data = "Filter with this id is not found")
         }
+
         is DeleteFilter -> {
             val filterId = action.payload.id
             logger.debug { "deleting filter with id '$filterId'" }
@@ -175,6 +184,7 @@ class Plugin(
             sendFilterUpdates(filterId)
             okResult
         }
+
         is RemoveBuild -> {
             val version = action.payload.version
             if (version != buildVersion && version != state.coverContext().parentBuild?.agentKey?.buildVersion) {
@@ -182,10 +192,12 @@ class Plugin(
                 okResult
             } else ActionResult(code = StatusCodes.BAD_REQUEST, data = "Can not remove a current or baseline build")
         }
+
         is RemovePluginData -> {
             storeClient.removeAllPluginData(agentId)
             okResult
         }
+
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
         /**
@@ -241,13 +253,16 @@ class Plugin(
                 )
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is AddCoverage -> action.payload.run {
             activeScope.addProbes(sessionId) {
                 this.data.map { probes ->
-                    ExecClassData(className = probes.name,
+                    ExecClassData(
+                        className = probes.name,
                         testName = probes.test,
                         testId = probes.testId,
-                        probes = probes.probes.toBitSet())
+                        probes = probes.probes.toBitSet()
+                    )
                 }
             }?.run {
                 if (isRealtime) {
@@ -256,15 +271,18 @@ class Plugin(
                 okResult
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is ExportCoverage -> exportCoverage(action.payload.version)
         is ImportCoverage -> (data as? InputStream)?.let {
             importCoverage(it)
         } ?: ActionResult(StatusCodes.BAD_REQUEST, "Error while parsing form-data parameters")
+
         is CancelSession -> action.payload.run {
             activeScope.cancelSession(action.payload.sessionId)?.let { session ->
                 CancelAgentSession(payload = AgentSessionPayload(session.id)).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is CancelAllSessions -> {
             activeScope.cancelAllSessions()
             CancelAllAgentSessions.toActionResult()
@@ -293,6 +311,7 @@ class Plugin(
                 ).toActionResult()
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
         is StopAllSessions -> StopAllAgentSessions.toActionResult()
         else -> "Action '$action' is not supported!".let { message ->
             logger.error { message }
@@ -345,6 +364,7 @@ class Plugin(
                 it += message.astEntities
             }
         }
+
         is Initialized -> state.initialized {
             processInitialized()
         }
@@ -352,12 +372,24 @@ class Plugin(
          * @features Session starting
          */
         is SessionStarted -> logger.info { "$instanceId: Agent session ${message.sessionId} started." }
+            .also {
+                activeScope.startSession(
+                    message.sessionId,
+                    message.testType,
+                    true,
+                    message.isRealtime,
+                    "testName",
+                    setOf(Label("Session", message.sessionId))
+                )
+            }
             .also { logPoolStats() }
+
         is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
         is SessionsCancelled -> message.run {
             activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
+
         is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
             activeScope.addProbes(message.sessionId) { message.data }?.run {
                 if (isRealtime) {
@@ -377,6 +409,7 @@ class Plugin(
                 "$instanceId: No active session with id ${message.sessionId}."
             }
         }
+
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
@@ -408,6 +441,7 @@ class Plugin(
                 }
             }
         }
+
         else -> logger.info { "$instanceId: Message is not supported! $message" }
     }
 
