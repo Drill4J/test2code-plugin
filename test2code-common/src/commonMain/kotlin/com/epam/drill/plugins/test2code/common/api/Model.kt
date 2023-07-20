@@ -50,7 +50,7 @@ data class AstMethod(
     val returnType: String,
     val probes: List<Int> = emptyList(),
     val checksum: String = "",
-    val annotations: Map<String, MutableList<String>> = mutableMapOf()
+    val annotations: Map<String, List<String>> = mapOf()
 ) {
     val count: Int = probes.size
 }

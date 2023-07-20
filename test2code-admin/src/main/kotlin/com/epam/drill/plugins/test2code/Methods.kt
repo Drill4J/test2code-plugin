@@ -36,7 +36,7 @@ data class Method(
     val name: String,
     val desc: String,
     val hash: String,
-    val annotations: Map<String,MutableList<String>> = mutableMapOf()
+    val annotations: Map<String, List<String>> = mapOf()
 ) : Comparable<Method> {
     val signature = signature(ownerClass, name, desc).intern()
     val key = fullMethodName(ownerClass, name, desc).intern()

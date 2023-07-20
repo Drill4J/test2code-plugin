@@ -62,7 +62,6 @@ class ClassProbeCounter(val name: String) : ProbeCounter() {
     }
 
     override fun visitAnnotation(desc: String?, visible: Boolean): AnnotationVisitor? {
-        val annotationName = Type.getType(desc).className
         val annotationValues = mutableListOf<String>()
 
         val annotationVisitor = object : AnnotationVisitor(api) {
@@ -70,8 +69,7 @@ class ClassProbeCounter(val name: String) : ProbeCounter() {
                 annotationValues.add(value.toString())
             }
         }
-        (astClass.annotations)[annotationName] = annotationValues
-
+        (astClass.annotations)[Type.getType(desc).className] = annotationValues
         return annotationVisitor
     }
 }
@@ -168,21 +166,16 @@ private fun getParams(methodNode: MethodNode): List<String> = Type
     .getArgumentTypes(methodNode.desc)
     .map { it.className }
 
-private fun getAnnotations(methodNode: MethodNode): Map<String, MutableList<String>> {
-    val visibleAnnotations = methodNode.visibleAnnotations.orEmpty()
-    val invisibleAnnotations = methodNode.invisibleAnnotations.orEmpty()
 
-    return (visibleAnnotations + invisibleAnnotations).groupBy(
-        { it.desc!! },
-        { getValuesOfAnnotation(it) }
-    ).mapValues { (_, v) -> v.flatten().toMutableList() }
+private fun getAnnotations(methodNode: MethodNode): Map<String, List<String>> {
+    return (methodNode.visibleAnnotations.orEmpty() + methodNode.invisibleAnnotations.orEmpty())
+        .associateBy({ it.desc }, { getValuesOfAnnotation(it) })
 }
 
-private fun getValuesOfAnnotation(annotationNode: AnnotationNode): MutableList<String> {
+private fun getValuesOfAnnotation(annotationNode: AnnotationNode): List<String> {
     return annotationNode.values
         .orEmpty()
         .flatMap { annotationValue -> parseAnnotationValueToString(annotationValue) }
-        .toMutableList()
 }
 
 private fun parseAnnotationValueToString(annotationValue: Any?): List<String> {
