@@ -214,7 +214,7 @@ class Plugin(
                 isRealtimeSession,
                 testName,
                 labels
-            )?.run {
+            ).run {
                 StartAgentSession(
                     payload = StartSessionPayload(
                         sessionId = id,
@@ -224,24 +224,13 @@ class Plugin(
                         isRealtime = isRealtime
                     )
                 ).toActionResult()
-            } ?: if (isGlobal && activeScope.hasActiveGlobalSession()) {
-                ActionResult(
-                    code = StatusCodes.CONFLICT,
-                    data = listOf(
-                        "Error! Only one active global session is allowed.",
-                        "Please finish the active one in order to start new."
-                    ).joinToString(" ")
-                )
-            } else FieldErrorDto(
-                field = "sessionId",
-                message = "Session with such ID already exists. Please choose a different ID."
-            ).toActionResult(StatusCodes.CONFLICT)
+            }
         }
         /**
          * @features Running tests
          */
         is AddSessionData -> action.payload.run {
-            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+            activeScope.activeSessions[sessionId]?.let { session ->
                 ActionResult(
                     code = StatusCodes.OK,
                     data = "Successfully received session data",
@@ -291,7 +280,7 @@ class Plugin(
          * @features Running tests
          */
         is AddTests -> action.payload.run {
-            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+            activeScope.activeSessions[sessionId]?.let { session ->
                 session.addTests(tests)
                 AddAgentSessionTests(
                     AgentSessionTestsPayload(
@@ -304,7 +293,7 @@ class Plugin(
          * @features Session finishing
          */
         is StopSession -> action.payload.run {
-            activeScope.activeSessionOrNull(sessionId)?.let { session ->
+            activeScope.activeSessions[sessionId]?.let { session ->
                 session.addTests(tests)
                 StopAgentSession(
                     payload = AgentSessionPayload(session.id)
@@ -390,7 +379,7 @@ class Plugin(
             logger.info { "$instanceId: Agent sessions cancelled: $ids." }
         }
 
-        is CoverDataPart -> activeScope.activeSessionOrNull(message.sessionId)?.let {
+        is CoverDataPart -> activeScope.activeSessions[message.sessionId]?.let {
             activeScope.addProbes(message.sessionId) { message.data }?.run {
                 if (isRealtime) {
                     activeScope.probesChanged()

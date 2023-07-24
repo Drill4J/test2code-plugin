@@ -111,6 +111,8 @@ abstract class Runtime(
     }
 
     abstract fun collect(): Sequence<ExecDatum>
+
+    // TODO add timer to close runtime at N seconds after last put
     abstract fun put(index: Int, updater: (TestKey) -> ExecDatum)
 
     fun close() {
@@ -278,9 +280,9 @@ open class SimpleSessionProbeArrayProvider(
         num: Int,
         name: String,
         probeCount: Int,
-    ): AgentProbes = global?.second?.get(num)
-        ?: checkLocalProbes(num)
-        ?: stubProbes
+    ): AgentProbes = checkLocalProbes(num)
+        ?: global?.second?.get(num)
+        ?: stubProbes.also { logger?.trace { "Stub probes call. Class id: $id, class name: $name" } }
 
     private fun checkLocalProbes(num: Int) = requestThreadLocal.get()?.get(num)?.probes
 
@@ -392,5 +394,5 @@ private class GlobalContext(
 ) : AgentContext {
     override fun get(key: String): String? = testName?.takeIf { key == DRIlL_TEST_NAME_HEADER }
 
-    override fun invoke(): String? = sessionId
+    override fun invoke(): String = sessionId
 }

@@ -85,6 +85,9 @@ class Plugin(
         //TODO add creation agent-session here and remove checking on active-session on admin part
         sendMessage(SessionStarted("1", "AUTO", true, currentTimeMillis()))
 
+//         instrContext.start(sessionId, isGlobal, testName, handler)
+//         sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
+
         logger.info { "Plugin $id initialized!" }
     }
 
@@ -129,16 +132,17 @@ class Plugin(
         _retransformed.value = true
     }
 
+    // TODO remove after merging to java-agent repo
     override suspend fun doAction(action: AgentAction) {
         when (action) {
             /**
              * @features Session starting
              */
             is StartAgentSession -> action.payload.run {
-                logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
-                val handler = probeSender(sessionId, isRealtime)
-                instrContext.start(sessionId, isGlobal, testName, handler)
-                sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
+//                logger.info { "Start recording for session $sessionId (isGlobal=$isGlobal)" }
+//                val handler = probeSender(sessionId, isRealtime)
+//                instrContext.start(sessionId, isGlobal, testName, handler)
+//                sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
             }
 
             is AddAgentSessionData -> {
@@ -146,44 +150,44 @@ class Plugin(
             }
 
             is AddAgentSessionTests -> action.payload.run {
-                instrContext.addCompletedTests(sessionId, tests)
+//                instrContext.addCompletedTests(sessionId, tests)
             }
             /**
              * @features Session stopping
              */
             is StopAgentSession -> {
-                val sessionId = action.payload.sessionId
-                logger.info { "End of recording for session $sessionId" }
-                val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
-                if (runtimeData.any()) {
-                    probeSender(sessionId)(runtimeData)
-                } else logger.info { "No data for session $sessionId" }
-                sendMessage(SessionFinished(sessionId, currentTimeMillis()))
+//                val sessionId = action.payload.sessionId
+//                logger.info { "End of recording for session $sessionId" }
+//                val runtimeData = instrContext.stop(sessionId) ?: emptySequence()
+//                if (runtimeData.any()) {
+//                    probeSender(sessionId)(runtimeData)
+//                } else logger.info { "No data for session $sessionId" }
+//                sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
 
             is StopAllAgentSessions -> {
-                val stopped = instrContext.stopAll()
-                logger.info { "End of recording for sessions $stopped" }
-                for ((sessionId, data) in stopped) {
-                    if (data.any()) {
-                        probeSender(sessionId)(data)
-                    }
-                }
-                val ids = stopped.map { it.first }
-                sendMessage(SessionsFinished(ids, currentTimeMillis()))
+//                val stopped = instrContext.stopAll()
+//                logger.info { "End of recording for sessions $stopped" }
+//                for ((sessionId, data) in stopped) {
+//                    if (data.any()) {
+//                        probeSender(sessionId)(data)
+//                    }
+//                }
+//                val ids = stopped.map { it.first }
+//                sendMessage(SessionsFinished(ids, currentTimeMillis()))
             }
 
             is CancelAgentSession -> {
-                val sessionId = action.payload.sessionId
-                logger.info { "Cancellation of recording for session $sessionId" }
-                instrContext.cancel(sessionId)
-                sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
+//                val sessionId = action.payload.sessionId
+//                logger.info { "Cancellation of recording for session $sessionId" }
+//                instrContext.cancel(sessionId)
+//                sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
 
             is CancelAllAgentSessions -> {
-                val cancelled = instrContext.cancelAll()
-                logger.info { "Cancellation of recording for sessions $cancelled" }
-                sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
+//                val cancelled = instrContext.cancelAll()
+//                logger.info { "Cancellation of recording for sessions $cancelled" }
+//                sendMessage(SessionsCancelled(cancelled, currentTimeMillis()))
             }
 
             else -> Unit
@@ -201,13 +205,22 @@ class Plugin(
             val name = context[DRIlL_TEST_NAME_HEADER] ?: DEFAULT_TEST_NAME
             val id = context[DRILL_TEST_ID_HEADER] ?: name.id()
             val testKey = TestKey(name, id)
-            runtimes[sessionId]?.run {
-                val execDatum = getOrPut(testKey) {
-                    arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) }
-                }
-                logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
-                requestThreadLocal.set(execDatum)
+
+            // Start runtime + agent session if none created for supplied context.sessionId.
+            if (runtimes[sessionId] == null) {
+                val handler = probeSender(sessionId, true)
+                instrContext.start(sessionId, false, "", handler)
             }
+            val runtime = runtimes[sessionId]
+            if (runtime == null) {
+                logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey' runtime is null" }
+                return
+            }
+            val execDatum = runtime.getOrPut(testKey) {
+                arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) }
+            }
+            logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
+            requestThreadLocal.set(execDatum)
         }
     }
 
