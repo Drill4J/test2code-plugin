@@ -21,9 +21,7 @@ import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import org.jacoco.core.analysis.*
 import org.jacoco.core.data.*
-import org.jacoco.core.internal.data.*
-import java.io.FileOutputStream
-import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.*
 
 
@@ -89,7 +87,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
         val testKey = TestKey(instrContextStub[DRIlL_TEST_NAME_HEADER] ?: "unspecified", "")
         val execRuntime = runtimes[sessionId]
         if (execRuntime != null) {
-            val execDatum = execRuntime.getOrPut(testKey) { arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) } }
+            val execDatum = execRuntime.getOrPut(testKey) { ConcurrentHashMap<Long, ExecDatum>().apply { fillFromMeta(testKey) } }
             requestThreadLocal.set(execDatum)
         } else {
             requestThreadLocal.remove()

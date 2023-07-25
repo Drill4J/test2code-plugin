@@ -15,15 +15,18 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.jacoco.*
-import com.epam.drill.logger.api.*
-import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.common.api.*
-import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
+import com.epam.drill.jacoco.AgentProbes
+import com.epam.drill.jacoco.StubAgentProbes
+import com.epam.drill.logger.api.Logger
+import com.epam.drill.plugin.api.processing.AgentContext
+import com.epam.drill.plugins.test2code.common.api.DEFAULT_TEST_NAME
+import com.epam.drill.plugins.test2code.common.api.ExecClassData
+import com.epam.drill.plugins.test2code.common.api.toBitSet
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
-import java.util.concurrent.*
-import kotlin.coroutines.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Provides boolean array for the probe.
@@ -32,9 +35,6 @@ import kotlin.coroutines.*
 typealias ProbeArrayProvider = (Long, Int, String, Int) -> AgentProbes
 
 typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
-
-private const val ClASS_LIMIT_ERROR_MESSAGE = """ Attempting to add coverage for a class whose index is greater than
-    | the maximum.Increase the maximum value."""
 
 interface SessionProbeArrayProvider : ProbeArrayProvider {
 
@@ -88,11 +88,8 @@ internal fun ProbeDescriptor.toExecDatum(testName: String, testId: String) = Exe
     testName = testName,
     testId = testId
 )
-
-typealias ExecData = Array<ExecDatum?>
-
-//TODO EPMDJ-8255 Replace this "magic number" with a calculated value
-const val MAX_CLASS_COUNT = 50_000
+// key - classId ; value - ExecDatum
+typealias ExecData = ConcurrentHashMap<Long, ExecDatum>
 
 internal object ProbeWorker : CoroutineScope {
     override val coroutineContext: CoroutineContext = run {
@@ -113,7 +110,7 @@ abstract class Runtime(
     abstract fun collect(): Sequence<ExecDatum>
 
     // TODO add timer to close runtime at N seconds after last put
-    abstract fun put(index: Int, updater: (TestKey) -> ExecDatum)
+    abstract fun put(index: Long, updater: (TestKey) -> ExecDatum)
 
     fun close() {
         job.cancel()
@@ -130,39 +127,41 @@ class ExecRuntime(
 ) : Runtime(realtimeHandler) {
     private val _execData = ConcurrentHashMap<TestKey, ExecData>()
 
-    private val _completedTests = atomic(persistentListOf<String>())
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
     init {
         logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
     }
 
-    override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
-        data.filterNotNull().filter { datum -> datum.probes.values.any { it } }
-    }.asSequence().also {
-        val passedTest = _completedTests.getAndUpdate { it.clear() }
-        if (isPerformanceMode) {
-            _execData.clear()
-        } else {
-            passedTest.forEach { _execData.remove(TestKey(DEFAULT_TEST_NAME, it)) }
-        }
-    }
+    override fun collect() = _execData.values.flatMap { data ->
+        data.values.filter { datum -> datum.probes.values.any { it } }
+    }.asSequence()
+//         TODO add clean up
+//        .also {
+//        val passedTest = _completedTests.getAndUpdate { it.clear() }
+//        if (isPerformanceMode) {
+//            _execData.clear()
+//        } else {
+//            passedTest.forEach { _execData.remove(TestKey(DEFAULT_TEST_NAME, it)) }
+//        }
+//    }
 
     fun getOrPut(
         testKey: TestKey,
         updater: () -> ExecData,
-    ): Array<ExecDatum?> = _execData.getOrPut(testKey) { updater() }
-
-    override fun put(
-        index: Int,
-        updater: (TestKey) -> ExecDatum,
-    ) = _execData.forEach { (testName, execDataset) ->
-        runCatching { execDataset[index] = updater(testName) }.onFailure {
-            logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
+    ): ConcurrentHashMap<Long, ExecDatum>? {
+        if (_execData[testKey] == null) {
+            _execData[testKey] = updater()
         }
+        return _execData[testKey]
     }
 
-    fun addCompletedTests(tests: List<String>) = _completedTests.update { it + tests }
+    override fun put(
+        index: Long,
+        updater: (TestKey) -> ExecDatum,
+    ) = _execData.forEach { (testName, execDataset) ->
+        execDataset[index] = updater(testName)
+    }
 }
 
 class GlobalExecRuntime(
@@ -170,13 +169,13 @@ class GlobalExecRuntime(
     private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
-    internal val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
+   internal val execData = ExecData()
 
     /**
      * Get probes from the completed tests
      * @features Coverage data sending
      */
-    override fun collect(): Sequence<ExecDatum> = execDatum.asSequence().filterNotNull().filter { datum ->
+    override fun collect(): Sequence<ExecDatum> = execData.values.filter { datum ->
         datum.probes.values.any { it }
     }.map { datum ->
         val probesToSend = datum.probes.values.copyOf()
@@ -189,44 +188,46 @@ class GlobalExecRuntime(
                 values = probesToSend
             )
         )
+    }.asSequence()
+
+    override fun put(index: Long, updater: (TestKey) -> ExecDatum) {
+        execData[index] = updater(TestKey(testName, testName.id()))
     }
 
-    override fun put(index: Int, updater: (TestKey) -> ExecDatum) {
-        runCatching { execDatum[index] = updater(TestKey(testName, testName.id())) }.onFailure {
-            logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
-        }
+    fun get(num: Long): AgentProbes {
+        return execData.values.toList()[num.toInt()].probes
     }
-
-    fun get(num: Int) = execDatum[num]?.probes
 }
 
 class ProbeMetaContainer {
-    private val probesDescriptor = arrayOfNulls<ProbeDescriptor?>(MAX_CLASS_COUNT)
+    //key: class-id ; value: ProbeDescriptor
+    private val probesDescriptor = ConcurrentHashMap<Long, ProbeDescriptor?>()
 
     fun addDescriptor(
+        // number of class at instrumentation
         index: Int,
         probeDescriptor: ProbeDescriptor,
         globalRuntime: GlobalExecRuntime?,
         runtimes: Collection<ExecRuntime>,
     ) {
-        probesDescriptor[index] = probeDescriptor
+        probesDescriptor[probeDescriptor.id] = probeDescriptor
 
-        globalRuntime?.put(index) { (testName, testId) ->
+        globalRuntime?.put(probeDescriptor.id) { (testName, testId) ->
             probeDescriptor.toExecDatum(testName, testId)
         }
 
         runtimes.forEach {
-            it.put(index) { (testName, testId) ->
+            it.put(probeDescriptor.id) { (testName, testId) ->
                 probeDescriptor.toExecDatum(testName, testId)
             }
         }
     }
 
     fun forEachIndexed(
-        action: (Int, ProbeDescriptor?) -> Unit,
+        action: (ProbeDescriptor?) -> Unit,
     ) {
-        probesDescriptor.forEachIndexed { index, probeDescriptor ->
-            action(index, probeDescriptor)
+        probesDescriptor.values.forEach { p ->
+            action(p)
         }
     }
 }
@@ -242,7 +243,7 @@ open class SimpleSessionProbeArrayProvider(
 ) : SessionProbeArrayProvider {
 
     // TODO EPMDJ-8256 When application is async we must use this implementation «com.alibaba.ttl.TransmittableThreadLocal»
-    val requestThreadLocal = ThreadLocal<Array<ExecDatum?>>()
+    val requestThreadLocal = ThreadLocal<ConcurrentHashMap<Long, ExecDatum>>()
 
     val probeMetaContainer = ProbeMetaContainer()
 
@@ -280,11 +281,9 @@ open class SimpleSessionProbeArrayProvider(
         num: Int,
         name: String,
         probeCount: Int,
-    ): AgentProbes = checkLocalProbes(num)
-        ?: global?.second?.get(num)
+    ): AgentProbes = requestThreadLocal.get()?.get(id)?.probes
+        ?: global?.second?.get(id)
         ?: stubProbes.also { logger?.trace { "Stub probes call. Class id: $id, class name: $name" } }
-
-    private fun checkLocalProbes(num: Int) = requestThreadLocal.get()?.get(num)?.probes
 
     override fun start(
         sessionId: String,
@@ -344,7 +343,7 @@ open class SimpleSessionProbeArrayProvider(
     }
 
     override fun addCompletedTests(sessionId: String, tests: List<String>) {
-        runtimes[sessionId]?.addCompletedTests(tests)
+//        runtimes[sessionId]?.addCompletedTests(tests)
     }
 
     override fun getActiveSessions(): Set<String> = (global?.let {
@@ -353,6 +352,7 @@ open class SimpleSessionProbeArrayProvider(
 
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         if (sessionId !in runtimes) {
+            logger?.trace { "Create new runtime" }
             val value = ExecRuntime(logger, realtimeHandler)
             runtimes[sessionId] = value
         } else runtimes
@@ -362,7 +362,7 @@ open class SimpleSessionProbeArrayProvider(
         val name = testName ?: DEFAULT_TEST_NAME
         val testId = name.id()
         val runtime = GlobalExecRuntime(name, logger, realtimeHandler).apply {
-            execDatum.fillFromMeta(TestKey(name, testId))
+            execData.fillFromMeta(TestKey(name, testId))
         }
         global = sessionId to runtime
     }
@@ -381,9 +381,9 @@ open class SimpleSessionProbeArrayProvider(
 
     fun ExecData.fillFromMeta(testKey: TestKey) {
         val (testName, testId) = testKey
-        probeMetaContainer.forEachIndexed { inx, probeDescriptor ->
+        probeMetaContainer.forEachIndexed { probeDescriptor ->
             if (probeDescriptor != null)
-                this[inx] = probeDescriptor.toExecDatum(testName, testId)
+                this[probeDescriptor.id] = probeDescriptor.toExecDatum(testName, testId)
         }
     }
 }

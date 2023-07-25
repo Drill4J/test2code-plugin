@@ -25,6 +25,7 @@ import kotlinx.atomicfu.atomic
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Service for managing the plugin on the agent side
@@ -81,12 +82,14 @@ class Plugin(
             retransform()
         }
         sendMessage(Initialized(msg = "Initialized"))
-        //The First version will call admin part to create session
-        //TODO add creation agent-session here and remove checking on active-session on admin part
-        sendMessage(SessionStarted("1", "AUTO", true, currentTimeMillis()))
 
-//         instrContext.start(sessionId, isGlobal, testName, handler)
-//         sendMessage(SessionStarted(sessionId, testType, isRealtime, currentTimeMillis()))
+        //Create global session
+        val sessionId = "1"
+        val isRealtime = true
+        val handler = probeSender(sessionId, isRealtime)
+        instrContext.start(sessionId, true, "GlobalSession", handler)
+        //TODO add creation agent-session here and remove checking on active-session on admin part
+        sendMessage(SessionStarted(sessionId, "AUTO", isRealtime, currentTimeMillis()))
 
         logger.info { "Plugin $id initialized!" }
     }
@@ -208,6 +211,8 @@ class Plugin(
 
             // Start runtime + agent session if none created for supplied context.sessionId.
             if (runtimes[sessionId] == null) {
+                logger?.trace { "processServerRequest. session is null" }
+                runtimes.forEach { logger?.trace { "runtime: $it" } }
                 val handler = probeSender(sessionId, true)
                 instrContext.start(sessionId, false, "", handler)
             }
@@ -217,7 +222,7 @@ class Plugin(
                 return
             }
             val execDatum = runtime.getOrPut(testKey) {
-                arrayOfNulls<ExecDatum>(MAX_CLASS_COUNT).apply { fillFromMeta(testKey) }
+                ConcurrentHashMap<Long, ExecDatum>().apply { fillFromMeta(testKey) }
             }
             logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
             requestThreadLocal.set(execDatum)
