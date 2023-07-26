@@ -19,8 +19,12 @@ open class AgentProbes(
     initialSize: Int = 0,
     val values: BooleanArray = BooleanArray(initialSize),
 ) {
+    private var lastUpdated = -1L
+    fun getLastUpdated() = lastUpdated
 
     open fun set(index: Int) {
+        lastUpdated = System.currentTimeMillis()
+        //TODO remove check
         if (!values[index])
             values[index] = true
     }

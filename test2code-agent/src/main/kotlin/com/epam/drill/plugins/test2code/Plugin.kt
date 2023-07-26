@@ -221,11 +221,12 @@ class Plugin(
                 logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey' runtime is null" }
                 return
             }
-            val execDatum = runtime.getOrPut(testKey) {
+            // TODO potential concurrency issue (if execData is removed by timer)
+            val execData = runtime.getOrPut(testKey) {
                 ExecData().apply { fillFromMeta(testKey) }
             }
-            logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
-            requestThreadLocal.set(execDatum)
+            logger?.trace { "CATDOG. processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
+            requestThreadLocal.set(execData)
         }
     }
 
@@ -294,6 +295,6 @@ fun Plugin.probeSender(
 
 fun Plugin.sendMessage(message: CoverMessage) {
     val messageStr = json.encodeToString(CoverMessage.serializer(), message)
-    logger.debug { "Send message $messageStr" }
+    logger.debug { "Send message ${messageStr.substring(0,4000)}" }
     send(messageStr)
 }

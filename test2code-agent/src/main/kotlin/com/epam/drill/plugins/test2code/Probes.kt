@@ -93,6 +93,7 @@ typealias ExecData = ConcurrentHashMap<Long, ExecDatum>
 
 internal object ProbeWorker : CoroutineScope {
     override val coroutineContext: CoroutineContext = run {
+        // TODO ProbeWorker thread count configure via env.variable?
         Executors.newFixedThreadPool(2).asCoroutineDispatcher() + SupervisorJob()
     }
 }
@@ -125,7 +126,14 @@ class ExecRuntime(
     private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
-    private val _execData = ConcurrentHashMap<TestKey, ExecData>()
+
+    init {
+        logger?.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
+    }
+
+    private val testCoverageMap = ConcurrentHashMap<TestKey, ExecData>()
+
+    private val timeTestCoverageMap = ConcurrentHashMap<TestKey, Long>()
 
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
@@ -133,33 +141,33 @@ class ExecRuntime(
         logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
     }
 
-    override fun collect() = _execData.values.flatMap { data ->
-        data.values.filter { datum -> datum.probes.values.any { it } }
-    }.asSequence()
-//         TODO add clean up
-//        .also {
+    override fun collect() = testCoverageMap.values.flatMap { testCoverage ->
+        testCoverage.values.filter { execDatum -> execDatum.probes.values.any { it } }
+    }.also {
+        logger?.trace { "CATDOG . collect(). thread '${Thread.currentThread().id}' " }
+
 //        val passedTest = _completedTests.getAndUpdate { it.clear() }
 //        if (isPerformanceMode) {
 //            _execData.clear()
 //        } else {
 //            passedTest.forEach { _execData.remove(TestKey(DEFAULT_TEST_NAME, it)) }
 //        }
-//    }
+    }.asSequence()
 
     fun getOrPut(
         testKey: TestKey,
         updater: () -> ExecData,
     ): ConcurrentHashMap<Long, ExecDatum>? {
-        if (_execData[testKey] == null) {
-            _execData[testKey] = updater()
+        if (testCoverageMap[testKey] == null) {
+            testCoverageMap[testKey] = updater()
         }
-        return _execData[testKey]
+        return testCoverageMap[testKey]
     }
 
     override fun put(
         index: Long,
         updater: (TestKey) -> ExecDatum,
-    ) = _execData.forEach { (testName, execDataset) ->
+    ) = testCoverageMap.forEach { (testName, execDataset) ->
         execDataset[index] = updater(testName)
     }
 }
@@ -178,6 +186,7 @@ class GlobalExecRuntime(
     override fun collect(): Sequence<ExecDatum> = execData.values.filter { datum ->
         datum.probes.values.any { it }
     }.map { datum ->
+        //TODO refactor
         val probesToSend = datum.probes.values.copyOf()
         probesToSend.forEachIndexed { index, value ->
             if (value)
@@ -203,6 +212,10 @@ class ProbeMetaContainer {
     //key: class-id ; value: ProbeDescriptor
     val probesDescriptorMap = ConcurrentHashMap<Long, ProbeDescriptor>()
 
+    init {
+        println("CATDOG. ProbeMetaContainer init. thread '${Thread.currentThread().id}' ")
+    }
+
     fun addDescriptor(
         // number of class at instrumentation
         index: Int,
@@ -224,6 +237,10 @@ class ProbeMetaContainer {
     }
 }
 
+data class ExecDataWithTimer(
+    val execData: ExecData,
+    val lastUpdateTime: Long
+)
 
 /**
  * Simple probe array provider that employs a lock-free map for runtime data storage.
@@ -233,6 +250,10 @@ class ProbeMetaContainer {
 open class SimpleSessionProbeArrayProvider(
     defaultContext: AgentContext? = null,
 ) : SessionProbeArrayProvider {
+
+    init {
+        logger?.trace { "CATDOG. SimpleSessionProbeArrayProvider init. thread '${Thread.currentThread().id}' " }
+    }
 
     // TODO EPMDJ-8256 When application is async we must use this implementation «com.alibaba.ttl.TransmittableThreadLocal»
     val requestThreadLocal = ThreadLocal<ConcurrentHashMap<Long, ExecDatum>>()
@@ -273,9 +294,15 @@ open class SimpleSessionProbeArrayProvider(
         num: Int,
         name: String,
         probeCount: Int,
-    ): AgentProbes = requestThreadLocal.get()?.get(id)?.probes
+    ): AgentProbes = getClassProbesInSession(id)
         ?: global?.second?.get(id)
         ?: stubProbes.also { logger?.trace { "Stub probes call. Class id: $id, class name: $name" } }
+
+    /**
+     * requestThreadLocal stores probes of classes for a specific session
+     * (see requestThreadLocal.set(execData) in processServerRequest method in Plugin.kt)
+     */
+    private fun getClassProbesInSession(id: Long) = requestThreadLocal.get()?.get(id)?.probes
 
     override fun start(
         sessionId: String,
