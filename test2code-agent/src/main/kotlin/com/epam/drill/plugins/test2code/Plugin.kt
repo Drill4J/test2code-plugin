@@ -222,7 +222,7 @@ class Plugin(
                 return
             }
             val execDatum = runtime.getOrPut(testKey) {
-                ConcurrentHashMap<Long, ExecDatum>().apply { fillFromMeta(testKey) }
+                ExecData().apply { fillFromMeta(testKey) }
             }
             logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
             requestThreadLocal.set(execDatum)

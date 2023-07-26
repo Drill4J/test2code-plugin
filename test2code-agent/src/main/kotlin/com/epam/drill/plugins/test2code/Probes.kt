@@ -201,7 +201,7 @@ class GlobalExecRuntime(
 
 class ProbeMetaContainer {
     //key: class-id ; value: ProbeDescriptor
-    private val probesDescriptor = ConcurrentHashMap<Long, ProbeDescriptor?>()
+    val probesDescriptorMap = ConcurrentHashMap<Long, ProbeDescriptor>()
 
     fun addDescriptor(
         // number of class at instrumentation
@@ -210,7 +210,7 @@ class ProbeMetaContainer {
         globalRuntime: GlobalExecRuntime?,
         runtimes: Collection<ExecRuntime>,
     ) {
-        probesDescriptor[probeDescriptor.id] = probeDescriptor
+        probesDescriptorMap[probeDescriptor.id] = probeDescriptor
 
         globalRuntime?.put(probeDescriptor.id) { (testName, testId) ->
             probeDescriptor.toExecDatum(testName, testId)
@@ -220,14 +220,6 @@ class ProbeMetaContainer {
             it.put(probeDescriptor.id) { (testName, testId) ->
                 probeDescriptor.toExecDatum(testName, testId)
             }
-        }
-    }
-
-    fun forEachIndexed(
-        action: (ProbeDescriptor?) -> Unit,
-    ) {
-        probesDescriptor.values.forEach { p ->
-            action(p)
         }
     }
 }
@@ -381,9 +373,8 @@ open class SimpleSessionProbeArrayProvider(
 
     fun ExecData.fillFromMeta(testKey: TestKey) {
         val (testName, testId) = testKey
-        probeMetaContainer.forEachIndexed { probeDescriptor ->
-            if (probeDescriptor != null)
-                this[probeDescriptor.id] = probeDescriptor.toExecDatum(testName, testId)
+        probeMetaContainer.probesDescriptorMap.values.forEach { probeDescriptor ->
+            this[probeDescriptor.id] = probeDescriptor.toExecDatum(testName, testId)
         }
     }
 }
