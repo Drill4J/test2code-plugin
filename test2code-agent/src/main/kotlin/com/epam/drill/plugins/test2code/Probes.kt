@@ -169,7 +169,7 @@ class GlobalExecRuntime(
     private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
-   internal val execData = ExecData()
+    internal val execData = ExecData()
 
     /**
      * Get probes from the completed tests
@@ -195,7 +195,7 @@ class GlobalExecRuntime(
     }
 
     fun get(num: Long): AgentProbes {
-        return execData.values.toList()[num.toInt()].probes
+        return execData.values.first { it.id == num }.probes
     }
 }
 
