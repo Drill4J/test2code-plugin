@@ -36,6 +36,8 @@ typealias ProbeArrayProvider = (Long, Int, String, Int) -> AgentProbes
 
 typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
 
+typealias TestKey = Pair<String, String>
+
 interface SessionProbeArrayProvider : ProbeArrayProvider {
 
     fun start(
@@ -70,8 +72,6 @@ class ProbeDescriptor(
     val name: String,
     val probeCount: Int,
 )
-
-typealias TestKey = Pair<String, String>
 
 internal fun ExecDatum.toExecClassData() = ExecClassData(
     id = id,
@@ -128,12 +128,11 @@ class ExecRuntime(
 ) : Runtime(realtimeHandler) {
 
     init {
+        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
         logger?.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
     }
-
-    private val testCoverageMap = ConcurrentHashMap<TestKey, ExecData>()
-
-    private val timeTestCoverageMap = ConcurrentHashMap<TestKey, Long>()
+    // key -
+    private val testCoverageMap = ConcurrentHashMap<Pair<String, TestKey>, ExecData>()
 
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
@@ -141,34 +140,40 @@ class ExecRuntime(
         logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
     }
 
-    override fun collect() = testCoverageMap.values.flatMap { testCoverage ->
-        testCoverage.values.filter { execDatum -> execDatum.probes.values.any { it } }
-    }.also {
+    override fun collect(): Sequence<ExecDatum> {
         logger?.trace { "CATDOG . collect(). thread '${Thread.currentThread().id}' " }
+        val filteredMap = testCoverageMap.filterValues { testCoverage ->
+            testCoverage.values.any { execDatum -> execDatum.probes.values.any { it } }
+        }
 
-//        val passedTest = _completedTests.getAndUpdate { it.clear() }
-//        if (isPerformanceMode) {
-//            _execData.clear()
-//        } else {
-//            passedTest.forEach { _execData.remove(TestKey(DEFAULT_TEST_NAME, it)) }
-//        }
-    }.asSequence()
+        //clean up
+        filteredMap.filter { (pair, _) ->
+            logger?.trace { "CATDOG . collect(). pair before filter: $pair " }
+            counterMap[pair]?.get() == 0
+        }.forEach { (pair, _) ->
+            logger?.trace { "CATDOG . collect(). pair to delete: $pair " }
+            testCoverageMap.remove(pair)
+        }
+        logger?.trace { "CATDOG . collect(). pair before filter: $counterMap " }
+
+        return filteredMap.flatMap { it.value.values }.asSequence()
+    }
 
     fun getOrPut(
-        testKey: TestKey,
+        pair: Pair<String, TestKey>,
         updater: () -> ExecData,
     ): ConcurrentHashMap<Long, ExecDatum>? {
-        if (testCoverageMap[testKey] == null) {
-            testCoverageMap[testKey] = updater()
+        if (testCoverageMap[pair] == null) {
+            testCoverageMap[pair] = updater()
         }
-        return testCoverageMap[testKey]
+        return testCoverageMap[pair]
     }
 
     override fun put(
         index: Long,
         updater: (TestKey) -> ExecDatum,
     ) = testCoverageMap.forEach { (testName, execDataset) ->
-        execDataset[index] = updater(testName)
+        execDataset[index] = updater(testName.second)
     }
 }
 
@@ -256,7 +261,7 @@ open class SimpleSessionProbeArrayProvider(
     }
 
     // TODO EPMDJ-8256 When application is async we must use this implementation «com.alibaba.ttl.TransmittableThreadLocal»
-    val requestThreadLocal = ThreadLocal<ConcurrentHashMap<Long, ExecDatum>>()
+    val requestThreadLocal = ThreadLocal<ExecData>()
 
     val probeMetaContainer = ProbeMetaContainer()
 

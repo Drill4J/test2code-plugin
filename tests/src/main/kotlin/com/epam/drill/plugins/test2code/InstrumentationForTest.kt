@@ -15,14 +15,20 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.logger.api.*
-import com.epam.drill.plugin.api.processing.*
-import kotlinx.atomicfu.*
-import kotlinx.collections.immutable.*
-import org.jacoco.core.analysis.*
-import org.jacoco.core.data.*
+import com.epam.drill.logger.api.NopLogAppender
+import com.epam.drill.logger.api.namedLogger
+import com.epam.drill.plugin.api.processing.AgentContext
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.updateAndGet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
+import org.jacoco.core.analysis.Analyzer
+import org.jacoco.core.analysis.CoverageBuilder
+import org.jacoco.core.analysis.ICounter
+import org.jacoco.core.data.ExecutionData
+import org.jacoco.core.data.ExecutionDataStore
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.reflect.*
+import kotlin.reflect.KClass
 
 
 class InstrumentationForTest(kClass: KClass<*>) {
@@ -87,7 +93,12 @@ class InstrumentationForTest(kClass: KClass<*>) {
         val testKey = TestKey(instrContextStub[DRIlL_TEST_NAME_HEADER] ?: "unspecified", "")
         val execRuntime = runtimes[sessionId]
         if (execRuntime != null) {
-            val execDatum = execRuntime.getOrPut(testKey) { ConcurrentHashMap<Long, ExecDatum>().apply { fillFromMeta(testKey) } }
+            val execDatum = execRuntime.getOrPut(
+                Pair(
+                    sessionId,
+                    testKey
+                )
+            ) { ConcurrentHashMap<Long, ExecDatum>().apply { fillFromMeta(testKey) } }
             requestThreadLocal.set(execDatum)
         } else {
             requestThreadLocal.remove()

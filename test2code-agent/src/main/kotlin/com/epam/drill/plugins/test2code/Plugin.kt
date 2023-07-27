@@ -26,6 +26,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Service for managing the plugin on the agent side
@@ -208,7 +209,6 @@ class Plugin(
             val name = context[DRIlL_TEST_NAME_HEADER] ?: DEFAULT_TEST_NAME
             val id = context[DRILL_TEST_ID_HEADER] ?: name.id()
             val testKey = TestKey(name, id)
-
             // Start runtime + agent session if none created for supplied context.sessionId.
             if (runtimes[sessionId] == null) {
                 logger?.trace { "processServerRequest. session is null" }
@@ -221,8 +221,17 @@ class Plugin(
                 logger?.trace { "processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey' runtime is null" }
                 return
             }
+
+            // Check on null
+            if (counterMap[Pair(sessionId, testKey)] == null) {
+                // Create if it does not exist
+                counterMap[Pair(sessionId, testKey)] = AtomicReference(0)
+            }
+            // Increment value for thread
+            counterMap[Pair(sessionId, testKey)]?.incrementAtomicInt()
+
             // TODO potential concurrency issue (if execData is removed by timer)
-            val execData = runtime.getOrPut(testKey) {
+            val execData = runtime.getOrPut(Pair(sessionId, testKey)) {
                 ExecData().apply { fillFromMeta(testKey) }
             }
             logger?.trace { "CATDOG. processServerRequest. thread '${Thread.currentThread().id}' sessionId '$sessionId' testKey '$testKey'" }
@@ -236,6 +245,17 @@ class Plugin(
      */
     fun processServerResponse() {
         (instrContext as DrillProbeArrayProvider).run {
+            val sessionId = context()
+            val name = context[DRIlL_TEST_NAME_HEADER] ?: DEFAULT_TEST_NAME
+            val id = context[DRILL_TEST_ID_HEADER] ?: name.id()
+            val testKey = TestKey(name, id)
+
+            logger?.trace { "CATDOG. processServerResponse. before decrementAtomicInt thread '${Thread.currentThread().id}' $counterMap " }
+            val key = Pair(sessionId, testKey)
+            val reference = counterMap[key]
+            logger?.trace { "CATDOG. processServerResponse. before reference thread '${Thread.currentThread().id}' $reference, key = $key " }
+            reference?.decrementAtomicInt()
+            logger?.trace { "CATDOG. processServerResponse. after decrementAtomicInt thread '${Thread.currentThread().id}' $counterMap " }
             requestThreadLocal.remove()
         }
     }
@@ -267,6 +287,24 @@ class Plugin(
     }
 }
 
+val counterMap = ConcurrentHashMap<Pair<String, TestKey>, AtomicReference<Int>>()
+
+fun AtomicReference<Int>.incrementAtomicInt() {
+//    while (true) {
+//        val current = this.get()
+//        val newValue = current + 1
+//        if (this.compareAndSet(current, newValue)) {
+//            break
+//        }
+//    }
+    this.set(this.get() + 1)
+}
+
+fun AtomicReference<Int>.decrementAtomicInt() {
+    this.set(this.get() - 1)
+}
+
+
 /**
  * Create a function which sends chunks of test coverage to the admin part of the plugin
  * @param sessionId the test session ID
@@ -295,6 +333,6 @@ fun Plugin.probeSender(
 
 fun Plugin.sendMessage(message: CoverMessage) {
     val messageStr = json.encodeToString(CoverMessage.serializer(), message)
-    logger.debug { "Send message ${messageStr.substring(0,4000)}" }
+    logger.debug { "Send message ${messageStr.substring(0, 4000)}" }
     send(messageStr)
 }
