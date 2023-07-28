@@ -18,8 +18,9 @@ package com.epam.drill.plugins.test2code
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.classloading.scanClasses
+import com.epam.drill.plugins.test2code.classloading.ClassLoadersScanner
 import com.epam.drill.plugins.test2code.common.api.*
+import com.epam.drill.common.classloading.EntitySource
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.json.*
@@ -219,8 +220,9 @@ class Plugin(
     override fun scanClasses(consumer: (Set<EntitySource>) -> Unit) {
         Native.WaitClassScanning()
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
+        val additionalPaths = Native.GetScanClassPath().split(";")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
-        scanClasses(packagePrefixes, 50, consumer)
+        ClassLoadersScanner(packagePrefixes, 50, logger, consumer).scanClasses(additionalPaths)
     }
 
     /**
