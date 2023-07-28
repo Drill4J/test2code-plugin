@@ -131,6 +131,7 @@ class ExecRuntime(
         logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
         logger?.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
     }
+    
     // key -
     private val testCoverageMap = ConcurrentHashMap<Pair<String, TestKey>, ExecData>()
 
@@ -153,6 +154,7 @@ class ExecRuntime(
         }.forEach { (pair, _) ->
             logger?.trace { "CATDOG . collect(). pair to delete: $pair " }
             testCoverageMap.remove(pair)
+            counterMap.remove(pair)
         }
         logger?.trace { "CATDOG . collect(). pair before filter: $counterMap " }
 

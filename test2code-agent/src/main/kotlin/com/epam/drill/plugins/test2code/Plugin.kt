@@ -26,7 +26,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Service for managing the plugin on the agent side
@@ -225,10 +225,10 @@ class Plugin(
             // Check on null
             if (counterMap[Pair(sessionId, testKey)] == null) {
                 // Create if it does not exist
-                counterMap[Pair(sessionId, testKey)] = AtomicReference(0)
+                counterMap[Pair(sessionId, testKey)] = AtomicInteger(0)
             }
             // Increment value for thread
-            counterMap[Pair(sessionId, testKey)]?.incrementAtomicInt()
+            counterMap[Pair(sessionId, testKey)]?.incrementAndGet()
 
             // TODO potential concurrency issue (if execData is removed by timer)
             val execData = runtime.getOrPut(Pair(sessionId, testKey)) {
@@ -254,7 +254,7 @@ class Plugin(
             val key = Pair(sessionId, testKey)
             val reference = counterMap[key]
             logger?.trace { "CATDOG. processServerResponse. before reference thread '${Thread.currentThread().id}' $reference, key = $key " }
-            reference?.decrementAtomicInt()
+            reference?.decrementAndGet()
             logger?.trace { "CATDOG. processServerResponse. after decrementAtomicInt thread '${Thread.currentThread().id}' $counterMap " }
             requestThreadLocal.remove()
         }
@@ -287,22 +287,7 @@ class Plugin(
     }
 }
 
-val counterMap = ConcurrentHashMap<Pair<String, TestKey>, AtomicReference<Int>>()
-
-fun AtomicReference<Int>.incrementAtomicInt() {
-//    while (true) {
-//        val current = this.get()
-//        val newValue = current + 1
-//        if (this.compareAndSet(current, newValue)) {
-//            break
-//        }
-//    }
-    this.set(this.get() + 1)
-}
-
-fun AtomicReference<Int>.decrementAtomicInt() {
-    this.set(this.get() - 1)
-}
+val counterMap = ConcurrentHashMap<Pair<String, TestKey>, AtomicInteger>()
 
 
 /**
