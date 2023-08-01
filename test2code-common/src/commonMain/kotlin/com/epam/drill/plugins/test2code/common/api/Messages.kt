@@ -50,10 +50,12 @@ data class ScopeInitialized(
 
 @SerialName("SESSION_STARTED")
 @Serializable
+@Deprecated("Will be removed after migration agent-part")
 data class SessionStarted(
     val sessionId: String,
     val testType: String,
     val isRealtime: Boolean = false,
+    val isGlobal: Boolean = false,
     val ts: Long,
 ) : CoverMessage()
 

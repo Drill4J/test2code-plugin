@@ -132,7 +132,7 @@ class ExecRuntime(
         logger?.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
     }
     
-    // key -
+    // key - pair of sessionId and testKey; value - ExecData
     private val testCoverageMap = ConcurrentHashMap<Pair<String, TestKey>, ExecData>()
 
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
@@ -147,16 +147,17 @@ class ExecRuntime(
             testCoverage.values.any { execDatum -> execDatum.probes.values.any { it } }
         }
 
-        //clean up
+        //clean up process
+        //TODO potential concurrency issue
         filteredMap.filter { (pair, _) ->
             logger?.trace { "CATDOG . collect(). pair before filter: $pair " }
-            counterMap[pair]?.get() == 0
+            sessionTestKeyPairToThreadNumber[pair]?.get() == 0
         }.forEach { (pair, _) ->
             logger?.trace { "CATDOG . collect(). pair to delete: $pair " }
             testCoverageMap.remove(pair)
-            counterMap.remove(pair)
+            sessionTestKeyPairToThreadNumber.remove(pair)
         }
-        logger?.trace { "CATDOG . collect(). pair before filter: $counterMap " }
+        logger?.trace { "CATDOG . collect(). pair before filter: $sessionTestKeyPairToThreadNumber " }
 
         return filteredMap.flatMap { it.value.values }.asSequence()
     }

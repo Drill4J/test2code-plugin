@@ -85,12 +85,13 @@ class Plugin(
         sendMessage(Initialized(msg = "Initialized"))
 
         //Create global session
-        val sessionId = "1"
+        val sessionId = "global"
         val isRealtime = true
         val handler = probeSender(sessionId, isRealtime)
-        instrContext.start(sessionId, true, "GlobalSession", handler)
+        val isGlobal = true
+        instrContext.start(sessionId, isGlobal, "GlobalSession", handler)
         //TODO add creation agent-session here and remove checking on active-session on admin part
-        sendMessage(SessionStarted(sessionId, "AUTO", isRealtime, currentTimeMillis()))
+        sendMessage(SessionStarted(sessionId, "AUTO", isRealtime, isGlobal, currentTimeMillis()))
 
         logger.info { "Plugin $id initialized!" }
     }
@@ -169,6 +170,13 @@ class Plugin(
 //                sendMessage(SessionFinished(sessionId, currentTimeMillis()))
             }
 
+            is CancelAgentSession -> {
+//                val sessionId = action.payload.sessionId
+//                logger.info { "Cancellation of recording for session $sessionId" }
+//                instrContext.cancel(sessionId)
+//                sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
+            }
+
             is StopAllAgentSessions -> {
 //                val stopped = instrContext.stopAll()
 //                logger.info { "End of recording for sessions $stopped" }
@@ -179,13 +187,6 @@ class Plugin(
 //                }
 //                val ids = stopped.map { it.first }
 //                sendMessage(SessionsFinished(ids, currentTimeMillis()))
-            }
-
-            is CancelAgentSession -> {
-//                val sessionId = action.payload.sessionId
-//                logger.info { "Cancellation of recording for session $sessionId" }
-//                instrContext.cancel(sessionId)
-//                sendMessage(SessionCancelled(sessionId, currentTimeMillis()))
             }
 
             is CancelAllAgentSessions -> {
@@ -214,7 +215,9 @@ class Plugin(
                 logger?.trace { "processServerRequest. session is null" }
                 runtimes.forEach { logger?.trace { "runtime: $it" } }
                 val handler = probeSender(sessionId, true)
-                instrContext.start(sessionId, false, "", handler)
+                val isGlobal = false
+                instrContext.start(sessionId, isGlobal, name, handler)
+                sendMessage(SessionStarted(sessionId, "AUTO", true, isGlobal, currentTimeMillis()))
             }
             val runtime = runtimes[sessionId]
             if (runtime == null) {
@@ -223,12 +226,12 @@ class Plugin(
             }
 
             // Check on null
-            if (counterMap[Pair(sessionId, testKey)] == null) {
+            if (sessionTestKeyPairToThreadNumber[Pair(sessionId, testKey)] == null) {
                 // Create if it does not exist
-                counterMap[Pair(sessionId, testKey)] = AtomicInteger(0)
+                sessionTestKeyPairToThreadNumber[Pair(sessionId, testKey)] = AtomicInteger(0)
             }
             // Increment value for thread
-            counterMap[Pair(sessionId, testKey)]?.incrementAndGet()
+            sessionTestKeyPairToThreadNumber[Pair(sessionId, testKey)]?.incrementAndGet()
 
             // TODO potential concurrency issue (if execData is removed by timer)
             val execData = runtime.getOrPut(Pair(sessionId, testKey)) {
@@ -250,12 +253,8 @@ class Plugin(
             val id = context[DRILL_TEST_ID_HEADER] ?: name.id()
             val testKey = TestKey(name, id)
 
-            logger?.trace { "CATDOG. processServerResponse. before decrementAtomicInt thread '${Thread.currentThread().id}' $counterMap " }
-            val key = Pair(sessionId, testKey)
-            val reference = counterMap[key]
-            logger?.trace { "CATDOG. processServerResponse. before reference thread '${Thread.currentThread().id}' $reference, key = $key " }
-            reference?.decrementAndGet()
-            logger?.trace { "CATDOG. processServerResponse. after decrementAtomicInt thread '${Thread.currentThread().id}' $counterMap " }
+            sessionTestKeyPairToThreadNumber[Pair(sessionId, testKey)]?.decrementAndGet()
+            logger?.trace { "CATDOG. processServerResponse. after decrementAtomicInt thread '${Thread.currentThread().id}' $sessionTestKeyPairToThreadNumber " }
             requestThreadLocal.remove()
         }
     }
@@ -287,7 +286,10 @@ class Plugin(
     }
 }
 
-val counterMap = ConcurrentHashMap<Pair<String, TestKey>, AtomicInteger>()
+val sessionTestKeyPairToThreadNumber = ConcurrentHashMap<Pair<String, TestKey>, AtomicInteger>()
+
+//TODO impl
+val sessionToThreadNumber = ConcurrentHashMap<String, AtomicInteger>()
 
 
 /**
