@@ -17,20 +17,21 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.*
 import com.epam.drill.jacoco.BooleanArrayProbeInserter.*
-import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.processing.Instrumenter
 import kotlinx.atomicfu.*
 import org.jacoco.core.internal.data.CRC64
 import org.jacoco.core.internal.flow.*
 import org.jacoco.core.internal.instr.*
 import org.objectweb.asm.*
+import mu.KotlinLogging
 
 private val classCounter = atomic(0)
 
 class DrillInstrumenter(
-    private val probeArrayProvider: ProbeArrayProvider,
-    private val logger: Logger
+    private val probeArrayProvider: ProbeArrayProvider
 ): Instrumenter {
+
+    private val logger = KotlinLogging.logger {}
 
     override fun instrument(className: String, initialBytes: ByteArray): ByteArray? = try {
         val version = InstrSupport.getMajorVersion(initialBytes)

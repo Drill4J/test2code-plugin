@@ -23,6 +23,7 @@ val jacocoVersion: String by parent!!.extra
 val atomicfuVersion: String by parent!!.extra
 val lubenZstdVersion: String by parent!!.extra
 val bcelVersion: String by parent!!.extra
+val microutilsLoggingVersion: String by parent!!.extra
 
 repositories {
     mavenLocal()
@@ -49,6 +50,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlinxSerializationVersion")
+    implementation("io.github.microutils:kotlin-logging-jvm:$microutilsLoggingVersion")
+
     implementation(project(":plugin-api-agent"))
 
     testImplementation(kotlin("test-junit5"))

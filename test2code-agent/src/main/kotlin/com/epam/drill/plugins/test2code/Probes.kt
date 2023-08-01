@@ -16,7 +16,6 @@
 package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.*
-import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.common.api.*
 import kotlinx.atomicfu.*
@@ -24,6 +23,7 @@ import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import java.util.concurrent.*
 import kotlin.coroutines.*
+import mu.KotlinLogging
 
 /**
  * Provides boolean array for the probe.
@@ -33,7 +33,7 @@ typealias ProbeArrayProvider = (Long, Int, String, Int) -> AgentProbes
 
 typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
 
-private const val ClASS_LIMIT_ERROR_MESSAGE = """ Attempting to add coverage for a class whose index is greater than
+private const val CLASS_LIMIT_ERROR_MESSAGE = """ Attempting to add coverage for a class whose index is greater than
     | the maximum.Increase the maximum value."""
 
 interface SessionProbeArrayProvider : ProbeArrayProvider {
@@ -123,16 +123,17 @@ abstract class Runtime(
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
+
+    private val logger = KotlinLogging.logger {}
     private val _execData = ConcurrentHashMap<TestKey, ExecData>()
 
     private val _completedTests = atomic(persistentListOf<String>())
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
     init {
-        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
+        logger.debug { "drill.probes.perf.mode=$isPerformanceMode" }
     }
 
     override fun collect(): Sequence<ExecDatum> = _execData.values.flatMap { data ->
@@ -156,7 +157,7 @@ class ExecRuntime(
         updater: (TestKey) -> ExecDatum,
     ) = _execData.forEach { (testName, execDataset) ->
         runCatching { execDataset[index] = updater(testName) }.onFailure {
-            logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
+            logger.warn { CLASS_LIMIT_ERROR_MESSAGE }
         }
     }
 
@@ -165,10 +166,10 @@ class ExecRuntime(
 
 class GlobalExecRuntime(
     private val testName: String,
-    private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
     internal val execDatum = arrayOfNulls<ExecDatum?>(MAX_CLASS_COUNT)
+    private val logger = KotlinLogging.logger {}
 
     /**
      * Get probes from the completed tests
@@ -191,7 +192,7 @@ class GlobalExecRuntime(
 
     override fun put(index: Int, updater: (TestKey) -> ExecDatum) {
         runCatching { execDatum[index] = updater(TestKey(testName, testName.id())) }.onFailure {
-            logger?.warn { ClASS_LIMIT_ERROR_MESSAGE }
+            logger.warn { CLASS_LIMIT_ERROR_MESSAGE }
         }
     }
 
@@ -246,6 +247,8 @@ open class SimpleSessionProbeArrayProvider(
 
     val runtimes = mutableMapOf<String, ExecRuntime>()
 
+    val logger = KotlinLogging.logger {}
+
     @Volatile
     var global: Pair<String, GlobalExecRuntime>? = null
 
@@ -254,14 +257,6 @@ open class SimpleSessionProbeArrayProvider(
         set(value) {
             _defaultContext.value = value
         }
-
-    var logger: Logger?
-        get() = _logger.value
-        set(value) {
-            _logger.value = value
-        }
-
-    private val _logger = atomic<Logger?>(null)
 
     private val _defaultContext = atomic(defaultContext)
 
@@ -351,7 +346,7 @@ open class SimpleSessionProbeArrayProvider(
 
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         if (sessionId !in runtimes) {
-            val value = ExecRuntime(logger, realtimeHandler)
+            val value = ExecRuntime(realtimeHandler)
             runtimes[sessionId] = value
         } else runtimes
     }
@@ -359,7 +354,7 @@ open class SimpleSessionProbeArrayProvider(
     private fun addGlobal(sessionId: String, testName: String?, realtimeHandler: RealtimeHandler) {
         val name = testName ?: DEFAULT_TEST_NAME
         val testId = name.id()
-        val runtime = GlobalExecRuntime(name, logger, realtimeHandler).apply {
+        val runtime = GlobalExecRuntime(name, realtimeHandler).apply {
             execDatum.fillFromMeta(TestKey(name, testId))
         }
         global = sessionId to runtime
