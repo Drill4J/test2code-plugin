@@ -206,10 +206,16 @@ class Plugin(
      */
     fun processServerRequest() {
         (instrContext as DrillProbeArrayProvider).run {
+            // TODO session id can be null
             val sessionId = context()
+            // TODO make session/test-key context extraction independent
+            //  (after coverage storing in "flat" map is implemented)
+            if (Objects.isNull(sessionId)) return
+
             val name = context[DRIlL_TEST_NAME_HEADER] ?: DEFAULT_TEST_NAME
             val id = context[DRILL_TEST_ID_HEADER] ?: name.id()
             val testKey = TestKey(name, id)
+
             // Start runtime + agent session if none created for supplied context.sessionId.
             if (runtimes[sessionId] == null) {
                 logger?.trace { "processServerRequest. session is null" }
