@@ -134,15 +134,10 @@ class ExecRuntime(
     
     // key - pair of sessionId and testKey; value - ExecData
     private val testCoverageMap = ConcurrentHashMap<Pair<String, TestKey>, ExecData>()
-
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
-    init {
-        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
-    }
 
     override fun collect(): Sequence<ExecDatum> {
-        logger?.trace { "CATDOG . collect(). thread '${Thread.currentThread().id}' " }
         val filteredMap = testCoverageMap.filterValues { testCoverage ->
             testCoverage.values.any { execDatum -> execDatum.probes.values.any { it } }
         }

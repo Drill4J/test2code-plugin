@@ -200,26 +200,7 @@ class Plugin(
 
         is DropScope -> dropScope(action.payload.scopeId)
         is UpdateSettings -> updateSettings(action.payload)
-        /**
-         * @features Session starting
-         */
-        is StartNewSession -> action.payload.run {
-            val newSessionId = sessionId.ifEmpty(::genUuid)
-            val isRealtimeSession = runtimeConfig.realtime && isRealtime
-            val labels = labels + Label("Session", newSessionId)
-            activeScope.startSession(
-                newSessionId,
-                testType,
-                isGlobal,
-                isRealtimeSession,
-                testName,
-                labels
-            )
-            ActionResult(
-                code = StatusCodes.OK,
-                data = "Session was created on admin side"
-            )
-        }
+
         /**
          * @features Running tests
          */
@@ -260,19 +241,6 @@ class Plugin(
             importCoverage(it)
         } ?: ActionResult(StatusCodes.BAD_REQUEST, "Error while parsing form-data parameters")
 
-        is CancelSession -> action.payload.run {
-            activeScope.cancelSession(action.payload.sessionId)?.let { session ->
-                ActionResult(
-                    code = StatusCodes.OK,
-                    data = "Session with id=${session.id} was canceled successfully"
-                )
-            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
-        }
-
-        is CancelAllSessions -> {
-            activeScope.cancelAllSessions()
-            CancelAllAgentSessions.toActionResult()
-        }
         /**
          * @features Running tests
          */
@@ -286,6 +254,26 @@ class Plugin(
 
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+
+        /**
+         * @features Session starting
+         */
+        is StartNewSession -> action.payload.run {
+//            val newSessionId = sessionId.ifEmpty(::genUuid)
+//            val isRealtimeSession = runtimeConfig.realtime && isRealtime
+//            val labels = labels + Label("Session", newSessionId)
+//            activeScope.startSession(
+//                newSessionId,
+//                testType,
+//                isGlobal,
+//                isRealtimeSession,
+//                testName,
+//                labels
+//            )
+            //Leave okResult as stub (for autotest-agent)
+            okResult
+        }
+
         /**
          * @features Session finishing
          */
@@ -295,18 +283,32 @@ class Plugin(
                 state.finishSession(sessionId) ?: logger.info {
                     "No active session with id ${sessionId}."
                 }
-                ActionResult(
-                    code = StatusCodes.OK,
-                    data = "Stop session on admin side was successfully completed"
-                )
+                okResult
             } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
         }
+        is CancelSession -> action.payload.run {
+//            activeScope.cancelSession(action.payload.sessionId)?.let { session ->
+//                okResult.copy(data = "Session with id=${session.id} was canceled successfully")
+//            } ?: ActionResult(StatusCodes.NOT_FOUND, "Active session '$sessionId' not found.")
+            deprecatedResult
+        }
 
-        is StopAllSessions -> StopAllAgentSessions.toActionResult()
+        is StopAllSessions -> {
+//            StopAllAgentSessions.toActionResult()
+            okResult
+        }
+
+        is CancelAllSessions -> {
+            activeScope.cancelAllSessions()
+//            CancelAllAgentSessions.toActionResult()
+            okResult
+        }
+
         else -> "Action '$action' is not supported!".let { message ->
             logger.error { message }
             ActionResult(StatusCodes.BAD_REQUEST, message)
         }
+
     }
 
     private suspend fun Plugin.calculateFilter(filter: StoredFilter): ActionResult {
@@ -374,12 +376,6 @@ class Plugin(
             }
             .also { logPoolStats() }
 
-        is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
-        is SessionsCancelled -> message.run {
-            activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
-            logger.info { "$instanceId: Agent sessions cancelled: $ids." }
-        }
-
         is CoverDataPart -> activeScope.activeSessions[message.sessionId]?.let {
             activeScope.addProbes(message.sessionId) { message.data }?.run {
                 if (isRealtime) {
@@ -391,6 +387,15 @@ class Plugin(
         is SessionChanged -> activeScope.takeIf { scope ->
             scope.activeSessions.values.any { it.isRealtime }
         }?.apply { probesChanged() }
+
+
+        is SessionCancelled -> logger.info { "$instanceId: Agent session ${message.sessionId} cancelled." }
+
+        is SessionsCancelled -> message.run {
+            activeScope.let { ids.forEach { id: String -> it.cancelSession(id) } }
+            logger.info { "$instanceId: Agent sessions cancelled: $ids." }
+        }
+
         /**
          * @features Session finishing
          */
@@ -400,11 +405,11 @@ class Plugin(
                 "$instanceId: No active session with id ${message.sessionId}."
             }
         }
-
         is SessionsFinished -> {
             delay(500L) //TODO remove after multi-instance core is implemented
             message.ids.forEach { state.finishSession(it) }
         }
+
         //TODO EPMDJ-10398 send on agent attach
         /**
          * Find inactive sessions and send them for cancellation on the agent side
