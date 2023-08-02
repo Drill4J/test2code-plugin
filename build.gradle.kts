@@ -28,6 +28,7 @@ val kotlinxCollectionsVersion: String by extra
 val kotlinxCoroutinesVersion: String by extra
 val kotlinxSerializationVersion: String by extra
 val sharedLibsLocalPath: String by extra
+val adminLocalPath: String by extra
 
 repositories {
     mavenLocal()
@@ -119,6 +120,24 @@ publishing {
 
 @Suppress("UNUSED_VARIABLE")
 tasks {
+    val adminDir = projectDir.resolve(adminLocalPath)
+    val adminRef: String by extra
+    val updateAdmin by registering {
+        group = "other"
+        doLast {
+            val gitrepo = Grgit.open { dir = adminDir }
+            val branches = gitrepo.branch.list { mode = BranchListOp.Mode.LOCAL }
+            val branchToName: (Branch) -> String = { it.name }
+            val branchIsCreate: (String) -> Boolean = { !branches.map(branchToName).contains(it) }
+            gitrepo.fetch()
+            gitrepo.checkout {
+                branch = adminRef
+                startPoint = adminRef.takeIf(branchIsCreate)?.prefixIfNot("origin/")
+                createBranch = branchIsCreate(adminRef)
+            }
+            gitrepo.pull()
+        }
+    }
     val sharedLibsDir = projectDir.resolve(sharedLibsLocalPath)
     val sharedLibsRef: String by extra
     val updateSharedLibs by registering {

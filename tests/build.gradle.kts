@@ -22,7 +22,6 @@ val kodeinVersion: String by parent!!.extra
 val jacocoVersion: String by parent!!.extra
 val atomicfuVersion: String by parent!!.extra
 val flywaydbVersion: String by parent!!.extra
-val drillAdminVersion: String by parent!!.extra
 val testsSkipIntegrationTests: String by parent!!.extra
 
 repositories {
@@ -75,8 +74,8 @@ dependencies {
     implementation(project(":test2code-admin"))
     implementation(project(":test2code-agent"))
     implementation(project(":ktor-swagger"))
-    implementation("com.epam.drill:test-framework:$drillAdminVersion@jar") { isChanging = true }
-    implementation("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
+    implementation(project(":admin-core"))
+    implementation(project(":test-framework"))
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
