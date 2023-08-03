@@ -32,7 +32,7 @@ class GlobalExecRuntimeTest {
     @Test
     fun `put - not existing index`() {
         val runtime = GlobalExecRuntime("test") {}
-        assertDoesNotThrow { runtime.put(MAX_CLASS_COUNT + 1) { ExecDatum(1L, className, AgentProbes(5)) } }
+        assertDoesNotThrow { runtime.put(Long.MAX_VALUE) { ExecDatum(1L, className, AgentProbes(5)) } }
     }
 
     @Test

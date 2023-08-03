@@ -167,11 +167,11 @@ class ExecRuntime(
     fun getOrPut(
         pair: Pair<String, TestKey>,
         updater: () -> ExecData,
-    ): ConcurrentHashMap<Long, ExecDatum>? {
+    ): ExecData {
         if (testCoverageMap[pair] == null) {
             testCoverageMap[pair] = updater()
         }
-        return testCoverageMap[pair]
+        return testCoverageMap[pair]!!
     }
 
     override fun put(

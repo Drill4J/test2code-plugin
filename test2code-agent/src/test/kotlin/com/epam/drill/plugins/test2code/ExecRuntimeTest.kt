@@ -22,7 +22,7 @@ import kotlin.test.*
 
 
 class ExecRuntimeTest {
-    private val threadLocal = ThreadLocal<Array<ExecDatum?>>()
+    private val threadLocal = ThreadLocal<ExecData>()
     private val className = "foo/bar/Foo"
     private val testKey = TestKey("test", "id")
 
@@ -34,7 +34,7 @@ class ExecRuntimeTest {
     @Test
     fun `put - should put by existing index`() {
         val runtime = ExecRuntime {}
-        val probesByClasses = runtime.getOrPut(testKey) { arrayOfNulls(9) }
+        val probesByClasses = runtime.getOrPut("test" to testKey) { ExecData() }
         runtime.put(7) { ExecDatum(1L, className, AgentProbes()) }
         assertNotNull(probesByClasses[7])
     }
@@ -42,7 +42,7 @@ class ExecRuntimeTest {
     @Test
     fun `put - not existing index`() {
         val runtime = ExecRuntime {}
-        val probesByClasses = runtime.getOrPut(testKey) { arrayOfNulls(5) }
+        val probesByClasses = runtime.getOrPut("test" to testKey) { ExecData() }
         assertDoesNotThrow {
             runtime.put(7) { ExecDatum(1L, className, AgentProbes()) }
         }
@@ -52,7 +52,7 @@ class ExecRuntimeTest {
     @Test
     fun `collect - empty probes`() {
         val runtime = ExecRuntime {}
-        val probesByClasses = runtime.getOrPut(testKey) { arrayOfNulls(9) }
+        val probesByClasses = runtime.getOrPut("test" to testKey) { ExecData() }
         runtime.put(7) { ExecDatum(1L, className, AgentProbes()) }
         assertNotNull(probesByClasses[7])
         assertTrue { runtime.collect().none() }
@@ -105,7 +105,7 @@ class ExecRuntimeTest {
     }
 
     private fun ExecRuntime.fillProbe() {
-        val value = getOrPut(testKey) { arrayOfNulls(5) }
+        val value = getOrPut("test" to testKey) { ExecData() }
         threadLocal.set(value)
         put(0) { (testName, _) -> ExecDatum(1L, className, AgentProbes(5), testName) }
     }
