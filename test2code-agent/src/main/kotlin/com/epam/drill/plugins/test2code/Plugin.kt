@@ -15,11 +15,11 @@
  */
 package com.epam.drill.plugins.test2code
 
+import com.epam.drill.common.classloading.EntitySource
 import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.classloading.ClassLoadersScanner
 import com.epam.drill.plugins.test2code.common.api.*
-import com.epam.drill.common.classloading.EntitySource
 import com.github.luben.zstd.*
 import kotlinx.atomicfu.*
 import kotlinx.serialization.json.*
@@ -211,7 +211,7 @@ class Plugin(
     fun processServerRequest() {
         (instrContext as DrillProbeArrayProvider).run {
             // TODO session id can be null
-            val sessionId = context()
+            val sessionId = context() ?: ""
             // TODO make session/test-key context extraction independent
             //  (after coverage storing in "flat" map is implemented)
             if (Objects.isNull(sessionId)) return
@@ -222,8 +222,8 @@ class Plugin(
 
             // Start runtime + agent session if none created for supplied context.sessionId.
             if (runtimes[sessionId] == null) {
-                logger?.trace { "processServerRequest. session is null" }
-                runtimes.forEach { logger?.trace { "runtime: $it" } }
+                logger.trace { "processServerRequest. session is null" }
+                runtimes.forEach { logger.trace { "runtime: $it" } }
                 val handler = probeSender(sessionId, true)
                 val isGlobal = false
                 instrContext.start(sessionId, isGlobal, name, handler)

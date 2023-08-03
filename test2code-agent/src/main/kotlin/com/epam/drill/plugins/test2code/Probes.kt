@@ -17,20 +17,13 @@ package com.epam.drill.plugins.test2code
 
 import com.epam.drill.jacoco.AgentProbes
 import com.epam.drill.jacoco.StubAgentProbes
-import com.epam.drill.logger.api.Logger
 import com.epam.drill.plugin.api.processing.AgentContext
 import com.epam.drill.plugins.test2code.common.api.DEFAULT_TEST_NAME
 import com.epam.drill.plugins.test2code.common.api.ExecClassData
 import com.epam.drill.plugins.test2code.common.api.toBitSet
 import kotlinx.atomicfu.atomic
-import com.epam.drill.jacoco.*
-import com.epam.drill.plugin.api.processing.*
-import com.epam.drill.plugins.test2code.common.api.*
-import kotlinx.atomicfu.*
 import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
-import java.util.concurrent.*
-import kotlin.coroutines.*
 import mu.KotlinLogging
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -143,13 +136,12 @@ class ExecRuntime(
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
     init {
-        logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
-        logger?.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
+        logger.debug { "drill.probes.perf.mode=$isPerformanceMode" }
+        logger.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
     }
 
     // key - pair of sessionId and testKey; value - ExecData
     private val testCoverageMap = ConcurrentHashMap<Pair<String, TestKey>, ExecData>()
-    private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
 
     override fun collect(): Sequence<ExecDatum> {
@@ -160,14 +152,14 @@ class ExecRuntime(
         //clean up process
         //TODO potential concurrency issue
         filteredMap.filter { (pair, _) ->
-            logger?.trace { "CATDOG . collect(). pair before filter: $pair " }
+            logger.trace { "CATDOG . collect(). pair before filter: $pair " }
             sessionTestKeyPairToThreadNumber[pair]?.get() == 0
         }.forEach { (pair, _) ->
-            logger?.trace { "CATDOG . collect(). pair to delete: $pair " }
+            logger.trace { "CATDOG . collect(). pair to delete: $pair " }
             testCoverageMap.remove(pair)
             sessionTestKeyPairToThreadNumber.remove(pair)
         }
-        logger?.trace { "CATDOG . collect(). pair before filter: $sessionTestKeyPairToThreadNumber " }
+        logger.trace { "CATDOG . collect(). pair before filter: $sessionTestKeyPairToThreadNumber " }
 
         return filteredMap.flatMap { it.value.values }.asSequence()
     }
@@ -269,9 +261,6 @@ open class SimpleSessionProbeArrayProvider(
     defaultContext: AgentContext? = null,
 ) : SessionProbeArrayProvider {
 
-    init {
-        logger?.trace { "CATDOG. SimpleSessionProbeArrayProvider init. thread '${Thread.currentThread().id}' " }
-    }
 
     // TODO EPMDJ-8256 When application is async we must use this implementation «com.alibaba.ttl.TransmittableThreadLocal»
     val requestThreadLocal = ThreadLocal<ExecData>()
@@ -383,8 +372,8 @@ open class SimpleSessionProbeArrayProvider(
 
     private fun add(sessionId: String, realtimeHandler: RealtimeHandler) {
         if (sessionId !in runtimes) {
-            logger?.trace { "Create new runtime" }
-            val value = ExecRuntime(logger, realtimeHandler)
+            logger.trace { "Create new runtime" }
+            val value = ExecRuntime(realtimeHandler)
             runtimes[sessionId] = value
         } else runtimes
     }
@@ -392,7 +381,7 @@ open class SimpleSessionProbeArrayProvider(
     private fun addGlobal(sessionId: String, testName: String?, realtimeHandler: RealtimeHandler) {
         val name = testName ?: DEFAULT_TEST_NAME
         val testId = name.id()
-        val runtime = GlobalExecRuntime(name, logger, realtimeHandler).apply {
+        val runtime = GlobalExecRuntime(name, realtimeHandler).apply {
             execData.fillFromMeta(TestKey(name, testId))
         }
         global = sessionId to runtime

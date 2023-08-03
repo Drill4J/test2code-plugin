@@ -15,8 +15,6 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.logger.api.NopLogAppender
-import com.epam.drill.logger.api.namedLogger
 import com.epam.drill.plugin.api.processing.AgentContext
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.updateAndGet
