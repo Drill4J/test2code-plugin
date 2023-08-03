@@ -15,7 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.plugins.test2code.classloading.scanClasses
+import com.epam.drill.plugins.test2code.classloading.ClassLoadersScanner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -23,9 +23,10 @@ class ClassScannerTest {
     @Test
     fun `check class scan in one consumer call`() {
         var classCount = 0
-        scanClasses(listOf("com/example/fixture/classloading/sub")) { classes ->
+        val scanner = ClassLoadersScanner(listOf("com/example/fixture/classloading/sub")) { classes ->
             classCount += classes.size
         }
+        scanner.scanClasses()
         assertEquals(2, classCount)
     }
 
@@ -33,10 +34,11 @@ class ClassScannerTest {
     fun `check class scan in several consumer call`() {
         var classCount = 0
         var transferCount = 0
-        scanClasses(listOf("com/example/fixture/classloading"), 5) { classes ->
+        val scanner = ClassLoadersScanner(listOf("com/example/fixture/classloading"), 5) { classes ->
             classCount += classes.size
             transferCount++
         }
+        scanner.scanClasses()
         assertEquals(6, classCount)
         assertEquals(2, transferCount)
     }
