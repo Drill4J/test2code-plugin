@@ -5,8 +5,6 @@ plugins {
 group = "com.epam.drill.plugins.test2code"
 version = rootProject.version
 
-val drillAdminVersion: String by rootProject
-
 repositories {
     mavenLocal()
     mavenCentral()
@@ -17,7 +15,7 @@ configurations.all {
 }
 
 dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
+    runtimeOnly(project(":admin-core"))
 }
 
 application {

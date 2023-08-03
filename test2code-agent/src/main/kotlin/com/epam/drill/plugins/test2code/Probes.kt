@@ -23,7 +23,15 @@ import com.epam.drill.plugins.test2code.common.api.DEFAULT_TEST_NAME
 import com.epam.drill.plugins.test2code.common.api.ExecClassData
 import com.epam.drill.plugins.test2code.common.api.toBitSet
 import kotlinx.atomicfu.atomic
+import com.epam.drill.jacoco.*
+import com.epam.drill.plugin.api.processing.*
+import com.epam.drill.plugins.test2code.common.api.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
+import java.util.concurrent.*
+import kotlin.coroutines.*
+import mu.KotlinLogging
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
@@ -36,6 +44,8 @@ typealias ProbeArrayProvider = (Long, Int, String, Int) -> AgentProbes
 
 typealias RealtimeHandler = (Sequence<ExecDatum>) -> Unit
 
+private const val CLASS_LIMIT_ERROR_MESSAGE = """ Attempting to add coverage for a class whose index is greater than
+    | the maximum.Increase the maximum value."""
 typealias TestKey = Pair<String, String>
 
 interface SessionProbeArrayProvider : ProbeArrayProvider {
@@ -123,15 +133,20 @@ abstract class Runtime(
  * TODO ad hoc implementation, rewrite to something more descent
  */
 class ExecRuntime(
-    private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
+
+    private val logger = KotlinLogging.logger {}
+    private val _execData = ConcurrentHashMap<TestKey, ExecData>()
+
+    private val _completedTests = atomic(persistentListOf<String>())
+    private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
 
     init {
         logger?.debug { "drill.probes.perf.mode=$isPerformanceMode" }
         logger?.trace { "CATDOG .ExecRuntime init. thread '${Thread.currentThread().id}' " }
     }
-    
+
     // key - pair of sessionId and testKey; value - ExecData
     private val testCoverageMap = ConcurrentHashMap<Pair<String, TestKey>, ExecData>()
     private val isPerformanceMode = System.getProperty("drill.probes.perf.mode")?.toBoolean() ?: false
@@ -177,10 +192,10 @@ class ExecRuntime(
 
 class GlobalExecRuntime(
     private val testName: String,
-    private val logger: Logger? = null,
     realtimeHandler: RealtimeHandler,
 ) : Runtime(realtimeHandler) {
     internal val execData = ExecData()
+    private val logger = KotlinLogging.logger {}
 
     /**
      * Get probes from the completed tests
@@ -265,6 +280,8 @@ open class SimpleSessionProbeArrayProvider(
 
     val runtimes = mutableMapOf<String, ExecRuntime>()
 
+    val logger = KotlinLogging.logger {}
+
     @Volatile
     var global: Pair<String, GlobalExecRuntime>? = null
 
@@ -273,14 +290,6 @@ open class SimpleSessionProbeArrayProvider(
         set(value) {
             _defaultContext.value = value
         }
-
-    var logger: Logger?
-        get() = _logger.value
-        set(value) {
-            _logger.value = value
-        }
-
-    private val _logger = atomic<Logger?>(null)
 
     private val _defaultContext = atomic(defaultContext)
 

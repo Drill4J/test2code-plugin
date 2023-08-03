@@ -19,20 +19,20 @@ import java.io.File
 import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
-import com.epam.drill.logger.api.Logger
+import mu.KotlinLogging
 import com.epam.drill.common.classloading.ClassSource
 
 class ClassLoadersScanner(
     packagePrefixes: List<String>,
     classesBufferSize: Int = 50,
-    private val logger: Logger? = null,
     transfer: (Set<ClassSource>) -> Unit
 ) {
 
-    private val classPathScanner = ClassPathScanner(packagePrefixes, classesBufferSize, logger, transfer)
+    private val logger = KotlinLogging.logger {}
+    private val classPathScanner = ClassPathScanner(packagePrefixes, classesBufferSize, transfer)
 
     private val getOrLogFail: Result<URI>.() -> URI? = {
-        this.onFailure { logger?.error(it) { "ClassLoadersScanner: error handling classpath URI" } }
+        this.onFailure { logger.error(it) { "ClassLoadersScanner: error handling classpath URI" } }
         this.getOrNull()
     }
 
@@ -55,7 +55,7 @@ class ClassLoadersScanner(
     private fun addClassLoaderWithParents(loaders: MutableSet<ClassLoader>, classloader: ClassLoader) = loaders.apply {
         var current: ClassLoader? = classloader
         while (current != null) {
-            if (this.add(current)) logger?.debug { "ClassLoadersScanner: ClassLoader found: $current" }
+            if (this.add(current)) logger.debug { "ClassLoadersScanner: ClassLoader found: $current" }
             current = current.parent
         }
     }
@@ -65,14 +65,14 @@ class ClassLoadersScanner(
         val urlToUri: (URL) -> Result<URI> = { it.runCatching { this.toURI() } }
         val result = this.runCatching {
             cl.let(toUrlClassloader)?.urLs?.map(urlToUri)?.mapNotNull(getOrLogFail)?.filter(this::add)?.forEach {
-                logger?.debug { "ClassLoadersScanner: ClassLoader URI found: $it" }
+                logger.debug { "ClassLoadersScanner: ClassLoader URI found: $it" }
             }
             cl.getResources("/").asSequence().map(urlToUri).mapNotNull(getOrLogFail).filter(this::add).forEach {
-                logger?.debug { "ClassLoadersScanner: ClassLoader URI found: $it" }
+                logger.debug { "ClassLoadersScanner: ClassLoader URI found: $it" }
             }
         }
         result.onFailure {
-            logger?.error(it) { "ClassLoadersScanner: error retrieving classpath URIs from classloader $cl" }
+            logger.error(it) { "ClassLoadersScanner: error retrieving classpath URIs from classloader $cl" }
         }
     }
 
@@ -90,7 +90,7 @@ class ClassLoadersScanner(
             }
         }
         this.onEach {
-            logger?.debug { "ClassLoadersScanner: ClassLoader URI normalized: $it" }
+            logger.debug { "ClassLoadersScanner: ClassLoader URI normalized: $it" }
         }
     }
 

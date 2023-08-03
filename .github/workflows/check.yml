@@ -39,11 +39,17 @@ jobs:
       - if: matrix.config.preset == 'linuxX64'
         run: chmod +x ${{ github.workspace }}/setup-shared-libs.sh
       - if: matrix.config.preset == 'linuxX64'
+        run: chmod +x ${{ github.workspace }}/setup-admin.sh
+      - if: matrix.config.preset == 'linuxX64'
         run: sudo apt-get install -y libtinfo5
       - if: matrix.config.preset == 'linuxX64'
         run: ${{ github.workspace }}/setup-shared-libs.sh
+      - if: matrix.config.preset == 'linuxX64'
+        run: ${{ github.workspace }}/setup-admin.sh
       - if: matrix.config.preset == 'mingwX64'
         run: ${{ github.workspace }}/setup-shared-libs.bat
+      - if: matrix.config.preset == 'mingwX64'
+        run: ${{ github.workspace }}/setup-admin.bat
       - uses: gradle/gradle-build-action@v2
         with:
           arguments: check

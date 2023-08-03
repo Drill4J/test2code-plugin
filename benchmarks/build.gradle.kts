@@ -26,7 +26,6 @@ val bcelVersion: String by parent!!.extra
 val javassistVersion: String by parent!!.extra
 val jacocoVersion: String by parent!!.extra
 val atomicfuVersion: String by parent!!.extra
-val drillAdminVersion: String by parent!!.extra
 
 repositories {
     mavenLocal()
@@ -55,8 +54,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
     testImplementation("io.mockk:mockk:1.9.3")
-    testImplementation("com.epam.drill:test-framework:$drillAdminVersion@jar") { isChanging = true }
-    testImplementation("com.epam.drill:admin-core:$drillAdminVersion:all@jar") { isChanging = true }
     testImplementation(project(":common"))
     testImplementation(project(":ktor-swagger"))
     testImplementation(project(":plugin-api-admin"))
@@ -64,6 +61,8 @@ dependencies {
     testImplementation(project(":test2code-admin"))
     testImplementation(project(":test2code-agent"))
     testImplementation(project(":tests"))
+    testImplementation(project(":admin-core"))
+    testImplementation(project(":test-framework"))
 }
 
 kotlin.sourceSets.all {

@@ -29,6 +29,14 @@ import org.jacoco.core.data.ExecutionData
 import org.jacoco.core.data.ExecutionDataStore
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
+import com.epam.drill.plugin.api.processing.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
+import org.jacoco.core.analysis.*
+import org.jacoco.core.data.*
+import org.jacoco.core.internal.data.*
+import java.io.FileOutputStream
+import kotlin.reflect.*
 
 
 class InstrumentationForTest(kClass: KClass<*>) {
@@ -50,7 +58,7 @@ class InstrumentationForTest(kClass: KClass<*>) {
 
     object TestProbeArrayProvider : SimpleSessionProbeArrayProvider(instrContextStub)
 
-    val instrumenter = DrillInstrumenter(TestProbeArrayProvider, "".namedLogger(appender = NopLogAppender))
+    val instrumenter = DrillInstrumenter(TestProbeArrayProvider)
 
     val memoryClassLoader = MemoryClassLoader()
 

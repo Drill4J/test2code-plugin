@@ -15,8 +15,7 @@
  */
 package com.epam.drill.plugins.test2code
 
-import com.epam.drill.logger.api.LoggerFactory
-import com.epam.drill.plugin.api.Native
+import com.epam.drill.plugin.api.*
 import com.epam.drill.plugin.api.processing.*
 import com.epam.drill.plugins.test2code.classloading.ClassLoadersScanner
 import com.epam.drill.plugins.test2code.common.api.*
@@ -32,6 +31,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import mu.KotlinLogging
 
 /**
  * Service for managing the plugin on the agent side
@@ -40,10 +40,10 @@ import java.util.concurrent.atomic.AtomicInteger
 class Plugin(
     id: String,
     agentContext: AgentContext,
-    sender: Sender,
-    logging: LoggerFactory,
-) : AgentPart<AgentAction>(id, agentContext, sender, logging), Instrumenter, ClassScanner {
-    internal val logger = logging.logger("Plugin $id")
+    sender: Sender
+) : AgentPart<AgentAction>(id, agentContext, sender), Instrumenter, ClassScanner {
+
+    internal val logger = KotlinLogging.logger {}
 
     internal val json = Json { encodeDefaults = true }
 
@@ -53,10 +53,9 @@ class Plugin(
 
     private val instrContext: SessionProbeArrayProvider = DrillProbeArrayProvider.apply {
         defaultContext = agentContext
-        logger = this@Plugin.logger
     }
 
-    private val instrumenter = DrillInstrumenter(instrContext, logger)
+    private val instrumenter = DrillInstrumenter(instrContext)
 
     private val _retransformed = atomic(false)
 
@@ -279,7 +278,7 @@ class Plugin(
         val packagePrefixes = Native.GetPackagePrefixes().split(", ")
         val additionalPaths = Native.GetScanClassPath().split(";")
         logger.info { "Scanning classes, package prefixes: $packagePrefixes... " }
-        ClassLoadersScanner(packagePrefixes, 50, logger, consumer).scanClasses(additionalPaths)
+        ClassLoadersScanner(packagePrefixes, 50, consumer).scanClasses(additionalPaths)
     }
 
     /**
