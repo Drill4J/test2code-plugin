@@ -2,50 +2,50 @@ plugins {
     application
 }
 
-configurations.all { resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES) }
+group = "com.epam.drill.plugins.test2code"
+version = rootProject.version
 
-val drillAdminVersion: String by rootProject
-
-dependencies {
-    runtimeOnly("com.epam.drill:admin-core:$drillAdminVersion:all@jar")
+repositories {
+    mavenLocal()
+    mavenCentral()
 }
 
-val appJvmArgs = listOf(
-    "-server",
-    "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006",
-    "-Djava.awt.headless=true",
-    "-XX:+UseG1GC",
-    "-XX:+UseStringDeduplication",
-    "-Xms128m",
-    "-Xmx2g"
-)
+configurations.all {
+    resolutionStrategy.cacheDynamicVersionsFor(5, TimeUnit.MINUTES)
+}
+
+dependencies {
+    runtimeOnly(project(":admin-core"))
+}
 
 application {
-    mainClassName = "io.ktor.server.netty.EngineMain"
-    applicationDefaultJvmArgs = appJvmArgs
+    mainClass.set("io.ktor.server.netty.EngineMain")
+    applicationDefaultJvmArgs = listOf(
+        "-Xms128m",
+        "-Xmx2g",
+        "-server",
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006",
+        "-Djava.awt.headless=true",
+        "-XX:+UseG1GC",
+        "-XX:+UseStringDeduplication"
+    )
 }
 
 tasks {
-    val cleanData by registering(Delete::class) {
-        group = "build"
-        delete("work", "distr")
-    }
-
-    clean {
-        dependsOn(cleanData)
-    }
-
-    val syncDistro by registering(Sync::class) {
+    val prepareDistr by registering(Sync::class) {
         from(rootProject.tasks.distZip)
         into("distr/adminStorage")
     }
-
     (run) {
-        dependsOn(syncDistro)
         environment("DRILL_DEVMODE", true)
         environment("DRILL_DEFAULT_PACKAGES", "org/springframework/samples/petclinic,com/epam,package")
         environment("DRILL_AGENTS_SOCKET_TIMEOUT", 360)
         environment("DRILL_PLUGINS_REMOTE_ENABLED", false)
         systemProperty("analytic.disable", true)
+        dependsOn(prepareDistr)
+    }
+    clean {
+        delete("distr")
+        delete("work")
     }
 }

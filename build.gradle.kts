@@ -1,155 +1,174 @@
+import org.jetbrains.kotlin.util.prefixIfNot
+import org.apache.commons.configuration2.builder.fluent.Configurations
+import org.ajoberstar.grgit.Grgit
+import org.ajoberstar.grgit.Branch
+import org.ajoberstar.grgit.Credentials
+import org.ajoberstar.grgit.operation.BranchListOp
+
+@Suppress("RemoveRedundantBackticks")
 plugins {
-    base
-    distribution
+    `distribution`
     `maven-publish`
-    kotlin("jvm") apply false
-    id("com.github.hierynomus.license")
-    id("org.jetbrains.kotlin.plugin.noarg")
-    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+    kotlin("jvm").apply(false)
+    kotlin("multiplatform").apply(false)
+    kotlin("plugin.allopen").apply(false)
+    kotlin("plugin.noarg").apply(false)
+    kotlin("plugin.serialization").apply(false)
+    id("kotlinx-atomicfu").apply(false)
+    id("org.ajoberstar.grgit")
+    id("org.jetbrains.kotlinx.benchmark").apply(false)
+    id("com.github.johnrengelman.shadow").apply(false)
+    id("com.github.hierynomus.license").apply(false)
 }
 
-val drillPluginId: String by project
+group = "com.epam.drill.plugins"
 
-val scriptUrl: String by extra
+val kotlinVersion: String by extra
+val kotlinxCollectionsVersion: String by extra
+val kotlinxCoroutinesVersion: String by extra
+val kotlinxSerializationVersion: String by extra
+val sharedLibsLocalPath: String by extra
+val adminLocalPath: String by extra
 
-val drillApiVersion: String by project
-val atomicFuVersion: String by project
-val ktorVersion: String by project
-val coroutinesVersion: String by project
-val kxSerializationVersion: String by project
-val kxCollectionsVersion: String by project
-val zstdVersion: String by extra
-val jacocoVersion: String by extra
-val bcelVersion: String by extra
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
 
-//TODO remove this block and gradle/classes dir after gradle is updated to v6.8
 buildscript {
-    dependencies {
-        classpath(files("gradle/classes"))
-    }
+    dependencies.classpath("org.apache.commons:commons-configuration2:2.9.0")
+    dependencies.classpath("commons-beanutils:commons-beanutils:1.9.4")
 }
 
-allprojects {
-    apply(from = rootProject.uri("$scriptUrl/git-version.gradle.kts"))
-    repositories {
-        apply(from = rootProject.uri("$scriptUrl/maven-repo.gradle.kts"))
-        mavenLocal()
-        mavenCentral()
-        jcenter()
+if(version == Project.DEFAULT_VERSION) {
+    val fromEnv: () -> String? = {
+        System.getenv("GITHUB_REF")?.let { Regex("refs/tags/v(.*)").matchEntire(it)?.groupValues?.get(1) }
     }
+    val fromGit: () -> String? = {
+        val gitdir: (Any) -> Boolean = { projectDir.resolve(".git").isDirectory }
+        takeIf(gitdir)?.let {
+            val gitrepo = Grgit.open { dir = projectDir }
+            val gittag = gitrepo.describe {
+                tags = true
+                longDescr = true
+                match = listOf("v[0-9]*.[0-9]*.[0-9]*")
+            }
+            gittag?.trim()?.removePrefix("v")?.replace(Regex("-[0-9]+-g[0-9a-f]+$"), "")?.takeIf(String::any)
+        }
+    }
+    version = fromEnv() ?: fromGit() ?: version
 }
 
 subprojects {
-    apply<BasePlugin>()
-    apply(plugin = "org.jetbrains.kotlin.plugin.noarg")
-
-    group = "${rootProject.group}.$drillPluginId"
-
-    val constraints = listOf(
-        "com.epam.drill:common:$drillApiVersion",
-        "com.epam.drill:drill-admin-part:$drillApiVersion",
-        "com.epam.drill:drill-agent-part:$drillApiVersion",
-        "org.jetbrains.kotlinx:atomicfu:$atomicFuVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-core:$kxSerializationVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-json:$kxSerializationVersion",
-        "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kxSerializationVersion",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion",
-        "org.jetbrains.kotlinx:kotlinx-collections-immutable:$kxCollectionsVersion",
-        "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kxCollectionsVersion",
-        "io.ktor:ktor-locations:$ktorVersion",
-        "com.github.luben:zstd-jni:$zstdVersion",
-        "org.jacoco:org.jacoco.core:$jacocoVersion",
-        "org.apache.bcel:bcel:$bcelVersion",
-        "org.junit.jupiter:junit-jupiter:5.5.2"
-    ).map(dependencies.constraints::create)
-
+    val constraints = setOf(
+        dependencies.constraints.create("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-collections-immutable:$kotlinxCollectionsVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$kotlinxCollectionsVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinxCoroutinesVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-coroutines-debug:$kotlinxCoroutinesVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$kotlinxCoroutinesVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:$kotlinxSerializationVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:$kotlinxSerializationVersion"),
+        dependencies.constraints.create("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlinxSerializationVersion"),
+    )
     configurations.all {
         dependencyConstraints += constraints
     }
-
-    noArg {
-        annotation("kotlinx.serialization.Serializable")
-    }
-
-    tasks {
-        withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-            kotlinOptions {
-                jvmTarget = "1.8"
-                freeCompilerArgs = listOf(
-                    "-Xuse-experimental=kotlin.Experimental",
-                    "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi",
-                    "-Xuse-experimental=kotlin.time.ExperimentalTime"
-                )
-            }
-        }
-    }
-}
-
-val pluginConfigJson = file("plugin_config.json")
-
-val prepareConfigJson by tasks.creating(Copy::class) {
-    group = "distribution"
-    from(provider {
-        file("$buildDir/tmp/${pluginConfigJson.name}").apply {
-            parentFile.mkdirs()
-            val json = pluginConfigJson.readText()
-            writeText(json.replace("{version}", "${project.version}"))
-        }
-    })
-    into("$buildDir/config")
 }
 
 distributions {
-    val adminShadow = provider {
-        tasks.getByPath(":admin-part:shadowJar")
-    }
-
-    val agentShadow = provider {
-        tasks.getByPath(":agent-part:shadowJar")
-    }
-
-    val agentShadowTest = provider {
-        tasks.getByPath(":agent-part:shadowJarTest")
-    }
-
-    main {
-        contents {
-            from(
-                adminShadow,
-                agentShadow,
-                prepareConfigJson
-            )
-            into("/")
+    val pluginConfigJson by tasks.creating(Copy::class) {
+        group = "distribution"
+        val pluginConfigTemplate = file("plugin_config.json")
+        val pluginConfigTemporary = file("$buildDir/tmp/${pluginConfigTemplate.name}").apply {
+            parentFile.mkdirs()
+            writeText(pluginConfigTemplate.readText().replace("{version}", project.version.toString()))
         }
+        from(pluginConfigTemporary)
+        into("$buildDir/config")
     }
-
-    //TODO Remove: there should be no special distro for integration tests
-    create("test") {
-        contents {
-            from(
-                adminShadow,
-                agentShadowTest,
-                prepareConfigJson
-            )
-            into("/")
-        }
+    main.get().contents {
+        from(
+            tasks.getByPath(":test2code-admin:shadowJar"),
+            tasks.getByPath(":test2code-agent:shadowJar"),
+            pluginConfigJson
+        )
+        into("/")
+    }
+    create("test").contents {
+        from(
+            tasks.getByPath(":test2code-admin:shadowJar"),
+            tasks.getByPath(":test2code-agent:testShadowJar"),
+            pluginConfigJson
+        )
+        into("/")
     }
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("test2codeZip") {
-            artifact(tasks.distZip.get())
-        }
+    publications.create<MavenPublication>("test2codeZip") {
+        artifact(tasks.distZip.get())
     }
 }
 
-val licenseFormatSettings by tasks.registering(com.hierynomus.gradle.license.tasks.LicenseFormat::class) {
-    source = fileTree(project.projectDir).also {
-        include("**/*.kt", "**/*.java", "**/*.groovy", "**/*.sql")
-        exclude("**/.idea")
-    }.asFileTree
-    headerURI = java.net.URI("https://raw.githubusercontent.com/Drill4J/drill4j/develop/COPYRIGHT")
+@Suppress("UNUSED_VARIABLE")
+tasks {
+    val adminDir = projectDir.resolve(adminLocalPath)
+    val adminRef: String by extra
+    val updateAdmin by registering {
+        group = "other"
+        doLast {
+            val gitrepo = Grgit.open { dir = adminDir }
+            val branches = gitrepo.branch.list { mode = BranchListOp.Mode.LOCAL }
+            val branchToName: (Branch) -> String = { it.name }
+            val branchIsCreate: (String) -> Boolean = { !branches.map(branchToName).contains(it) }
+            gitrepo.fetch()
+            gitrepo.checkout {
+                branch = adminRef
+                startPoint = adminRef.takeIf(branchIsCreate)?.prefixIfNot("origin/")
+                createBranch = branchIsCreate(adminRef)
+            }
+            gitrepo.pull()
+        }
+    }
+    val sharedLibsDir = projectDir.resolve(sharedLibsLocalPath)
+    val sharedLibsRef: String by extra
+    val updateSharedLibs by registering {
+        group = "other"
+        doLast {
+            val gitrepo = Grgit.open { dir = sharedLibsDir }
+            val branches = gitrepo.branch.list { mode = BranchListOp.Mode.LOCAL }
+            val branchToName: (Branch) -> String = { it.name }
+            val branchIsCreate: (String) -> Boolean = { !branches.map(branchToName).contains(it) }
+            gitrepo.fetch()
+            gitrepo.checkout {
+                branch = sharedLibsRef
+                startPoint = sharedLibsRef.takeIf(branchIsCreate)?.prefixIfNot("origin/")
+                createBranch = branchIsCreate(sharedLibsRef)
+            }
+            gitrepo.pull()
+        }
+    }
+    val tagSharedLibs by registering {
+        group = "other"
+        doLast {
+            val tag = "${project.name}-v${project.version}"
+            val gitrepo = Grgit.open {
+                dir = sharedLibsDir
+                credentials = Credentials(System.getenv("SHARED_LIBS_USER"), System.getenv("SHARED_LIBS_PASSWORD"))
+            }
+            gitrepo.tag.add { name = tag }
+            gitrepo.push { refsOrSpecs = listOf("tags/$tag") }
+            val properties = Configurations().propertiesBuilder(file("gradle.properties"))
+            properties.configuration.setProperty("sharedLibsRef", tag)
+            properties.save()
+        }
+    }
 }
-
-tasks["licenseFormat"].dependsOn(licenseFormatSettings)
